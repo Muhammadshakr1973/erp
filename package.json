@@ -1,0 +1,13 @@
+{
+  "name": "pos_app",
+  "version": "1.0.0",
+  "description": "POS Application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo \"This is a Flutter/Laravel project. Dev server placeholder.\" && sleep 86400",
+    "build": "echo \"Build placeholder\"",
+    "start": "echo \"Start placeholder\" && sleep 86400"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
