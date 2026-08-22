@@ -40,7 +40,7 @@ class EmptyState extends StatelessWidget {
           Text(
             title,
             style: AppTextStyles.h2.copyWith(
-              color: theme.colorScheme.onBackground,
+              color: theme.colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),

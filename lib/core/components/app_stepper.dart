@@ -48,7 +48,7 @@ class AppStepper extends StatelessWidget {
       height: AppSizes.stepperHeight,
       decoration: BoxDecoration(
         borderRadius: AppRadius.radiusMd,
-        border: BorderSide(color: borderColor),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [

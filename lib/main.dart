@@ -38,7 +38,7 @@ class PosApp extends ConsumerWidget {
         Locale('ckb', 'IQ'),
         Locale('en', 'US'), // Fallback
       ],
-      localizationsDelegates: const [
+      localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

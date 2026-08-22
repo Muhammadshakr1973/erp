@@ -58,7 +58,7 @@ class AppButton extends StatelessWidget {
         textColor = theme.colorScheme.onPrimary;
         break;
       case AppButtonType.secondary:
-        backgroundColor = theme.colorScheme.surfaceVariant;
+        backgroundColor = theme.colorScheme.surfaceContainerHighest;
         textColor = theme.colorScheme.primary;
         break;
       case AppButtonType.outline:
