@@ -58,7 +58,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: AppRadius.radiusMd,
-                border: BorderSide(color: AppColors.success.withValues(alpha: 0.3)),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
