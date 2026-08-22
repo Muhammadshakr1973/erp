@@ -1,126 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../../../core/components/app_button.dart';
+import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_snackbar.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../providers/auth_provider.dart';
 
-// بەکارهێنانی ConsumerWidget لە جیاتی StatelessWidget بۆ بەکارهێنانی Riverpod
-class LoginScreen extends ConsumerWidget {
-  LoginScreen({super.key});
-
-  final TextEditingController phoneController = TextEditingController(
-    text: '07500000001',
-  );
-  final TextEditingController passwordController = TextEditingController(
-    text: 'password',
-  );
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // چاودێریکردنی دۆخی لۆگین (loading, error, etc.)
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() async {
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    if (phone.isEmpty || password.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'تکایە ژمارەی مۆبایل و وشەی نهێنی پڕبکەرەوە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    final success = await ref.read(authProvider.notifier).login(phone, password);
+    if (success && mounted) {
+      final user = ref.read(authProvider).user;
+      if (user != null) {
+        // Redirect based on role
+        if (user.role == 'admin' || user.role == 'owner') {
+          context.go('/admin');
+        } else if (user.role == 'salesman') {
+          context.go('/salesman');
+        } else {
+           AppSnackbar.show(
+            context,
+            message: 'ڕۆڵی بەکارهێنەر نەناسراوە',
+            type: SnackbarType.error,
+          );
+        }
+      }
+    } else if (mounted) {
+      final error = ref.read(authProvider).error;
+      if (error != null) {
+        AppSnackbar.show(
+          context,
+          message: error,
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.storefront, size: 100, color: Colors.blueAccent),
-              const SizedBox(height: 32),
-              const Text(
-                'بەخێربێیتەوە',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 32),
-
-              // کێڵگەی ژمارە مۆبایل
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'ژمارە مۆبایل',
-                  prefixIcon: const Icon(Icons.phone),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400), // Responsive constraint
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    Symbols.storefront,
+                    size: 80,
+                    color: theme.colorScheme.primary,
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // کێڵگەی پاسۆرد
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'وشەی نهێنی',
-                  prefixIcon: const Icon(Icons.lock),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // پیشاندانی نامەی هەڵە
-              if (authState.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    authState.error!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 24),
+                  Text(
+                    'بەخێربێیتەوە',
+                    style: AppTextStyles.displayMedium.copyWith(
+                      color: theme.colorScheme.onBackground,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                ),
-
-              // دوگمەی چوونەژوورەوە
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 8),
+                  Text(
+                    'بۆ چوونەژوورەوە زانیارییەکانت پڕبکەرەوە',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 48),
+                  AppTextField(
+                    labelText: 'ژمارەی مۆبایل',
+                    hintText: '0750 000 0000',
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    prefixIcon: Symbols.phone,
+                  ),
+                  const SizedBox(height: 24),
+                  AppTextField(
+                    labelText: 'وشەی نهێنی',
+                    hintText: 'وشەی نهێنی بنووسە',
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    prefixIcon: Symbols.lock,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Symbols.visibility : Symbols.visibility_off,
+                        size: 20,
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
                   ),
-                  onPressed: authState.isLoading
-                      ? null
-                      : () async {
-                          // بانگکردنی فەنکشنی لۆگین لە Provider
-                          final success = await ref
-                              .read(authProvider.notifier)
-                              .login(
-                                phoneController.text.trim(),
-                                passwordController.text,
-                              );
-
-                          if (success && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('چوونەژوورەوە سەرکەوتوو بوو!'),
-                              ),
-                            );
-                            // دواتر لێرەدا دەیبەینە پەڕەی داشبۆرد
-                          }
-                        },
-                  child: authState.isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'چوونەژوورەوە',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                ),
+                  const SizedBox(height: 48),
+                  AppButton(
+                    text: 'چوونەژوورەوە',
+                    isLoading: authState.isLoading,
+                    size: AppButtonSize.lg,
+                    onPressed: _handleLogin,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

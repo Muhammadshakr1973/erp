@@ -2,21 +2,30 @@ class UserModel {
   final int id;
   final String name;
   final String phone;
-  final String token;
+  final String role; // owner, admin, salesman, warehouse, driver
 
   UserModel({
     required this.id,
     required this.name,
     required this.phone,
-    required this.token,
+    required this.role,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json, String token) {
+  factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      name: json['name'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
       phone: json['phone'] ?? '',
-      token: token,
+      role: json['role'] ?? 'salesman', // Default fallback
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'role': role,
+    };
   }
 }
