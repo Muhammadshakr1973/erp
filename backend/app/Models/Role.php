@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * Role Model - V4.0
+ * @property int $id
+ * @property string $name owner|admin|salesman|warehouse|driver
+ */
+class Role extends Model
+{
+    use HasFactory;
+    protected $fillable = ['name', 'display_name', 'description', 'permissions', 'is_system'];
+    protected $casts = ['permissions' => 'array', 'is_system' => 'boolean'];
+
+    public const OWNER = 'owner';
+    public const ADMIN = 'admin';
+    public const SALESMAN = 'salesman';
+    public const WAREHOUSE = 'warehouse';
+    public const DRIVER = 'driver';
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+}

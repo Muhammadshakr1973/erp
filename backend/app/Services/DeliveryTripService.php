@@ -1,0 +1,135 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Customer;
+use App\Models\DeliveryTrip;
+use App\Models\SalesOrder;
+use App\Models\CustomerPayment;
+use App\Models\CustomerLedger;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+
+class DeliveryTripService
+{
+    /**
+     * دروستکردنی گەشت و پێدانی پسوڵەکان بە شۆفێر
+     */
+    public function createTrip(array $data, $user): DeliveryTrip
+    {
+        return DB::transaction(function () use ($data, $user) {
+
+            $tripNumber = 'TRP-' . strtoupper(Str::random(8));
+
+            // ١. دروستکردنی گەشتەکە
+            $trip = DeliveryTrip::create([
+                'trip_number' => $tripNumber,
+                'driver_id'   => $data['driver_id'],
+                'trip_date'   => $data['trip_date'],
+                'status'      => 'IN_PROGRESS',
+                'started_at'  => now(),
+                'total_orders' => count($data['order_ids']),
+                'notes'       => $data['notes'] ?? null,
+                'created_by'  => $user->id,
+            ]);
+
+            // ٢. زیادکردنی پسوڵەکان بۆ ناو گەشتەکە
+            foreach ($data['order_ids'] as $index => $orderId) {
+                $order = SalesOrder::findOrFail($orderId);
+
+                // دڵنیابوونەوە کە پسوڵەکە پێشتر نەگەیندراوە
+                if (in_array($order->status, ['DELIVERED', 'CANCELLED'])) {
+                    throw ValidationException::withMessages([
+                        'orders' => "پسوڵەی ژمارە {$order->order_number} ناتوانرێت بنێردرێت چونکە دۆخەکەی {$order->status}ـە."
+                    ]);
+                }
+
+                // گۆڕینی دۆخی پسوڵەکە بۆ (لە ڕێگایە)
+                $order->update(['status' => 'IN_DELIVERY']);
+
+                // بەستنەوەی پسوڵەکە بە گەشتەکەوە
+                $trip->orders()->create([
+                    'sales_order_id' => $order->id,
+                    'status'         => 'PENDING',
+                    'delivery_order' => $index + 1,
+                ]);
+            }
+
+            return $trip;
+        });
+    }
+
+    /**
+     * گەیاندنی پسوڵە و وەرگرتنی پارە لەلایەن شۆفێرەوە
+     */
+    public function deliverOrder(int $tripOrderId, array $data, $user)
+    {
+        return DB::transaction(function () use ($tripOrderId, $data, $user) {
+
+            // هێنانی ئۆردەری ناو گەشتەکە لەگەڵ پسوڵە سەرەکییەکە و کڕیارەکە
+            $tripOrder = \App\Models\DeliveryTripOrder::with(['order.customer', 'trip'])->findOrFail($tripOrderId);
+            $salesOrder = $tripOrder->order;
+            $customer = $salesOrder->customer;
+
+            if ($tripOrder->status === 'DELIVERED') {
+                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر گەیندراوە.']);
+            }
+
+            $receivedAmount = $data['received_amount'];
+
+            // ١. گۆڕینی دۆخی پسوڵەکان بۆ گەیندراو
+            $tripOrder->update([
+                'status'          => 'DELIVERED',
+                'received_amount' => $receivedAmount,
+                'delivered_at'    => now(),
+                'notes'           => $data['notes'] ?? null,
+            ]);
+
+            $salesOrder->update([
+                'status'       => 'DELIVERED',
+                'delivered_at' => now(),
+            ]);
+
+            // ٢. زیادکردنی کۆی پارەی وەرگیراو بۆ ناو گەشتەکە
+            $tripOrder->trip->increment('total_amount_collected', $receivedAmount);
+
+            // ٣. هەژمارکردنی قەرز (تۆمارکردنی پارەدان ئەگەر پارەی دابوو)
+            // ئەگەر شۆفێرەکە پارەی وەرگرت، پێویستە قەرزی کڕیار کەم بکەینەوە
+            if ($receivedAmount > 0) {
+                // Lock the customer row to prevent race conditions
+                $lockedCustomer = Customer::lockForUpdate()->find($customer->id);
+
+                $payment = CustomerPayment::create([
+                    'payment_number' => 'PAY-' . strtoupper(Str::random(8)),
+                    'customer_id'    => $lockedCustomer->id,
+                    'sales_order_id' => $salesOrder->id,
+                    'amount'         => $receivedAmount,
+                    'payment_method' => 'CASH',
+                    'paid_at'        => now()->toDateString(),
+                    'collected_by'   => $user->id, // شۆفێرەکە
+                    'received_by'    => $user->id,
+                ]);
+
+                $newBalance = $lockedCustomer->current_balance - $receivedAmount;
+
+                CustomerLedger::create([
+                    'customer_id'    => $lockedCustomer->id,
+                    'entry_type'     => 'PAYMENT',
+                    'type'           => 'credit',
+                    'credit'         => $receivedAmount,
+                    'amount'         => $receivedAmount,
+                    'balance_after'  => $newBalance,
+                    'reference_type' => 'delivery_payment',
+                    'reference_id'   => $payment->id,
+                    'description'    => "پارەدان لە کاتی گەیاندنی پسوڵەی {$salesOrder->order_number}",
+                    'created_by'     => $user->id,
+                ]);
+
+                $lockedCustomer->update(['current_balance' => $newBalance]);
+            }
+
+            return $tripOrder;
+        });
+    }
+}

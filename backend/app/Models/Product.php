@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Product extends Model
+{
+    use HasFactory, SoftDeletes;
+    protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
+    protected $casts = ['is_active' => 'boolean', 'units_per_carton' => 'integer'];
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+    public function stocks()
+    {
+        return $this->hasMany(WarehouseStock::class);
+    }
+    public function salesItems()
+    {
+        return $this->hasMany(SalesOrderItem::class);
+    }
+    public function getPriceForType(string $type): int
+    {
+        return match ($type) {
+            'N1' => $this->price_n1,
+            'N2' => $this->price_n2,
+            'N3' => $this->price_n3,
+            'special' => $this->price_n1,
+            default => $this->price_n1
+        };
+    }
+    public function scopeActive($q)
+    {
+        return $q->where('is_active', true);
+    }
+}
