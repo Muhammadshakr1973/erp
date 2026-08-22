@@ -9,6 +9,7 @@ class StatusBadge extends StatelessWidget {
   final String label;
   final StatusBadgeType type;
 
+  // ignore: use_super_parameters
   const StatusBadge({
     Key? key,
     required this.label,
@@ -45,6 +46,7 @@ class StatusBadge extends StatelessWidget {
         textColor = ext.purple;
         break;
       case StatusBadgeType.neutral:
+      // ignore: unreachable_switch_default
       default:
         bgColor = theme.colorScheme.onSurface.withOpacity(0.1);
         textColor = theme.colorScheme.onSurface.withOpacity(0.8);

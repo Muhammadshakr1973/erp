@@ -30,9 +30,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'create-order',
             name: 'createOrder',
-            builder: (context, state) => const Scaffold(
-              appBar: AppBar(title: Text('دروستکردنی پسوڵەی نوێ')),
-              body: Center(child: Text('بەمزووانە...')),
+            builder: (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('دروستکردنی پسوڵەی نوێ')),
+              body: const Center(child: Text('بەمزووانە...')),
             ),
           ),
         ],

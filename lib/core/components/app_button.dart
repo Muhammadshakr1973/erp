@@ -39,6 +39,7 @@ class AppButton extends StatelessWidget {
         height = AppSizes.buttonHeightSm;
         break;
       case AppButtonSize.md:
+      // ignore: unreachable_switch_default
       default:
         height = AppSizes.buttonHeightMd;
         break;

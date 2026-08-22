@@ -34,6 +34,7 @@ class AppSnackbar {
         icon = Symbols.warning;
         break;
       case SnackbarType.info:
+      // ignore: unreachable_switch_default
       default:
         bgColor = AppColors.info;
         icon = Symbols.info;
