@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import 'salesman_dashboard_screen.dart';
 import 'today_customers_screen.dart';
 import 'salesman_orders_screen.dart';
-import '../../auth/views/profile_placeholder.dart'; // We will create this
 
 class SalesmanMainScreen extends ConsumerStatefulWidget {
   const SalesmanMainScreen({super.key});

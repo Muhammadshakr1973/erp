@@ -32,10 +32,10 @@ class PosApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       routerConfig: router,
       
-      // Kurdish RTL Support
-      locale: const Locale('ckb', 'IQ'), // Central Kurdish
+      // Kurdish RTL Support (fallback to Arabic for Material components)
+      locale: const Locale('ar', 'IQ'), // Arabic is supported and RTL
       supportedLocales: const [
-        Locale('ckb', 'IQ'),
+        Locale('ar', 'IQ'),
         Locale('en', 'US'), // Fallback
       ],
       localizationsDelegates: [
