@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api_client.dart';
-import '../models/dashboard_model.dart';
+import '../../../../core/api_client.dart';
+import '../../models/dashboard_model.dart';
 
 final dashboardProvider = FutureProvider<DashboardModel>((ref) async {
   final api = ref.watch(apiClientProvider);
