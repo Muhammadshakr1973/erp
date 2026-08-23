@@ -155,6 +155,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             child: AppTextField(
                               controller: _barcodeController,
                               hintText: 'بارکۆد',
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.qr_code_scanner),
+                                onPressed: () {
+                                  final randomBarcode = (100000000000 + (DateTime.now().millisecond * 123456)).toString();
+                                  _barcodeController.text = randomBarcode;
+                                },
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -168,23 +175,28 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       categoriesAsync.when(
-                        data: (categories) => DropdownButtonFormField<int>(
-                          initialValue: _selectedCategoryId,
-                          decoration: InputDecoration(
-                            labelText: 'جۆری کاڵا (Category)',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        data: (categories) {
+                          final int? validValue = categories.any((c) => c.id == _selectedCategoryId)
+                              ? _selectedCategoryId
+                              : null;
+                          return DropdownButtonFormField<int>(
+                            value: validValue,
+                            decoration: InputDecoration(
+                              labelText: 'جۆری کاڵا (Category)',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          items: categories.map((c) {
-                            return DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name),
-                            );
-                          }).toList(),
-                          onChanged: (v) => setState(() => _selectedCategoryId = v),
-                        ),
-                        loading: () => const CircularProgressIndicator(),
+                            items: categories.map((c) {
+                              return DropdownMenuItem(
+                                value: c.id,
+                                child: Text(c.name),
+                              );
+                            }).toList(),
+                            onChanged: (v) => setState(() => _selectedCategoryId = v),
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
                         error: (err, stack) => const Text('کێشە لە هێنانی جۆرەکان'),
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -272,10 +284,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                     child: const Text('پاشگەزبوونەوە'),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  AppButton(
-                    text: 'پاشەکەوتکردن',
-                    isLoading: _isLoading,
-                    onPressed: _submit,
+                  SizedBox(
+                    width: 140,
+                    child: AppButton(
+                      text: 'پاشەکەوتکردن',
+                      isLoading: _isLoading,
+                      onPressed: _submit,
+                    ),
                   ),
                 ],
               ),
