@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
@@ -42,16 +41,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     final success = await ref.read(authProvider.notifier).login(phone, password);
+
     if (success && mounted) {
       final user = ref.read(authProvider).user;
       if (user != null) {
-        // Redirect based on role
         if (user.role == 'admin' || user.role == 'owner') {
           context.go('/admin');
         } else if (user.role == 'salesman') {
           context.go('/salesman');
+        } else if (user.role == 'warehouse') {
+          context.go('/warehouse');
+        } else if (user.role == 'driver') {
+          context.go('/driver');
         } else {
-           AppSnackbar.show(
+          AppSnackbar.show(
             context,
             message: 'ڕۆڵی بەکارهێنەر نەناسراوە',
             type: SnackbarType.error,
@@ -82,13 +85,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 400), // Responsive constraint
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Icon(
-                    Symbols.storefront,
+                    Icons.storefront,
                     size: 80,
                     color: theme.colorScheme.primary,
                   ),
@@ -114,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: '0750 000 0000',
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    prefixIcon: Symbols.phone,
+                    prefixIcon: Icons.phone,
                   ),
                   const SizedBox(height: 24),
                   AppTextField(
@@ -122,10 +125,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'وشەی نهێنی بنووسە',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    prefixIcon: Symbols.lock,
+                    prefixIcon: Icons.lock,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Symbols.visibility : Symbols.visibility_off,
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                         size: 20,
                         color: theme.colorScheme.onSurface.withOpacity(0.5),
                       ),

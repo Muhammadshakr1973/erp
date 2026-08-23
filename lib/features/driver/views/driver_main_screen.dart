@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_icons.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../core/components/responsive_shell.dart';
-import 'salesman_dashboard_screen.dart';
-import 'today_customers_screen.dart';
-import 'salesman_orders_screen.dart';
+import 'driver_dashboard_screen.dart';
+import 'today_trips_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
-class SalesmanMainScreen extends ConsumerStatefulWidget {
-  const SalesmanMainScreen({super.key});
+class DriverMainScreen extends ConsumerStatefulWidget {
+  const DriverMainScreen({super.key});
 
   @override
-  ConsumerState<SalesmanMainScreen> createState() => _SalesmanMainScreenState();
+  ConsumerState<DriverMainScreen> createState() => _DriverMainScreenState();
 }
 
-class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
+class _DriverMainScreenState extends ConsumerState<DriverMainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const SalesmanDashboardScreen(),
-    const TodayCustomersScreen(),
-    const SalesmanOrdersScreen(),
+    const DriverDashboardScreen(),
+    const TodayTripsScreen(),
     const ProfileScreen(),
   ];
 
@@ -37,11 +34,7 @@ class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
       body: IndexedStack(index: _currentIndex, children: _screens),
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
-        NavigationDestination(
-          icon: Icon(AppIcons.customers),
-          label: 'کڕیارەکان',
-        ),
-        NavigationDestination(icon: Icon(AppIcons.order), label: 'پسوڵەکان'),
+        NavigationDestination(icon: Icon(AppIcons.orderDelivered), label: 'گەشتەکان'),
         NavigationDestination(icon: Icon(AppIcons.profile), label: 'پڕۆفایل'),
       ],
     );

@@ -37,7 +37,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(AppIcons.notifications),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.sync), // Sync icon
@@ -151,6 +153,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 return AppCard(
+                  onTap: () {
+                    context.push('/order/100${index + 1}');
+                  },
                   child: Row(
                     children: [
                       AppIconButton(

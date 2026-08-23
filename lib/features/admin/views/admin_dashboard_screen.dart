@@ -36,13 +36,14 @@ class AdminDashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(AppIcons.notifications),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications');
+            },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(AppIcons.profile),
             onPressed: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
+              context.push('/profile');
             },
           ),
         ],
@@ -52,53 +53,105 @@ class AdminDashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Stats row 1
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    context: context,
-                    title: 'فرۆشتنی ئەمڕۆ',
-                    value: '1,250,000',
-                    currency: 'د.ع',
-                    icon: AppIcons.order,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _buildStatCard(
-                    context: context,
-                    title: 'قەرزی بازاڕ',
-                    value: '4,500,000',
-                    currency: 'د.ع',
-                    icon: AppIcons.customerDebt,
-                    color: AppColors.danger,
-                  ),
-                ),
-              ],
+            // Top Stats Grid
+            LayoutBuilder(
+              builder: (context, constraints) {
+                int crossAxisCount = 2;
+                if (constraints.maxWidth >= 1024) {
+                  crossAxisCount = 4;
+                } else if (constraints.maxWidth >= 600) {
+                  crossAxisCount = 3;
+                }
+
+                return GridView.count(
+                  crossAxisCount: crossAxisCount,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _buildStatCard(
+                      context: context,
+                      title: 'فرۆشتنی ئەمڕۆ',
+                      value: '1,250,000',
+                      currency: 'د.ع',
+                      icon: AppIcons.order,
+                      color: AppColors.primary,
+                    ),
+                    _buildStatCard(
+                      context: context,
+                      title: 'قەرزی بازاڕ',
+                      value: '4,500,000',
+                      currency: 'د.ع',
+                      icon: AppIcons.customerDebt,
+                      color: AppColors.danger,
+                    ),
+                    _buildStatCard(
+                      context: context,
+                      title: 'گەشتەکانی ئەمڕۆ',
+                      value: '4',
+                      icon: AppIcons.orderStatus,
+                      color: AppColors.info,
+                    ),
+                    _buildStatCard(
+                      context: context,
+                      title: 'کاڵای کەمبوو',
+                      value: '12',
+                      icon: Icons.warning_amber_rounded,
+                      color: AppColors.warning,
+                    ),
+                  ],
+                );
+              },
             ),
+            const SizedBox(height: AppSpacing.sectionGap),
+
+            Text('کارگێڕی خێرا', style: AppTextStyles.h2),
             const SizedBox(height: AppSpacing.md),
-            // Top Stats row 2
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard(
-                    context: context,
-                    title: 'گەشتەکانی ئەمڕۆ',
-                    value: '4',
-                    icon: AppIcons.orderStatus,
-                    color: AppColors.info,
+                  child: InkWell(
+                    onTap: () {
+                      context.push('/admin-purchases');
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.colorScheme.outline),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Expanded(child: Text('بازاڕ و سەپاڵیەر', style: AppTextStyles.bodyBold)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: _buildStatCard(
-                    context: context,
-                    title: 'کاڵای کەمبوو',
-                    value: '12',
-                    icon: Icons.warning_amber_rounded,
-                    color: AppColors.warning,
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.colorScheme.outline),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.group_outlined, color: theme.colorScheme.primary),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Expanded(child: Text('بەکارهێنەران', style: AppTextStyles.bodyBold)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
