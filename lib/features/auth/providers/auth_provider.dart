@@ -40,20 +40,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> login(String phone, String password) async {
     state = state.copyWith(isLoading: true, error: null);
-    
-    // --- MOCK LOGIN FOR TESTING IN PREVIEW ---
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulate network
-    
-    if (phone == '1' || phone == '07500000000') {
-      final user = UserModel(id: 1, name: 'خاوەندارێت (ئادمین)', phone: phone, role: 'owner');
-      await _saveMockUser(user);
-      return true;
-    } else if (phone == '2' || phone == '07501111111') {
-      final user = UserModel(id: 2, name: 'مەندوب (Salesman)', phone: phone, role: 'salesman');
-      await _saveMockUser(user);
-      return true;
-    }
-    // -----------------------------------------
 
     try {
       final api = ref.read(apiClientProvider);
@@ -61,6 +47,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'phone': phone,
         'password': password,
       });
+
 
       if (response.statusCode == 200) {
         final token = response.data['token'];
