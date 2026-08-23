@@ -13,11 +13,12 @@ class AppTextField extends StatelessWidget {
   final IconData? prefixIcon;
   final Widget? suffixIcon;
   final String? errorText;
+  final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final int maxLines;
 
   const AppTextField({
-    Key? key,
+    super.key,
     this.hintText,
     this.labelText,
     this.controller,
@@ -26,9 +27,10 @@ class AppTextField extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.errorText,
+    this.validator,
     this.onChanged,
     this.maxLines = 1,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,11 +74,12 @@ class AppTextField extends StatelessWidget {
           const SizedBox(height: 6),
         ],
         SizedBox(
-          height: maxLines > 1 ? null : AppSizes.inputHeight,
+          height: (maxLines > 1 || validator != null) ? null : AppSizes.inputHeight,
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
             obscureText: obscureText,
+            validator: validator,
             onChanged: onChanged,
             maxLines: maxLines,
             style: AppTextStyles.bodyMedium.copyWith(

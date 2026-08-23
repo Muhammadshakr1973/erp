@@ -153,7 +153,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       const SizedBox(height: AppSpacing.md),
                       categoriesAsync.when(
                         data: (categories) => DropdownButtonFormField<int>(
-                          value: _selectedCategoryId,
+                          initialValue: _selectedCategoryId,
                           decoration: InputDecoration(
                             labelText: 'جۆری کاڵا (Category)',
                             border: OutlineInputBorder(
@@ -169,7 +169,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           onChanged: (v) => setState(() => _selectedCategoryId = v),
                         ),
                         loading: () => const CircularProgressIndicator(),
-                        error: (_, __) => const Text('کێشە لە هێنانی جۆرەکان'),
+                        error: (err, stack) => const Text('کێشە لە هێنانی جۆرەکان'),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
