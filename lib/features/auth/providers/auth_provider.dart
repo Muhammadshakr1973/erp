@@ -50,8 +50,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 
       if (response.statusCode == 200) {
-        final token = response.data['token'];
-        final userData = response.data['user'];
+        final token = response.data['data']['token'];
+        final userData = response.data['data']['user'];
 
         final user = UserModel.fromJson(userData);
         
