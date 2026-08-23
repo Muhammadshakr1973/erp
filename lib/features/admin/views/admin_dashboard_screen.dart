@@ -9,6 +9,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../providers/dashboard_provider.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -17,6 +18,7 @@ class AdminDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
+    final dashboardAsync = ref.watch(dashboardProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -48,63 +50,74 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Stats Grid
-            LayoutBuilder(
-              builder: (context, constraints) {
-                int crossAxisCount = 2;
-                if (constraints.maxWidth >= 1024) {
-                  crossAxisCount = 4;
-                } else if (constraints.maxWidth >= 600) {
-                  crossAxisCount = 3;
-                }
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(dashboardProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Stats Grid
+              dashboardAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا: $error')),
+                data: (dashboard) => LayoutBuilder(
+                  builder: (context, constraints) {
+                    int crossAxisCount = 2;
+                    if (constraints.maxWidth >= 1024) {
+                      crossAxisCount = 4;
+                    } else if (constraints.maxWidth >= 600) {
+                      crossAxisCount = 3;
+                    }
 
-                return GridView.count(
-                  crossAxisCount: crossAxisCount,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: AppSpacing.md,
-                  mainAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 1.5,
-                  children: [
-                    _buildStatCard(
-                      context: context,
-                      title: 'فرۆشتنی ئەمڕۆ',
-                      value: '1,250,000',
-                      currency: 'د.ع',
-                      icon: AppIcons.order,
-                      color: AppColors.primary,
-                    ),
-                    _buildStatCard(
-                      context: context,
-                      title: 'قەرزی بازاڕ',
-                      value: '4,500,000',
-                      currency: 'د.ع',
-                      icon: AppIcons.customerDebt,
-                      color: AppColors.danger,
-                    ),
-                    _buildStatCard(
-                      context: context,
-                      title: 'گەشتەکانی ئەمڕۆ',
-                      value: '4',
-                      icon: AppIcons.orderStatus,
-                      color: AppColors.info,
-                    ),
-                    _buildStatCard(
-                      context: context,
-                      title: 'کاڵای کەمبوو',
-                      value: '12',
-                      icon: Icons.warning_amber_rounded,
-                      color: AppColors.warning,
-                    ),
-                  ],
-                );
-              },
-            ),
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisSpacing: AppSpacing.md,
+                      childAspectRatio: 1.5,
+                      children: [
+                        _buildStatCard(
+                          context: context,
+                          title: 'فرۆشتنی ئەم مانگە',
+                          value: dashboard.monthlySales.toInt().toString(),
+                          currency: 'د.ع',
+                          icon: AppIcons.order,
+                          color: AppColors.primary,
+                        ),
+                        _buildStatCard(
+                          context: context,
+                          title: 'قازانجی مانگ',
+                          value: dashboard.monthlyProfit.toInt().toString(),
+                          currency: 'د.ع',
+                          icon: Icons.trending_up,
+                          color: AppColors.success,
+                        ),
+                        _buildStatCard(
+                          context: context,
+                          title: 'کۆی قەرزی بازاڕ',
+                          value: dashboard.totalReceivables.toInt().toString(),
+                          currency: 'د.ع',
+                          icon: AppIcons.customerDebt,
+                          color: AppColors.danger,
+                        ),
+                        _buildStatCard(
+                          context: context,
+                          title: 'پارەی وەرگیراو',
+                          value: dashboard.monthlyCollected.toInt().toString(),
+                          currency: 'د.ع',
+                          icon: Icons.monetization_on_outlined,
+                          color: AppColors.info,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: AppSpacing.sectionGap),
 
             Text('کارگێڕی خێرا', style: AppTextStyles.h2),

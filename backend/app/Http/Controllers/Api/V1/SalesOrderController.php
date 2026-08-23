@@ -16,6 +16,15 @@ class SalesOrderController extends Controller
         $this->salesOrderService = $salesOrderService;
     }
 
+    public function index(): JsonResponse
+    {
+        $orders = \App\Models\SalesOrder::with(['customer', 'salesman'])->orderBy('id', 'desc')->get();
+        return response()->json([
+            'message' => 'لیستی پسوڵەکان',
+            'data' => $orders
+        ]);
+    }
+
     public function store(StoreSalesOrderRequest $request): JsonResponse
     {
         // ناردنی داتاکان و بەکارهێنەرەکە بۆ لۆژیکی Service

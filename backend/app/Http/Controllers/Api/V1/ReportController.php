@@ -21,12 +21,12 @@ class ReportController extends Controller
         $endOfMonth = Carbon::now()->endOfMonth();
 
         // ١. کۆی فرۆشتنی ئەم مانگە (ئەو پسوڵانەی کە گەیەندراون یان تەواوبوون)
-        $monthlySales = SalesOrder::whereIn('status', ['DELIVERED', 'CONFIRMED'])
+        $monthlySales = SalesOrder::whereIn('status', ['delivered', 'confirmed'])
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->sum('total_amount');
 
         // ٢. کۆی قازانجی ئەم مانگە
-        $monthlyProfit = SalesOrder::whereIn('status', ['DELIVERED', 'CONFIRMED'])
+        $monthlyProfit = SalesOrder::whereIn('status', ['delivered', 'confirmed'])
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->sum('total_profit');
 

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\DeliveryTripController;
 use App\Http\Controllers\Api\V1\CommissionController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\ProductController;
 
 Route::prefix('v1')->group(function () {
 
@@ -21,7 +22,9 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::get('/products', [ProductController::class, 'index']);
         Route::apiResource('customers', CustomerController::class);
+        Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::post('/stock-transfers', [StockTransferController::class, 'store']);

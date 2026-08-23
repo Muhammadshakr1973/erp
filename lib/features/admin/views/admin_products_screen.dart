@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/status_badge.dart';
-// ignore: unused_import
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../products/providers/products_provider.dart';
 
-class AdminProductsScreen extends StatelessWidget {
+class AdminProductsScreen extends ConsumerWidget {
   const AdminProductsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final productsAsync = ref.watch(productsListProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('کاڵاکان و کۆگا', style: AppTextStyles.h2),
         actions: [
           IconButton(icon: const Icon(AppIcons.add), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.refresh), 
+            onPressed: () => ref.invalidate(productsListProvider)
+          ),
         ],
       ),
       body: Column(
@@ -51,56 +57,74 @@ class AdminProductsScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
-              itemCount: 20,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final int stock = index % 4 == 0 ? 5 : 150; // Simulate low stock
-                final bool isLowStock = stock < 20;
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(productsListProvider),
+              child: productsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا: $error')),
+                data: (products) {
+                  if (products.isEmpty) {
+                    return const Center(child: Text('هیچ کاڵایەک نییە'));
+                  }
+                  
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+                    itemCount: products.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      int totalStock = 0;
+                      for (var stock in product.stocks) {
+                        totalStock += (stock['quantity'] as int?) ?? 0;
+                      }
+                      
+                      final bool isLowStock = totalStock < 20;
 
-                return AppCard(
-                  onTap: () {},
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://via.placeholder.com/150'), // Placeholder image
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      return AppCard(
+                        onTap: () {},
+                        child: Row(
                           children: [
-                            Text('شامپۆی سەر ${index + 1}', style: AppTextStyles.bodyBold),
-                            const SizedBox(height: 4),
-                            Text('کارتۆن: 12 دانە • بارکۆد: 123456789', style: AppTextStyles.caption),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                                image: const DecorationImage(
+                                  image: NetworkImage('https://via.placeholder.com/150'),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(product.name, style: AppTextStyles.bodyBold),
+                                  const SizedBox(height: 4),
+                                  Text('کارتۆن: ${product.unitsPerCarton} دانە • بارکۆد: ${product.barcode}', style: AppTextStyles.caption),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('${product.priceN1.toInt()} د.ع', style: AppTextStyles.price),
+                                const SizedBox(height: 4),
+                                StatusBadge(
+                                  label: 'ستۆک: $totalStock',
+                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('15,000 د.ع', style: AppTextStyles.price),
-                          const SizedBox(height: 4),
-                          StatusBadge(
-                            label: 'ستۆک: $stock',
-                            type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      );
+                    },
+                  );
+                }
+              ),
             ),
           ),
         ],
