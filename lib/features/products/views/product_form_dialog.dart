@@ -117,31 +117,37 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesListProvider);
+    final theme = Theme.of(context);
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.product == null ? 'زیادکردنی کاڵا' : 'دەستکاریکردنی کاڵا',
-                style: AppTextStyles.h2,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      AppTextField(
-                        controller: _nameController,
-                        hintText: 'ناوی کاڵا',
-                        validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
-                      ),
+      child: SizedBox(
+        width: 500,
+        height: screenHeight * 0.8,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.product == null ? 'زیادکردنی کاڵا' : 'دەستکاریکردنی کاڵا',
+                  style: AppTextStyles.h2,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        AppTextField(
+                          controller: _nameController,
+                          hintText: 'ناوی کاڵا',
+                          validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                        ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
@@ -277,6 +283,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
