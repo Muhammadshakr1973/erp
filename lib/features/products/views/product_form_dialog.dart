@@ -30,6 +30,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _priceN3Controller;
   late TextEditingController _unitsPerCartonController;
   late TextEditingController _unitController;
+  late TextEditingController _stockController;
   
   int? _selectedCategoryId;
   bool _isActive = true;
@@ -38,15 +39,22 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   void initState() {
     super.initState();
     final p = widget.product;
+    int currentStock = 0;
+    if (p != null) {
+      for (var s in p.stocks) {
+        currentStock += (s['quantity'] as int?) ?? 0;
+      }
+    }
     _nameController = TextEditingController(text: p?.name ?? '');
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
-    _costPriceController = TextEditingController(text: p?.costPrice.toString() ?? '');
-    _priceN1Controller = TextEditingController(text: p?.priceN1.toString() ?? '');
-    _priceN2Controller = TextEditingController(text: p?.priceN2.toString() ?? '');
-    _priceN3Controller = TextEditingController(text: p?.priceN3.toString() ?? '');
+    _costPriceController = TextEditingController(text: p != null ? p.costPrice.toString() : '');
+    _priceN1Controller = TextEditingController(text: p != null ? p.priceN1.toString() : '');
+    _priceN2Controller = TextEditingController(text: p != null ? p.priceN2.toString() : '');
+    _priceN3Controller = TextEditingController(text: p != null ? p.priceN3.toString() : '');
     _unitsPerCartonController = TextEditingController(text: p?.unitsPerCarton.toString() ?? '1');
     _unitController = TextEditingController(text: p?.unit ?? '');
+    _stockController = TextEditingController(text: p != null ? currentStock.toString() : '0');
     _selectedCategoryId = p?.categoryId;
     _isActive = p?.isActive ?? true;
   }
@@ -62,6 +70,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceN3Controller.dispose();
     _unitsPerCartonController.dispose();
     _unitController.dispose();
+    _stockController.dispose();
     super.dispose();
   }
 
@@ -82,6 +91,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'unit': _unitController.text,
       'category_id': _selectedCategoryId,
       'is_active': _isActive ? 1 : 0,
+      'initial_stock': int.tryParse(_stockController.text) ?? 0,
     };
 
     try {
@@ -229,6 +239,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        controller: _stockController,
+                        hintText: 'مەوجودکراو / کۆگا (Stock Quantity)',
+                        keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       SwitchListTile(

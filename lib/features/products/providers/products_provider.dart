@@ -28,16 +28,23 @@ final productSearchProvider = StateNotifierProvider<ProductSearchNotifier, Strin
   return ProductSearchNotifier();
 });
 
+final selectedCategoryFilterProvider = StateProvider<int?>((ref) => null);
+
 final filteredProductsProvider = Provider<AsyncValue<List<ProductModel>>>((ref) {
   final productsAsync = ref.watch(productsListProvider);
   final searchQuery = ref.watch(productSearchProvider).toLowerCase();
+  final selectedCategory = ref.watch(selectedCategoryFilterProvider);
 
   return productsAsync.whenData((products) {
-    if (searchQuery.isEmpty) return products;
     return products.where((p) {
-      return p.name.toLowerCase().contains(searchQuery) ||
-             p.barcode.toLowerCase().contains(searchQuery) ||
-             (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
+      final matchesQuery = searchQuery.isEmpty ||
+          p.name.toLowerCase().contains(searchQuery) ||
+          p.barcode.toLowerCase().contains(searchQuery) ||
+          (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
+
+      final matchesCategory = selectedCategory == null || p.categoryId == selectedCategory;
+
+      return matchesQuery && matchesCategory;
     }).toList();
   });
 });

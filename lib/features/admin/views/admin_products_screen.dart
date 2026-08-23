@@ -8,6 +8,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/providers/products_provider.dart';
+import '../../products/providers/categories_provider.dart';
 import '../../products/views/product_form_dialog.dart';
 
 class AdminProductsScreen extends ConsumerWidget {
@@ -17,6 +18,8 @@ class AdminProductsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(filteredProductsProvider);
+    final categoriesAsync = ref.watch(categoriesListProvider);
+    final selectedCategory = ref.watch(selectedCategoryFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +43,7 @@ class AdminProductsScreen extends ConsumerWidget {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
             child: Row(
               children: [
                 Expanded(
@@ -68,6 +71,47 @@ class AdminProductsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          categoriesAsync.when(
+            data: (categories) {
+              if (categories.isEmpty) return const SizedBox.shrink();
+              return SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: ChoiceChip(
+                        label: const Text('هەموو جۆرەکان'),
+                        selected: selectedCategory == null,
+                        onSelected: (_) {
+                          ref.read(selectedCategoryFilterProvider.notifier).state = null;
+                        },
+                      ),
+                    ),
+                    ...categories.map((c) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: ChoiceChip(
+                          label: Text(c.name),
+                          selected: selectedCategory == c.id,
+                          onSelected: (selected) {
+                            ref.read(selectedCategoryFilterProvider.notifier).state =
+                                selected ? c.id : null;
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(productsListProvider),

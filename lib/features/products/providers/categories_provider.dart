@@ -15,3 +15,25 @@ final categoriesListProvider = FutureProvider<List<CategoryModel>>((ref) async {
     throw Exception(api.parseError(e));
   }
 });
+
+final categoryActionsProvider = Provider<CategoryActions>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return CategoryActions(api, ref);
+});
+
+class CategoryActions {
+  final ApiClient api;
+  final Ref ref;
+
+  CategoryActions(this.api, this.ref);
+
+  Future<CategoryModel> addCategory(String name) async {
+    try {
+      final response = await api.client.post('/categories', data: {'name': name});
+      ref.invalidate(categoriesListProvider);
+      return CategoryModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+}
