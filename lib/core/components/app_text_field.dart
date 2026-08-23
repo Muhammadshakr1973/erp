@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
 import '../theme/app_sizes.dart';
 import '../theme/app_text_styles.dart';
 
@@ -35,84 +34,81 @@ class AppTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    final outlineInputBorder = OutlineInputBorder(
-      borderRadius: AppRadius.radiusMd,
-      borderSide: BorderSide(
-        color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        width: 1.0,
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      validator: validator,
+      onChanged: onChanged,
+      maxLines: maxLines,
+      style: AppTextStyles.bodyMedium.copyWith(
+        color: theme.colorScheme.onSurface,
       ),
-    );
-
-    final focusedBorder = outlineInputBorder.copyWith(
-      borderSide: BorderSide(
-        color: theme.colorScheme.primary,
-        width: 1.5,
-      ),
-    );
-
-    final errorBorder = outlineInputBorder.copyWith(
-      borderSide: BorderSide(
-        color: theme.colorScheme.error,
-        width: 1.5,
-      ),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (labelText != null) ...[
-          Text(
-            labelText!,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
-        SizedBox(
-          height: (maxLines > 1 || validator != null) ? null : AppSizes.inputHeight,
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            obscureText: obscureText,
-            validator: validator,
-            onChanged: onChanged,
-            maxLines: maxLines,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: isDark ? AppColors.textDisabledLight : AppColors.textDisabledLight,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              prefixIcon: prefixIcon != null
-                  ? Icon(prefixIcon, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5))
-                  : null,
-              suffixIcon: suffixIcon,
-              border: outlineInputBorder,
-              enabledBorder: outlineInputBorder,
-              focusedBorder: focusedBorder,
-              errorBorder: errorBorder,
-              focusedErrorBorder: errorBorder,
-              filled: true,
-              fillColor: theme.colorScheme.surface,
-            ),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: AppTextStyles.bodyMedium.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        floatingLabelStyle: AppTextStyles.bodyMedium.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
+        hintText: hintText,
+        hintStyle: AppTextStyles.bodySmall.copyWith(
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+        ),
+        prefixIcon: prefixIcon != null
+            ? Icon(
+                prefixIcon,
+                size: AppSizes.iconSm,
+                color: theme.colorScheme.onSurfaceVariant,
+              )
+            : null,
+        suffixIcon: suffixIcon,
+        errorText: errorText,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 14,
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline,
+            width: 1,
           ),
         ),
-        if (errorText != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            errorText!,
-            style: AppTextStyles.caption.copyWith(color: theme.colorScheme.error),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline.withOpacity(0.6),
+            width: 1,
           ),
-        ],
-      ],
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 1.5,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: const BorderSide(
+            color: AppColors.danger,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: const BorderSide(
+            color: AppColors.danger,
+            width: 1.5,
+          ),
+        ),
+      ),
     );
   }
 }

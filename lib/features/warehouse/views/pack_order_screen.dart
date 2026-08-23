@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -31,7 +32,14 @@ class _PackOrderScreenState extends State<PackOrderScreen> {
           IconButton(
             icon: const Icon(AppIcons.scan),
             onPressed: () {
-              // Barcode scanner
+              CameraBarcodeScanner.show(context, (scanned) {
+                final firstUnpackedIndex = _packedItems.indexOf(false);
+                if (firstUnpackedIndex != -1) {
+                  setState(() {
+                    _packedItems[firstUnpackedIndex] = true;
+                  });
+                }
+              });
             },
           ),
         ],

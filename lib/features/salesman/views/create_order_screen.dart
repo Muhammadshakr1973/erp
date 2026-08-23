@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -30,7 +31,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           IconButton(
             icon: const Icon(AppIcons.scan),
             onPressed: () {
-              // Barcode scan action
+              CameraBarcodeScanner.show(context, (scanned) {
+                setState(() {
+                  _cartItemCount++;
+                  _totalPrice += 15000;
+                });
+              });
             },
           ),
         ],
