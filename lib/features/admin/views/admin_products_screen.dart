@@ -8,20 +8,29 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/providers/products_provider.dart';
+import '../../products/views/product_form_dialog.dart';
 
 class AdminProductsScreen extends ConsumerWidget {
-  const AdminProductsScreen({Key? key}) : super(key: key);
+  const AdminProductsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final productsAsync = ref.watch(productsListProvider);
+    final productsAsync = ref.watch(filteredProductsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('کاڵاکان و کۆگا', style: AppTextStyles.h2),
         actions: [
-          IconButton(icon: const Icon(AppIcons.add), onPressed: () {}),
+          IconButton(
+            icon: const Icon(AppIcons.add), 
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const ProductFormDialog(),
+              );
+            }
+          ),
           IconButton(
             icon: const Icon(Icons.refresh), 
             onPressed: () => ref.invalidate(productsListProvider)
@@ -38,6 +47,9 @@ class AdminProductsScreen extends ConsumerWidget {
                   child: AppTextField(
                     hintText: 'گەڕان بۆ کاڵا، بارکۆد...',
                     prefixIcon: AppIcons.search,
+                    onChanged: (value) {
+                      ref.read(productSearchProvider.notifier).search(value);
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -81,7 +93,12 @@ class AdminProductsScreen extends ConsumerWidget {
                       final bool isLowStock = totalStock < 20;
 
                       return AppCard(
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => ProductFormDialog(product: product),
+                          );
+                        },
                         child: Row(
                           children: [
                             Container(
@@ -118,6 +135,31 @@ class AdminProductsScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: AppColors.danger),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('سڕینەوەی کاڵا'),
+                                    content: Text('دڵنیایت لە سڕینەوەی "${product.name}"؟'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('نەخێر'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          ref.read(productActionsProvider).deleteProduct(product.id);
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text('بەڵێ', style: TextStyle(color: AppColors.danger)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            )
                           ],
                         ),
                       );

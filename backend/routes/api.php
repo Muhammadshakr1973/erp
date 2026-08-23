@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\CommissionController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\CategoryController;
 
 Route::prefix('v1')->group(function () {
 
@@ -22,7 +23,8 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
-        Route::get('/products', [ProductController::class, 'index']);
+        Route::apiResource('products', ProductController::class);
+        Route::get('/categories', [CategoryController::class, 'index']);
         Route::apiResource('customers', CustomerController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);

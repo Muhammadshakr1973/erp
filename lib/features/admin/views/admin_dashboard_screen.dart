@@ -79,7 +79,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      childAspectRatio: 1.5,
+                      childAspectRatio: 1.2,
                       children: [
                         _buildStatCard(
                           context: context,

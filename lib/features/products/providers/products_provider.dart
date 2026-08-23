@@ -15,3 +15,68 @@ final productsListProvider = FutureProvider<List<ProductModel>>((ref) async {
     throw Exception(api.parseError(e));
   }
 });
+
+class ProductSearchNotifier extends StateNotifier<String> {
+  ProductSearchNotifier() : super('');
+  
+  void search(String query) {
+    state = query;
+  }
+}
+
+final productSearchProvider = StateNotifierProvider<ProductSearchNotifier, String>((ref) {
+  return ProductSearchNotifier();
+});
+
+final filteredProductsProvider = Provider<AsyncValue<List<ProductModel>>>((ref) {
+  final productsAsync = ref.watch(productsListProvider);
+  final searchQuery = ref.watch(productSearchProvider).toLowerCase();
+
+  return productsAsync.whenData((products) {
+    if (searchQuery.isEmpty) return products;
+    return products.where((p) {
+      return p.name.toLowerCase().contains(searchQuery) ||
+             p.barcode.toLowerCase().contains(searchQuery) ||
+             (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
+    }).toList();
+  });
+});
+
+final productActionsProvider = Provider<ProductActions>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return ProductActions(api, ref);
+});
+
+class ProductActions {
+  final ApiClient api;
+  final Ref ref;
+
+  ProductActions(this.api, this.ref);
+
+  Future<void> addProduct(Map<String, dynamic> data) async {
+    try {
+      await api.client.post('/products', data: data);
+      ref.invalidate(productsListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> updateProduct(int id, Map<String, dynamic> data) async {
+    try {
+      await api.client.put('/products/$id', data: data);
+      ref.invalidate(productsListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> deleteProduct(int id) async {
+    try {
+      await api.client.delete('/products/$id');
+      ref.invalidate(productsListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+}
