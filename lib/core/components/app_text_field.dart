@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_sizes.dart';
 import '../theme/app_text_styles.dart';
 
 class AppTextField extends StatelessWidget {
@@ -56,12 +55,12 @@ class AppTextField extends StatelessWidget {
         ),
         hintText: hintText,
         hintStyle: AppTextStyles.bodySmall.copyWith(
-          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         prefixIcon: prefixIcon != null
             ? Icon(
                 prefixIcon,
-                size: AppSizes.iconSm,
+                size: 20.0,
                 color: theme.colorScheme.onSurfaceVariant,
               )
             : null,
@@ -83,7 +82,7 @@ class AppTextField extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.6),
+            color: theme.colorScheme.outline.withValues(alpha: 0.6),
             width: 1,
           ),
         ),

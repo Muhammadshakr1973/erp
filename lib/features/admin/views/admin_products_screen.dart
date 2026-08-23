@@ -20,8 +20,6 @@ class AdminProductsScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminProductsScreen> createState() => _AdminProductsScreenState();
 }
 
-class _AdminState extends ConsumerState<AdminProductsScreen> {} // dummy for type safety if needed, but standard is:
-
 class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   final TextEditingController _searchController = TextEditingController();
 
@@ -102,7 +100,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(24), // Matches AppTextField
-                    border: Border.all(color: theme.colorScheme.outline.withOpacity(0.6)),
+                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.6)),
                   ),
                   child: IconButton(
                     icon: const Icon(AppIcons.scan),
@@ -158,7 +156,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: AppSpacing.sm),
           Expanded(
@@ -209,7 +207,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   width: 60,
                                   height: 60,
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(12),
                                     image: const DecorationImage(
                                       image: NetworkImage('https://via.placeholder.com/150'),

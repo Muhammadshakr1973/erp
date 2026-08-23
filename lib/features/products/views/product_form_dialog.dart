@@ -239,13 +239,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(24),
                                   borderSide: BorderSide(
-                                    color: theme.colorScheme.outline.withOpacity(0.6),
+                                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(24),
                                   borderSide: BorderSide(
-                                    color: theme.colorScheme.outline.withOpacity(0.6),
+                                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
