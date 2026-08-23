@@ -12,7 +12,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../shared/providers/customer_provider.dart';
 
 class AdminCustomersScreen extends ConsumerWidget {
-  const AdminCustomersScreen({Key? key}) : super(key: key);
+  const AdminCustomersScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +62,7 @@ class AdminCustomersScreen extends ConsumerWidget {
                     separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final customer = customers[index];
-                      final bool hasDebt = customer.currentBalance > 0;
+                      final bool hasDebt = customer.balance > 0;
                       
                       return AppCard(
                         onTap: () {},
@@ -82,7 +82,7 @@ class AdminCustomersScreen extends ConsumerWidget {
                                 children: [
                                   Text(customer.name, style: AppTextStyles.bodyBold),
                                   const SizedBox(height: 4),
-                                  Text('${customer.neighborhood} • ${customer.phone}', style: AppTextStyles.caption),
+                                  Text('${customer.address ?? 'بێ ناونیشان'} • ${customer.phone ?? ''}', style: AppTextStyles.caption),
                                 ],
                               ),
                             ),
@@ -91,7 +91,7 @@ class AdminCustomersScreen extends ConsumerWidget {
                               children: [
                                 if (hasDebt) ...[
                                   Text('قەرزدار', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
-                                  Text('${customer.currentBalance.toInt()} د.ع', style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger)),
+                                  Text('${customer.balance.toInt()} د.ع', style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger)),
                                 ] else ...[
                                   Text('پاکە', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
                                   Text('0 د.ع', style: AppTextStyles.bodyBold.copyWith(color: AppColors.success)),

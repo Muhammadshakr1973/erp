@@ -12,7 +12,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
-  const AdminDashboardScreen({Key? key}) : super(key: key);
+  const AdminDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -232,6 +232,7 @@ class AdminDashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -254,7 +255,7 @@ class AdminDashboardScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: AppRadius.radiusSm,
                 ),
                 child: Icon(Icons.arrow_upward, color: color, size: 16),
