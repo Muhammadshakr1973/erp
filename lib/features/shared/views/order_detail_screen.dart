@@ -21,7 +21,7 @@ class OrderDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('پسوڵەی #$orderId', style: AppTextStyles.h2),
         actions: [
-          IconButton(icon: const Icon(AppIcons.print), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.print_outlined), onPressed: () {}),
           IconButton(icon: const Icon(AppIcons.edit), onPressed: () {}),
         ],
       ),

@@ -18,7 +18,7 @@ class TripOrdersScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('وردەکاری گەشت #$tripId', style: AppTextStyles.h2),
         actions: [
-          IconButton(icon: const Icon(AppIcons.routeMap), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.map_outlined), onPressed: () {}),
         ],
       ),
       body: Column(
@@ -101,7 +101,7 @@ class TripOrdersScreen extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: AppTextStyles.h2.copyWith(color: color ?? AppColors.textPrimary),
+          style: AppTextStyles.h2.copyWith(color: color ?? AppColors.textPrimaryLight),
         ),
       ],
     );
