@@ -12,6 +12,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(

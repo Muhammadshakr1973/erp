@@ -14,6 +14,7 @@ class OrderDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final theme = Theme.of(context);
     final isDesktop = MediaQuery.of(context).size.width >= AppBreakpoints.desktopMin;
 
