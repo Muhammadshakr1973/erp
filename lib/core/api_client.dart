@@ -60,8 +60,19 @@ class ApiClient {
       if (error.response != null && error.response!.data != null) {
         try {
           final data = error.response!.data;
-          if (data['message'] != null) {
-            return data['message'].toString();
+          if (data is Map) {
+            if (data['errors'] != null && data['errors'] is Map) {
+              final errors = data['errors'] as Map;
+              if (errors.isNotEmpty) {
+                final firstError = errors.values.first;
+                if (firstError is List && firstError.isNotEmpty) {
+                  return firstError.first.toString();
+                }
+              }
+            }
+            if (data['message'] != null) {
+              return data['message'].toString();
+            }
           }
         } catch (_) {}
       }

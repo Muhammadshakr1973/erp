@@ -12,11 +12,18 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    String roleName = 'salesman';
+    if (json['role'] is Map) {
+      roleName = json['role']['name'] ?? 'salesman';
+    } else if (json['role'] is String) {
+      roleName = json['role'];
+    }
+
     return UserModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
-      role: json['role'] ?? 'salesman', // Default fallback
+      role: roleName,
     );
   }
 
