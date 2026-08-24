@@ -50,7 +50,7 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی زیادکرا',
-            'data' => $product->load(['category', 'stocks'])
+            'data' => $product->load(['category', 'supplier', 'stocks'])
         ], 201);
     }
 
@@ -87,7 +87,7 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی نوێکرایەوە',
-            'data' => $product->load(['category', 'stocks'])
+            'data' => $product->load(['category', 'supplier', 'stocks'])
         ]);
     }
 
