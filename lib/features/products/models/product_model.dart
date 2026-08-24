@@ -6,6 +6,7 @@ class ProductModel {
   final int? categoryId;
   final int? supplierId;
   final dynamic category;
+  final dynamic supplier;
   final String? unit;
   final double costPrice;
   final double priceN1;
@@ -24,6 +25,7 @@ class ProductModel {
     this.categoryId,
     this.supplierId,
     this.category,
+    this.supplier,
     this.unit,
     required this.costPrice,
     required this.priceN1,
@@ -44,6 +46,7 @@ class ProductModel {
       categoryId: json['category_id'],
       supplierId: json['supplier_id'],
       category: json['category'],
+      supplier: json['supplier'],
       unit: json['unit'],
       costPrice: double.tryParse(json['cost_price']?.toString() ?? '0') ?? 0.0,
       priceN1: double.tryParse(json['price_n1']?.toString() ?? '0') ?? 0.0,

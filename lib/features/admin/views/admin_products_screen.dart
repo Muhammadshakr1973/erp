@@ -37,15 +37,15 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         content: Text('دڵنیایت لە سڕینەوەی "${product.name}"؟'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('نەخێر'),
-          ),
-          TextButton(
             onPressed: () {
               ref.read(productActionsProvider).deleteProduct(product.id);
               Navigator.pop(context);
             },
             child: const Text('بەڵێ', style: TextStyle(color: AppColors.danger)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('نەخێر'),
           ),
         ],
       ),
@@ -233,27 +233,31 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     children: [
                                       Text(
                                         product.name,
-                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
                                       if (product.unit == null || product.unit != 'دانە') ...[
                                         Text(
                                           '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: theme.colorScheme.onSurfaceVariant,
-                                          ),
+                                          style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                                         ),
                                         const SizedBox(height: 2),
                                       ],
-                                      if (product.barcode != null && product.barcode!.isNotEmpty)
-                                        Text(
-                                          'بارکۆد: ${product.barcode}',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: theme.colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
+                                      Text(
+                                        'بارکۆد: ${product.barcode}${product.sku != null && product.sku!.isNotEmpty ? ' • SKU: ${product.sku}' : ''}',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -262,13 +266,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      '${product.priceN1.toInt()} د.ع',
-                                      style: AppTextStyles.price.copyWith(
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
+                                    Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                                    Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.green.shade600)),
+                                    Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
+                                    Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
+                                    const SizedBox(height: 4),
                                     StatusBadge(
                                       label: 'ستۆک: $totalStock',
                                       type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
@@ -334,27 +336,38 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product.name, style: AppTextStyles.bodyBold),
-                                  const SizedBox(height: 4),
+                                  Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
                                   if (product.unit == null || product.unit != 'دانە') ...[
                                     Text(
                                       '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
-                                      style: AppTextStyles.caption,
+                                      style: AppTextStyles.caption.copyWith(fontSize: 10),
                                     ),
                                     const SizedBox(height: 2),
                                   ],
-                                  if (product.barcode != null && product.barcode!.isNotEmpty)
-                                    Text(
-                                      'بارکۆد: ${product.barcode}',
-                                      style: AppTextStyles.caption,
-                                    ),
+                                  Text(
+                                    'بارکۆد: ${product.barcode}${product.sku != null && product.sku!.isNotEmpty ? ' • SKU: ${product.sku}' : ''}',
+                                    style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
                               ),
                             ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('${product.priceN1.toInt()} د.ع', style: AppTextStyles.price),
+                                Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                                Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
+                                Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
+                                Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
                                 const SizedBox(height: 4),
                                 StatusBadge(
                                   label: 'ستۆک: $totalStock',
