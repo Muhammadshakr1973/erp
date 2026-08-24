@@ -10,7 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -131,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: Icon(
                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
                         size: 20,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       onPressed: () {
                         setState(() {
@@ -151,12 +151,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   AppButton(
                     text: 'چوونەژوورەوە بە بارکۆد',
                     icon: Icons.qr_code_scanner,
-                    isOutlined: true,
+                    type: AppButtonType.outline,
                     size: AppButtonSize.lg,
                     onPressed: () {
                       CameraBarcodeScanner.show(context, (barcode) async {
                         final success = await ref.read(authProvider.notifier).loginByBarcode(barcode);
-                        if (success && mounted) {
+                        if (!mounted) return;
+                        
+                        if (success) {
                           final user = ref.read(authProvider).user;
                           if (user != null) {
                             if (user.role == 'admin' || user.role == 'owner') {
@@ -175,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               );
                             }
                           }
-                        } else if (mounted) {
+                        } else {
                           final error = ref.read(authProvider).error;
                           if (error != null) {
                             AppSnackbar.show(
