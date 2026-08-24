@@ -65,6 +65,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _isActive = p?.isActive ?? true;
   }
 
+  bool _isValidImageUrl(String url) {
+    if (url.trim().isEmpty) return false;
+    final uri = Uri.tryParse(url.trim());
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -232,7 +238,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 onChanged: (v) => setState(() {}),
                               ),
                             ),
-                            if (_imageUrlController.text.isNotEmpty) ...[
+                            if (_isValidImageUrl(_imageUrlController.text)) ...[
                               const SizedBox(width: AppSpacing.md),
                               Container(
                                 width: 80,
