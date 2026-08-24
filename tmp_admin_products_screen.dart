@@ -199,7 +199,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               builder: (context) => ProductFormDialog(product: product),
                             );
                           },
-                          onLongPress: () => _showDeleteDialog(context, ref, product),
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Row(
@@ -238,18 +237,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      if (product.unit == null || product.unit != 'دانە') ...[
+                                      if (product.barcode != null && product.barcode!.isNotEmpty) ...[
                                         Text(
-                                          '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
+                                          'بارکۆد: ${product.barcode}',
                                           style: AppTextStyles.caption.copyWith(
                                             color: theme.colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
                                       ],
-                                      if (product.barcode != null && product.barcode!.isNotEmpty)
+                                      if (product.unit == null || product.unit != 'دانە')
                                         Text(
-                                          'بارکۆد: ${product.barcode}',
+                                          '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
                                           style: AppTextStyles.caption.copyWith(
                                             color: theme.colorScheme.onSurfaceVariant,
                                           ),
@@ -275,7 +274,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(width: AppSpacing.md),
+                                const SizedBox(width: AppSpacing.xs),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: AppColors.danger, size: 22),
+                                  onPressed: () => _showDeleteDialog(context, ref, product),
+                                ),
                               ],
                             ),
                           ),
@@ -305,7 +308,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             builder: (context) => ProductFormDialog(product: product),
                           );
                         },
-                        onLongPress: () => _showDeleteDialog(context, ref, product),
                         child: Row(
                           children: [
                             if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
@@ -336,18 +338,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 children: [
                                   Text(product.name, style: AppTextStyles.bodyBold),
                                   const SizedBox(height: 4),
-                                  if (product.unit == null || product.unit != 'دانە') ...[
-                                    Text(
-                                      '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
-                                      style: AppTextStyles.caption,
-                                    ),
-                                    const SizedBox(height: 2),
-                                  ],
-                                  if (product.barcode != null && product.barcode!.isNotEmpty)
-                                    Text(
-                                      'بارکۆد: ${product.barcode}',
-                                      style: AppTextStyles.caption,
-                                    ),
+                                  Text(
+                                    '${product.unit == null || product.unit != 'دانە' ? '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە • ' : ''}بارکۆد: ${product.barcode}',
+                                    style: AppTextStyles.caption,
+                                  ),
                                 ],
                               ),
                             ),
@@ -362,7 +356,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(width: AppSpacing.md),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: AppColors.danger),
+                              onPressed: () => _showDeleteDialog(context, ref, product),
+                            )
                           ],
                         ),
                       );
