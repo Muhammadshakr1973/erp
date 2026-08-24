@@ -388,11 +388,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     ),
                                     items: [
                                       ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                                      const DropdownMenuItem(value: -1, child: Text('+ جۆرێکی نوێ زیادبکە', style: TextStyle(color: AppColors.primary))),
+                                      DropdownMenuItem(value: -1, child: Text('+ جۆرێکی نوێ زیادبکە', style: TextStyle(color: theme.colorScheme.primary))),
                                     ],
                                     onChanged: (v) {
                                       if (v == -1) {
-                                        _showAddCategoryDialog(context, ref);
+                                        _showAddCategoryDialog();
                                       } else {
                                         setState(() => _selectedCategoryId = v);
                                       }
