@@ -200,86 +200,98 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             );
                           },
                           onLongPress: () => _showDeleteDialog(context, ref, product),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Row(
-                              children: [
-                                if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.network(
-                                        product.imagePath!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          color: theme.colorScheme.surfaceContainerHighest,
-                                          child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 24),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                ],
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        product.name,
-                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
-                                        style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      if (product.unit == null || product.unit != 'دانە') ...[
-                                        Text(
-                                          '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
-                                          style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                        ),
-                                        const SizedBox(height: 2),
-                                      ],
-                                      Text(
-                                        'بارکۆد: ${product.barcode}${product.sku != null && product.sku!.isNotEmpty ? ' • SKU: ${product.sku}' : ''}',
-                                        style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Row(
                                   children: [
-                                    Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                                    Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.green.shade600)),
-                                    Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
-                                    Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                                    const SizedBox(height: 4),
-                                    StatusBadge(
-                                      label: 'ستۆک: $totalStock',
-                                      type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                    if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            product.imagePath!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Container(
+                                              color: theme.colorScheme.surfaceContainerHighest,
+                                              child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 24),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.md),
+                                    ],
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            product.name,
+                                            style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                            style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
+                                            Text(
+                                              [
+                                                if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
+                                                if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
+                                              ].join(' • '),
+                                              style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 2),
+                                          ],
+                                          Text(
+                                            'بارکۆد: ${product.barcode}',
+                                            style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                                        Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.green.shade600)),
+                                        Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
+                                        Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
+                                      ],
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
                                   ],
                                 ),
-                                const SizedBox(width: AppSpacing.md),
-                              ],
-                            ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: StatusBadge(
+                                  label: 'ستۆک: $totalStock',
+                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -308,74 +320,86 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           );
                         },
                         onLongPress: () => _showDeleteDialog(context, ref, product),
-                        child: Row(
+                        child: Stack(
                           children: [
-                            if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    product.imagePath!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      color: theme.colorScheme.surfaceContainerHighest,
-                                      child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.md),
-                            ],
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
-                                    style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  if (product.unit == null || product.unit != 'دانە') ...[
-                                    Text(
-                                      '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
-                                      style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                    ),
-                                    const SizedBox(height: 2),
-                                  ],
-                                  Text(
-                                    'بارکۆد: ${product.barcode}${product.sku != null && product.sku!.isNotEmpty ? ' • SKU: ${product.sku}' : ''}',
-                                    style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            Row(
                               children: [
-                                Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                                Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
-                                Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
-                                Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                                const SizedBox(height: 4),
-                                StatusBadge(
-                                  label: 'ستۆک: $totalStock',
-                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
+                                  Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        product.imagePath!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          color: theme.colorScheme.surfaceContainerHighest,
+                                          child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.md),
+                                ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
+                                        Text(
+                                          [
+                                            if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
+                                            if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
+                                          ].join(' • '),
+                                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                      ],
+                                      Text(
+                                        'بارکۆد: ${product.barcode}',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                                    Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
+                                    Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
+                                    Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
+                                  ],
+                                ),
+                                const SizedBox(width: AppSpacing.md),
                               ],
                             ),
-                            const SizedBox(width: AppSpacing.md),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: StatusBadge(
+                                label: 'ستۆک: $totalStock',
+                                type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                              ),
+                            ),
                           ],
                         ),
                       );
