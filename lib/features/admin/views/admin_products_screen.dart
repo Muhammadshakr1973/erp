@@ -193,6 +193,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         final bool isLowStock = totalStock < 20;
 
                         return AppCard(
+                          padding: const EdgeInsets.all(8.0),
                           onTap: () {
                             showDialog(
                               context: context,
@@ -201,9 +202,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           },
                           onLongPress: () => _showDeleteDialog(context, ref, product),
                           child: Stack(
+                            clipBehavior: Clip.none,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.all(4.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
                                 child: Row(
                                   children: [
                                     if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
@@ -284,10 +286,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                 ),
                               ),
                               Positioned(
-                                top: 4,
-                                right: 4,
+                                top: -2,
+                                right: 0,
                                 child: StatusBadge(
-                                  label: 'ستۆک: $totalStock',
+                                  label: '$totalStock',
                                   type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
                                 ),
                               ),
@@ -312,97 +314,99 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 
                       final bool isLowStock = totalStock < 20;
 
-                      return AppCard(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => ProductFormDialog(product: product),
-                          );
-                        },
-                        onLongPress: () => _showDeleteDialog(context, ref, product),
-                        child: Stack(
-                          children: [
-                            Row(
-                              children: [
-                                if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
-                                  Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        product.imagePath!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          color: theme.colorScheme.surfaceContainerHighest,
-                                          child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                        return AppCard(
+                          padding: const EdgeInsets.all(8.0),
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => ProductFormDialog(product: product),
+                            );
+                          },
+                          onLongPress: () => _showDeleteDialog(context, ref, product),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Row(
+                                children: [
+                                  if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          product.imagePath!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            color: theme.colorScheme.surfaceContainerHighest,
+                                            child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                ],
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
-                                        style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
+                                    const SizedBox(width: AppSpacing.md),
+                                  ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 2),
                                         Text(
-                                          [
-                                            if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
-                                            if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
-                                          ].join(' • '),
+                                          'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
                                           style: AppTextStyles.caption.copyWith(fontSize: 10),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
+                                        if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
+                                          Text(
+                                            [
+                                              if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
+                                              if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
+                                            ].join(' • '),
+                                            style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                        ],
+                                        Text(
+                                          'بارکۆد: ${product.barcode}',
+                                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
-                                      Text(
-                                        'بارکۆد: ${product.barcode}',
-                                        style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+                                      Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
+                                      Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
+                                      Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
                                     ],
                                   ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                                    Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
-                                    Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
-                                    Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                                  ],
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                              ],
-                            ),
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: StatusBadge(
-                                label: 'ستۆک: $totalStock',
-                                type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                  const SizedBox(width: AppSpacing.md),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      );
+                              Positioned(
+                                top: -2,
+                                right: 0,
+                                child: StatusBadge(
+                                  label: '$totalStock',
+                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                     },
                   );
                 },
