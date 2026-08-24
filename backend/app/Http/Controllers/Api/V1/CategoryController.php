@@ -8,6 +8,16 @@ use Illuminate\Http\JsonResponse;
 
 class CategoryController extends Controller
 {
+    public function store(IlluminateHttpRequest $request): JsonResponse
+    {
+        $validated = $request->validate(['name' => 'required|string|max:255|unique:categories,name']);
+        $category = Category::create($validated);
+        return response()->json([
+            'message' => 'جۆرەکە زیادکرا',
+            'data' => $category
+        ], 201);
+    }
+
     public function index(): JsonResponse
     {
         $categories = Category::orderBy('name')->get();

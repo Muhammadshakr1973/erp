@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../models/product_model.dart';
 import '../providers/products_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/suppliers_provider.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductModel? product;
@@ -32,8 +33,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _unitsPerCartonController;
   late TextEditingController _unitController;
   late TextEditingController _stockController;
+  late TextEditingController _imageUrlController;
 
   int? _selectedCategoryId;
+  int? _selectedSupplierId;
   bool _isActive = true;
 
   @override
@@ -53,10 +56,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceN1Controller = TextEditingController(text: p != null ? p.priceN1.toString() : '');
     _priceN2Controller = TextEditingController(text: p != null ? p.priceN2.toString() : '');
     _priceN3Controller = TextEditingController(text: p != null ? p.priceN3.toString() : '');
-    _unitsPerCartonController = TextEditingController(text: p?.unitsPerCarton.toString() ?? '1');
+    _unitsPerCartonController = TextEditingController(text: p?.unitsPerCarton.toString() ?? '12');
     _unitController = TextEditingController(text: p?.unit ?? '');
     _stockController = TextEditingController(text: p != null ? currentStock.toString() : '0');
+    _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;
+    _selectedSupplierId = p?.supplierId;
     _isActive = p?.isActive ?? true;
   }
 
@@ -72,6 +77,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _unitsPerCartonController.dispose();
     _unitController.dispose();
     _stockController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -88,11 +94,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'price_n1': double.tryParse(_priceN1Controller.text) ?? 0,
       'price_n2': double.tryParse(_priceN2Controller.text) ?? 0,
       'price_n3': double.tryParse(_priceN3Controller.text) ?? 0,
-      'units_per_carton': int.tryParse(_unitsPerCartonController.text) ?? 1,
+      'units_per_carton': int.tryParse(_unitsPerCartonController.text) ?? 12,
       'unit': _unitController.text,
       'category_id': _selectedCategoryId,
+      'supplier_id': _selectedSupplierId,
       'is_active': _isActive ? 1 : 0,
       'initial_stock': int.tryParse(_stockController.text) ?? 0,
+      'image_path': _imageUrlController.text,
     };
 
     try {
@@ -114,14 +122,60 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+  
+  Future<void> _showAddCategoryDialog() async {
+    String newCategoryName = '';
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('زیادکردنی کاتیگۆری نوێ'),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
+            onChanged: (val) => newCategoryName = val,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('پاشگەزبوونەوە'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, newCategoryName),
+              child: const Text('زیادکردن'),
+            ),
+          ],
+        );
+      }
+    );
+
+    if (result != null && result.trim().isNotEmpty) {
+      try {
+        final newCategory = await ref.read(categoryActionsProvider).addCategory(result.trim());
+        setState(() {
+          _selectedCategoryId = newCategory.id;
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('کێشە لە زیادکردنی کاتیگۆری: $e')),
+          );
+        }
+      }
+    } else {
+      // Reset dropdown if cancelled
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesListProvider);
+    final suppliersAsync = ref.watch(suppliersListProvider);
     final theme = Theme.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobile = screenWidth < 600;
+    final bool isMobile = screenWidth < 800;
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -132,8 +186,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: SizedBox(
-        width: isMobile ? double.infinity : 500,
-        height: screenHeight * 0.85,
+        width: isMobile ? double.infinity : 900,
+        height: screenHeight * 0.9,
         child: Padding(
           padding: EdgeInsets.all(isMobile ? 16 : 24),
           child: Form(
@@ -155,141 +209,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        AppTextField(
-                          controller: _nameController,
-                          labelText: 'ناوی کاڵا',
-                          hintText: 'ناوی کاڵا بنووسە',
-                          validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        if (isMobile) ...[
-                          AppTextField(
-                            controller: _barcodeController,
-                            labelText: 'بارکۆد',
-                            hintText: 'بارکۆد لێرە بنووسە',
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.qr_code_scanner),
-                              onPressed: () {
-                                CameraBarcodeScanner.show(context, (scanned) {
-                                  setState(() {
-                                    _barcodeController.text = scanned;
-                                  });
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          AppTextField(
-                            controller: _skuController,
-                            labelText: 'SKU کۆدی ناوخۆیی',
-                            hintText: 'کۆدی ناوخۆیی بنووسە',
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
                               Expanded(
                                 child: AppTextField(
-                                  controller: _barcodeController,
-                                  labelText: 'بارکۆد',
-                                  hintText: 'بارکۆد لێرە بنووسە',
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.qr_code_scanner),
-                                    onPressed: () {
-                                      CameraBarcodeScanner.show(context, (scanned) {
-                                        setState(() {
-                                          _barcodeController.text = scanned;
-                                        });
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _skuController,
-                                  labelText: 'SKU کۆدی ناوخۆیی',
-                                  hintText: 'کۆدی ناوخۆیی بنووسە',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        categoriesAsync.when(
-                          data: (categories) {
-                            final int? validValue = categories.any((c) => c.id == _selectedCategoryId)
-                                ? _selectedCategoryId
-                                : null;
-                            return DropdownButtonFormField<int>(
-                              value: validValue,
-                              decoration: InputDecoration(
-                                labelText: 'جۆری کاڵا (Category)',
-                                labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                filled: true,
-                                fillColor: theme.colorScheme.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: BorderSide(
-                                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: BorderSide(
-                                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: BorderSide(
-                                    color: theme.colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              items: categories.map((c) {
-                                return DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(c.name),
-                                );
-                              }).toList(),
-                              onChanged: (v) => setState(() => _selectedCategoryId = v),
-                            );
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (err, stack) => const Text('کێشە لە هێنانی جۆرەکان'),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        if (isMobile) ...[
-                          AppTextField(
-                            controller: _unitsPerCartonController,
-                            labelText: 'دانە لە کارتۆندا',
-                            hintText: 'ژمارەی دانەکان بنووسە',
+                                  controller: _unitsPerCartonController,
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: AppSpacing.md),
                           AppTextField(
                             controller: _unitController,
                             labelText: 'یەکە (دانە، کیلۆ...)',
-                            hintText: 'دانە، کیلۆ یان کارتۆن',
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _unitsPerCartonController,
+                            hintText: 'دانە، کیلۆ',
                                   labelText: 'دانە لە کارتۆندا',
-                                  hintText: 'ژمارەی دانەکان بنووسە',
+                                  hintText: 'ژمارەی دانەکان',
                                   keyboardType: TextInputType.number,
                                 ),
                               ),
@@ -298,130 +229,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 child: AppTextField(
                                   controller: _unitController,
                                   labelText: 'یەکە (دانە، کیلۆ...)',
-                                  hintText: 'دانە، کیلۆ یان کارتۆن',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        if (isMobile) ...[
-                          AppTextField(
-                            controller: _costPriceController,
-                            labelText: 'نرخی کڕین',
-                            hintText: 'بڕی نرخ بنووسە',
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          AppTextField(
-                            controller: _priceN1Controller,
-                            labelText: 'نرخی فرۆشتن 1',
-                            hintText: 'بڕی نرخ بنووسە',
-                            keyboardType: TextInputType.number,
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _costPriceController,
-                                  labelText: 'نرخی کڕین',
-                                  hintText: 'بڕی نرخ بنووسە',
-                                  keyboardType: TextInputType.number,
+                                  hintText: 'دانە، کیلۆ',
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: AppTextField(
-                                  controller: _priceN1Controller,
-                                  labelText: 'نرخی فرۆشتن 1',
-                                  hintText: 'بڕی نرخ بنووسە',
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        if (isMobile) ...[
-                          AppTextField(
-                            controller: _priceN2Controller,
-                            labelText: 'نرخی فرۆشتن 2',
-                            hintText: 'بڕی نرخ بنووسە',
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          AppTextField(
-                            controller: _priceN3Controller,
-                            labelText: 'نرخی فرۆشتن 3',
-                            hintText: 'بڕی نرخ بنووسە',
-                            keyboardType: TextInputType.number,
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _priceN2Controller,
-                                  labelText: 'نرخی فرۆشتن 2',
-                                  hintText: 'بڕی نرخ بنووسە',
+                                  controller: _stockController,
+                                  labelText: 'مەوجودکراو (Stock)',
+                                  hintText: 'بڕی عەدەدی کۆگا',
+
                                   keyboardType: TextInputType.number,
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _priceN3Controller,
-                                  labelText: 'نرخی فرۆشتن 3',
-                                  hintText: 'بڕی نرخ بنووسە',
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _stockController,
-                          labelText: 'مەوجودکراو / کۆگا (Stock Quantity)',
-                          hintText: 'بڕی عەدەدی کۆگا بنووسە',
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        SwitchListTile(
-                          title: const Text('چالاكە'),
-                          value: _isActive,
-                          onChanged: (v) => setState(() => _isActive = v),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('پاشگەزبوونەوە'),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    SizedBox(
-                      width: isMobile ? 120 : 140,
-                      child: AppButton(
-                        text: 'پاشەکەوتکردن',
-                        isLoading: _isLoading,
-                        onPressed: _submit,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

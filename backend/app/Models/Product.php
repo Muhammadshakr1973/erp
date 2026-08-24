@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Product extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
+    protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'supplier_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
     protected $casts = ['is_active' => 'boolean', 'units_per_carton' => 'integer'];
     public function category()
     {

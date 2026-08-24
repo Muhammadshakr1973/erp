@@ -4,6 +4,7 @@ class ProductModel {
   final String? sku;
   final String barcode;
   final int? categoryId;
+  final int? supplierId;
   final dynamic category;
   final String? unit;
   final double costPrice;
@@ -11,6 +12,7 @@ class ProductModel {
   final double priceN2;
   final double priceN3;
   final int unitsPerCarton;
+  final String? imagePath;
   final bool isActive;
   final List<dynamic> stocks;
 
@@ -20,6 +22,7 @@ class ProductModel {
     this.sku,
     required this.barcode,
     this.categoryId,
+    this.supplierId,
     this.category,
     this.unit,
     required this.costPrice,
@@ -27,6 +30,7 @@ class ProductModel {
     required this.priceN2,
     required this.priceN3,
     required this.unitsPerCarton,
+    this.imagePath,
     this.isActive = true,
     this.stocks = const [],
   });
@@ -38,13 +42,15 @@ class ProductModel {
       sku: json['sku'],
       barcode: json['barcode'] ?? '',
       categoryId: json['category_id'],
+      supplierId: json['supplier_id'],
       category: json['category'],
       unit: json['unit'],
       costPrice: double.tryParse(json['cost_price']?.toString() ?? '0') ?? 0.0,
       priceN1: double.tryParse(json['price_n1']?.toString() ?? '0') ?? 0.0,
       priceN2: double.tryParse(json['price_n2']?.toString() ?? '0') ?? 0.0,
       priceN3: double.tryParse(json['price_n3']?.toString() ?? '0') ?? 0.0,
-      unitsPerCarton: json['units_per_carton'] ?? 1,
+      unitsPerCarton: json['units_per_carton'] ?? 12,
+      imagePath: json['image_path'],
       isActive: json['is_active'] == 1 || json['is_active'] == true,
       stocks: json['stocks'] ?? [],
     );

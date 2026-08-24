@@ -25,12 +25,14 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:255',
             'barcode' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'nullable|string|max:255',
             'units_per_carton' => 'nullable|integer|min:1',
             'cost_price' => 'nullable|numeric|min:0',
             'price_n1' => 'nullable|numeric|min:0',
             'price_n2' => 'nullable|numeric|min:0',
             'price_n3' => 'nullable|numeric|min:0',
+            'image_path' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
 
@@ -49,12 +51,14 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:255',
             'barcode' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'nullable|string|max:255',
             'units_per_carton' => 'nullable|integer|min:1',
             'cost_price' => 'nullable|numeric|min:0',
             'price_n1' => 'nullable|numeric|min:0',
             'price_n2' => 'nullable|numeric|min:0',
             'price_n3' => 'nullable|numeric|min:0',
+            'image_path' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
 
