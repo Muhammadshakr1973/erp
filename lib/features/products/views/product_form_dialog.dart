@@ -152,9 +152,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     if (result != null && result.trim().isNotEmpty) {
       try {
         final newCategory = await ref.read(categoryActionsProvider).addCategory(result.trim());
-        setState(() {
-          _selectedCategoryId = newCategory.id;
-        });
+        // چاوەڕێ دەکەین تا لیستەکە نوێ دەبێتەوە
+        await ref.read(categoriesListProvider.future);
+        
+        if (mounted) {
+          setState(() {
+            _selectedCategoryId = newCategory.id;
+          });
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
