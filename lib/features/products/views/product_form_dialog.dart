@@ -209,16 +209,327 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        
+                        // Image URL and Preview
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: _imageUrlController,
+                                labelText: 'لینکی وێنەی کاڵا',
+                                hintText: 'لینک لێرە دابنێ (بۆ نموونە https://...)',
+                                onChanged: (v) => setState(() {}),
+                              ),
+                            ),
+                            if (_imageUrlController.text.isNotEmpty) ...[
+                              const SizedBox(width: AppSpacing.md),
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    _imageUrlController.text,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.grey),
+                                  ),
+                                ),
+                              ),
+                            ]
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Basic Info
+                        if (isMobile) ...[
+                          AppTextField(
+                            controller: _nameController,
+                            labelText: 'ناوی کاڵا',
+                            hintText: 'ناوی کاڵا بنووسە',
+                            validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _barcodeController,
+                            labelText: 'بارکۆد',
+                            hintText: 'بارکۆد لێرە بنووسە',
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.qr_code_scanner),
+                              onPressed: () {
+                                CameraBarcodeScanner.show(context, (scanned) {
+                                  setState(() {
+                                    _barcodeController.text = scanned;
+                                  });
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _skuController,
+                            labelText: 'SKU کۆدی ناوخۆیی',
+                            hintText: 'کۆدی ناوخۆیی بنووسە',
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: AppTextField(
+                                  controller: _nameController,
+                                  labelText: 'ناوی کاڵا',
+                                  hintText: 'ناوی کاڵا بنووسە',
+                                  validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                flex: 1,
+                                child: AppTextField(
+                                  controller: _barcodeController,
+                                  labelText: 'بارکۆد',
+                                  hintText: 'بارکۆد',
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    onPressed: () {
+                                      CameraBarcodeScanner.show(context, (scanned) {
+                                        setState(() {
+                                          _barcodeController.text = scanned;
+                                        });
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                flex: 1,
+                                child: AppTextField(
+                                  controller: _skuController,
+                                  labelText: 'SKU کۆد',
+                                  hintText: 'کۆدی ناوخۆیی',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        
+                        const SizedBox(height: AppSpacing.md),
+                        
+                        // Dropdowns
+                        Builder(
+                          builder: (context) {
+                            Widget categoryDropdown = categoriesAsync.when(
+                              data: (categories) {
+                                final int? validValue = categories.any((c) => c.id == _selectedCategoryId)
+                                    ? _selectedCategoryId
+                                    : null;
+                                return DropdownButtonFormField<int>(
+                                  value: validValue,
+                                  decoration: InputDecoration(
+                                    labelText: 'جۆری کاڵا (Category)',
+                                    labelStyle: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    filled: true,
+                                    fillColor: theme.colorScheme.surface,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                                  ),
+                                  items: [
+                                    ...categories.map((c) {
+                                      return DropdownMenuItem(
+                                        value: c.id,
+                                        child: Text(c.name),
+                                      );
+                                    }),
+                                    const DropdownMenuItem(
+                                      value: -1,
+                                      child: Text('+ زیادکردنی کاتیگۆری نوێ', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                                    )
+                                  ],
+                                  onChanged: (v) {
+                                    if (v == -1) {
+                                      _showAddCategoryDialog();
+                                    } else {
+                                      setState(() => _selectedCategoryId = v);
+                                    }
+                                  },
+                                );
+                              },
+                              loading: () => const Center(child: CircularProgressIndicator()),
+                              error: (err, stack) => const Text('کێشە لە هێنانی جۆرەکان'),
+                            );
+
+                            Widget supplierDropdown = suppliersAsync.when(
+                              data: (suppliers) {
+                                final int? validValue = suppliers.any((s) => s.id == _selectedSupplierId)
+                                    ? _selectedSupplierId
+                                    : null;
+                                return DropdownButtonFormField<int>(
+                                  value: validValue,
+                                  decoration: InputDecoration(
+                                    labelText: 'سەپڵایەر (Supplier)',
+                                    labelStyle: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    filled: true,
+                                    fillColor: theme.colorScheme.surface,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                                  ),
+                                  items: suppliers.map((s) {
+                                    return DropdownMenuItem(
+                                      value: s.id,
+                                      child: Text(s.name),
+                                    );
+                                  }).toList(),
+                                  onChanged: (v) => setState(() => _selectedSupplierId = v),
+                                );
+                              },
+                              loading: () => const Center(child: CircularProgressIndicator()),
+                              error: (err, stack) => const Text('کێشە لە هێنانی سەپڵایەرەکان'),
+                            );
+
+                            if (isMobile) {
+                              return Column(
+                                children: [
+                                  categoryDropdown,
+                                  const SizedBox(height: AppSpacing.md),
+                                  supplierDropdown,
+                                ],
+                              );
+                            } else {
+                              return Row(
+                                children: [
+                                  Expanded(child: categoryDropdown),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(child: supplierDropdown),
+                                ],
+                              );
+                            }
+                          }
+                        ),
+
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Prices
+                        if (isMobile) ...[
+                          AppTextField(
+                            controller: _costPriceController,
+                            labelText: 'نرخی کڕین',
+                            hintText: 'بڕی نرخ بنووسە',
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _priceN1Controller,
+                            labelText: 'نرخی فرۆشتن 1',
+                            hintText: 'بڕی نرخ بنووسە',
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _priceN2Controller,
+                            labelText: 'نرخی فرۆشتن 2',
+                            hintText: 'بڕی نرخ بنووسە',
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _priceN3Controller,
+                            labelText: 'نرخی فرۆشتن 3',
+                            hintText: 'بڕی نرخ بنووسە',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
                               Expanded(
                                 child: AppTextField(
-                                  controller: _unitsPerCartonController,
+                                  controller: _costPriceController,
+                                  labelText: 'نرخی کڕین',
+                                  hintText: 'بڕی نرخ بنووسە',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _priceN1Controller,
+                                  labelText: 'نرخی فرۆشتن 1',
+                                  hintText: 'بڕی نرخ',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _priceN2Controller,
+                                  labelText: 'نرخی فرۆشتن 2',
+                                  hintText: 'بڕی نرخ',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _priceN3Controller,
+                                  labelText: 'نرخی فرۆشتن 3',
+                                  hintText: 'بڕی نرخ',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        
+                        const SizedBox(height: AppSpacing.md),
+
+                        // Quantities & Status
+                        if (isMobile) ...[
+                          AppTextField(
+                            controller: _unitsPerCartonController,
+                            labelText: 'دانە لە کارتۆندا',
+                            hintText: 'ژمارەی دانەکان بنووسە',
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: AppSpacing.md),
                           AppTextField(
                             controller: _unitController,
                             labelText: 'یەکە (دانە، کیلۆ...)',
-                            hintText: 'دانە، کیلۆ',
+                            hintText: 'دانە، کیلۆ یان کارتۆن',
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppTextField(
+                            controller: _stockController,
+                            labelText: 'مەوجودکراو / کۆگا (Stock Quantity)',
+                            hintText: 'بڕی عەدەدی کۆگا بنووسە',
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          SwitchListTile(
+                            title: const Text('چالاكە'),
+                            value: _isActive,
+                            onChanged: (v) => setState(() => _isActive = v),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _unitsPerCartonController,
                                   labelText: 'دانە لە کارتۆندا',
                                   hintText: 'ژمارەی دانەکان',
                                   keyboardType: TextInputType.number,
@@ -238,8 +549,50 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   controller: _stockController,
                                   labelText: 'مەوجودکراو (Stock)',
                                   hintText: 'بڕی عەدەدی کۆگا',
-
                                   keyboardType: TextInputType.number,
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: SwitchListTile(
+                                  title: const Text('چالاكە'),
+                                  value: _isActive,
+                                  onChanged: (v) => setState(() => _isActive = v),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('پاشگەزبوونەوە'),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(
+                      width: isMobile ? 120 : 140,
+                      child: AppButton(
+                        text: 'پاشەکەوتکردن',
+                        isLoading: _isLoading,
+                        onPressed: _submit,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
