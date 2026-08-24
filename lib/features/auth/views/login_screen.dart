@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/auth_provider.dart';
@@ -145,6 +146,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isLoading: authState.isLoading,
                     size: AppButtonSize.lg,
                     onPressed: _handleLogin,
+                  ),
+                  const SizedBox(height: 16),
+                  AppButton(
+                    text: 'چوونەژوورەوە بە بارکۆد',
+                    icon: Icons.qr_code_scanner,
+                    isOutlined: true,
+                    size: AppButtonSize.lg,
+                    onPressed: () {
+                      CameraBarcodeScanner.show(context, (barcode) async {
+                        final success = await ref.read(authProvider.notifier).loginByBarcode(barcode);
+                        if (success && mounted) {
+                          final user = ref.read(authProvider).user;
+                          if (user != null) {
+                            if (user.role == 'admin' || user.role == 'owner') {
+                              context.go('/admin');
+                            } else if (user.role == 'salesman') {
+                              context.go('/salesman');
+                            } else if (user.role == 'warehouse') {
+                              context.go('/warehouse');
+                            } else if (user.role == 'driver') {
+                              context.go('/driver');
+                            } else {
+                              AppSnackbar.show(
+                                context,
+                                message: 'ڕۆڵی بەکارهێنەر نەناسراوە',
+                                type: SnackbarType.error,
+                              );
+                            }
+                          }
+                        } else if (mounted) {
+                          final error = ref.read(authProvider).error;
+                          if (error != null) {
+                            AppSnackbar.show(
+                              context,
+                              message: error,
+                              type: SnackbarType.error,
+                            );
+                          }
+                        }
+                      });
+                    },
                   ),
                 ],
               ),

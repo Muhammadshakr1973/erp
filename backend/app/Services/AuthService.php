@@ -11,13 +11,23 @@ class AuthService
     public function login(array $credentials)
     {
         // هێنانی بەکارهێنەر لەگەڵ ڕۆڵەکەی
-        $user = User::with('role')->where('phone', $credentials['phone'])->first();
+        if (!empty($credentials['barcode'])) {
+            $user = User::with('role')->where('barcode', $credentials['barcode'])->first();
+            
+            if (! $user) {
+                throw ValidationException::withMessages([
+                    'barcode' => ['هیچ بەکارهێنەرێک بەم بارکۆدە نەدۆزرایەوە.'],
+                ]);
+            }
+        } else {
+            $user = User::with('role')->where('phone', $credentials['phone'])->first();
 
-        // پشکنینی پاسۆرد و بوونی بەکارهێنەر
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'phone' => ['ژمارە مۆبایل یان وشەی نهێنی هەڵەیە.'],
-            ]);
+            // پشکنینی پاسۆرد و بوونی بەکارهێنەر
+            if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+                throw ValidationException::withMessages([
+                    'phone' => ['ژمارە مۆبایل یان وشەی نهێنی هەڵەیە.'],
+                ]);
+            }
         }
 
         // پشکنین بزانین ئایا ئەکاونتەکەی ڕاگیراوە (inactive)؟

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_button.dart';
@@ -18,7 +19,7 @@ class CameraBarcodeScanner extends StatefulWidget {
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: Container(
           width: 480,
-          height: 400,
+          height: 600,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(24),
@@ -45,11 +46,16 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   final FocusNode _keyboardFocusNode = FocusNode();
   final StringBuffer _barcodeBuffer = StringBuffer();
   DateTime? _lastKeyEventTime;
+  bool _isProcessing = false;
+  
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+  );
 
   @override
   void initState() {
     super.initState();
-    // Request focus so the hardware listener works immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _keyboardFocusNode.requestFocus();
     });
@@ -59,13 +65,19 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   void dispose() {
     _controller.dispose();
     _keyboardFocusNode.dispose();
+    _scannerController.dispose();
     super.dispose();
   }
 
   void _onSuccessScan(String barcode) {
+    if (_isProcessing) return;
     final cleanBarcode = barcode.trim();
     if (cleanBarcode.isEmpty) return;
     
+    setState(() {
+      _isProcessing = true;
+    });
+
     widget.onScan(cleanBarcode);
     Navigator.of(context).pop();
 
@@ -83,16 +95,13 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
     );
   }
 
-  // Intercept keyboard events for hardware laser scanners which act as keyboard inputs
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       final now = DateTime.now();
-      
-      // Hardware scanners typically send keys very rapidly (under 50ms apart)
       if (_lastKeyEventTime != null) {
         final difference = now.difference(_lastKeyEventTime!).inMilliseconds;
         if (difference > 150) {
-          // If the delay is long, it's likely a manual keystroke, but we still buffer it
+           // delay
         }
       }
       _lastKeyEventTime = now;
@@ -153,42 +162,56 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
               ),
             ),
 
-            // Instructional & Diagnostic Screen
+            // Camera Scanner & Instruction
             Expanded(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.02),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
+              child: Stack(
+                children: [
+                  MobileScanner(
+                    controller: _scannerController,
+                    onDetect: (capture) {
+                      final List<Barcode> barcodes = capture.barcodes;
+                      for (final barcode in barcodes) {
+                        if (barcode.rawValue != null) {
+                          _onSuccessScan(barcode.rawValue!);
+                          break; // Only scan one
+                        }
+                      }
+                    },
+                    errorBuilder: (context, error, child) {
+                      return Container(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.videocam_off_outlined,
+                              size: 48,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'کامێرا کارناکات، تکایە ئامێری سکانەر بەکاربهێنە یان بە دەست بینوسە.',
+                              style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  // Overlay targeting box
+                  Center(
+                    child: Container(
+                      width: 250,
+                      height: 250,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.settings_input_hdmi,
-                        size: 48,
-                        color: theme.colorScheme.primary,
+                        border: Border.all(color: theme.colorScheme.primary, width: 3),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'ئامادەیە بۆ خوێندنەوەی ئامێری بارکۆد',
-                      style: AppTextStyles.bodyBold.copyWith(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'ئامێری سکانی بارکۆدەکەت ڕووبەڕووی کاڵاکە بکەرەوە و سکان بکە، یان کۆدی بارکۆدەکە لە خوارەوە بە دەست بنووسە.',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
@@ -207,7 +230,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                       Expanded(
                         child: TextField(
                           controller: _controller,
-                          focusNode: FocusNode(), // Separate focus node so it does not capture the main keyboard listener unless selected
+                          focusNode: FocusNode(), 
                           style: AppTextStyles.bodyMedium,
                           decoration: InputDecoration(
                             hintText: 'کۆدی بارکۆدەکە بە دەست بنووسە...',

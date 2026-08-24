@@ -23,6 +23,7 @@ dependencies:
   intl: ^0.20.3
   material_symbols_icons: ^4.27.0
   responsive_builder: ^0.7.1
+  mobile_scanner: ^5.2.3
 
 dev_dependencies:
   flutter_test:

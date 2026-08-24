@@ -72,6 +72,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return false;
   }
 
+  Future<bool> loginByBarcode(String barcode) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.client.post('/auth/login', data: {
+        'barcode': barcode,
+      });
+
+      if (response.statusCode == 200) {
+        final token = response.data['data']['token'];
+        final userData = response.data['data']['user'];
+
+        final user = UserModel.fromJson(userData);
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('current_user', jsonEncode(user.toJson()));
+
+        state = state.copyWith(isLoading: false, user: user);
+        return true;
+      }
+    } catch (e) {
+      final errorMsg = ref.read(apiClientProvider).parseError(e);
+      state = state.copyWith(isLoading: false, error: errorMsg);
+      return false;
+    }
+    
+    state = state.copyWith(isLoading: false, error: 'هەڵەیەکی نەزانراو ڕوویدا');
+    return false;
+  }
+
   Future<void> _saveMockUser(UserModel user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', 'mock_token_123');
