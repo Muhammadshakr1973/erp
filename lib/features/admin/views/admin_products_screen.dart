@@ -203,19 +203,28 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                             padding: const EdgeInsets.all(4.0),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                    image: const DecorationImage(
-                                      image: NetworkImage('https://via.placeholder.com/150'),
-                                      fit: BoxFit.cover,
+                                if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        product.imagePath!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          color: theme.colorScheme.surfaceContainerHighest,
+                                          child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 24),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
+                                  const SizedBox(width: AppSpacing.md),
+                                ],
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,19 +237,22 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        'بارکۆد: ${product.barcode}',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                      if (product.barcode != null && product.barcode!.isNotEmpty) ...[
+                                        Text(
+                                          'بارکۆد: ${product.barcode}',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'کارتۆن: ${product.unitsPerCarton} دانە',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                        const SizedBox(height: 2),
+                                      ],
+                                      if (product.unit == null || product.unit != 'دانە')
+                                        Text(
+                                          '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -298,19 +310,28 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         },
                         child: Row(
                           children: [
-                            Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://via.placeholder.com/150'),
-                                  fit: BoxFit.cover,
+                            if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    product.imagePath!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      color: theme.colorScheme.surfaceContainerHighest,
+                                      child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
+                              const SizedBox(width: AppSpacing.md),
+                            ],
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,7 +339,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   Text(product.name, style: AppTextStyles.bodyBold),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'کارتۆن: ${product.unitsPerCarton} دانە • بارکۆد: ${product.barcode}',
+                                    '${product.unit == null || product.unit != 'دانە' ? '${product.unit ?? 'کارتۆن'} = ${product.unitsPerCarton} دانە • ' : ''}بارکۆد: ${product.barcode}',
                                     style: AppTextStyles.caption,
                                   ),
                                 ],

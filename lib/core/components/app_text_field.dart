@@ -6,6 +6,7 @@ class AppTextField extends StatelessWidget {
   final String? hintText;
   final String? labelText;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final TextInputType keyboardType;
   final bool obscureText;
   final IconData? prefixIcon;
@@ -20,6 +21,7 @@ class AppTextField extends StatelessWidget {
     this.hintText,
     this.labelText,
     this.controller,
+    this.focusNode,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.prefixIcon,
@@ -36,6 +38,7 @@ class AppTextField extends StatelessWidget {
 
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       obscureText: obscureText,
       validator: validator,

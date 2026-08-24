@@ -32,6 +32,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _priceN3Controller;
   late TextEditingController _unitsPerCartonController;
   late TextEditingController _unitController;
+  late FocusNode _unitFocusNode;
   late TextEditingController _stockController;
   late TextEditingController _imageUrlController;
 
@@ -57,6 +58,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceN2Controller = TextEditingController(text: p != null ? p.priceN2.toString() : '');
     _priceN3Controller = TextEditingController(text: p != null ? p.priceN3.toString() : '');
     _unitsPerCartonController = TextEditingController(text: p?.unitsPerCarton.toString() ?? '12');
+    _unitFocusNode = FocusNode();
     _unitController = TextEditingController(text: p?.unit ?? '');
     _stockController = TextEditingController(text: p != null ? currentStock.toString() : '0');
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
@@ -82,9 +84,71 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceN3Controller.dispose();
     _unitsPerCartonController.dispose();
     _unitController.dispose();
+    _unitFocusNode.dispose();
     _stockController.dispose();
     _imageUrlController.dispose();
     super.dispose();
+  }
+
+
+  Widget _buildUnitAutocomplete(ThemeData theme) {
+    final List<String> unitOptions = [
+      'ج', 'ک', 'پاکەت', 'باڵە', 'عەلاگە', 'پ', 'دانە', 'پارچە', 'سێت'
+    ];
+
+    return RawAutocomplete<String>(
+      textEditingController: _unitController,
+      focusNode: _unitFocusNode,
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text == '') {
+          return const Iterable<String>.empty();
+        }
+        return unitOptions.where((String option) {
+          return option.contains(textEditingValue.text);
+        });
+      },
+      onSelected: (String selection) {
+        _unitController.text = selection;
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return AppTextField(
+          controller: controller,
+          focusNode: focusNode,
+          labelText: 'یەکە (دانە، کیلۆ...)',
+          hintText: 'دانە، کیلۆ یان کارتۆن',
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4.0,
+            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surface,
+            child: SizedBox(
+              width: 200,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return InkWell(
+                    onTap: () {
+                      onSelected(option);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(option),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _submit() async {
@@ -516,11 +580,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             keyboardType: TextInputType.number,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          AppTextField(
-                            controller: _unitController,
-                            labelText: 'یەکە (دانە، کیلۆ...)',
-                            hintText: 'دانە، کیلۆ یان کارتۆن',
-                          ),
+                          _buildUnitAutocomplete(theme),
                           const SizedBox(height: AppSpacing.md),
                           AppTextField(
                             controller: _stockController,
@@ -548,11 +608,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
-                                child: AppTextField(
-                                  controller: _unitController,
-                                  labelText: 'یەکە (دانە، کیلۆ...)',
-                                  hintText: 'دانە، کیلۆ',
-                                ),
+                                child: _buildUnitAutocomplete(theme),
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(

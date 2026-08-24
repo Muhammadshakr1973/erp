@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Models\WarehouseStock;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -37,6 +39,14 @@ class ProductController extends Controller
         ]);
 
         $product = Product::create($validated);
+        
+        $initial_stock = $request->input('initial_stock', 0);
+        $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
+        WarehouseStock::create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => $initial_stock
+        ]);
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی زیادکرا',
@@ -63,6 +73,17 @@ class ProductController extends Controller
         ]);
 
         $product->update($validated);
+
+        if ($request->has('initial_stock')) {
+            $initial_stock = $request->input('initial_stock');
+            $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
+            $stock = WarehouseStock::firstOrNew([
+                'product_id' => $product->id,
+                'warehouse_id' => $warehouse->id
+            ]);
+            $stock->quantity = $initial_stock;
+            $stock->save();
+        }
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی نوێکرایەوە',
