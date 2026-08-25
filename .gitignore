@@ -50,3 +50,18 @@ backend/vendor/
 backend/node_modules/
 backend/.env
 backend/storage/logs/
+# Platform Folders
+android/
+ios/
+web/
+windows/
+macos/
+linux/
+
+#Scripts & Heavy Files
+*.py
+patch_*
+rewrite_*
+*.zip
+backend/*.zip
+backend/storage/

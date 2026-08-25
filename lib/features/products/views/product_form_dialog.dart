@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -53,14 +54,26 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _nameController = TextEditingController(text: p?.name ?? '');
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
-    _costPriceController = TextEditingController(text: p != null ? p.costPrice.toString() : '');
-    _priceN1Controller = TextEditingController(text: p != null ? p.priceN1.toString() : '');
-    _priceN2Controller = TextEditingController(text: p != null ? p.priceN2.toString() : '');
-    _priceN3Controller = TextEditingController(text: p != null ? p.priceN3.toString() : '');
-    _unitsPerCartonController = TextEditingController(text: p?.unitsPerCarton.toString() ?? '12');
+    _costPriceController = TextEditingController(
+      text: p != null ? p.costPrice.toString() : '',
+    );
+    _priceN1Controller = TextEditingController(
+      text: p != null ? p.priceN1.toString() : '',
+    );
+    _priceN2Controller = TextEditingController(
+      text: p != null ? p.priceN2.toString() : '',
+    );
+    _priceN3Controller = TextEditingController(
+      text: p != null ? p.priceN3.toString() : '',
+    );
+    _unitsPerCartonController = TextEditingController(
+      text: p?.unitsPerCarton.toString() ?? '12',
+    );
     _unitFocusNode = FocusNode();
     _unitController = TextEditingController(text: p?.unit ?? '');
-    _stockController = TextEditingController(text: p != null ? currentStock.toString() : '0');
+    _stockController = TextEditingController(
+      text: p != null ? currentStock.toString() : '0',
+    );
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;
     _selectedSupplierId = p?.supplierId;
@@ -90,10 +103,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     super.dispose();
   }
 
-
   Widget _buildUnitAutocomplete(ThemeData theme) {
     final List<String> unitOptions = [
-      'ج', 'ک', 'پاکەت', 'باڵە', 'عەلاگە', 'پ', 'دانە', 'پارچە', 'سێت'
+      'ج',
+      'ک',
+      'پاکەت',
+      'باڵە',
+      'عەلاگە',
+      'پ',
+      'دانە',
+      'پارچە',
+      'سێت',
     ];
 
     return RawAutocomplete<String>(
@@ -177,22 +197,23 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       if (widget.product == null) {
         await ref.read(productActionsProvider).addProduct(data);
       } else {
-        await ref.read(productActionsProvider).updateProduct(widget.product!.id, data);
+        await ref
+            .read(productActionsProvider)
+            .updateProduct(widget.product!.id, data);
       }
       if (mounted) {
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _showAddCategoryDialog() async {
     String newCategoryName = '';
     final result = await showDialog<String>(
@@ -216,15 +237,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
             ),
           ],
         );
-      }
+      },
     );
 
     if (result != null && result.trim().isNotEmpty) {
       try {
-        final newCategory = await ref.read(categoryActionsProvider).addCategory(result.trim());
+        final newCategory = await ref
+            .read(categoryActionsProvider)
+            .addCategory(result.trim());
         // چاوەڕێ دەکەین تا لیستەکە نوێ دەبێتەوە
         await ref.read(categoriesListProvider.future);
-        
+
         if (mounted) {
           setState(() {
             _selectedCategoryId = newCategory.id;
@@ -274,7 +297,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.product == null ? 'زیادکردنی کاڵا' : 'دەستکاریکردنی کاڵا',
+                      widget.product == null
+                          ? 'زیادکردنی کاڵا'
+                          : 'دەستکاریکردنی کاڵا',
                       style: AppTextStyles.h2,
                     ),
                     IconButton(
@@ -289,7 +314,6 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        
                         // Image URL and Preview
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,18 +333,25 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 height: 80,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant,
+                                  ),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
                                   child: Image.network(
                                     _imageUrlController.text,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.grey),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(
+                                              Icons.image_not_supported,
+                                              color: Colors.grey,
+                                            ),
                                   ),
                                 ),
                               ),
-                            ]
+                            ],
                           ],
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -334,7 +365,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 controller: _nameController,
                                 labelText: 'ناوی کاڵا',
                                 hintText: 'ناوی کاڵا',
-                                validator: (v) => v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                                validator: (v) =>
+                                    v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
@@ -347,7 +379,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.qr_code_scanner),
                                   onPressed: () {
-                                    CameraBarcodeScanner.show(context, (scanned) {
+                                    CameraBarcodeScanner.show(context, (
+                                      scanned,
+                                    ) {
                                       setState(() {
                                         _barcodeController.text = scanned;
                                       });
@@ -373,22 +407,67 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             Expanded(
                               child: categoriesAsync.when(
                                 data: (categories) {
-                                  final int? validValue = categories.any((c) => c.id == _selectedCategoryId) ? _selectedCategoryId : null;
+                                  final int? validValue =
+                                      categories.any(
+                                        (c) => c.id == _selectedCategoryId,
+                                      )
+                                      ? _selectedCategoryId
+                                      : null;
                                   return DropdownButtonFormField<int>(
                                     value: validValue,
                                     decoration: InputDecoration(
                                       labelText: 'جۆر',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      labelStyle: AppTextStyles.bodyMedium
+                                          .copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 14,
+                                          ),
                                       filled: true,
                                       fillColor: theme.colorScheme.surface,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.outline
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.outline
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.primary,
+                                          width: 1.5,
+                                        ),
+                                      ),
                                     ),
                                     items: [
-                                      ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                                      DropdownMenuItem(value: -1, child: Text('+ جۆرێکی نوێ زیادبکە', style: TextStyle(color: theme.colorScheme.primary))),
+                                      ...categories.map(
+                                        (c) => DropdownMenuItem(
+                                          value: c.id,
+                                          child: Text(c.name),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: -1,
+                                        child: Text(
+                                          '+ جۆرێکی نوێ زیادبکە',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                     onChanged: (v) {
                                       if (v == -1) {
@@ -399,33 +478,79 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     },
                                   );
                                 },
-                                loading: () => const Center(child: CircularProgressIndicator()),
-                                error: (err, stack) => const Text('کێشە لە هێنانی جۆرەکان'),
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (err, stack) =>
+                                    const Text('کێشە لە هێنانی جۆرەکان'),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: suppliersAsync.when(
                                 data: (suppliers) {
-                                  final int? validValue = suppliers.any((s) => s.id == _selectedSupplierId) ? _selectedSupplierId : null;
+                                  final int? validValue =
+                                      suppliers.any(
+                                        (s) => s.id == _selectedSupplierId,
+                                      )
+                                      ? _selectedSupplierId
+                                      : null;
                                   return DropdownButtonFormField<int>(
                                     value: validValue,
                                     decoration: InputDecoration(
                                       labelText: 'سەپڵایەر',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      labelStyle: AppTextStyles.bodyMedium
+                                          .copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 14,
+                                          ),
                                       filled: true,
                                       fillColor: theme.colorScheme.surface,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.6))),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.outline
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.outline
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide(
+                                          color: theme.colorScheme.primary,
+                                          width: 1.5,
+                                        ),
+                                      ),
                                     ),
-                                    items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                                    onChanged: (v) => setState(() => _selectedSupplierId = v),
+                                    items: suppliers
+                                        .map(
+                                          (s) => DropdownMenuItem(
+                                            value: s.id,
+                                            child: Text(s.name),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (v) =>
+                                        setState(() => _selectedSupplierId = v),
                                   );
                                 },
-                                loading: () => const Center(child: CircularProgressIndicator()),
-                                error: (err, stack) => const Text('کێشە لە هێنانی سەپڵایەرەکان'),
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (err, stack) =>
+                                    const Text('کێشە لە هێنانی سەپڵایەرەکان'),
                               ),
                             ),
                           ],
@@ -486,9 +611,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: _buildUnitAutocomplete(theme),
-                            ),
+                            Expanded(child: _buildUnitAutocomplete(theme)),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: AppTextField(
@@ -506,7 +629,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   Text('چالاکە', style: AppTextStyles.caption),
                                   Switch(
                                     value: _isActive,
-                                    onChanged: (v) => setState(() => _isActive = v),
+                                    onChanged: (v) =>
+                                        setState(() => _isActive = v),
                                   ),
                                 ],
                               ),
