@@ -1,40 +1,121 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/components/app_dialog.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../products/models/supplier_model.dart';
+import '../../products/providers/suppliers_provider.dart';
+import 'supplier_form_dialog.dart';
 
-class AdminPurchasesScreen extends StatelessWidget {
+class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
 
   @override
+  ConsumerState<AdminPurchasesScreen> createState() => _AdminPurchasesScreenState();
+}
+
+class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _showAddSupplierDialog(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (context) => const SupplierFormDialog(),
+    ).then((success) {
+      if (success == true) {
+        ref.invalidate(suppliersListProvider);
+      }
+    });
+  }
+
+  void _showEditSupplierDialog(BuildContext context, SupplierModel supplier) {
+    showDialog<bool>(
+      context: context,
+      builder: (context) => SupplierFormDialog(supplier: supplier),
+    ).then((success) {
+      if (success == true) {
+        ref.invalidate(suppliersListProvider);
+      }
+    });
+  }
+
+  void _deleteSupplier(BuildContext context, SupplierModel supplier) async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'سڕینەوەی کۆمپانیا',
+      message: 'دڵنیایت لە سڕینەوەی کۆمپانیای "${supplier.name}"؟',
+      confirmText: 'سڕینەوە',
+      cancelText: 'پەشیمانبوونەوە',
+      isDanger: true,
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref.read(supplierActionsProvider).deleteSupplier(supplier.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('کۆمپانیا بە سەرکەوتوویی سڕایەوە')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('کێشە لە سڕینەوە: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),
-          actions: [
-            IconButton(icon: const Icon(AppIcons.add), onPressed: () {}),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),
+        actions: [
+          if (_tabController.index == 2)
+            IconButton(
+              icon: const Icon(AppIcons.add),
+              onPressed: () => _showAddSupplierDialog(context),
+            ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'پێویست بۆ کڕین'),
+            Tab(text: 'پسوڵەکانی کڕین'),
+            Tab(text: 'کۆمپانیاکان'),
           ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'پێویست بۆ کڕین'),
-              Tab(text: 'پسوڵەکانی کڕین'),
-              Tab(text: 'کۆمپانیاکان'),
-            ],
-            labelStyle: AppTextStyles.bodyBold,
-          ),
+          labelStyle: AppTextStyles.bodyBold,
         ),
-        body: TabBarView(
-          children: [
-            _buildRequirementsTab(context),
-            _buildPurchaseOrdersTab(context),
-            _buildSuppliersTab(context),
-          ],
-        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildRequirementsTab(context),
+          _buildPurchaseOrdersTab(context),
+          _buildSuppliersTab(context),
+        ],
       ),
     );
   }
@@ -52,7 +133,7 @@ class AdminPurchasesScreen extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.1),
+                  color: AppColors.danger.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.inventory_2_outlined, color: AppColors.danger),
@@ -107,34 +188,75 @@ class AdminPurchasesScreen extends StatelessWidget {
   }
 
   Widget _buildSuppliersTab(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobile = screenWidth < 800;
+    final suppliersAsync = ref.watch(suppliersListProvider);
 
-    if (isMobile) {
-      return ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        itemCount: 4,
-        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) => _buildSupplierCard(context, index),
-      );
-    } else {
-      return GridView.builder(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        itemCount: 4,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: screenWidth > 1200 ? 3 : 2,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-          mainAxisExtent: 88,
+    return suppliersAsync.when(
+      data: (suppliers) {
+        if (suppliers.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.store_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Text(
+                  'هیچ کۆمپانیایەک نییە',
+                  style: AppTextStyles.bodyBold,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton.icon(
+                  onPressed: () => _showAddSupplierDialog(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('زیادکردنی کۆمپانیا'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final screenWidth = MediaQuery.of(context).size.width;
+        final bool isMobile = screenWidth < 800;
+
+        if (isMobile) {
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            itemCount: suppliers.length,
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
+          );
+        } else {
+          return GridView.builder(
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            itemCount: suppliers.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: screenWidth > 1200 ? 3 : 2,
+              crossAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: AppSpacing.md,
+              mainAxisExtent: 88,
+            ),
+            itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
+          );
+        }
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stack) => Center(
+        child: Text(
+          'شکست لە هێنانی زانیارییەکان: $error',
+          style: const TextStyle(color: AppColors.danger),
         ),
-        itemBuilder: (context, index) => _buildSupplierCard(context, index),
-      );
-    }
+      ),
+    );
   }
 
-  Widget _buildSupplierCard(BuildContext context, int index) {
+  Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
     return AppCard(
-      onTap: () {},
+      onTap: () => _showEditSupplierDialog(context, supplier),
       child: Row(
         children: [
           CircleAvatar(
@@ -148,20 +270,27 @@ class AdminPurchasesScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('کۆمپانیای ${index + 1}', style: AppTextStyles.bodyBold),
+                Text(supplier.name, style: AppTextStyles.bodyBold),
                 const SizedBox(height: 4),
-                const Text('0750 123 4567 • هەولێر', style: AppTextStyles.caption),
+                Text(
+                  '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
+                  style: AppTextStyles.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('قەرز', style: AppTextStyles.caption),
-              Text(
-                '2,000,000 د.ع',
-                style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                onPressed: () => _showEditSupplierDialog(context, supplier),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                onPressed: () => _deleteSupplier(context, supplier),
               ),
             ],
           ),

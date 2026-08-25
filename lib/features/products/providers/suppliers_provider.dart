@@ -28,11 +28,51 @@ class SupplierActions {
 
   SupplierActions(this.api, this.ref);
 
-  Future<SupplierModel> addSupplier(String name) async {
+  Future<SupplierModel> addSupplier(
+    String name, {
+    String? phone,
+    String? address,
+    String? contactPerson,
+  }) async {
     try {
-      final response = await api.client.post('/suppliers', data: {'name': name});
+      final response = await api.client.post('/suppliers', data: {
+        'name': name,
+        'phone': phone,
+        'address': address,
+        'contact_person': contactPerson,
+      });
       ref.invalidate(suppliersListProvider);
       return SupplierModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<SupplierModel> updateSupplier(
+    int id,
+    String name, {
+    String? phone,
+    String? address,
+    String? contactPerson,
+  }) async {
+    try {
+      final response = await api.client.put('/suppliers/$id', data: {
+        'name': name,
+        'phone': phone,
+        'address': address,
+        'contact_person': contactPerson,
+      });
+      ref.invalidate(suppliersListProvider);
+      return SupplierModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> deleteSupplier(int id) async {
+    try {
+      await api.client.delete('/suppliers/$id');
+      ref.invalidate(suppliersListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

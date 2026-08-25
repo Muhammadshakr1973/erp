@@ -39,4 +39,33 @@ class SupplierController extends Controller
             'data' => $supplier
         ], 201);
     }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $supplier = Supplier::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:suppliers,name,' . $id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+        ]);
+
+        $supplier->update($validated);
+
+        return response()->json([
+            'message' => 'سەپڵایەر بە سەرکەوتوویی نوێکرایەوە',
+            'data' => $supplier
+        ]);
+    }
+
+    public function destroy($id): JsonResponse
+    {
+        $supplier = Supplier::findOrFail($id);
+        $supplier->delete();
+
+        return response()->json([
+            'message' => 'سەپڵایەر بە سەرکەوتوویی سڕدرایەوە'
+        ]);
+    }
 }
