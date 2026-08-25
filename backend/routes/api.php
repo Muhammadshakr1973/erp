@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::get('/suppliers', [SupplierController::class, 'index']);
+        Route::post('/suppliers', [SupplierController::class, 'store']);
         Route::apiResource('customers', CustomerController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);
