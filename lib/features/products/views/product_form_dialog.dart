@@ -864,19 +864,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 keyboardType: TextInputType.number,
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            const SizedBox(width: AppSpacing.xs),
+                            Text('چالاکە', style: AppTextStyles.bodyBold),
                             const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('چالاکە', style: AppTextStyles.caption),
-                                  Switch(
-                                    value: _isActive,
-                                    onChanged: (v) =>
-                                        setState(() => _isActive = v),
-                                  ),
-                                ],
-                              ),
+                            Switch(
+                              value: _isActive,
+                              onChanged: (v) =>
+                                  setState(() => _isActive = v),
                             ),
                           ],
                         ),
