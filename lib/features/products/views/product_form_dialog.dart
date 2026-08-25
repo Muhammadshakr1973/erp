@@ -402,200 +402,250 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: categoriesAsync.when(
-                                data: (categories) {
-                                  final int? validValue =
-                                      categories.any(
-                                        (c) => c.id == _selectedCategoryId,
-                                      )
-                                      ? _selectedCategoryId
-                                      : null;
-                                  return DropdownButtonFormField<int>(
-                                    value: validValue,
-                                    decoration: InputDecoration(
-                                      labelText: 'جۆر',
-                                      labelStyle: AppTextStyles.bodyMedium
-                                          .copyWith(
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 14,
-                                          ),
-                                      filled: true,
-                                      fillColor: theme.colorScheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.outline
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.outline
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.primary,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    items: [
-                                      ...categories.map(
-                                        (c) => DropdownMenuItem(
-                                          value: c.id,
-                                          child: Text(c.name),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: -1,
-                                        child: Text(
-                                          '+ جۆرێکی نوێ زیادبکە',
-                                          style: TextStyle(
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    onChanged: (v) {
-                                      if (v == -1) {
-                                        _showAddCategoryDialog();
-                                      } else {
-                                        setState(() => _selectedCategoryId = v);
-                                      }
-                                    },
-                                  );
-                                },
-                                loading: () => const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                                error: (err, stack) =>
-                                    const Text('کێشە لە هێنانی جۆرەکان'),
-                              ),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                              width: 1,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: suppliersAsync.when(
-                                data: (suppliers) {
-                                  final int? validValue =
-                                      suppliers.any(
-                                        (s) => s.id == _selectedSupplierId,
-                                      )
-                                      ? _selectedSupplierId
-                                      : null;
-                                  return DropdownButtonFormField<int>(
-                                    value: validValue,
-                                    decoration: InputDecoration(
-                                      labelText: 'سەپڵایەر',
-                                      labelStyle: AppTextStyles.bodyMedium
-                                          .copyWith(
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 14,
-                                          ),
-                                      filled: true,
-                                      fillColor: theme.colorScheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.outline
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.outline
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                        borderSide: BorderSide(
-                                          color: theme.colorScheme.primary,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    items: suppliers
-                                        .map(
-                                          (s) => DropdownMenuItem(
-                                            value: s.id,
-                                            child: Text(s.name),
-                                          ),
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                // Category Selector
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: categoriesAsync.when(
+                                      data: (categories) {
+                                        final int? validValue = categories.any(
+                                          (c) => c.id == _selectedCategoryId,
                                         )
-                                        .toList(),
-                                    onChanged: (v) =>
-                                        setState(() => _selectedSupplierId = v),
-                                  );
-                                },
-                                loading: () => const Center(
-                                  child: CircularProgressIndicator(),
+                                        ? _selectedCategoryId
+                                        : null;
+                                        return DropdownButtonHideUnderline(
+                                          child: DropdownButtonFormField<int>(
+                                            value: validValue,
+                                            isExpanded: true,
+                                            hint: const Text('جۆر هەڵبژێرە'),
+                                            decoration: const InputDecoration(
+                                              labelText: 'جۆری کاڵا',
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            items: [
+                                              ...categories.map(
+                                                (c) => DropdownMenuItem(
+                                                  value: c.id,
+                                                  child: Text(c.name, overflow: TextOverflow.ellipsis),
+                                                ),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: -1,
+                                                child: Text(
+                                                  '+ زیادکردنی نوێ',
+                                                  style: TextStyle(
+                                                    color: theme.colorScheme.primary,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                            onChanged: (v) {
+                                              if (v == -1) {
+                                                _showAddCategoryDialog();
+                                              } else {
+                                                setState(() => _selectedCategoryId = v);
+                                              }
+                                            },
+                                          ),
+                                        );
+                                      },
+                                      loading: () => const Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                      error: (err, stack) => const Text('کێشە لە جۆرەکان'),
+                                    ),
+                                  ),
                                 ),
-                                error: (err, stack) =>
-                                    const Text('کێشە لە هێنانی سەپڵایەرەکان'),
-                              ),
+                                // 1px Vertical Divider
+                                VerticalDivider(
+                                  width: 1,
+                                  thickness: 1,
+                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                ),
+                                // Supplier Selector
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: suppliersAsync.when(
+                                      data: (suppliers) {
+                                        final int? validValue = suppliers.any(
+                                          (s) => s.id == _selectedSupplierId,
+                                        )
+                                        ? _selectedSupplierId
+                                        : null;
+                                        return DropdownButtonHideUnderline(
+                                          child: DropdownButtonFormField<int>(
+                                            value: validValue,
+                                            isExpanded: true,
+                                            hint: const Text('سەپڵایەر هەڵبژێرە'),
+                                            decoration: const InputDecoration(
+                                              labelText: 'سەپڵایەر / کۆمپانیا',
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            items: suppliers.map(
+                                              (s) => DropdownMenuItem(
+                                                value: s.id,
+                                                child: Text(s.name, overflow: TextOverflow.ellipsis),
+                                              ),
+                                            ).toList(),
+                                            onChanged: (v) =>
+                                                setState(() => _selectedSupplierId = v),
+                                          ),
+                                        );
+                                      },
+                                      loading: () => const Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                      error: (err, stack) => const Text('کێشە لە سەپڵایەرەکان'),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Prices
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                controller: _costPriceController,
-                                labelText: 'کڕین',
-                                hintText: 'کڕین',
-                                keyboardType: TextInputType.number,
-                              ),
+                        // Prices Unified Cohesive Group
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                              width: 1,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppTextField(
-                                controller: _priceN1Controller,
-                                labelText: 'فرۆشتن ١',
-                                hintText: 'فرۆشتن ١',
-                                keyboardType: TextInputType.number,
-                              ),
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                // Cost Price
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _costPriceController,
+                                    keyboardType: TextInputType.number,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: 'کۆست',
+                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      hintText: 'کۆست',
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                VerticalDivider(
+                                  width: 1,
+                                  thickness: 1,
+                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                ),
+                                // Price N1
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _priceN1Controller,
+                                    keyboardType: TextInputType.number,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: 'نرخی ١',
+                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      hintText: 'N1',
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                VerticalDivider(
+                                  width: 1,
+                                  thickness: 1,
+                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                ),
+                                // Price N2
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _priceN2Controller,
+                                    keyboardType: TextInputType.number,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: 'نرخی ٢',
+                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      hintText: 'N2',
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                VerticalDivider(
+                                  width: 1,
+                                  thickness: 1,
+                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                ),
+                                // Price N3
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _priceN3Controller,
+                                    keyboardType: TextInputType.number,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    decoration: InputDecoration(
+                                      labelText: 'نرخی ٣',
+                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      hintText: 'N3',
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppTextField(
-                                controller: _priceN2Controller,
-                                labelText: 'فرۆشتن ٢',
-                                hintText: 'فرۆشتن ٢',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppTextField(
-                                controller: _priceN3Controller,
-                                labelText: 'فرۆشتن ٣',
-                                hintText: 'فرۆشتن ٣',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
 

@@ -261,19 +261,23 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                           ],
-                                          Text(
-                                            'ستۆک: $totalStock',
-                                            style: AppTextStyles.bodyBold.copyWith(
-                                              fontSize: 11,
-                                              color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'بارکۆد: ${product.barcode}',
-                                            style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'ستۆک: $totalStock',
+                                                style: AppTextStyles.bodyBold.copyWith(
+                                                  fontSize: 11,
+                                                  color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: AppSpacing.sm),
+                                              Text(
+                                                'بارکۆد: ${product.barcode}',
+                                                style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
