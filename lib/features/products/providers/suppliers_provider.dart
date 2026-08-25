@@ -77,4 +77,23 @@ class SupplierActions {
       throw Exception(api.parseError(e));
     }
   }
+
+  Future<SupplierModel> paySupplier(
+    int id,
+    int amount, {
+    String? paymentMethod,
+    String? notes,
+  }) async {
+    try {
+      final response = await api.client.post('/suppliers/$id/pay', data: {
+        'amount': amount,
+        'payment_method': paymentMethod ?? 'cash',
+        'notes': notes,
+      });
+      ref.invalidate(suppliersListProvider);
+      return SupplierModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
 }

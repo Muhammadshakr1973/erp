@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/app_card.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
@@ -19,12 +21,18 @@ class SupplierFormDialog extends ConsumerStatefulWidget {
 
 class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _paymentFormKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isPaying = false;
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _contactPersonController;
+
+  late TextEditingController _paymentAmountController;
+  late TextEditingController _paymentNotesController;
+  String _selectedPaymentMethod = 'cash';
 
   @override
   void initState() {
@@ -33,6 +41,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     _phoneController = TextEditingController(text: widget.supplier?.phone);
     _addressController = TextEditingController(text: widget.supplier?.address);
     _contactPersonController = TextEditingController(text: widget.supplier?.contactPerson);
+
+    _paymentAmountController = TextEditingController();
+    _paymentNotesController = TextEditingController();
   }
 
   @override
@@ -41,7 +52,13 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     _phoneController.dispose();
     _addressController.dispose();
     _contactPersonController.dispose();
+    _paymentAmountController.dispose();
+    _paymentNotesController.dispose();
     super.dispose();
+  }
+
+  String _formatCurrency(num amount) {
+    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
   }
 
   Future<void> _submit() async {
@@ -87,12 +104,99 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     }
   }
 
+  Future<void> _submitPayment() async {
+    if (!_paymentFormKey.currentState!.validate()) return;
+
+    final amountText = _paymentAmountController.text.trim();
+    final amount = int.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')),
+      );
+      return;
+    }
+
+    setState(() => _isPaying = true);
+
+    try {
+      final actions = ref.read(supplierActionsProvider);
+      await actions.paySupplier(
+        widget.supplier!.id,
+        amount,
+        paymentMethod: _selectedPaymentMethod,
+        notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('قەرزەکە بە سەرکەوتوویی کەمکرایەوە')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('کێشە لە نوێکردنەوەی قەرز: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPaying = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
+
+    final childWidget = widget.supplier == null
+        ? _buildProfileForm(context)
+        : DefaultTabController(
+            length: 2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('بەڕێوەبردنی کۆمپانیا', style: AppTextStyles.h2),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                TabBar(
+                  tabs: const [
+                    Tab(text: 'زانیاری کۆمپانیا'),
+                    Tab(text: 'قەرز و پارەدان'),
+                  ],
+                  labelStyle: AppTextStyles.bodyBold,
+                  unselectedLabelStyle: AppTextStyles.body,
+                  labelColor: theme.colorScheme.primary,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Flexible(
+                  child: SizedBox(
+                    height: 400,
+                    child: TabBarView(
+                      children: [
+                        SingleChildScrollView(child: _buildProfileFormFields(context)),
+                        SingleChildScrollView(child: _buildDebtForm(context)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -106,88 +210,179 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
         width: isMobile ? double.infinity : 500,
         child: Padding(
           padding: EdgeInsets.all(isMobile ? 16 : 24),
-          child: Form(
-            key: _formKey,
+          child: childWidget,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileForm(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('زیادکردنی کۆمپانیا', style: AppTextStyles.h2),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Flexible(
+            child: SingleChildScrollView(
+              child: _buildProfileFormFields(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: 140,
+                child: AppButton(
+                  text: 'پاشەکەوت',
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('داخستن'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileFormFields(BuildContext context) {
+    return Form(
+      key: widget.supplier == null ? null : _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppTextField(
+            controller: _nameController,
+            labelText: 'ناوی کۆمپانیا',
+            hintText: 'کۆمپانیای ...',
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'تکایە ناوی کۆمپانیا بنووسە';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _phoneController,
+            labelText: 'ژمارەی مۆبایل',
+            hintText: '0750 ...',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _addressController,
+            labelText: 'ناونیشان',
+            hintText: 'هەولێر، سلێمانی، ...',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _contactPersonController,
+            labelText: 'کەسی پەیوەندیدار',
+            hintText: 'ناوى بەرپرس یان پەیوەندی ...',
+          ),
+          if (widget.supplier != null) ...[
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                text: 'پاشەکەوتکردنی گۆڕانکارییەکان',
+                isLoading: _isLoading,
+                onPressed: _submit,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebtForm(BuildContext context) {
+    final theme = Theme.of(context);
+    return Form(
+      key: _paymentFormKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppCard(
+            color: AppColors.danger.withValues(alpha: 0.08),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      widget.supplier == null
-                          ? 'زیادکردنی کۆمپانیا'
-                          : 'دەستکاریکردنی کۆمپانیا',
-                      style: AppTextStyles.h2,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        AppTextField(
-                          controller: _nameController,
-                          labelText: 'ناوی کۆمپانیا',
-                          hintText: 'کۆمپانیای ...',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'تکایە ناوی کۆمپانیا بنووسە';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _phoneController,
-                          labelText: 'ژمارەی مۆبایل',
-                          hintText: '0750 ...',
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _addressController,
-                          labelText: 'ناونیشان',
-                          hintText: 'هەولێر، سلێمانی، ...',
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _contactPersonController,
-                          labelText: 'کەسی پەیوەندیدار',
-                          hintText: 'ناوى بەرپرس یان پەیوەندی ...',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: 140,
-                      child: AppButton(
-                        text: 'پاشەکەوت',
-                        isLoading: _isLoading,
-                        onPressed: _submit,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('داخستن'),
-                    ),
-                  ],
+                const Text('بڕی قەرزی ئێستای کۆمپانیا', style: AppTextStyles.caption),
+                const SizedBox(height: 4),
+                Text(
+                  _formatCurrency(widget.supplier?.debt ?? 0),
+                  style: AppTextStyles.priceLarge.copyWith(color: AppColors.danger),
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          const Text('دانەوەی بەشێک لە قەرز', style: AppTextStyles.bodyBold),
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
+            controller: _paymentAmountController,
+            labelText: 'بڕی پارە',
+            hintText: 'نموونە: 150000',
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'تکایە بڕی پارەی دراو بنووسە';
+              }
+              if (int.tryParse(value) == null) {
+                return 'تکایە تەنها ژمارە بنووسە';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<String>(
+            value: _selectedPaymentMethod,
+            decoration: const InputDecoration(
+              labelText: 'جۆری پارەدان',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'cash', child: Text('نەختینە (Cash)')),
+              DropdownMenuItem(value: 'bank', child: Text('بانک (Bank)')),
+              DropdownMenuItem(value: 'transfer', child: Text('حەواڵە (Transfer)')),
+            ],
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _selectedPaymentMethod = val);
+              }
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _paymentNotesController,
+            labelText: 'تێبینی پارەدان',
+            hintText: 'تێبینی بنووسە لێرە ...',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            text: 'تۆمارکردنی پارەدان',
+            isLoading: _isPaying,
+            onPressed: _submitPayment,
+          ),
+        ],
       ),
     );
   }

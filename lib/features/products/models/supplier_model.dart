@@ -4,6 +4,7 @@ class SupplierModel {
   final String? phone;
   final String? address;
   final String? contactPerson;
+  final int debt;
 
   SupplierModel({
     required this.id,
@@ -11,6 +12,7 @@ class SupplierModel {
     this.phone,
     this.address,
     this.contactPerson,
+    this.debt = 0,
   });
 
   factory SupplierModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class SupplierModel {
       phone: json['phone'],
       address: json['address'],
       contactPerson: json['contact_person'],
+      debt: json['debt'] ?? 0,
     );
   }
 
@@ -30,6 +33,7 @@ class SupplierModel {
       'phone': phone,
       'address': address,
       'contact_person': contactPerson,
+      'debt': debt,
     };
   }
 }

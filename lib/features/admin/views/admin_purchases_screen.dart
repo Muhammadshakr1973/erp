@@ -254,9 +254,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
     );
   }
 
+  String _formatCurrency(num amount) {
+    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+  }
+
   Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
+      onLongPress: () => _deleteSupplier(context, supplier),
       child: Row(
         children: [
           CircleAvatar(
@@ -281,16 +286,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
               ],
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          const SizedBox(width: AppSpacing.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-                onPressed: () => _showEditSupplierDialog(context, supplier),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
-                onPressed: () => _deleteSupplier(context, supplier),
+              const Text('قەرز', style: AppTextStyles.caption),
+              const SizedBox(height: 4),
+              Text(
+                _formatCurrency(supplier.debt),
+                style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
               ),
             ],
           ),

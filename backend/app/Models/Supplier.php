@@ -11,6 +11,8 @@ class Supplier extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = ['name', 'phone', 'address', 'contact_person', 'is_active'];
     protected $casts = ['is_active' => 'boolean'];
+    protected $appends = ['debt'];
+
     public function products()
     {
         return $this->hasMany(Product::class);
@@ -29,6 +31,7 @@ class Supplier extends Model
     }
     public function getDebtAttribute(): int
     {
-        return (int) $this->ledger()->selectRaw("SUM(CASE WHEN type='debit' THEN amount ELSE -amount END) as bal")->value('bal');
+        $lastLedger = $this->ledger()->orderByDesc('id')->first();
+        return $lastLedger ? (int) $lastLedger->balance_after : 0;
     }
 }
