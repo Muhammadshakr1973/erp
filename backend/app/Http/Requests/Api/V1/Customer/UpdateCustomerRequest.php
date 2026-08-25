@@ -20,7 +20,7 @@ class UpdateCustomerRequest extends FormRequest
         return [
             'route_id'   => ['required', 'integer', 'exists:routes,id'],
             'name'       => ['required', 'string', 'max:255'],
-            'phone'      => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)],
+            'phone'      => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)->whereNull('deleted_at')],
             'phone2'     => ['nullable', 'string', 'max:20'],
             'address'    => ['nullable', 'string'],
             'latitude'   => ['nullable', 'numeric'],

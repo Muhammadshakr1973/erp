@@ -17,7 +17,7 @@ class StoreCustomerRequest extends FormRequest
         return [
             'route_id'   => ['required', 'integer', 'exists:routes,id'],
             'name'       => ['required', 'string', 'max:255'],
-            'phone'      => ['nullable', 'string', 'max:20', 'unique:customers,phone'],
+            'phone'      => ['nullable', 'string', 'max:20', \Illuminate\Validation\Rule::unique('customers')->whereNull('deleted_at')],
             'phone2'     => ['nullable', 'string', 'max:20'],
             'address'    => ['nullable', 'string'],
             'latitude'   => ['nullable', 'numeric'],

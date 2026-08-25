@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SupplierController extends Controller
 {
@@ -25,7 +26,12 @@ class SupplierController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:suppliers,name',
+            'name' => [
+                'required', 
+                'string', 
+                'max:255', 
+                Rule::unique('suppliers')->whereNull('deleted_at')
+            ],
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
@@ -48,7 +54,12 @@ class SupplierController extends Controller
         $supplier = Supplier::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:suppliers,name,' . $id,
+            'name' => [
+                'required', 
+                'string', 
+                'max:255', 
+                Rule::unique('suppliers')->ignore($id)->whereNull('deleted_at')
+            ],
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',

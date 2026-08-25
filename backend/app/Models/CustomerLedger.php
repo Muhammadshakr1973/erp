@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class CustomerLedger extends Model
 {
     use HasFactory;
+    protected $table = 'customer_ledger';
     protected $fillable = ['customer_id', 'type', 'amount', 'balance_after', 'reference_type', 'reference_id', 'description', 'created_by'];
     const TYPE_DEBIT = 'debit';
     const TYPE_CREDIT = 'credit';
