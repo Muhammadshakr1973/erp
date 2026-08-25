@@ -29,10 +29,10 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _contactPersonController;
+  late TextEditingController _initialDebtController;
 
   late TextEditingController _paymentAmountController;
   late TextEditingController _paymentNotesController;
-  String _selectedPaymentMethod = 'cash';
 
   @override
   void initState() {
@@ -41,6 +41,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     _phoneController = TextEditingController(text: widget.supplier?.phone);
     _addressController = TextEditingController(text: widget.supplier?.address);
     _contactPersonController = TextEditingController(text: widget.supplier?.contactPerson);
+    _initialDebtController = TextEditingController();
 
     _paymentAmountController = TextEditingController();
     _paymentNotesController = TextEditingController();
@@ -52,6 +53,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     _phoneController.dispose();
     _addressController.dispose();
     _contactPersonController.dispose();
+    _initialDebtController.dispose();
     _paymentAmountController.dispose();
     _paymentNotesController.dispose();
     super.dispose();
@@ -69,11 +71,13 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     try {
       final actions = ref.read(supplierActionsProvider);
       if (widget.supplier == null) {
+        final initialDebt = int.tryParse(_initialDebtController.text.trim());
         await actions.addSupplier(
           _nameController.text.trim(),
           phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
           contactPerson: _contactPersonController.text.trim().isEmpty ? null : _contactPersonController.text.trim(),
+          initialDebt: initialDebt,
         );
       } else {
         await actions.updateSupplier(
@@ -123,7 +127,6 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       await actions.paySupplier(
         widget.supplier!.id,
         amount,
-        paymentMethod: _selectedPaymentMethod,
         notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
       );
 
@@ -268,6 +271,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: AppSpacing.sm),
           AppTextField(
             controller: _nameController,
             labelText: 'ناوی کۆمپانیا',
@@ -297,6 +301,15 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
             labelText: 'کەسی پەیوەندیدار',
             hintText: 'ناوى بەرپرس یان پەیوەندی ...',
           ),
+          if (widget.supplier == null) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              controller: _initialDebtController,
+              labelText: 'قەرزی سەرەتا (بە دینار)',
+              hintText: '0',
+              keyboardType: TextInputType.number,
+            ),
+          ],
           if (widget.supplier != null) ...[
             const SizedBox(height: AppSpacing.lg),
             SizedBox(
@@ -348,25 +361,6 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 return 'تکایە تەنها ژمارە بنووسە';
               }
               return null;
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          DropdownButtonFormField<String>(
-            initialValue: _selectedPaymentMethod,
-            decoration: const InputDecoration(
-              labelText: 'جۆری پارەدان',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'cash', child: Text('نەختینە (Cash)')),
-              DropdownMenuItem(value: 'bank', child: Text('بانک (Bank)')),
-              DropdownMenuItem(value: 'transfer', child: Text('حەواڵە (Transfer)')),
-            ],
-            onChanged: (val) {
-              if (val != null) {
-                setState(() => _selectedPaymentMethod = val);
-              }
             },
           ),
           const SizedBox(height: AppSpacing.md),

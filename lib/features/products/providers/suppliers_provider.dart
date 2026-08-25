@@ -33,6 +33,7 @@ class SupplierActions {
     String? phone,
     String? address,
     String? contactPerson,
+    int? initialDebt,
   }) async {
     try {
       final response = await api.client.post('/suppliers', data: {
@@ -40,6 +41,7 @@ class SupplierActions {
         'phone': phone,
         'address': address,
         'contact_person': contactPerson,
+        'initial_debt': initialDebt,
       });
       ref.invalidate(suppliersListProvider);
       return SupplierModel.fromJson(response.data['data']);

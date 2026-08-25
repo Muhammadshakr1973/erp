@@ -275,7 +275,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(supplier.name, style: AppTextStyles.bodyBold),
+                Text(
+                  supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty
+                      ? '${supplier.name} - ${supplier.contactPerson}'
+                      : supplier.name,
+                  style: AppTextStyles.bodyBold,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',

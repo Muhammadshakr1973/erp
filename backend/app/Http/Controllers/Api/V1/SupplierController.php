@@ -35,18 +35,42 @@ class SupplierController extends Controller
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
+            'initial_debt' => 'nullable|numeric|min:0',
         ]);
 
         if (auth()->check()) {
             $validated['created_by'] = auth()->id();
         }
 
-        $supplier = Supplier::create($validated);
+        return DB::transaction(function () use ($validated) {
+            $supplier = Supplier::create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'address' => $validated['address'],
+                'contact_person' => $validated['contact_person'],
+                'created_by' => $validated['created_by'] ?? 1,
+            ]);
 
-        return response()->json([
-            'message' => 'سەپڵایەر بە سەرکەوتوویی زیادکرا',
-            'data' => $supplier
-        ], 201);
+            if (!empty($validated['initial_debt']) && $validated['initial_debt'] > 0) {
+                SupplierLedger::create([
+                    'supplier_id' => $supplier->id,
+                    'entry_type' => 'ADJUSTMENT',
+                    'type' => 'credit',
+                    'credit' => $validated['initial_debt'],
+                    'amount' => $validated['initial_debt'],
+                    'balance_after' => $validated['initial_debt'],
+                    'reference_type' => 'supplier',
+                    'reference_id' => $supplier->id,
+                    'description' => 'قەرزی سەرەتا',
+                    'created_by' => $validated['created_by'] ?? 1,
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'سەپڵایەر بە سەرکەوتوویی زیادکرا',
+                'data' => $supplier->append('debt')
+            ], 201);
+        });
     }
 
     public function update(Request $request, $id): JsonResponse
