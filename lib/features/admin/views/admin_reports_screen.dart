@@ -30,7 +30,7 @@ class AdminReportsScreen extends StatelessWidget {
             'قەرزەکان',
             AppIcons.customerDebt,
             AppColors.danger,
-            ['قەرزی کڕیارەکان', 'قەرزی سەپاڵیەرەکان', 'مێژووی پارەدان'],
+            ['قەرزی کڕیارەکان', 'قەرزی کۆمپانیاکان', 'مێژووی پارەدان'],
           ),
           const SizedBox(height: AppSpacing.md),
           _buildReportCategory(

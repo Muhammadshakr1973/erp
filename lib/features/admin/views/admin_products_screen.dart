@@ -243,7 +243,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                            'جۆر: ${product.category?['name'] ?? '-'} • کۆمپانیا: ${product.supplier?['name'] ?? '-'}',
                                             style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -361,7 +361,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                         Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'جۆر: ${product.category?['name'] ?? '-'} • سەپڵایەر: ${product.supplier?['name'] ?? '-'}',
+                                          'جۆر: ${product.category?['name'] ?? '-'} • کۆمپانیا: ${product.supplier?['name'] ?? '-'}',
                                           style: AppTextStyles.caption.copyWith(fontSize: 10),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -379,22 +379,26 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                         ],
-                                        Text(
-                                          'ستۆک: $totalStock',
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'ستۆک: $totalStock',
                                           style: AppTextStyles.bodyBold.copyWith(
                                             fontSize: 11,
                                             color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
                                           ),
+                                            ),
+                                            const SizedBox(width: AppSpacing.sm),
+                                            Expanded(
+                                              child: Text(
+                                                'بارکۆد: ${product.barcode}',
+                                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'بارکۆد: ${product.barcode}',
-                                          style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,

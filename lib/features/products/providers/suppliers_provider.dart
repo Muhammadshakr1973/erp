@@ -16,3 +16,25 @@ final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
     return [];
   }
 });
+
+final supplierActionsProvider = Provider<SupplierActions>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return SupplierActions(api, ref);
+});
+
+class SupplierActions {
+  final ApiClient api;
+  final Ref ref;
+
+  SupplierActions(this.api, this.ref);
+
+  Future<SupplierModel> addSupplier(String name) async {
+    try {
+      final response = await api.client.post('/suppliers', data: {'name': name});
+      ref.invalidate(suppliersListProvider);
+      return SupplierModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+}

@@ -150,7 +150,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                         children: [
                           Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
                           const SizedBox(width: AppSpacing.sm),
-                          const Expanded(child: Text('بازاڕ و سەپاڵیەر', style: AppTextStyles.bodyBold)),
+                          const Expanded(child: Text('بازاڕ و کۆمپانیا', style: AppTextStyles.bodyBold)),
                         ],
                       ),
                     ),

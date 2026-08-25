@@ -15,7 +15,7 @@ class AdminPurchasesScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('بازاڕ و سەپاڵیەر', style: AppTextStyles.h2),
+          title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),
           actions: [
             IconButton(icon: const Icon(AppIcons.add), onPressed: () {}),
           ],
@@ -23,7 +23,7 @@ class AdminPurchasesScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'پێویست بۆ کڕین'),
               Tab(text: 'پسوڵەکانی کڕین'),
-              Tab(text: 'سەپاڵیەرەکان'),
+              Tab(text: 'کۆمپانیاکان'),
             ],
             labelStyle: AppTextStyles.bodyBold,
           ),
@@ -107,45 +107,66 @@ class AdminPurchasesScreen extends StatelessWidget {
   }
 
   Widget _buildSuppliersTab(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-      itemCount: 4,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        return AppCard(
-          onTap: () {},
-          child: Row(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 800;
+
+    if (isMobile) {
+      return ListView.separated(
+        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+        itemCount: 4,
+        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+        itemBuilder: (context, index) => _buildSupplierCard(context, index),
+      );
+    } else {
+      return GridView.builder(
+        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+        itemCount: 4,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: screenWidth > 1200 ? 3 : 2,
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          mainAxisExtent: 88,
+        ),
+        itemBuilder: (context, index) => _buildSupplierCard(context, index),
+      );
+    }
+  }
+
+  Widget _buildSupplierCard(BuildContext context, int index) {
+    return AppCard(
+      onTap: () {},
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: const Icon(Icons.store, color: Colors.grey),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('کۆمپانیای ${index + 1}', style: AppTextStyles.bodyBold),
+                const SizedBox(height: 4),
+                const Text('0750 123 4567 • هەولێر', style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.store, color: Colors.grey),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('سەپاڵیەری ${index + 1}', style: AppTextStyles.bodyBold),
-                    const SizedBox(height: 4),
-                    const Text('0750 123 4567 • هەولێر', style: AppTextStyles.caption),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('قەرز', style: AppTextStyles.caption),
-                  Text(
-                    '2,000,000 د.ع',
-                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
-                  ),
-                ],
+              const Text('قەرز', style: AppTextStyles.caption),
+              Text(
+                '2,000,000 د.ع',
+                style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
               ),
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

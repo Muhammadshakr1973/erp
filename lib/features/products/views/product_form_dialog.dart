@@ -266,6 +266,58 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
+  Future<void> _showAddSupplierDialog() async {
+    String newSupplierName = '';
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('زیادکردنی کۆمپانیای نوێ'),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'ناوی کۆمپانیا'),
+            onChanged: (val) => newSupplierName = val,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, newSupplierName),
+              child: const Text('زیادکردن'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('داخستن'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && result.trim().isNotEmpty) {
+      try {
+        final newSupplier = await ref
+            .read(supplierActionsProvider)
+            .addSupplier(result.trim());
+        // چاوەڕێ دەکەین تا لیستەکە نوێ دەبێتەوە
+        await ref.read(suppliersListProvider.future);
+
+        if (mounted) {
+          setState(() {
+            _selectedSupplierId = newSupplier.id;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('کێشە لە زیادکردنی کۆمپانیا: $e')),
+          );
+        }
+      }
+    } else {
+      // Reset dropdown if cancelled
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesListProvider);
@@ -496,22 +548,39 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                           child: DropdownButtonFormField<int>(
                                             value: validValue,
                                             isExpanded: true,
-                                            hint: const Text('سەپڵایەر هەڵبژێرە'),
+                                            hint: const Text('کۆمپانیا هەڵبژێرە'),
                                             decoration: const InputDecoration(
-                                              labelText: 'سەپڵایەر / کۆمپانیا',
+                                              labelText: 'کۆمپانیا',
                                               border: InputBorder.none,
                                               enabledBorder: InputBorder.none,
                                               focusedBorder: InputBorder.none,
                                               contentPadding: EdgeInsets.zero,
                                             ),
-                                            items: suppliers.map(
-                                              (s) => DropdownMenuItem(
-                                                value: s.id,
-                                                child: Text(s.name, overflow: TextOverflow.ellipsis),
+                                            items: [
+                                              ...suppliers.map(
+                                                (s) => DropdownMenuItem(
+                                                  value: s.id,
+                                                  child: Text(s.name, overflow: TextOverflow.ellipsis),
+                                                ),
                                               ),
-                                            ).toList(),
-                                            onChanged: (v) =>
-                                                setState(() => _selectedSupplierId = v),
+                                              DropdownMenuItem(
+                                                value: -1,
+                                                child: Text(
+                                                  '+ زیادکردنی نوێ',
+                                                  style: TextStyle(
+                                                    color: theme.colorScheme.primary,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                            onChanged: (v) {
+                                              if (v == -1) {
+                                                _showAddSupplierDialog();
+                                              } else {
+                                                setState(() => _selectedSupplierId = v);
+                                              }
+                                            },
                                           ),
                                         );
                                       },
@@ -522,7 +591,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                           child: CircularProgressIndicator(strokeWidth: 2),
                                         ),
                                       ),
-                                      error: (err, stack) => const Text('کێشە لە سەپڵایەرەکان'),
+                                      error: (err, stack) => const Text('کێشە لە کۆمپانیاکان'),
                                     ),
                                   ),
                                 ),
@@ -531,122 +600,246 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.md),
-
                         // Prices Unified Cohesive Group
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                              width: 1,
+                        if (isMobile)
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                width: 1,
+                              ),
                             ),
-                          ),
-                          child: IntrinsicHeight(
-                            child: Row(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Cost Price
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _costPriceController,
-                                    keyboardType: TextInputType.number,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'کۆست',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                // First row: Cost and Price N1
+                                IntrinsicHeight(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _costPriceController,
+                                          keyboardType: TextInputType.number,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                          decoration: InputDecoration(
+                                            labelText: 'کۆست',
+                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                            hintText: 'کۆست',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                        ),
                                       ),
-                                      hintText: 'کۆست',
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    ),
+                                      VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                      ),
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _priceN1Controller,
+                                          keyboardType: TextInputType.number,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                          decoration: InputDecoration(
+                                            labelText: 'نرخی ١',
+                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                            hintText: 'N1',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                VerticalDivider(
-                                  width: 1,
+                                Divider(
+                                  height: 1,
                                   thickness: 1,
                                   color: theme.colorScheme.outline.withValues(alpha: 0.4),
                                 ),
-                                // Price N1
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _priceN1Controller,
-                                    keyboardType: TextInputType.number,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'نرخی ١',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                // Second row: Price N2 and Price N3
+                                IntrinsicHeight(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _priceN2Controller,
+                                          keyboardType: TextInputType.number,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                          decoration: InputDecoration(
+                                            labelText: 'نرخی ٢',
+                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                            hintText: 'N2',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                        ),
                                       ),
-                                      hintText: 'N1',
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    ),
-                                  ),
-                                ),
-                                VerticalDivider(
-                                  width: 1,
-                                  thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                                ),
-                                // Price N2
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _priceN2Controller,
-                                    keyboardType: TextInputType.number,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'نرخی ٢',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                      VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
                                       ),
-                                      hintText: 'N2',
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    ),
-                                  ),
-                                ),
-                                VerticalDivider(
-                                  width: 1,
-                                  thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                                ),
-                                // Price N3
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _priceN3Controller,
-                                    keyboardType: TextInputType.number,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'نرخی ٣',
-                                      labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _priceN3Controller,
+                                          keyboardType: TextInputType.number,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                          decoration: InputDecoration(
+                                            labelText: 'نرخی ٣',
+                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                            hintText: 'N3',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          ),
+                                        ),
                                       ),
-                                      hintText: 'N3',
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                width: 1,
+                              ),
+                            ),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                children: [
+                                  // Cost Price
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _costPriceController,
+                                      keyboardType: TextInputType.number,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: 'کۆست',
+                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                        hintText: 'کۆست',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                  ),
+                                  // Price N1
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _priceN1Controller,
+                                      keyboardType: TextInputType.number,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: 'نرخی ١',
+                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                        hintText: 'N1',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                  ),
+                                  // Price N2
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _priceN2Controller,
+                                      keyboardType: TextInputType.number,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: 'نرخی ٢',
+                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                        hintText: 'N2',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                  ),
+                                  // Price N3
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _priceN3Controller,
+                                      keyboardType: TextInputType.number,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: 'نرخی ٣',
+                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                        hintText: 'N3',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
                         const SizedBox(height: AppSpacing.md),
 
                         // Quantities & Status
