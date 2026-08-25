@@ -179,7 +179,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                     Tab(text: 'قەرز و پارەدان'),
                   ],
                   labelStyle: AppTextStyles.bodyBold,
-                  unselectedLabelStyle: AppTextStyles.body,
+                  unselectedLabelStyle: AppTextStyles.bodyMedium,
                   labelColor: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -314,7 +314,6 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   }
 
   Widget _buildDebtForm(BuildContext context) {
-    final theme = Theme.of(context);
     return Form(
       key: _paymentFormKey,
       child: Column(
@@ -353,7 +352,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _selectedPaymentMethod,
+            initialValue: _selectedPaymentMethod,
             decoration: const InputDecoration(
               labelText: 'جۆری پارەدان',
               border: OutlineInputBorder(),
