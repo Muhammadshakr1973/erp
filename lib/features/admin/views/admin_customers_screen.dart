@@ -65,7 +65,9 @@ class AdminCustomersScreen extends ConsumerWidget {
                       final bool hasDebt = customer.balance > 0;
                       
                       return AppCard(
-                        onTap: () {},
+                        onTap: () {
+                          context.push('/customer/${customer.id}');
+                        },
                         child: Row(
                           children: [
                             CircleAvatar(

@@ -262,6 +262,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                             const SizedBox(height: 2),
                                           ],
                                           Text(
+                                            'ستۆک: $totalStock',
+                                            style: AppTextStyles.bodyBold.copyWith(
+                                              fontSize: 11,
+                                              color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
                                             'بارکۆد: ${product.barcode}',
                                             style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                                             maxLines: 1,
@@ -283,14 +291,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     ),
                                     const SizedBox(width: AppSpacing.md),
                                   ],
-                                ),
-                              ),
-                              Positioned(
-                                top: -2,
-                                right: 0,
-                                child: StatusBadge(
-                                  label: '$totalStock',
-                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
                                 ),
                               ),
                             ],
@@ -376,6 +376,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                           const SizedBox(height: 2),
                                         ],
                                         Text(
+                                          'ستۆک: $totalStock',
+                                          style: AppTextStyles.bodyBold.copyWith(
+                                            fontSize: 11,
+                                            color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
                                           'بارکۆد: ${product.barcode}',
                                           style: AppTextStyles.caption.copyWith(fontSize: 10),
                                           maxLines: 1,
@@ -395,14 +403,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   ),
                                   const SizedBox(width: AppSpacing.md),
                                 ],
-                              ),
-                              Positioned(
-                                top: -2,
-                                right: 0,
-                                child: StatusBadge(
-                                  label: '$totalStock',
-                                  type: isLowStock ? StatusBadgeType.danger : StatusBadgeType.info,
-                                ),
                               ),
                             ],
                           ),

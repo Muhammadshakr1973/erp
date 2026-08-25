@@ -9,6 +9,8 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../orders/providers/orders_provider.dart';
+import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
@@ -120,6 +122,14 @@ class AdminDashboardScreen extends ConsumerWidget {
               ),
             const SizedBox(height: AppSpacing.sectionGap),
 
+            // Dashboard Chart
+            dashboardAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (err, stack) => const SizedBox.shrink(),
+              data: (dashboard) => _buildDashboardChart(context, dashboard),
+            ),
+            const SizedBox(height: AppSpacing.sectionGap),
+
             Text('کارگێڕی خێرا', style: AppTextStyles.h2),
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -149,7 +159,10 @@ class AdminDashboardScreen extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      // Navigate to customers tab as quick management
+                      ref.read(dashboardProvider); // just dummy touch
+                    },
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
@@ -161,7 +174,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                         children: [
                           Icon(Icons.group_outlined, color: theme.colorScheme.primary),
                           const SizedBox(width: AppSpacing.sm),
-                          const Expanded(child: Text('بەکارهێنەران', style: AppTextStyles.bodyBold)),
+                          const Expanded(child: Text('کڕیارەکان', style: AppTextStyles.bodyBold)),
                         ],
                       ),
                     ),
@@ -176,56 +189,98 @@ class AdminDashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('دوایین پسوڵەکانی فرۆشتن', style: AppTextStyles.h2),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('هەمووی'),
-                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 4,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final statuses = [StatusBadgeType.success, StatusBadgeType.info, StatusBadgeType.warning, StatusBadgeType.danger];
-                final labels = ['گەیشتووە', 'لە ڕێگایە', 'ئامادەکردن', 'گەڕاوە'];
-                
-                return AppCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: AppRadius.radiusMd,
-                        ),
-                        child: Icon(AppIcons.order, color: theme.colorScheme.primary),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            ref.watch(ordersListProvider).when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا لە هێنانی پسوڵەکان')),
+              data: (orders) {
+                if (orders.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.md),
+                      child: Text('هیچ پسوڵەیەک نییە'),
+                    ),
+                  );
+                }
+                final recentOrders = orders.take(4).toList();
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentOrders.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final order = recentOrders[index];
+                    final customerName = order.customer != null ? (order.customer['name'] ?? 'کڕیار') : 'کڕیار';
+                    final salesmanName = order.salesman != null ? (order.salesman['name'] ?? 'مەندوب') : 'مەندوب';
+                    
+                    StatusBadgeType badgeType;
+                    String statusText;
+                    switch (order.status.toLowerCase()) {
+                      case 'delivered':
+                        badgeType = StatusBadgeType.success;
+                        statusText = 'گەیشتووە';
+                        break;
+                      case 'in_delivery':
+                        badgeType = StatusBadgeType.info;
+                        statusText = 'لە ڕێگایە';
+                        break;
+                      case 'ready':
+                      case 'packing':
+                        badgeType = StatusBadgeType.warning;
+                        statusText = 'ئامادەکردن';
+                        break;
+                      case 'cancelled':
+                        badgeType = StatusBadgeType.danger;
+                        statusText = 'گەڕاوە';
+                        break;
+                      default:
+                        badgeType = StatusBadgeType.purple;
+                        statusText = order.status;
+                    }
+
+                    return InkWell(
+                      onTap: () {
+                        context.push('/order/${order.id}');
+                      },
+                      child: AppCard(
+                        child: Row(
                           children: [
-                            Text('مارکێتی سەفین ${index + 1}', style: AppTextStyles.bodyBold),
-                            Text('مەندوب: ئەحمەد • پێش 10 خولەک', style: AppTextStyles.caption),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: AppRadius.radiusMd,
+                              ),
+                              child: Icon(AppIcons.order, color: theme.colorScheme.primary),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(customerName, style: AppTextStyles.bodyBold),
+                                  Text('مەندوب: $salesmanName • ${order.orderNumber}', style: AppTextStyles.caption),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('${order.totalAmount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع', style: AppTextStyles.price),
+                                const SizedBox(height: 4),
+                                StatusBadge(
+                                  label: statusText,
+                                  type: badgeType,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('145,000 د.ع', style: AppTextStyles.price),
-                          const SizedBox(height: 4),
-                          StatusBadge(
-                            label: labels[index % labels.length],
-                            type: statuses[index % statuses.length],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -279,6 +334,96 @@ class AdminDashboardScreen extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardChart(BuildContext context, DashboardModel data) {
+    final theme = Theme.of(context);
+    final totalActivity = data.monthlySales + data.totalReceivables;
+    final salesRatio = totalActivity > 0 ? (data.monthlySales / totalActivity) : 0.0;
+    final debtRatio = totalActivity > 0 ? (data.totalReceivables / totalActivity) : 0.0;
+    
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('شیکاری دارایی و ڕێژەی فرۆشتن بەرامبەر قەرز', style: AppTextStyles.bodyBold),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'ئەم چارتە نیشاندەری ڕێژەی فرۆشتنی مانگانەیە لەگەڵ کۆی قەرزە دەرەکییەکان',
+              style: AppTextStyles.caption,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // Stacked Progress Bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 16,
+                child: Row(
+                  children: [
+                    if (salesRatio > 0)
+                      Expanded(
+                        flex: (salesRatio * 100).toInt(),
+                        child: Container(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    if (debtRatio > 0)
+                      Expanded(
+                        flex: (debtRatio * 100).toInt(),
+                        child: Container(
+                          color: AppColors.danger,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Legend
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(width: 12, height: 12, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(width: 6),
+                    Text('فرۆشتنی مانگ (${(salesRatio * 100).toStringAsFixed(1)}%)', style: AppTextStyles.caption),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Container(width: 12, height: 12, decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(width: 6),
+                    Text('قەرزی کڕیار (${(debtRatio * 100).toStringAsFixed(1)}%)', style: AppTextStyles.caption),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: AppSpacing.lg),
+            // Profit Margin Indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('ڕێژەی قازانجی گشتی فرۆشتن:', style: AppTextStyles.caption),
+                Text(
+                  '${data.monthlySales > 0 ? ((data.monthlyProfit / data.monthlySales) * 100).toStringAsFixed(1) : "0"}%',
+                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.success),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: data.monthlySales > 0 ? (data.monthlyProfit / data.monthlySales) : 0.0,
+              backgroundColor: theme.colorScheme.surfaceContainer,
+              color: AppColors.success,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+        ),
       ),
     );
   }

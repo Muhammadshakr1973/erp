@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_icons.dart';
@@ -93,7 +94,9 @@ class AdminOrdersScreen extends ConsumerWidget {
               }
 
               return AppCard(
-                onTap: () {},
+                onTap: () {
+                  context.push('/order/${order.id}');
+                },
                 child: Row(
                   children: [
                     Container(
