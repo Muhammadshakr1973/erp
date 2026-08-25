@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
-import '../../../core/components/status_badge.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -399,6 +398,8 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                             ),
                                           ],
                                         ),
+                                      ],
+                                    ),
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
