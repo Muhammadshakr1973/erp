@@ -83,7 +83,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -144,7 +146,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Future<void> _submitPayment() async {
-    if (!_paymentFormKey.currentState!.validate()) return;
+    if (!_paymentFormKey.currentState!.validate()) {
+      return;
+    }
 
     final amountText = _paymentAmountController.text.trim();
     final amount = int.tryParse(amountText);
@@ -491,7 +495,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               DropdownMenuItem(value: 'N3', child: Text('نرخی سێیەم (N3 - تایبەت)')),
             ],
             onChanged: (val) {
-              if (val != null) setState(() => _priceType = val);
+              if (val != null) {
+                setState(() => _priceType = val);
+              }
             },
           ),
           if (widget.customer == null) ...[
@@ -575,7 +581,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Widget _buildLedgerHistory(BuildContext context) {
-    if (widget.customer == null) return const SizedBox.shrink();
+    if (widget.customer == null) {
+      return const SizedBox.shrink();
+    }
 
     final ledgerAsync = ref.watch(customerDebtsReportProvider(_ledgerFilters));
 
