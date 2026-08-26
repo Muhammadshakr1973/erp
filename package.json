@@ -2,11 +2,11 @@
   "name": "pos_app",
   "version": "1.0.0",
   "description": "POS Application",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "dev": "node server.js",
-    "build": "echo \"Build placeholder\"",
-    "start": "echo \"Start placeholder\" && sleep 86400"
+    "build": "flutter build web --release",
+    "start": "node server.js"
   },
   "dependencies": {},
   "devDependencies": {}

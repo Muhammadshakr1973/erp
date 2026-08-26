@@ -18,7 +18,7 @@ class UpdateCustomerRequest extends FormRequest
         $customerId = $this->route('customer');
 
         return [
-            'route_id'   => ['required', 'integer', 'exists:routes,id'],
+            'route_id'   => ['nullable', 'integer', 'exists:routes,id'],
             'name'       => ['required', 'string', 'max:255'],
             'phone'      => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)->whereNull('deleted_at')],
             'phone2'     => ['nullable', 'string', 'max:20'],

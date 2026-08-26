@@ -48,14 +48,47 @@ class CustomerService
     {
         $data['created_by'] = $userId;
 
-        // لەبەرئەوەی کڕیاری نوێیە، قەرزەکەی دەبێت سفر بێت
-        $data['current_balance'] = 0;
+        $initialDebt = !empty($data['initial_debt']) ? (int)$data['initial_debt'] : 0;
+        unset($data['initial_debt']);
 
-        return Customer::create($data);
+        if (empty($data['route_id'])) {
+            $defaultRoute = \App\Models\Route::firstOrCreate(
+                ['name' => 'گشتی'],
+                ['code' => 'GEN', 'is_active' => true]
+            );
+            $data['route_id'] = $defaultRoute->id;
+        }
+
+        $data['current_balance'] = $initialDebt;
+
+        $customer = Customer::create($data);
+
+        if ($initialDebt > 0) {
+            \App\Models\CustomerLedger::create([
+                'customer_id' => $customer->id,
+                'entry_type' => 'ADJUSTMENT',
+                'type' => 'debit',
+                'debit' => $initialDebt,
+                'credit' => 0,
+                'amount' => $initialDebt,
+                'balance_after' => $initialDebt,
+                'description' => 'قەرزی پێشینە / قەرزی سەرەتا',
+                'created_by' => $userId,
+            ]);
+        }
+
+        return $customer;
     }
 
     public function updateCustomer(Customer $customer, array $data): Customer
     {
+        if (empty($data['route_id']) && !$customer->route_id) {
+            $defaultRoute = \App\Models\Route::firstOrCreate(
+                ['name' => 'گشتی'],
+                ['code' => 'GEN', 'is_active' => true]
+            );
+            $data['route_id'] = $defaultRoute->id;
+        }
         $customer->update($data);
         return $customer;
     }

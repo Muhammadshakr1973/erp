@@ -10,6 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/api_client.dart';
 import '../providers/customer_provider.dart';
 import '../models/customer.dart';
+import '../views/customer_form_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
@@ -176,6 +177,26 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('زانیاری کڕیار', style: AppTextStyles.h2),
+          actions: [
+            customerAsync.maybeWhen(
+              data: (customer) => IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'دەستکاریکردنی کڕیار',
+                onPressed: () {
+                  showDialog<bool>(
+                    context: context,
+                    builder: (context) => CustomerFormDialog(customer: customer),
+                  ).then((success) {
+                    if (success == true) {
+                      ref.invalidate(singleCustomerProvider(customer.id));
+                      ref.invalidate(customerListProvider);
+                    }
+                  });
+                },
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'زانیاری'),
