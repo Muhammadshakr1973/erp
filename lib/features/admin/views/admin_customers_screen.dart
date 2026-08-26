@@ -40,15 +40,91 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     super.dispose();
   }
 
-  void _showAddCustomerDialog(BuildContext context) {
+  void _showAddCustomerDialog(BuildContext context, [Customer? customer]) {
     showDialog<bool>(
       context: context,
-      builder: (context) => const CustomerFormDialog(),
+      builder: (context) => CustomerFormDialog(customer: customer),
     ).then((success) {
       if (success == true) {
         ref.invalidate(customerListProvider);
       }
     });
+  }
+
+  void _showDeleteCustomerDialog(BuildContext context, Customer customer) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('سڕینەوەی کڕیار', style: AppTextStyles.h3),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('دڵنیایت لە سڕینەوەی کڕیاری "${customer.name}"؟'),
+            if (customer.balance > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ئاگاداربە: ئەم کڕیارە بڕی ${customer.balance.toInt()} د.ع قەرزی لەسەرە!',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.danger, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('پاشگەزبوونەوە'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(customerActionsProvider).deleteCustomer(customer.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('کڕیار بە سەرکەوتوویی سڕایەوە'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('هەڵە لە سڕینەوە: $e'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('سڕینەوە'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -202,6 +278,42 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                   Text('پاکە', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
                                   Text('0 د.ع', style: AppTextStyles.bodyBold.copyWith(color: AppColors.success)),
                                 ],
+                              ],
+                            ),
+                            PopupMenuButton<String>(
+                              icon: Icon(
+                                Icons.more_vert,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _showAddCustomerDialog(context, customer);
+                                } else if (value == 'delete') {
+                                  _showDeleteCustomerDialog(context, customer);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined, size: 20),
+                                      SizedBox(width: 8),
+                                      Text('دەستکاریکردن'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
+                                      SizedBox(width: 8),
+                                      Text('سڕینەوە', style: TextStyle(color: AppColors.danger)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ],

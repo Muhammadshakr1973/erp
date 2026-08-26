@@ -15,3 +15,8 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
     throw Exception(api.parseError(e));
   }
 });
+
+final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((ref, customerId) async {
+  final orders = await ref.watch(ordersListProvider.future);
+  return orders.where((order) => order.customerId == customerId).toList();
+});

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -12,6 +14,8 @@ import '../providers/customer_provider.dart';
 import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
+import '../../orders/providers/orders_provider.dart';
+import '../../orders/models/order_model.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -179,20 +183,104 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           title: const Text('زانیاری کڕیار', style: AppTextStyles.h2),
           actions: [
             customerAsync.maybeWhen(
-              data: (customer) => IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: 'دەستکاریکردنی کڕیار',
-                onPressed: () {
-                  showDialog<bool>(
-                    context: context,
-                    builder: (context) => CustomerFormDialog(customer: customer),
-                  ).then((success) {
-                    if (success == true) {
-                      ref.invalidate(singleCustomerProvider(customer.id));
-                      ref.invalidate(customerListProvider);
-                    }
-                  });
-                },
+              data: (customer) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'دەستکاریکردنی کڕیار',
+                    onPressed: () {
+                      showDialog<bool>(
+                        context: context,
+                        builder: (context) => CustomerFormDialog(customer: customer),
+                      ).then((success) {
+                        if (success == true) {
+                          ref.invalidate(singleCustomerProvider(customer.id));
+                          ref.invalidate(customerListProvider);
+                        }
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                    tooltip: 'سڕینەوەی کڕیار',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('سڕینەوەی کڕیار', style: AppTextStyles.h3),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('دڵنیایت لە سڕینەوەی کڕیاری "${customer.name}"؟'),
+                              if (customer.balance > 0) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Container(
+                                  padding: const EdgeInsets.all(AppSpacing.sm),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.danger.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'ئاگاداربە: ئەم کڕیارە بڕی ${customer.balance.toInt()} د.ع قەرزی لەسەرە!',
+                                          style: AppTextStyles.caption.copyWith(color: AppColors.danger, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('پاشگەزبوونەوە'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.danger,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                try {
+                                  await ref.read(customerActionsProvider).deleteCustomer(customer.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('کڕیار بە سەرکەوتوویی سڕایەوە'),
+                                        backgroundColor: AppColors.success,
+                                      ),
+                                    );
+                                    Navigator.pop(context);
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('هەڵە لە سڕینەوە: $e'),
+                                        backgroundColor: AppColors.danger,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: const Text('سڕینەوە'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
               orElse: () => const SizedBox.shrink(),
             ),
@@ -436,8 +524,93 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   Widget _buildOrdersTab(BuildContext context, Customer customer) {
-    // Note: To implement properly, a customerOrdersProvider is needed.
-    // For now returning placeholder.
-    return const Center(child: Text('بەمزووانە...'));
+    final ordersAsync = ref.watch(customerOrdersProvider(customer.id));
+    final theme = Theme.of(context);
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(ordersListProvider),
+      child: ordersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا: $error')),
+        data: (orders) {
+          if (orders.isEmpty) {
+            return const Center(child: Text('هیچ پسوڵەیەکی کڕین بۆ ئەم کڕیارە نییە'));
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            itemCount: orders.length,
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              final salesmanName = order.salesman != null ? order.salesman['name'] : 'نەناسراو';
+              
+              String statusLabel = 'ئامادەکردن';
+              StatusBadgeType statusType = StatusBadgeType.warning;
+              
+              if (order.status == 'delivered') {
+                statusLabel = 'گەیشتووە';
+                statusType = StatusBadgeType.success;
+              } else if (order.status == 'in_delivery') {
+                statusLabel = 'لە ڕێگایە';
+                statusType = StatusBadgeType.info;
+              } else if (order.status == 'cancelled' || order.status == 'returned') {
+                statusLabel = 'گەڕاوە';
+                statusType = StatusBadgeType.danger;
+              }
+
+              return AppCard(
+                onTap: () {
+                  context.push('/order/${order.id}');
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(AppIcons.order, color: theme.colorScheme.primary),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('پسوڵەی #${order.orderNumber}', style: AppTextStyles.bodyBold),
+                            const SizedBox(height: 4),
+                            Text(
+                              'مەندوب: $salesmanName • ${order.createdAt.split('T').first}', 
+                              style: AppTextStyles.caption,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('${order.totalAmount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع', style: AppTextStyles.price),
+                          const SizedBox(height: 4),
+                          StatusBadge(
+                            label: statusLabel,
+                            type: statusType,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 }
