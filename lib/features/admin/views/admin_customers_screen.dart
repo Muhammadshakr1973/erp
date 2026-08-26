@@ -232,6 +232,10 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     crossAxisCount = 2;
                   }
 
+                  String formatCurrency(num amount) {
+                    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+                  }
+
                   return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.screenHorizontal,
@@ -251,17 +255,14 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                       final bool hasDebt = customer.balance > 0;
 
                       return AppCard(
-                        onTap: () {
-                          context.push('/customer/${customer.id}');
-                        },
+                        onTap: () => _showAddCustomerDialog(context, customer),
+                        onLongPress: () => _showDeleteCustomerDialog(context, customer),
                         child: Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: theme.colorScheme.primaryContainer,
-                              child: Icon(
-                                AppIcons.customer,
-                                color: theme.colorScheme.primary,
-                              ),
+                              radius: 24,
+                              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.person, color: Colors.grey),
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -277,7 +278,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${customer.address ?? 'بێ ناونیشان'} • ${customer.phone ?? ''}',
+                                    '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}',
                                     style: AppTextStyles.caption,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -285,57 +286,19 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.sm),
+                            const SizedBox(width: AppSpacing.md),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                if (hasDebt) ...[
-                                  Text('قەرزدار', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
-                                  Text(
-                                    '${customer.balance.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع',
-                                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
-                                    textDirection: TextDirection.ltr,
+                                const Text('قەرز', style: AppTextStyles.caption),
+                                const SizedBox(height: 4),
+                                Text(
+                                  hasDebt ? formatCurrency(customer.balance) : '0 د.ع',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: hasDebt ? AppColors.danger : AppColors.success,
                                   ),
-                                ] else ...[
-                                  Text('پاکە', style: AppTextStyles.caption.copyWith(color: AppColors.success)),
-                                  Text('0 د.ع', style: AppTextStyles.bodyBold.copyWith(color: AppColors.success)),
-                                ],
-                              ],
-                            ),
-                            PopupMenuButton<String>(
-                              icon: Icon(
-                                Icons.more_vert,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  _showAddCustomerDialog(context, customer);
-                                } else if (value == 'delete') {
-                                  _showDeleteCustomerDialog(context, customer);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit_outlined, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('دەستکاریکردن'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('سڕینەوە', style: TextStyle(color: AppColors.danger)),
-                                    ],
-                                  ),
+                                  textDirection: TextDirection.ltr,
                                 ),
                               ],
                             ),

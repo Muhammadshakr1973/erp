@@ -54,6 +54,8 @@ class CustomerActions {
     int? routeId,
     String? priceType,
     int? initialDebt,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final response = await api.client.post('/customers', data: {
@@ -64,6 +66,8 @@ class CustomerActions {
         if (routeId != null) 'route_id': routeId,
         if (priceType != null) 'price_type': priceType,
         if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       });
       ref.invalidate(customerListProvider);
       return Customer.fromJson(response.data['data']);
@@ -81,6 +85,8 @@ class CustomerActions {
     int? routeId,
     String? priceType,
     bool? isActive,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final response = await api.client.put('/customers/$id', data: {
@@ -91,6 +97,8 @@ class CustomerActions {
         if (routeId != null) 'route_id': routeId,
         if (priceType != null) 'price_type': priceType,
         if (isActive != null) 'is_active': isActive,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       });
       ref.invalidate(customerListProvider);
       ref.invalidate(singleCustomerProvider(id));

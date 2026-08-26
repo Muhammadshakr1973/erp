@@ -10,6 +10,8 @@ class Customer {
   final int? routeId;
   final String? priceType;
   final bool isActive;
+  final double? latitude;
+  final double? longitude;
 
   Customer({
     required this.id,
@@ -23,6 +25,8 @@ class Customer {
     this.routeId,
     this.priceType = 'N2',
     this.isActive = true,
+    this.latitude,
+    this.longitude,
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
@@ -38,6 +42,8 @@ class Customer {
       routeId: json['route_id'],
       priceType: json['price_type'] ?? 'N2',
       isActive: json['is_active'] == 1 || json['is_active'] == true,
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
     );
   }
 }

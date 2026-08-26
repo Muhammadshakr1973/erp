@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong2.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/customer.dart';
 import '../providers/customer_provider.dart';
+import 'map_picker_dialog.dart';
 
 class CustomerFormDialog extends ConsumerStatefulWidget {
   final Customer? customer;
@@ -27,7 +29,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   late TextEditingController _phone2Controller;
   late TextEditingController _addressController;
   late TextEditingController _initialDebtController;
-  String _priceType = 'N2';
+  String _priceType = 'N3';
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -37,7 +41,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _phone2Controller = TextEditingController(text: widget.customer?.phone2);
     _addressController = TextEditingController(text: widget.customer?.address);
     _initialDebtController = TextEditingController();
-    _priceType = widget.customer?.priceType ?? 'N2';
+    _priceType = widget.customer?.priceType ?? 'N3';
+    _latitude = widget.customer?.latitude;
+    _longitude = widget.customer?.longitude;
   }
 
   @override
@@ -66,6 +72,8 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
           priceType: _priceType,
           initialDebt: initialDebt,
+          latitude: _latitude,
+          longitude: _longitude,
         );
       } else {
         await actions.updateCustomer(
@@ -75,6 +83,8 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
           priceType: _priceType,
+          latitude: _latitude,
+          longitude: _longitude,
         );
       }
 
@@ -184,15 +194,93 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        AppTextField(
-                          controller: _addressController,
-                          labelText: 'ناونیشان / شوێن',
-                          hintText: 'هەولێر، گەڕەکی ڕزگاری...',
-                          prefixIcon: Icons.location_on_outlined,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: _addressController,
+                                labelText: 'ناونیشان / شوێن',
+                                hintText: 'هەولێر، گەڕەکی ڕزگاری...',
+                                prefixIcon: Icons.location_on_outlined,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _latitude != null ? Colors.green.shade50 : Colors.blue.shade50,
+                                foregroundColor: _latitude != null ? Colors.green : Colors.blue,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: _latitude != null ? Colors.green.shade300 : Colors.blue.shade300,
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              ),
+                              onPressed: () async {
+                                final LatLng? initialLoc = _latitude != null && _longitude != null
+                                    ? LatLng(_latitude!, _longitude!)
+                                    : null;
+                                final result = await showDialog<LatLng>(
+                                  context: context,
+                                  builder: (context) => MapPickerDialog(initialLocation: initialLoc),
+                                );
+                                if (result != null) {
+                                  setState(() {
+                                    _latitude = result.latitude;
+                                    _longitude = result.longitude;
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.map_outlined),
+                              label: Text(
+                                _latitude != null ? 'نەخشە دیاریکراوە' : 'نەخشە',
+                                style: const TextStyle(fontFamily: 'Rudaw'),
+                              ),
+                            ),
+                          ],
                         ),
+                        if (_latitude != null && _longitude != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_outline, color: Colors.green.shade600, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'پۆتانەکان: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green.shade700,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _latitude = null;
+                                      _longitude = null;
+                                    });
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 0),
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  child: const Text('سڕینەوەی پۆتان', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.md),
                         DropdownButtonFormField<String>(
-                          initialValue: _priceType,
+                          value: _priceType,
                           decoration: const InputDecoration(
                             labelText: 'جۆری نرخ',
                             border: OutlineInputBorder(),
