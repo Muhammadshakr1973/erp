@@ -104,4 +104,72 @@ class ReportController extends Controller
             'data' => $ledgers
         ]);
     }
+
+    public function paymentsHistory(Request $request): JsonResponse
+    {
+        $type = $request->input('type', 'customer'); // customer or supplier
+
+        if ($type === 'supplier') {
+            $query = \App\Models\SupplierPayment::with(['supplier'])->orderByDesc('paid_at')->orderByDesc('id');
+
+            if ($request->has('supplier_id') && $request->supplier_id != '') {
+                $query->where('supplier_id', $request->supplier_id);
+            }
+
+            if ($request->has('start_date') && $request->start_date != '') {
+                $query->whereDate('paid_at', '>=', $request->start_date);
+            }
+
+            if ($request->has('end_date') && $request->end_date != '') {
+                $query->whereDate('paid_at', '<=', $request->end_date);
+            }
+
+            $payments = $query->get()->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'type' => 'supplier',
+                    'party_name' => $payment->supplier ? $payment->supplier->name : 'N/A',
+                    'party_id' => $payment->supplier_id,
+                    'amount' => $payment->amount,
+                    'payment_method' => strtoupper($payment->payment_method),
+                    'paid_at' => $payment->paid_at,
+                    'notes' => $payment->notes,
+                    'reference' => $payment->purchase_order_id ? 'پسوڵەی کڕین #' . $payment->purchase_order_id : 'قەرزی گشتی',
+                ];
+            });
+        } else {
+            $query = \App\Models\CustomerPayment::with(['customer'])->orderByDesc('paid_at')->orderByDesc('id');
+
+            if ($request->has('customer_id') && $request->customer_id != '') {
+                $query->where('customer_id', $request->customer_id);
+            }
+
+            if ($request->has('start_date') && $request->start_date != '') {
+                $query->whereDate('paid_at', '>=', $request->start_date);
+            }
+
+            if ($request->has('end_date') && $request->end_date != '') {
+                $query->whereDate('paid_at', '<=', $request->end_date);
+            }
+
+            $payments = $query->get()->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'type' => 'customer',
+                    'party_name' => $payment->customer ? $payment->customer->name : 'N/A',
+                    'party_id' => $payment->customer_id,
+                    'amount' => $payment->amount,
+                    'payment_method' => strtoupper($payment->payment_method),
+                    'paid_at' => $payment->paid_at,
+                    'notes' => $payment->notes,
+                    'reference' => $payment->payment_number ?? ($payment->sales_order_id ? 'پسوڵەی فرۆشتن #' . $payment->sales_order_id : 'قەرزی گشتی'),
+                ];
+            });
+        }
+
+        return response()->json([
+            'message' => 'ڕاپۆرتی مێژووی پارەدان',
+            'data' => $payments
+        ]);
+    }
 }

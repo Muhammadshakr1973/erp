@@ -48,5 +48,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard']);
         Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts']);
         Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts']);
+        Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory']);
     });
 });

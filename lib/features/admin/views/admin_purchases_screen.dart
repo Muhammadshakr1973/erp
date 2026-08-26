@@ -219,28 +219,24 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
         }
 
         final screenWidth = MediaQuery.of(context).size.width;
-        final bool isMobile = screenWidth < 800;
-
-        if (isMobile) {
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-            itemCount: suppliers.length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
-          );
-        } else {
-          return GridView.builder(
-            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-            itemCount: suppliers.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: screenWidth > 1200 ? 3 : 2,
-              crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: AppSpacing.md,
-              mainAxisExtent: 88,
-            ),
-            itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
-          );
+        int crossAxisCount = 1;
+        if (screenWidth >= 1200) {
+          crossAxisCount = 3;
+        } else if (screenWidth >= 600) {
+          crossAxisCount = 2;
         }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+          itemCount: suppliers.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            mainAxisExtent: 96,
+          ),
+          itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
+        );
       },
       loading: () => const Center(
         child: CircularProgressIndicator(),

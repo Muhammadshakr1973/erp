@@ -224,7 +224,15 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     );
                   }
 
-                  return ListView.separated(
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  int crossAxisCount = 1;
+                  if (screenWidth >= 1200) {
+                    crossAxisCount = 3;
+                  } else if (screenWidth >= 600) {
+                    crossAxisCount = 2;
+                  }
+
+                  return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.screenHorizontal,
                       0,
@@ -232,7 +240,12 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                       80,
                     ),
                     itemCount: filteredCustomers.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisSpacing: AppSpacing.sm,
+                      mainAxisExtent: 96,
+                    ),
                     itemBuilder: (context, index) {
                       final customer = filteredCustomers[index];
                       final bool hasDebt = customer.balance > 0;
@@ -254,18 +267,28 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(customer.name, style: AppTextStyles.bodyBold),
+                                  Text(
+                                    customer.name, 
+                                    style: AppTextStyles.bodyBold,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${customer.address ?? 'بێ ناونیشان'} • ${customer.phone ?? ''}',
                                     style: AppTextStyles.caption,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 if (hasDebt) ...[
                                   Text('قەرزدار', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
