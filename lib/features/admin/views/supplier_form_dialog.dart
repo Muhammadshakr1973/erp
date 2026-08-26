@@ -450,7 +450,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String?>(
-                      value: _ledgerEntryType,
+                      initialValue: _ledgerEntryType,
                       decoration: const InputDecoration(
                         labelText: 'جۆری جوڵە',
                         border: OutlineInputBorder(),

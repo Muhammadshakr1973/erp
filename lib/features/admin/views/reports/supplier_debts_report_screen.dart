@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../products/providers/suppliers_provider.dart';
+import '../../../products/models/supplier_model.dart';
 import '../providers/reports_provider.dart';
 
 class SupplierDebtsReportScreen extends ConsumerStatefulWidget {
@@ -69,7 +70,7 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
 
   Widget _buildSupplierDropdown(AsyncValue<List<SupplierModel>> suppliersAsync) {
     return DropdownButtonFormField<int?>(
-      value: _selectedSupplierId,
+      initialValue: _selectedSupplierId,
       decoration: const InputDecoration(
         labelText: 'کۆمپانیا',
         border: OutlineInputBorder(),
@@ -80,7 +81,7 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
         ...suppliersAsync.when(
           data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
           loading: () => [const DropdownMenuItem(value: null, child: Text('بارکردن...'))],
-          error: (_, __) => [const DropdownMenuItem(value: null, child: Text('کێشە هەیە'))],
+          error: (_, _) => [const DropdownMenuItem(value: null, child: Text('کێشە هەیە'))],
         ),
       ],
       onChanged: (val) => setState(() => _selectedSupplierId = val),
@@ -89,7 +90,7 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
 
   Widget _buildEntryTypeDropdown() {
     return DropdownButtonFormField<String?>(
-      value: _selectedEntryType,
+      initialValue: _selectedEntryType,
       decoration: const InputDecoration(
         labelText: 'جۆری جوڵە',
         border: OutlineInputBorder(),
