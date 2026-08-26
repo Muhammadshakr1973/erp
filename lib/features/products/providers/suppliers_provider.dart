@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/supplier_model.dart';
+import '../models/supplier_ledger_model.dart';
 
 final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -12,7 +13,20 @@ final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
     }
     return [];
   } catch (e) {
-    // If the endpoint doesn't exist yet, return empty list instead of failing
+    return [];
+  }
+});
+
+final supplierLedgerProvider = FutureProvider.family<List<SupplierLedgerModel>, int>((ref, supplierId) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/suppliers/$supplierId/ledger');
+    if (response.statusCode == 200) {
+      final List data = response.data['data'] ?? [];
+      return data.map((json) => SupplierLedgerModel.fromJson(json)).toList();
+    }
+    return [];
+  } catch (e) {
     return [];
   }
 });
@@ -93,6 +107,7 @@ class SupplierActions {
         'notes': notes,
       });
       ref.invalidate(suppliersListProvider);
+      ref.invalidate(supplierLedgerProvider(id));
       return SupplierModel.fromJson(response.data['data']);
     } catch (e) {
       throw Exception(api.parseError(e));

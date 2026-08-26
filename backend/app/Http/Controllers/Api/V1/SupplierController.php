@@ -153,4 +153,17 @@ class SupplierController extends Controller
             ]);
         });
     }
+
+    public function ledger($id): JsonResponse
+    {
+        $supplier = Supplier::findOrFail($id);
+        $ledger = SupplierLedger::where('supplier_id', $supplier->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json([
+            'message' => 'مێژووی قەرز و پارەدانی سەپڵایەر',
+            'data' => $ledger
+        ]);
+    }
 }

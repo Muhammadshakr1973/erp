@@ -32,6 +32,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/suppliers/{id}', [SupplierController::class, 'update']);
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy']);
         Route::post('/suppliers/{id}/pay', [SupplierController::class, 'pay']);
+        Route::get('/suppliers/{id}/ledger', [SupplierController::class, 'ledger']);
         Route::apiResource('customers', CustomerController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);

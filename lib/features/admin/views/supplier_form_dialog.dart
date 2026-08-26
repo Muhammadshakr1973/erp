@@ -161,7 +161,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     final childWidget = widget.supplier == null
         ? _buildProfileForm(context)
         : DefaultTabController(
-            length: 2,
+            length: 3,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,8 +178,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 ),
                 TabBar(
                   tabs: const [
-                    Tab(text: 'زانیاری کۆمپانیا'),
-                    Tab(text: 'قەرز و پارەدان'),
+                    Tab(text: 'زانیاری'),
+                    Tab(text: 'پارەدان'),
+                    Tab(text: 'مێژوو'),
                   ],
                   labelStyle: AppTextStyles.bodyBold,
                   unselectedLabelStyle: AppTextStyles.bodyMedium,
@@ -193,6 +194,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                       children: [
                         SingleChildScrollView(child: _buildProfileFormFields(context)),
                         SingleChildScrollView(child: _buildDebtForm(context)),
+                        _buildLedgerHistory(context),
                       ],
                     ),
                   ),
@@ -377,6 +379,55 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLedgerHistory(BuildContext context) {
+    if (widget.supplier == null) return const SizedBox.shrink();
+    
+    final ledgerAsync = ref.watch(supplierLedgerProvider(widget.supplier!.id));
+    
+    return ledgerAsync.when(
+      data: (ledgerList) {
+        if (ledgerList.isEmpty) {
+          return const Center(child: Text('هیچ مێژوویەک نییە'));
+        }
+        return ListView.separated(
+          itemCount: ledgerList.length,
+          separatorBuilder: (context, index) => const Divider(),
+          itemBuilder: (context, index) {
+            final entry = ledgerList[index];
+            final isCredit = entry.type == 'credit';
+            final amountColor = isCredit ? AppColors.success : AppColors.danger;
+            
+            return ListTile(
+              title: Text(entry.description ?? 'بێ تێبینی', style: AppTextStyles.bodyBold),
+              subtitle: Text(
+                '${entry.createdAt?.split('T').first ?? ''} • ${entry.entryType}',
+                style: AppTextStyles.caption,
+              ),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
+                    style: AppTextStyles.bodyBold.copyWith(color: amountColor),
+                    textDirection: TextDirection.ltr,
+                  ),
+                  Text(
+                    'قەرز: ${_formatCurrency(entry.balanceAfter)}',
+                    style: AppTextStyles.caption,
+                    textDirection: TextDirection.ltr,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('کێشە هەیە: $e')),
     );
   }
 }
