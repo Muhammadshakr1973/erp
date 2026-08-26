@@ -7,6 +7,7 @@ use App\Models\SalesOrder;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class ReportController extends Controller
@@ -46,5 +47,31 @@ class ReportController extends Controller
                 'monthly_collected' => $monthlyCollected,
             ]
         ], 200);
+    public function supplierDebts(Request $request): JsonResponse
+    {
+        $query = \App\Models\SupplierLedger::with('supplier')->orderByDesc('created_at');
+
+        if ($request->has('supplier_id') && $request->supplier_id != '') {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        if ($request->has('start_date') && $request->start_date != '') {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date') && $request->end_date != '') {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        if ($request->has('entry_type') && $request->entry_type != '') {
+            $query->where('entry_type', $request->entry_type);
+        }
+
+        $ledgers = $query->get();
+
+        return response()->json([
+            'message' => 'ڕاپۆرتی قەرزی کۆمپانیاکان',
+            'data' => $ledgers
+        ]);
     }
 }

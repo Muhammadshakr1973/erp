@@ -11,6 +11,7 @@ class SupplierLedgerModel {
   final int? referenceId;
   final String? description;
   final String? createdAt;
+  final String? supplierName;
 
   SupplierLedgerModel({
     required this.id,
@@ -25,6 +26,7 @@ class SupplierLedgerModel {
     this.referenceId,
     this.description,
     this.createdAt,
+    this.supplierName,
   });
 
   factory SupplierLedgerModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class SupplierLedgerModel {
       referenceId: json['reference_id'],
       description: json['description'],
       createdAt: json['created_at'],
+      supplierName: json['supplier'] != null ? json['supplier']['name'] : null,
     );
   }
 }

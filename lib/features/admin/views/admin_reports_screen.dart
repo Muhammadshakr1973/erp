@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'reports/supplier_debts_report_screen.dart';
 
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
@@ -69,7 +70,14 @@ class AdminReportsScreen extends StatelessWidget {
           ...reports.map((report) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: InkWell(
-                  onTap: () {},
+                  onTap: () {
+                    if (report == 'قەرزی کۆمپانیاکان') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SupplierDebtsReportScreen()),
+                      );
+                    }
+                  },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
