@@ -80,8 +80,8 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
         const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
         ...suppliersAsync.when(
           data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-          loading: () => [const DropdownMenuItem(value: null, child: Text('بارکردن...'))],
-          error: (_, _) => [const DropdownMenuItem(value: null, child: Text('کێشە هەیە'))],
+          loading: () => [],
+          error: (_, _) => [],
         ),
       ],
       onChanged: (val) => setState(() => _selectedSupplierId = val),

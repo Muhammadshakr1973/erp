@@ -5,11 +5,12 @@ import '../../../core/components/responsive_shell.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_customers_screen.dart';
+import 'admin_purchases_screen.dart';
 import 'admin_products_screen.dart';
 import 'admin_reports_screen.dart';
 
 class AdminMainScreen extends ConsumerStatefulWidget {
-  const AdminMainScreen({Key? key}) : super(key: key);
+  const AdminMainScreen({super.key});
 
   @override
   ConsumerState<AdminMainScreen> createState() => _AdminMainScreenState();
@@ -22,6 +23,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
     const AdminDashboardScreen(),
     const AdminOrdersScreen(),
     const AdminCustomersScreen(),
+    const AdminPurchasesScreen(),
     const AdminProductsScreen(),
     const AdminReportsScreen(),
   ];
@@ -53,11 +55,15 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
           label: 'کڕیارەکان',
         ),
         NavigationDestination(
-          icon: Icon(Icons.inventory_2_outlined), // Products Icon
+          icon: Icon(Icons.store), 
+          label: 'کۆمپانیا',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.inventory_2_outlined), 
           label: 'کاڵاکان',
         ),
         NavigationDestination(
-          icon: Icon(Icons.bar_chart), // Reports Icon
+          icon: Icon(Icons.bar_chart), 
           label: 'ڕاپۆرت',
         ),
       ],

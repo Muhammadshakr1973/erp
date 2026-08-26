@@ -130,60 +130,6 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.sectionGap),
 
-            Text('کارگێڕی خێرا', style: AppTextStyles.h2),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      context.push('/admin-purchases');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.outline),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
-                          const SizedBox(width: AppSpacing.sm),
-                          const Expanded(child: Text('بازاڕ و کۆمپانیا', style: AppTextStyles.bodyBold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      // Navigate to customers tab as quick management
-                      ref.read(dashboardProvider); // just dummy touch
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.outline),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.group_outlined, color: theme.colorScheme.primary),
-                          const SizedBox(width: AppSpacing.sm),
-                          const Expanded(child: Text('کڕیارەکان', style: AppTextStyles.bodyBold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sectionGap),
-
             // Recent Orders
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

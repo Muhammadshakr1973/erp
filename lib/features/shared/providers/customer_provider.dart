@@ -7,7 +7,13 @@ final customerListProvider = FutureProvider<List<Customer>>((ref) async {
   try {
     final response = await api.client.get('/customers');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      var rawData = response.data['data'];
+      List data = [];
+      if (rawData is Map<String, dynamic> && rawData.containsKey('data')) {
+        data = rawData['data'] ?? [];
+      } else if (rawData is List) {
+        data = rawData;
+      }
       return data.map((json) => Customer.fromJson(json)).toList();
     }
     return [];
