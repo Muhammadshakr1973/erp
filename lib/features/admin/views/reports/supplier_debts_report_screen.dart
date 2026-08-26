@@ -67,6 +67,72 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
     }
   }
 
+  Widget _buildSupplierDropdown(AsyncValue<List<SupplierModel>> suppliersAsync) {
+    return DropdownButtonFormField<int?>(
+      value: _selectedSupplierId,
+      decoration: const InputDecoration(
+        labelText: 'کۆمپانیا',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      items: [
+        const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
+        ...suppliersAsync.when(
+          data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+          loading: () => [const DropdownMenuItem(value: null, child: Text('بارکردن...'))],
+          error: (_, __) => [const DropdownMenuItem(value: null, child: Text('کێشە هەیە'))],
+        ),
+      ],
+      onChanged: (val) => setState(() => _selectedSupplierId = val),
+    );
+  }
+
+  Widget _buildEntryTypeDropdown() {
+    return DropdownButtonFormField<String?>(
+      value: _selectedEntryType,
+      decoration: const InputDecoration(
+        labelText: 'جۆری جوڵە',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
+        DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
+        DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین')),
+        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
+      ],
+      onChanged: (val) => setState(() => _selectedEntryType = val),
+    );
+  }
+
+  Widget _buildStartDatePicker(BuildContext context) {
+    return InkWell(
+      onTap: () => _selectDate(context, true),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'لە بەرواری',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ),
+        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+      ),
+    );
+  }
+
+  Widget _buildEndDatePicker(BuildContext context) {
+    return InkWell(
+      onTap: () => _selectDate(context, false),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'تا بەرواری',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ),
+        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final reportAsync = ref.watch(supplierDebtsReportProvider(_filters));
@@ -85,97 +151,71 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('فلتەرکردن', style: AppTextStyles.h3),
-                  const SizedBox(height: AppSpacing.md),
-                  Wrap(
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    crossAxisAlignment: WrapCrossAlignment.end,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Supplier Dropdown
-                      SizedBox(
-                        width: 200,
-                        child: DropdownButtonFormField<int?>(
-                          value: _selectedSupplierId,
-                          decoration: const InputDecoration(
-                            labelText: 'کۆمپانیا',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          ),
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
-                            ...suppliersAsync.when(
-                              data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                              loading: () => [const DropdownMenuItem(value: null, child: Text('بارکردن...'))],
-                              error: (_, __) => [const DropdownMenuItem(value: null, child: Text('کێشە هەیە'))],
-                            ),
-                          ],
-                          onChanged: (val) => setState(() => _selectedSupplierId = val),
-                        ),
-                      ),
-                      
-                      // Entry Type Dropdown
-                      SizedBox(
-                        width: 150,
-                        child: DropdownButtonFormField<String?>(
-                          value: _selectedEntryType,
-                          decoration: const InputDecoration(
-                            labelText: 'جۆری جوڵە',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-                            DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
-                            DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین')),
-                            DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
-                          ],
-                          onChanged: (val) => setState(() => _selectedEntryType = val),
-                        ),
-                      ),
-
-                      // Start Date
-                      SizedBox(
-                        width: 150,
-                        child: InkWell(
-                          onTap: () => _selectDate(context, true),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'لە بەرواری',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            ),
-                            child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
-                          ),
-                        ),
-                      ),
-
-                      // End Date
-                      SizedBox(
-                        width: 150,
-                        child: InkWell(
-                          onTap: () => _selectDate(context, false),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'تا بەرواری',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            ),
-                            child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
-                          ),
-                        ),
-                      ),
-
-                      // Buttons
-                      AppButton(
-                        text: 'جێبەجێکردن',
-                        onPressed: _applyFilters,
-                      ),
+                      const Text('فلتەرکردن', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
                         child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 600;
+                      
+                      if (isMobile) {
+                        return Column(
+                          children: [
+                            _buildSupplierDropdown(suppliersAsync),
+                            const SizedBox(height: AppSpacing.md),
+                            _buildEntryTypeDropdown(),
+                            const SizedBox(height: AppSpacing.md),
+                            Row(
+                              children: [
+                                Expanded(child: _buildStartDatePicker(context)),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(child: _buildEndDatePicker(context)),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            SizedBox(
+                              width: double.infinity,
+                              child: AppButton(
+                                text: 'جێبەجێکردن',
+                                onPressed: _applyFilters,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(flex: 2, child: _buildSupplierDropdown(suppliersAsync)),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(flex: 1, child: _buildEntryTypeDropdown()),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(flex: 1, child: _buildStartDatePicker(context)),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(flex: 1, child: _buildEndDatePicker(context)),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          SizedBox(
+                            width: double.infinity,
+                            child: AppButton(
+                              text: 'جێبەجێکردن',
+                              onPressed: _applyFilters,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

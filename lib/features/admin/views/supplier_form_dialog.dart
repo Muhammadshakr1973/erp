@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
+import 'providers/reports_provider.dart';
 
 class SupplierFormDialog extends ConsumerStatefulWidget {
   final SupplierModel? supplier;
@@ -34,9 +35,17 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   late TextEditingController _paymentAmountController;
   late TextEditingController _paymentNotesController;
 
+  String? _ledgerEntryType;
+  DateTime? _ledgerStartDate;
+  DateTime? _ledgerEndDate;
+  Map<String, dynamic> _ledgerFilters = {};
+
   @override
   void initState() {
     super.initState();
+    if (widget.supplier != null) {
+      _ledgerFilters = {'supplier_id': widget.supplier!.id.toString()};
+    }
     _nameController = TextEditingController(text: widget.supplier?.name);
     _phoneController = TextEditingController(text: widget.supplier?.phone);
     _addressController = TextEditingController(text: widget.supplier?.address);
@@ -382,52 +391,176 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     );
   }
 
+  void _applyLedgerFilters() {
+    setState(() {
+      _ledgerFilters = {
+        'supplier_id': widget.supplier!.id.toString(),
+        if (_ledgerEntryType != null && _ledgerEntryType != 'ALL') 'entry_type': _ledgerEntryType,
+        if (_ledgerStartDate != null) 'start_date': _ledgerStartDate!.toIso8601String().split('T').first,
+        if (_ledgerEndDate != null) 'end_date': _ledgerEndDate!.toIso8601String().split('T').first,
+      };
+    });
+  }
+
+  void _clearLedgerFilters() {
+    setState(() {
+      _ledgerEntryType = null;
+      _ledgerStartDate = null;
+      _ledgerEndDate = null;
+      _ledgerFilters = {'supplier_id': widget.supplier!.id.toString()};
+    });
+  }
+
+  Future<void> _selectLedgerDate(BuildContext context, bool isStart) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _ledgerStartDate = picked;
+        } else {
+          _ledgerEndDate = picked;
+        }
+      });
+    }
+  }
+
   Widget _buildLedgerHistory(BuildContext context) {
     if (widget.supplier == null) return const SizedBox.shrink();
     
-    final ledgerAsync = ref.watch(supplierLedgerProvider(widget.supplier!.id));
+    final ledgerAsync = ref.watch(supplierDebtsReportProvider(_ledgerFilters));
     
-    return ledgerAsync.when(
-      data: (ledgerList) {
-        if (ledgerList.isEmpty) {
-          return const Center(child: Text('هیچ مێژوویەک نییە'));
-        }
-        return ListView.separated(
-          itemCount: ledgerList.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) {
-            final entry = ledgerList[index];
-            final isCredit = entry.type == 'credit';
-            final amountColor = isCredit ? AppColors.success : AppColors.danger;
-            
-            return ListTile(
-              title: Text(entry.description ?? 'بێ تێبینی', style: AppTextStyles.bodyBold),
-              subtitle: Text(
-                '${entry.createdAt?.split('T').first ?? ''} • ${entry.entryType}',
-                style: AppTextStyles.caption,
-              ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        // Filter UI
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Text(
-                    '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
-                    style: AppTextStyles.bodyBold.copyWith(color: amountColor),
-                    textDirection: TextDirection.ltr,
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      value: _ledgerEntryType,
+                      decoration: const InputDecoration(
+                        labelText: 'جۆری جوڵە',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
+                        DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
+                        DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین')),
+                        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
+                      ],
+                      onChanged: (val) => setState(() => _ledgerEntryType = val),
+                    ),
                   ),
-                  Text(
-                    'قەرز: ${_formatCurrency(entry.balanceAfter)}',
-                    style: AppTextStyles.caption,
-                    textDirection: TextDirection.ltr,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectLedgerDate(context, true),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'لە بەرواری',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        child: Text(_ledgerStartDate != null ? _ledgerStartDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectLedgerDate(context, false),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'تا بەرواری',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        child: Text(_ledgerEndDate != null ? _ledgerEndDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => Center(child: Text('کێشە هەیە: $e')),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _clearLedgerFilters,
+                    child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                  ),
+                  SizedBox(
+                    width: 120,
+                    child: AppButton(
+                      text: 'فلتەر',
+                      onPressed: _applyLedgerFilters,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Expanded(
+          child: ledgerAsync.when(
+            data: (ledgerList) {
+              if (ledgerList.isEmpty) {
+                return const Center(child: Text('هیچ مێژوویەک نییە'));
+              }
+              return ListView.separated(
+                itemCount: ledgerList.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final entry = ledgerList[index];
+                  final isCredit = entry.type == 'credit';
+                  final amountColor = isCredit ? AppColors.success : AppColors.danger;
+                  
+                  return ListTile(
+                    title: Text(entry.description ?? 'بێ تێبینی', style: AppTextStyles.bodyBold),
+                    subtitle: Text(
+                      '${entry.createdAt?.split('T').first ?? ''} • ${entry.entryType}',
+                      style: AppTextStyles.caption,
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
+                          style: AppTextStyles.bodyBold.copyWith(color: amountColor),
+                          textDirection: TextDirection.ltr,
+                        ),
+                        Text(
+                          'قەرز: ${_formatCurrency(entry.balanceAfter)}',
+                          style: AppTextStyles.caption,
+                          textDirection: TextDirection.ltr,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('کێشە هەیە: $e')),
+          ),
+        ),
+      ],
     );
   }
 }

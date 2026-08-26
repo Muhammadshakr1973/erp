@@ -47,6 +47,8 @@ class ReportController extends Controller
                 'monthly_collected' => $monthlyCollected,
             ]
         ], 200);
+    }
+    
     public function supplierDebts(Request $request): JsonResponse
     {
         $query = \App\Models\SupplierLedger::with('supplier')->orderByDesc('created_at');
