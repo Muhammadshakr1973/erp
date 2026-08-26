@@ -5,6 +5,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import 'reports/supplier_debts_report_screen.dart';
+import 'reports/customer_debts_report_screen.dart';
 
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
@@ -75,6 +76,11 @@ class AdminReportsScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const SupplierDebtsReportScreen()),
+                      );
+                    } else if (report == 'قەرزی کڕیارەکان') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CustomerDebtsReportScreen()),
                       );
                     }
                   },

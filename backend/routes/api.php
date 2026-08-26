@@ -47,5 +47,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive']);
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard']);
         Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts']);
+        Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts']);
     });
 });

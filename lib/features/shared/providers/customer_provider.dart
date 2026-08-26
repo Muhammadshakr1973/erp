@@ -15,3 +15,16 @@ final customerListProvider = FutureProvider<List<Customer>>((ref) async {
     throw Exception(api.parseError(e));
   }
 });
+
+final singleCustomerProvider = FutureProvider.family<Customer, int>((ref, id) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/customers/$id');
+    if (response.statusCode == 200) {
+      return Customer.fromJson(response.data['data']);
+    }
+    throw Exception('Failed to load customer');
+  } catch (e) {
+    throw Exception(api.parseError(e));
+  }
+});

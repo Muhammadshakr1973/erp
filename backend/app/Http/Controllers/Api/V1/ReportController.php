@@ -76,4 +76,32 @@ class ReportController extends Controller
             'data' => $ledgers
         ]);
     }
+
+    public function customerDebts(Request $request): JsonResponse
+    {
+        $query = \App\Models\CustomerLedger::with('customer')->orderByDesc('created_at');
+
+        if ($request->has('customer_id') && $request->customer_id != '') {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->has('start_date') && $request->start_date != '') {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date') && $request->end_date != '') {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        if ($request->has('entry_type') && $request->entry_type != '') {
+            $query->where('entry_type', $request->entry_type);
+        }
+
+        $ledgers = $query->get();
+
+        return response()->json([
+            'message' => 'ڕاپۆرتی قەرزی کڕیارەکان',
+            'data' => $ledgers
+        ]);
+    }
 }
