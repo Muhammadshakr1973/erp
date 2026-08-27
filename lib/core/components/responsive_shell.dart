@@ -29,7 +29,8 @@ class ResponsiveShell extends StatelessWidget {
               destinations: destinations,
             ),
           );
-        } else if (AppBreakpoints.isTablet(width)) {
+        } else {
+          // Both Tablet and Desktop use the same NavigationRail layout (compact, not extended)
           return Scaffold(
             body: Row(
               children: [
@@ -37,28 +38,6 @@ class ResponsiveShell extends StatelessWidget {
                   selectedIndex: currentIndex,
                   onDestinationSelected: onDestinationSelected,
                   labelType: NavigationRailLabelType.all,
-                  destinations: destinations.map((d) {
-                    return NavigationRailDestination(
-                      icon: d.icon,
-                      selectedIcon: d.selectedIcon ?? d.icon,
-                      label: Text(d.label),
-                    );
-                  }).toList(),
-                ),
-                const VerticalDivider(thickness: 1, width: 1),
-                Expanded(child: body),
-              ],
-            ),
-          );
-        } else {
-          // Desktop & Wide - Persistent Drawer / Expanded Rail
-          return Scaffold(
-            body: Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: currentIndex,
-                  onDestinationSelected: onDestinationSelected,
-                  extended: true, // Shows labels next to icons
                   destinations: destinations.map((d) {
                     return NavigationRailDestination(
                       icon: d.icon,
