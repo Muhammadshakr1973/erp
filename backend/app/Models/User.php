@@ -16,7 +16,6 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'phone',
-        'email',
         'password',
         'role_id',
         'commission_rate',
@@ -26,7 +25,6 @@ class User extends Authenticatable
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'commission_rate' => 'decimal:2',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',

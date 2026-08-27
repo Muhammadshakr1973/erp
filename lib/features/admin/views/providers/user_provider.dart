@@ -35,7 +35,6 @@ class UserActions {
   Future<void> addUser({
     required String name,
     required String phone,
-    String? email,
     required String password,
     required int roleId,
     double? commissionRate,
@@ -46,7 +45,6 @@ class UserActions {
       await api.client.post('/users', data: {
         'name': name,
         'phone': phone,
-        if (email != null && email.isNotEmpty) 'email': email,
         'password': password,
         'role_id': roleId,
         if (commissionRate != null) 'commission_rate': commissionRate,
@@ -63,7 +61,6 @@ class UserActions {
     int id, {
     required String name,
     required String phone,
-    String? email,
     String? password,
     required int roleId,
     double? commissionRate,
@@ -74,7 +71,6 @@ class UserActions {
       await api.client.put('/users/$id', data: {
         'name': name,
         'phone': phone,
-        if (email != null && email.isNotEmpty) 'email': email,
         if (password != null && password.isNotEmpty) 'password': password,
         'role_id': roleId,
         if (commissionRate != null) 'commission_rate': commissionRate,

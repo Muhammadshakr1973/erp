@@ -3,7 +3,6 @@ class UserModel {
   final String name;
   final String phone;
   final String role; // owner, admin, salesman, warehouse, driver
-  final String? email;
   final int? roleId;
   final double? commissionRate;
   final String? barcode;
@@ -14,7 +13,6 @@ class UserModel {
     required this.name,
     required this.phone,
     required this.role,
-    this.email,
     this.roleId,
     this.commissionRate,
     this.barcode,
@@ -41,7 +39,6 @@ class UserModel {
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       role: roleName,
-      email: json['email'],
       roleId: json['role_id'] ?? roleIdVal,
       commissionRate: commRate,
       barcode: json['barcode'],
@@ -55,7 +52,6 @@ class UserModel {
       'name': name,
       'phone': phone,
       'role': role,
-      'email': email,
       'role_id': roleId,
       'commission_rate': commissionRate,
       'barcode': barcode,

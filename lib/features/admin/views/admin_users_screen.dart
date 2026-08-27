@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -137,22 +138,19 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('بەکارهێنەرانی سیستەم', style: AppTextStyles.h1),
-        actions: [
-          usersAsync.when(
-            data: (data) {
-              final roles = data['roles'] as List<dynamic>?;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: AppButton(
-                  text: 'زیادکردنی نوێ',
-                  onPressed: () => _showUserFormDialog(context, null, roles),
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        ],
+      ),
+      floatingActionButton: usersAsync.when(
+        data: (data) {
+          final roles = data['roles'] as List<dynamic>?;
+          return FloatingActionButton.extended(
+            onPressed: () => _showUserFormDialog(context, null, roles),
+            backgroundColor: AppColors.primary,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text('بەکارهێنەری نوێ', style: TextStyle(color: Colors.white, fontFamily: 'Rudaw', fontWeight: FontWeight.bold)),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
       ),
       body: Column(
         children: [
@@ -193,8 +191,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 final filteredUsers = users.where((u) {
                   final nameMatch = u.name.toLowerCase().contains(_searchQuery);
                   final phoneMatch = u.phone.toLowerCase().contains(_searchQuery);
-                  final emailMatch = (u.email ?? '').toLowerCase().contains(_searchQuery);
-                  return nameMatch || phoneMatch || emailMatch;
+                  return nameMatch || phoneMatch;
                 }).toList();
 
                 if (filteredUsers.isEmpty) {
@@ -273,13 +270,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     'تەلەفۆن: ${user.phone}',
                                     style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                   ),
-                                  if (user.email != null && user.email!.isNotEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'ئیمەیڵ: ${user.email}',
-                                      style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
-                                    ),
-                                  ],
                                   if (user.role.toLowerCase() == 'salesman' && user.commissionRate != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
@@ -362,7 +352,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   late final TextEditingController _commissionRateController;
   late final TextEditingController _barcodeController;
@@ -376,7 +365,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.user?.name);
     _phoneController = TextEditingController(text: widget.user?.phone);
-    _emailController = TextEditingController(text: widget.user?.email);
     _passwordController = TextEditingController();
     _commissionRateController = TextEditingController(
       text: widget.user?.commissionRate != null ? widget.user!.commissionRate!.toString() : '0.0',
@@ -404,7 +392,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
     _passwordController.dispose();
     _commissionRateController.dispose();
     _barcodeController.dispose();
@@ -443,7 +430,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     try {
       final name = _nameController.text.trim();
       final phone = _phoneController.text.trim();
-      final email = _emailController.text.trim();
       final password = _passwordController.text;
       final commissionRate = double.tryParse(_commissionRateController.text) ?? 0.0;
       final barcode = _barcodeController.text.trim();
@@ -453,7 +439,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         await ref.read(userActionsProvider).addUser(
               name: name,
               phone: phone,
-              email: email,
               password: password,
               roleId: _selectedRoleId!,
               commissionRate: commissionRate,
@@ -471,7 +456,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               widget.user!.id,
               name: name,
               phone: phone,
-              email: email,
               password: password.isNotEmpty ? password : null,
               roleId: _selectedRoleId!,
               commissionRate: commissionRate,
@@ -558,13 +542,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(
-                  controller: _emailController,
-                  labelText: 'ناونیشانی ئیمەیڵ (ئارەزوومەندانە)',
-                  prefixIcon: Icons.email_outlined,
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                AppTextField(
                   controller: _passwordController,
                   labelText: isEditing ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)' : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
                   obscureText: true,
@@ -623,7 +600,19 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _barcodeController,
                   labelText: 'بارکۆدی ناسنامە (ئارەزوومەندانە)',
-                  prefixIcon: Icons.qr_code_scanner_outlined,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    color: AppColors.primary,
+                    onPressed: () {
+                      CameraBarcodeScanner.show(context, (barcode) {
+                        if (mounted) {
+                          setState(() {
+                            _barcodeController.text = barcode;
+                          });
+                        }
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
 

@@ -36,12 +36,6 @@ class UserController extends Controller
                 'max:20',
                 Rule::unique('users')->whereNull('deleted_at')
             ],
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-                Rule::unique('users')->whereNull('deleted_at')
-            ],
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
@@ -57,7 +51,6 @@ class UserController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
             'password' => Hash::make($validated['password']),
             'role_id' => $validated['role_id'],
             'commission_rate' => $validated['commission_rate'] ?? 0,
@@ -83,12 +76,6 @@ class UserController extends Controller
                 'max:20',
                 Rule::unique('users')->ignore($id)->whereNull('deleted_at')
             ],
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-                Rule::unique('users')->ignore($id)->whereNull('deleted_at')
-            ],
             'password' => 'nullable|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
@@ -104,7 +91,6 @@ class UserController extends Controller
         $updateData = [
             'name' => $validated['name'],
             'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
             'role_id' => $validated['role_id'],
             'commission_rate' => $validated['commission_rate'] ?? 0,
             'barcode' => $validated['barcode'] ?? null,
