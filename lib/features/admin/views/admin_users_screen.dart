@@ -165,7 +165,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   child: AppTextField(
                     controller: _searchController,
                     hintText: 'گەڕان بەدوای بەکارهێنەر (ناو، مۆبایل، ئیمەیڵ)...',
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: Icons.search,
                   ),
                 ),
               ],
@@ -182,7 +182,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   children: [
                     const Icon(Icons.error_outline, size: 48, color: Colors.red),
                     const SizedBox(height: 16),
-                    Text('هەڵەیەک ڕوویدا: $err', style: AppTextStyles.body),
+                    Text('هەڵەیەک ڕوویدا: $err', style: AppTextStyles.bodyMedium),
                   ],
                 ),
               ),
@@ -544,7 +544,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _nameController,
                   labelText: 'ناوی تەواو',
-                  prefixIcon: const Icon(Icons.person_outline),
+                  prefixIcon: Icons.person_outline,
                   validator: (val) => val == null || val.isEmpty ? 'تکایە ناو بنووسە' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -552,7 +552,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _phoneController,
                   labelText: 'ژمارەی مۆبایل',
-                  prefixIcon: const Icon(Icons.phone_outlined),
+                  prefixIcon: Icons.phone_outlined,
                   validator: (val) => val == null || val.isEmpty ? 'تکایە ژمارەی مۆبایل بنووسە' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -560,7 +560,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _emailController,
                   labelText: 'ناونیشانی ئیمەیڵ (ئارەزوومەندانە)',
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  prefixIcon: Icons.email_outlined,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -568,7 +568,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   controller: _passwordController,
                   labelText: isEditing ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)' : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
                   obscureText: true,
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  prefixIcon: Icons.lock_outline,
                   validator: (val) {
                     if (!isEditing && (val == null || val.isEmpty)) {
                       return 'تکایە وشەی تێپەڕ بنووسە';
@@ -606,7 +606,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   AppTextField(
                     controller: _commissionRateController,
                     labelText: 'ڕێژەی کۆمسیۆن (%)',
-                    prefixIcon: const Icon(Icons.percent_outlined),
+                    prefixIcon: Icons.percent_outlined,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (val) {
                       if (val == null || val.isEmpty) return 'تکایە ڕێژەی کۆمسیۆن دیاری بکە';
@@ -623,7 +623,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _barcodeController,
                   labelText: 'بارکۆدی ناسنامە (ئارەزوومەندانە)',
-                  prefixIcon: const Icon(Icons.qr_code_scanner_outlined),
+                  prefixIcon: Icons.qr_code_scanner_outlined,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
