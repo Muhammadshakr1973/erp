@@ -35,16 +35,12 @@ class RouteActions {
 
   Future<RouteModel> addRoute({
     required String name,
-    required String code,
-    String? description,
     String? color,
     bool isActive = true,
   }) async {
     try {
       final response = await api.client.post('/routes', data: {
         'name': name,
-        'code': code,
-        if (description != null) 'description': description,
         if (color != null) 'color': color,
         'is_active': isActive,
       });
@@ -58,16 +54,12 @@ class RouteActions {
   Future<RouteModel> updateRoute(
     int id, {
     required String name,
-    required String code,
-    String? description,
     String? color,
     bool? isActive,
   }) async {
     try {
       final response = await api.client.put('/routes/$id', data: {
         'name': name,
-        'code': code,
-        if (description != null) 'description': description,
         if (color != null) 'color': color,
         if (isActive != null) 'is_active': isActive,
       });

@@ -535,7 +535,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 ),
                 ...routes.map((route) => DropdownMenuItem<int>(
                       value: route.id,
-                      child: Text('${route.name} (${route.code})'),
+                      child: Text(route.name),
                     )),
               ],
               onChanged: (val) {

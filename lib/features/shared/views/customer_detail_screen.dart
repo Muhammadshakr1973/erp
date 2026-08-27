@@ -326,7 +326,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     routesAsync.whenData((routes) {
       for (final r in routes) {
         if (r.id == customer.routeId) {
-          routeName = '${r.name} (${r.code})';
+          routeName = r.name;
           break;
         }
       }

@@ -20,7 +20,6 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->string('display_name');
-            $table->text('description')->nullable();
             $table->json('permissions')->nullable();
             $table->boolean('is_system')->default(false);
             $table->timestamps();
@@ -74,8 +73,6 @@ return new class extends Migration
         Schema::create('routes', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('code')->unique()->nullable();
-            $table->text('description')->nullable();
             $table->string('color', 7)->nullable();
             $table->boolean('is_active')->default(true)->index();
             $table->timestamps();
@@ -177,7 +174,6 @@ return new class extends Migration
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('code')->unique()->nullable();
             $table->string('address')->nullable();
             $table->boolean('is_main')->default(false);
             $table->boolean('is_active')->default(true)->index();
@@ -478,7 +474,6 @@ return new class extends Migration
             $table->id();
             $table->string('key')->unique();
             $table->json('value')->nullable();
-            $table->text('description')->nullable();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

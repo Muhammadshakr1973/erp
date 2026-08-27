@@ -30,8 +30,6 @@ class RouteController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:routes,name',
-            'code' => 'required|string|max:50|unique:routes,code',
-            'description' => 'nullable|string',
             'color' => 'nullable|string|max:20',
             'is_active' => 'boolean'
         ]);
@@ -65,7 +63,6 @@ class RouteController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:routes,name,' . $route->id,
             'code' => 'required|string|max:50|unique:routes,code,' . $route->id,
-            'description' => 'nullable|string',
             'color' => 'nullable|string|max:20',
             'is_active' => 'boolean'
         ]);

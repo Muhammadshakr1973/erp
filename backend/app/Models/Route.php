@@ -11,7 +11,7 @@ class Route extends Model
 {
     use HasFactory, SoftDeletes;
     protected $table = 'routes';
-    protected $fillable = ['name', 'code', 'description', 'color', 'is_active'];
+    protected $fillable = ['name', 'color', 'is_active'];
     protected $casts = ['is_active' => 'boolean'];
     public function customers(): HasMany
     {

@@ -181,10 +181,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                       final route = filteredRoutes[index];
                       final routeColor = _parseColor(route.color) ?? theme.colorScheme.primary;
 
-                      return GestureDetector(
-                        onTap: () => _showRouteForm(route),
-                        onLongPress: () => _confirmDelete(route),
-                        child: AppCard(
+                      return AppCard(
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
                           children: [
@@ -213,7 +210,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+
                                   Row(
                                     children: [
                                       InkWell(
@@ -264,7 +261,47 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                 ],
                               ),
                             ),
-                            
+                            const SizedBox(width: AppSpacing.md),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+,
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'salesmen',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.person_add_alt_outlined, size: 20, color: Colors.blue),
+                                              SizedBox(width: 8),
+                                              Text('دیاریکردنی مەندوب', style: TextStyle(fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'customers',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.storefront_outlined, size: 20, color: Colors.green),
+                                              SizedBox(width: 8),
+                                              Text('بینینی کڕیارەکان', style: TextStyle(fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                              SizedBox(width: 8),
+                                              Text('سڕینەوە', style: TextStyle(color: Colors.red, fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -304,7 +341,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                             ),
                           ],
                         ),
-                      ));
+                      );
                     },
                   );
                 },
@@ -406,7 +443,8 @@ class _RouteFormDialog extends ConsumerStatefulWidget {
 class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-    String _color = '#122D5A';
+  
+  String _color = '#122D5A';
   bool _isActive = true;
   bool _isLoading = false;
 
@@ -423,6 +461,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.route?.name);
+    
     _color = widget.route?.color ?? '#122D5A';
     _isActive = widget.route?.isActive ?? true;
   }
@@ -430,6 +469,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    
     super.dispose();
   }
 
@@ -443,6 +483,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
       if (widget.route == null) {
         await actions.addRoute(
           name: _nameController.text.trim(),
+          
           color: _color,
           isActive: _isActive,
         );
@@ -450,6 +491,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
         await actions.updateRoute(
           widget.route!.id,
           name: _nameController.text.trim(),
+          
           color: _color,
           isActive: _isActive,
         );
@@ -825,7 +867,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                 const Icon(Icons.storefront, color: AppColors.success),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('کڕیارەکانی ڕاوتی ${widget.route.name} ', style: AppTextStyles.h2),
+                  child: Text('کڕیارەکانی ڕاوتی ${widget.route.name} (${widget.route.code})', style: AppTextStyles.h2),
                 ),
               ],
             ),
