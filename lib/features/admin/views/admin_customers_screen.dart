@@ -234,7 +234,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
 
                   final screenWidth = MediaQuery.of(context).size.width;
                   int crossAxisCount = 1;
-                  if (screenWidth >= 1200) {
+                  if (screenWidth >= 1024) {
                     crossAxisCount = 3;
                   } else if (screenWidth >= 600) {
                     crossAxisCount = 2;
@@ -255,8 +255,8 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
-                      mainAxisSpacing: AppSpacing.sm,
-                      mainAxisExtent: 96,
+                      mainAxisSpacing: AppSpacing.md,
+                      mainAxisExtent: 116,
                     ),
                     itemBuilder: (context, index) {
                       final customer = filteredCustomers[index];
@@ -265,52 +265,116 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                       return AppCard(
                         onTap: () => _showAddCustomerDialog(context, customer),
                         onLongPress: () => _showDeleteCustomerDialog(context, customer),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.person, color: Colors.grey),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(Icons.person, color: theme.colorScheme.primary, size: 28),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      customer.name, 
+                                      style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}',
+                                      style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (customer.routeId != null && routeNames.containsKey(customer.routeId)) ...[
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primaryContainer,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          routeNames[customer.routeId]!,
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme.colorScheme.onPrimaryContainer,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    customer.name, 
-                                    style: AppTextStyles.bodyBold,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    'ناسنامە: #${customer.id}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}${customer.routeId != null && routeNames.containsKey(customer.routeId) ? ' • ${routeNames[customer.routeId]}' : ''}',
-                                    style: AppTextStyles.caption,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: hasDebt
+                                          ? AppColors.danger.withValues(alpha: 0.1)
+                                          : AppColors.success.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          hasDebt ? formatCurrency(customer.balance) : '0 د.ع',
+                                          style: AppTextStyles.bodyBold.copyWith(
+                                            color: hasDebt ? AppColors.danger : AppColors.success,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: hasDebt ? AppColors.danger : AppColors.success,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            hasDebt ? 'قەرزدار' : 'پاکە',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Rudaw',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('قەرز', style: AppTextStyles.caption),
-                                const SizedBox(height: 4),
-                                Text(
-                                  hasDebt ? formatCurrency(customer.balance) : '0 د.ع',
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: hasDebt ? AppColors.danger : AppColors.success,
-                                  ),
-                                  textDirection: TextDirection.ltr,
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },

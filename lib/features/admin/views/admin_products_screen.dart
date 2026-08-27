@@ -169,253 +169,187 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     return const Center(child: Text('هیچ کاڵایەک نییە'));
                   }
 
-                  if (isDesktop) {
-                    final int crossAxisCount = screenWidth > 1200 ? 3 : 2;
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.screenHorizontal,
-                        vertical: AppSpacing.sm,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: AppSpacing.md,
-                        mainAxisSpacing: AppSpacing.md,
-                        childAspectRatio: screenWidth > 1200 ? 3.0 : 2.6,
-                      ),
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        int totalStock = 0;
-                        for (var stock in product.stocks) {
-                          totalStock += (stock['quantity'] as int?) ?? 0;
-                        }
-                        final bool isLowStock = totalStock < 20;
-
-                        return AppCard(
-                          padding: const EdgeInsets.all(8.0),
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => ProductFormDialog(product: product),
-                            );
-                          },
-                          onLongPress: () => _showDeleteDialog(context, ref, product),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                                child: Row(
-                                  children: [
-                                    if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
-                                      Container(
-                                        width: 60,
-                                        height: 60,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            product.imagePath!,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Container(
-                                              color: theme.colorScheme.surfaceContainerHighest,
-                                              child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 24),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: AppSpacing.md),
-                                    ],
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            product.name,
-                                            style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'جۆر: ${product.category?['name'] ?? '-'} • کۆمپانیا: ${product.supplier?['name'] ?? '-'}',
-                                            style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
-                                            Text(
-                                              [
-                                                if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
-                                                if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
-                                              ].join(' • '),
-                                              style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 2),
-                                          ],
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'ستۆک: $totalStock',
-                                                style: AppTextStyles.bodyBold.copyWith(
-                                                  fontSize: 11,
-                                                  color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
-                                                ),
-                                              ),
-                                              const SizedBox(width: AppSpacing.sm),
-                                              Text(
-                                                'بارکۆد: ${product.barcode}',
-                                                style: AppTextStyles.caption.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                                        Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.green.shade600)),
-                                        Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
-                                        Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                                      ],
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  int crossAxisCount = 1;
+                  if (screenWidth >= 1024) {
+                    crossAxisCount = 3;
+                  } else if (screenWidth >= 600) {
+                    crossAxisCount = 2;
                   }
 
-                  // Mobile Layout (Standard list view)
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                      vertical: AppSpacing.sm,
+                    ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisSpacing: AppSpacing.md,
+                      mainAxisExtent: 138,
+                    ),
                     itemCount: products.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final product = products[index];
                       int totalStock = 0;
                       for (var stock in product.stocks) {
                         totalStock += (stock['quantity'] as int?) ?? 0;
                       }
-
                       final bool isLowStock = totalStock < 20;
 
-                        return AppCard(
-                          padding: const EdgeInsets.all(8.0),
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => ProductFormDialog(product: product),
-                            );
-                          },
-                          onLongPress: () => _showDeleteDialog(context, ref, product),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Row(
+                      return AppCard(
+                        padding: const EdgeInsets.all(12.0),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => ProductFormDialog(product: product),
+                          );
+                        },
+                        onLongPress: () => _showDeleteDialog(context, ref, product),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: (product.imagePath != null && product.imagePath!.isNotEmpty)
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.network(
+                                        product.imagePath!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Icon(
+                                          Icons.inventory_2_outlined,
+                                          color: theme.colorScheme.primary,
+                                          size: 28,
+                                        ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: theme.colorScheme.primary,
+                                      size: 28,
+                                    ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  if (product.imagePath != null && product.imagePath!.isNotEmpty) ...[
-                                    Container(
-                                      width: 56,
-                                      height: 56,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          product.imagePath!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(
-                                            color: theme.colorScheme.surfaceContainerHighest,
-                                            child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurfaceVariant, size: 20),
-                                          ),
-                                        ),
-                                      ),
+                                  Text(
+                                    product.name,
+                                    style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'جۆر: ${product.category?['name'] ?? '-'} • کۆمپانیا: ${product.supplier?['name'] ?? '-'}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurfaceVariant,
                                     ),
-                                    const SizedBox(width: AppSpacing.md),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'بارکۆد: ${product.barcode}${product.sku != null && product.sku!.isNotEmpty ? ' • SKU: ${product.sku}' : ''}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (product.unit != null && product.unit != 'دانە') ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'یەکە: ${product.unit} = ${product.unitsPerCarton} دانە',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 11,
+                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ],
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(product.name, style: AppTextStyles.bodyBold.copyWith(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'جۆر: ${product.category?['name'] ?? '-'} • کۆمپانیا: ${product.supplier?['name'] ?? '-'}',
-                                          style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        if ((product.unit != null && product.unit != 'دانە') || (product.sku != null && product.sku!.isNotEmpty)) ...[
-                                          Text(
-                                            [
-                                              if (product.unit != null && product.unit != 'دانە') '${product.unit} = ${product.unitsPerCarton} دانە',
-                                              if (product.sku != null && product.sku!.isNotEmpty) 'SKU: ${product.sku}',
-                                            ].join(' • '),
-                                            style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 2),
-                                        ],
-                                        Row(
-                                          children: [
-                                            Text(
-                                              'ستۆک: $totalStock',
-                                          style: AppTextStyles.bodyBold.copyWith(
-                                            fontSize: 11,
-                                            color: isLowStock ? Colors.red.shade700 : Colors.green.shade700,
-                                          ),
-                                            ),
-                                            const SizedBox(width: AppSpacing.sm),
-                                            Expanded(
-                                              child: Text(
-                                                'بارکۆد: ${product.barcode}',
-                                                style: AppTextStyles.caption.copyWith(fontSize: 10),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text('${product.costPrice.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
-                                      Text('${product.priceN1.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade600)),
-                                      Text('${product.priceN2.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade600)),
-                                      Text('${product.priceN3.toInt()}', style: AppTextStyles.caption.copyWith(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                                    ],
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
                                 ],
                               ),
-                            ],
-                          ),
-                        );
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'تێچوو: ${product.costPrice.toInt()} د.ع',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isLowStock
+                                        ? AppColors.danger.withValues(alpha: 0.1)
+                                        : AppColors.success.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${product.priceN1.toInt()} د.ع',
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          color: isLowStock ? AppColors.danger : AppColors.success,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isLowStock ? AppColors.danger : AppColors.success,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          'ستۆک: $totalStock',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Rudaw',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'نرخ٢: ${product.priceN2.toInt()} د.ع • نرخ٣: ${product.priceN3.toInt()} د.ع',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontSize: 10,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   );
                 },

@@ -220,7 +220,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
 
         final screenWidth = MediaQuery.of(context).size.width;
         int crossAxisCount = 1;
-        if (screenWidth >= 1200) {
+        if (screenWidth >= 1024) {
           crossAxisCount = 3;
         } else if (screenWidth >= 600) {
           crossAxisCount = 2;
@@ -233,7 +233,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
-            mainAxisExtent: 96,
+            mainAxisExtent: 110,
           ),
           itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
         );
@@ -255,52 +255,109 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
   }
 
   Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
+    final theme = Theme.of(context);
+    final bool hasDebt = supplier.debt > 0;
+
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
       onLongPress: () => _deleteSupplier(context, supplier),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: const Icon(Icons.store, color: Colors.grey),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.storefront, color: theme.colorScheme.primary, size: 28),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    supplier.name,
+                    style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'کەسی پەیوەندی: ${supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty ? supplier.contactPerson : '-'}',
+                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
+                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty
-                      ? '${supplier.name} - ${supplier.contactPerson}'
-                      : supplier.name,
-                  style: AppTextStyles.bodyBold,
+                  'کۆد: #${supplier.id}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    fontSize: 11,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
-                  style: AppTextStyles.caption,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: hasDebt
+                        ? AppColors.danger.withValues(alpha: 0.1)
+                        : AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatCurrency(supplier.debt),
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: hasDebt ? AppColors.danger : AppColors.success,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: hasDebt ? AppColors.danger : AppColors.success,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          hasDebt ? 'قەرزدار' : 'پاکە',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('قەرز', style: AppTextStyles.caption),
-              const SizedBox(height: 4),
-              Text(
-                _formatCurrency(supplier.debt),
-                style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -162,12 +162,20 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     );
                   }
 
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  int crossAxisCount = 1;
+                  if (screenWidth >= 1024) {
+                    crossAxisCount = 3;
+                  } else if (screenWidth >= 600) {
+                    crossAxisCount = 2;
+                  }
+
                   return GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 420,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 240,
+                      mainAxisExtent: 124,
                     ),
                     itemCount: filteredRoutes.length,
                     itemBuilder: (context, index) {
@@ -175,175 +183,202 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                       final routeColor = _parseColor(route.color) ?? theme.colorScheme.primary;
 
                       return AppCard(
-                        color: routeColor.withValues(alpha: 0.04),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: routeColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: routeColor.withValues(alpha: 0.4)),
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: routeColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(Icons.alt_route, color: routeColor, size: 28),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          route.name,
+                                          style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  child: Text(
-                                    route.code,
-                                    style: TextStyle(
-                                      color: routeColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Rudaw',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Text(
-                                    route.name,
-                                    style: AppTextStyles.bodyBold,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    route.description ?? 'هیچ ڕوونکردنەوەیەک نییە',
+                                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                PopupMenuButton<String>(
-                                  onSelected: (val) {
-                                    if (val == 'edit') {
-                                      _showRouteForm(route);
-                                    } else if (val == 'salesmen') {
-                                      _showManageSalesmen(route);
-                                    } else if (val == 'customers') {
-                                      _showRouteCustomers(route);
-                                    } else if (val == 'delete') {
-                                      _confirmDelete(route);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.edit_outlined, size: 20),
-                                          SizedBox(width: 8),
-                                          Text('دەستکاریکردن', style: TextStyle(fontFamily: 'Rudaw')),
-                                        ],
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      InkWell(
+                                        onTap: () => _showRouteCustomers(route),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '${route.customersCount} کڕیار',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Rudaw',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      InkWell(
+                                        onTap: () => _showManageSalesmen(route),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            route.salesmen.isEmpty
+                                                ? 'دیاریکردنی مەندوب'
+                                                : '${route.salesmen.length} مەندوب',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Rudaw',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'کۆد: ${route.code}',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: routeColor,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const PopupMenuItem(
-                                      value: 'salesmen',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.person_add_alt_outlined, size: 20, color: Colors.blue),
-                                          SizedBox(width: 8),
-                                          Text('دیاریکردنی مەندوب', style: TextStyle(fontFamily: 'Rudaw')),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'customers',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.storefront_outlined, size: 20, color: Colors.green),
-                                          SizedBox(width: 8),
-                                          Text('بینینی کڕیارەکان', style: TextStyle(fontFamily: 'Rudaw')),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                                          SizedBox(width: 8),
-                                          Text('سڕینەوە', style: TextStyle(color: Colors.red, fontFamily: 'Rudaw')),
-                                        ],
-                                      ),
+                                    const SizedBox(width: 4),
+                                    PopupMenuButton<String>(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(Icons.more_vert, size: 20),
+                                      onSelected: (val) {
+                                        if (val == 'edit') {
+                                          _showRouteForm(route);
+                                        } else if (val == 'salesmen') {
+                                          _showManageSalesmen(route);
+                                        } else if (val == 'customers') {
+                                          _showRouteCustomers(route);
+                                        } else if (val == 'delete') {
+                                          _confirmDelete(route);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit_outlined, size: 20),
+                                              SizedBox(width: 8),
+                                              Text('دەستکاریکردن', style: TextStyle(fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'salesmen',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.person_add_alt_outlined, size: 20, color: Colors.blue),
+                                              SizedBox(width: 8),
+                                              Text('دیاریکردنی مەندوب', style: TextStyle(fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'customers',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.storefront_outlined, size: 20, color: Colors.green),
+                                              SizedBox(width: 8),
+                                              Text('بینینی کڕیارەکان', style: TextStyle(fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                              SizedBox(width: 8),
+                                              Text('سڕینەوە', style: TextStyle(color: Colors.red, fontFamily: 'Rudaw')),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              route.description ?? 'هیچ ڕوونکردنەوەیەک نییە',
-                              style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Spacer(),
-
-                            // Badges for customers & assigned salesmen
-                            Row(
-                              children: [
-                                InkWell(
-                                  onTap: () => _showRouteCustomers(route),
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.storefront, size: 14, color: Colors.green),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${route.customersCount} کڕیار',
-                                          style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold, fontFamily: 'Rudaw'),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: route.isActive
+                                        ? AppColors.success.withValues(alpha: 0.1)
+                                        : AppColors.danger.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        route.isActive ? 'چالاک' : 'ناچالاک',
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          color: route.isActive ? AppColors.success : AppColors.danger,
+                                          fontSize: 11,
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                InkWell(
-                                  onTap: () => _showManageSalesmen(route),
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.badge, size: 14, color: Colors.blue),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          route.salesmen.isEmpty
-                                              ? 'دیاریکردنی مەندوب'
-                                              : '${route.salesmen.length} مەندوب',
-                                          style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold, fontFamily: 'Rudaw'),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: route.isActive ? AppColors.success : AppColors.danger,
+                                          shape: BoxShape.circle,
                                         ),
-                                      ],
-                                    ),
+                                        child: const Icon(
+                                          Icons.circle,
+                                          color: Colors.white,
+                                          size: 6,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  route.isActive ? '● چالاکە' : '○ ناچالاکە',
-                                  style: TextStyle(
-                                    color: route.isActive ? Colors.green : Colors.grey,
-                                    fontSize: 12,
-                                    fontFamily: 'Rudaw',
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () => _showManageSalesmen(route),
-                                  icon: const Icon(Icons.person_add_alt_1, size: 16),
-                                  label: const Text('دیاریکردنی مەندوب', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
                                 ),
                               ],
                             ),
