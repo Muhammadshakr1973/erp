@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:math';
+
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
@@ -138,20 +141,22 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('بەکارهێنەرانی سیستەم', style: AppTextStyles.h1),
+        actions: [
+          usersAsync.when(
+            data: (data) {
+              final roles = data['roles'] as List<dynamic>?;
+              return IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'بەکارهێنەری نوێ',
+                onPressed: () => _showUserFormDialog(context, null, roles),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
       ),
-      floatingActionButton: usersAsync.when(
-        data: (data) {
-          final roles = data['roles'] as List<dynamic>?;
-          return FloatingActionButton.extended(
-            onPressed: () => _showUserFormDialog(context, null, roles),
-            backgroundColor: AppColors.primary,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text('بەکارهێنەری نوێ', style: TextStyle(color: Colors.white, fontFamily: 'Rudaw', fontWeight: FontWeight.bold)),
-          );
-        },
-        loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
-      ),
+      
       body: Column(
         children: [
           // Search Bar
@@ -544,8 +549,16 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _passwordController,
                   labelText: isEditing ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)' : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   prefixIcon: Icons.lock_outline,
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                   validator: (val) {
                     if (!isEditing && (val == null || val.isEmpty)) {
                       return 'تکایە وشەی تێپەڕ بنووسە';
@@ -600,18 +613,70 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 AppTextField(
                   controller: _barcodeController,
                   labelText: 'بارکۆدی ناسنامە (ئارەزوومەندانە)',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.qr_code_scanner),
-                    color: AppColors.primary,
-                    onPressed: () {
-                      CameraBarcodeScanner.show(context, (barcode) {
-                        if (mounted) {
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.autorenew),
+                        color: AppColors.primary,
+                        tooltip: 'دروستکردنی کۆدی هەڕەمەکی',
+                        onPressed: () {
                           setState(() {
-                            _barcodeController.text = barcode;
+                            _barcodeController.text = _generateRandomString(12);
                           });
-                        }
-                      });
-                    },
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_2),
+                        color: AppColors.primary,
+                        tooltip: 'پیشاندانی QR Code',
+                        onPressed: () {
+                          final text = _barcodeController.text.trim();
+                          if (text.isNotEmpty) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('کۆدی چوونەژوورەوە', style: AppTextStyles.h3, textAlign: TextAlign.center),
+                                content: SizedBox(
+                                  width: 200,
+                                  height: 200,
+                                  child: QrImageView(
+                                    data: text,
+                                    version: QrVersions.auto,
+                                    size: 200.0,
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('داخستن', style: TextStyle(fontFamily: 'Rudaw')),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('تکایە سەرەتا کۆدێک بنووسە یان دروست بکە')),
+                            );
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner),
+                        color: AppColors.primary,
+                        tooltip: 'سکانی QR Code',
+                        onPressed: () {
+                          CameraBarcodeScanner.show(context, (barcode) {
+                            if (mounted) {
+                              setState(() {
+                                _barcodeController.text = barcode;
+                              });
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
