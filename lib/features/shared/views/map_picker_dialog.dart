@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -73,18 +74,22 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     });
 
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('خزمەتگوزاری لۆکەیشن چالاک نییە لەسەر ئامێرەکەت', style: TextStyle(fontFamily: 'Rudaw')),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
+      // Geolocator.isLocationServiceEnabled() is not supported on web and throws MissingPluginException.
+      // Bypass it if we are on Web.
+      if (!kIsWeb) {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تکایە لۆکەیشنی ئامێرەکەت (GPS) کار پێ بکە، یان بە دەستی شوێنەکە نیشان بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+                backgroundColor: Colors.orangeAccent,
+              ),
+            );
+          }
+          setState(() => _isLocating = false);
+          return;
         }
-        setState(() => _isLocating = false);
-        return;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
@@ -94,8 +99,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('دەسەڵاتی لۆکەیشن ڕەتکرایەوە', style: TextStyle(fontFamily: 'Rudaw')),
-                backgroundColor: Colors.redAccent,
+                content: Text('دەسەڵاتی خوێندنەوەی لۆکەیشن ڕەتکرایەوە، تکایە بە دەست لۆکەیشنەکە دیاری بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+                backgroundColor: Colors.orangeAccent,
               ),
             );
           }
@@ -108,8 +113,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('دەسەڵاتی لۆکەیشن بۆ هەمیشە ڕەتکراوەتەوە، تکایە لە ڕێکخستنەکان چالاکی بکە', style: TextStyle(fontFamily: 'Rudaw')),
-              backgroundColor: Colors.redAccent,
+              content: Text('دەسەڵاتی لۆکەیشن بلۆک کراوە. تکایە بە دەست لۆکەیشنەکە لەسەر نەخشەکە نیشان بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+              backgroundColor: Colors.orangeAccent,
             ),
           );
         }
@@ -119,7 +124,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
 
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 8),
       );
 
       final userLoc = LatLng(position.latitude, position.longitude);
@@ -127,9 +132,13 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('هەڵە لە دۆزینەوەی لۆکەیشن: $e', style: const TextStyle(fontFamily: 'Rudaw')),
-            backgroundColor: Colors.redAccent,
+          const SnackBar(
+            content: Text(
+              'خزمەتگوزاری لۆکەیشن کار ناکات یان پێگەکەت چالاک نەکراوە. تکایە بە دەستی لەسەر نەخشەکە شوێنەکە دەستنیشان بکە.',
+              style: TextStyle(fontFamily: 'Rudaw'),
+            ),
+            backgroundColor: Colors.orangeAccent,
+            duration: Duration(seconds: 5),
           ),
         );
       }
