@@ -9,6 +9,7 @@ import 'admin_routes_screen.dart';
 import 'admin_purchases_screen.dart';
 import 'admin_products_screen.dart';
 import 'admin_reports_screen.dart';
+import 'admin_users_screen.dart';
 
 class AdminMainScreen extends ConsumerStatefulWidget {
   const AdminMainScreen({super.key});
@@ -28,6 +29,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
     const AdminPurchasesScreen(),
     const AdminProductsScreen(),
     const AdminReportsScreen(),
+    const AdminUsersScreen(),
   ];
 
   @override
@@ -84,6 +86,10 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
         NavigationDestination(
           icon: Icon(Icons.bar_chart), 
           label: 'ڕاپۆرت',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.people), 
+          label: 'بەکارهێنەران',
         ),
       ],
     );

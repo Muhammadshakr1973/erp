@@ -233,7 +233,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
-            mainAxisExtent: 110,
+            mainAxisExtent: 130,
           ),
           itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
         );
@@ -283,22 +283,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                   Text(
                     supplier.name,
                     style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'کەسی پەیوەندی: ${supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty ? supplier.contactPerson : '-'}',
                     style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
                     style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

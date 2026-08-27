@@ -175,7 +175,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 124,
+                      mainAxisExtent: 140,
                     ),
                     itemCount: filteredRoutes.length,
                     itemBuilder: (context, index) {
@@ -207,8 +207,6 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                         child: Text(
                                           route.name,
                                           style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -217,8 +215,6 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                   Text(
                                     route.description ?? 'هیچ ڕوونکردنەوەیەک نییە',
                                     style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
@@ -720,6 +716,12 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
 
   Future<void> _assign() async {
     if (_selectedSalesmanId == null) return;
+    if (widget.route.salesmen.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ڕاوت ناتوانێت لە ١ مەندوب زیاتری هەبێت. تکایە سەرەتا مەندوبە کۆنەکە بسڕەوە.', style: TextStyle(fontFamily: 'Rudaw'))),
+      );
+      return;
+    }
     setState(() => _isAssigning = true);
 
     try {
@@ -821,13 +823,14 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
               const Center(child: CircularProgressIndicator())
             else if (_salesmenList.isEmpty)
               const Text('هیچ مەندوبێک لە سیستەمەکەدا بەردەست نییە.', style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'))
-            else
+            else ...[
               DropdownButtonFormField<int>(
                 value: _selectedSalesmanId,
                 decoration: InputDecoration(
                   labelText: 'مەندوب هەڵبژێرە',
                   prefixIcon: const Icon(Icons.person_outline),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  enabled: widget.route.salesmen.isEmpty,
                 ),
                 items: _salesmenList.map((s) {
                   return DropdownMenuItem<int>(
@@ -835,8 +838,18 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                     child: Text('${s['name']} (${s['phone'] ?? ''})', style: const TextStyle(fontFamily: 'Rudaw')),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedSalesmanId = val),
+                onChanged: widget.route.salesmen.isEmpty
+                    ? (val) => setState(() => _selectedSalesmanId = val)
+                    : null,
               ),
+              if (widget.route.salesmen.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '⚠️ ئەم ڕاوتە پێشتر مەندوبێکی بۆ دیاریکراوە. تکایە سەرەتا مەندوبەکەی پێشوو بسڕەوە.',
+                  style: TextStyle(color: Colors.red, fontSize: 11, fontFamily: 'Rudaw'),
+                ),
+              ],
+            ],
 
             const SizedBox(height: AppSpacing.lg),
 
@@ -853,7 +866,7 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                   child: AppButton(
                     text: 'دیاریکردن',
                     isLoading: _isAssigning,
-                    onPressed: _selectedSalesmanId == null ? null : _assign,
+                    onPressed: _selectedSalesmanId == null || widget.route.salesmen.isNotEmpty ? null : _assign,
                   ),
                 ),
               ],

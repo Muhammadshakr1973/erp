@@ -256,7 +256,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 116,
+                      mainAxisExtent: 135,
                     ),
                     itemBuilder: (context, index) {
                       final customer = filteredCustomers[index];
@@ -287,15 +287,11 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                     Text(
                                       customer.name, 
                                       style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}',
                                       style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     if (customer.routeId != null && routeNames.containsKey(customer.routeId)) ...[
                                       const SizedBox(height: 4),
@@ -312,8 +308,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                             fontWeight: FontWeight.bold,
                                             fontSize: 10,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],

@@ -186,7 +186,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 138,
+                      mainAxisExtent: 160,
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
@@ -243,8 +243,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   Text(
                                     product.name,
                                     style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -253,8 +251,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       fontSize: 11,
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -263,8 +259,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       fontSize: 11,
                                       color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   if (product.unit != null && product.unit != 'دانە') ...[
                                     const SizedBox(height: 2),
@@ -274,8 +268,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                         fontSize: 11,
                                         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ],

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\RouteController;
+use App\Http\Controllers\Api\V1\UserController;
 
 Route::prefix('v1')->group(function () {
 
@@ -40,6 +41,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/suppliers/{id}/pay', [SupplierController::class, 'pay']);
         Route::get('/suppliers/{id}/ledger', [SupplierController::class, 'ledger']);
         Route::apiResource('customers', CustomerController::class);
+        Route::apiResource('users', UserController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);
         Route::post('/payments', [PaymentController::class, 'store']);
