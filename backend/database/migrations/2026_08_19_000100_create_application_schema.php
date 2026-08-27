@@ -86,6 +86,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('route_id')->constrained()->restrictOnDelete();
             $table->string('name')->index();
+            $table->string('image_url')->nullable();
             $table->string('phone', 20)->nullable()->index();
             $table->string('phone2', 20)->nullable();
             $table->string('address')->nullable();

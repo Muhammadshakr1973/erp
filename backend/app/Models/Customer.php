@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Customer extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by'];
+    protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url'];
     protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'is_active' => 'boolean'];
     const PRICE_N1 = 'N1';
     const PRICE_N2 = 'N2';

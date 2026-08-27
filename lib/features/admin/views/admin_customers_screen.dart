@@ -158,11 +158,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddCustomerDialog(context),
-        icon: const Icon(Icons.person_add),
-        label: const Text('کڕیاری نوێ'),
-      ),
       body: Column(
         children: [
           Padding(
@@ -275,8 +270,16 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(16),
+                                  image: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(customer.imageUrl!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                child: Icon(Icons.person, color: theme.colorScheme.primary, size: 28),
+                                child: customer.imageUrl == null || customer.imageUrl!.isEmpty
+                                    ? Icon(Icons.person, color: theme.colorScheme.primary, size: 28)
+                                    : null,
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
@@ -290,27 +293,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}',
+                                      customer.phone ?? 'مۆبایل نییە',
                                       style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                     ),
-                                    if (customer.routeId != null && routeNames.containsKey(customer.routeId)) ...[
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          routeNames[customer.routeId]!,
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ],
                                 ),
                               ),
@@ -343,23 +328,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                           style: AppTextStyles.bodyBold.copyWith(
                                             color: hasDebt ? AppColors.danger : AppColors.success,
                                             fontSize: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: hasDebt ? AppColors.danger : AppColors.success,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            hasDebt ? 'قەرزدار' : 'پاکە',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily: 'Rudaw',
-                                            ),
                                           ),
                                         ),
                                       ],

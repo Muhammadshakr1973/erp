@@ -35,6 +35,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   late TextEditingController _phoneController;
   late TextEditingController _phone2Controller;
   late TextEditingController _addressController;
+  late TextEditingController _imageUrlController;
   late TextEditingController _initialDebtController;
 
   late TextEditingController _paymentAmountController;
@@ -60,6 +61,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _phoneController = TextEditingController(text: widget.customer?.phone);
     _phone2Controller = TextEditingController(text: widget.customer?.phone2);
     _addressController = TextEditingController(text: widget.customer?.address);
+    _imageUrlController = TextEditingController(text: widget.customer?.imageUrl);
     _initialDebtController = TextEditingController();
     _priceType = widget.customer?.priceType ?? 'N3';
     _routeId = widget.customer?.routeId;
@@ -76,6 +78,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _phoneController.dispose();
     _phone2Controller.dispose();
     _addressController.dispose();
+    _imageUrlController.dispose();
     _initialDebtController.dispose();
     _paymentAmountController.dispose();
     _paymentNotesController.dispose();
@@ -102,6 +105,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
           routeId: _routeId,
           priceType: _priceType,
           initialDebt: initialDebt,
@@ -115,6 +119,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
           routeId: _routeId,
           priceType: _priceType,
           latitude: _latitude,
@@ -486,6 +491,13 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               ),
             ),
           ],
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _imageUrlController,
+            labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
+            hintText: 'https://example.com/image.jpg',
+            prefixIcon: Icons.image_outlined,
+          ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
             value: _priceType,

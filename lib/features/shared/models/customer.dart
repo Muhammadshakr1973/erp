@@ -4,6 +4,7 @@ class Customer {
   final String? phone;
   final String? phone2;
   final String? address;
+  final String? imageUrl;
   final double balance;
   final double creditLimit;
   final int? salesmanId;
@@ -19,6 +20,7 @@ class Customer {
     this.phone,
     this.phone2,
     this.address,
+    this.imageUrl,
     this.balance = 0.0,
     this.creditLimit = 0.0,
     this.salesmanId,
@@ -36,6 +38,7 @@ class Customer {
       phone: json['phone'],
       phone2: json['phone2'],
       address: json['address'],
+      imageUrl: json['image_url'],
       balance: double.tryParse(json['current_balance']?.toString() ?? json['balance']?.toString() ?? '0') ?? 0.0,
       creditLimit: double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
       salesmanId: json['salesman_id'],
