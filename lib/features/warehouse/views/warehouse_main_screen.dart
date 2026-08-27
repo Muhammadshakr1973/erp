@@ -33,7 +33,23 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
           _currentIndex = index;
         });
       },
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: List.generate(_screens.length, (index) {
+          final isSelected = index == _currentIndex;
+          return Visibility(
+            visible: isSelected,
+            maintainState: true,
+            child: FocusScope(
+              canRequestFocus: isSelected,
+              child: TickerMode(
+                enabled: isSelected,
+                child: _screens[index],
+              ),
+            ),
+          );
+        }),
+      ),
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
         NavigationDestination(icon: Icon(AppIcons.orderStatus), label: 'پاکەتکردن'),

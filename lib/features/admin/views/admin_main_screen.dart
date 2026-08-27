@@ -41,7 +41,20 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
       },
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: List.generate(_screens.length, (index) {
+          final isSelected = index == _currentIndex;
+          return Visibility(
+            visible: isSelected,
+            maintainState: true,
+            child: FocusScope(
+              canRequestFocus: isSelected,
+              child: TickerMode(
+                enabled: isSelected,
+                child: _screens[index],
+              ),
+            ),
+          );
+        }),
       ),
       destinations: const [
         NavigationDestination(

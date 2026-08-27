@@ -22,27 +22,30 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final hasTap = onTap != null || onLongPress != null;
 
-    final cardWidget = Container(
+    final content = Padding(
+      padding: padding,
+      child: child,
+    );
+
+    return Container(
       decoration: BoxDecoration(
         color: color ?? theme.colorScheme.surface,
         borderRadius: AppRadius.radiusLg,
         boxShadow: isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: AppRadius.radiusLg,
-          child: Padding(
-            padding: padding,
-            child: child,
-          ),
-        ),
-      ),
+      child: hasTap
+          ? Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                onLongPress: onLongPress,
+                borderRadius: AppRadius.radiusLg,
+                child: content,
+              ),
+            )
+          : content,
     );
-
-    return cardWidget;
   }
 }

@@ -159,7 +159,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                       maxCrossAxisExtent: 420,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 220,
+                      mainAxisExtent: 240,
                     ),
                     itemCount: filteredRoutes.length,
                     itemBuilder: (context, index) {
