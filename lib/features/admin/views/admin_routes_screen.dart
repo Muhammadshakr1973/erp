@@ -62,21 +62,29 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('بەڕێوەبردنی ڕاوتەکان (گەڕەکەکان)', style: AppTextStyles.h1),
-                    const SizedBox(height: 4),
-                    Text(
-                      'بەڕێوەبردنی گەڕەکەکان، دیاریکردنی مەندوبەکان و بینینی کڕیارەکانی هەر ڕاوتێک.',
-                      style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('بەڕێوەبردنی ڕاوتەکان (گەڕەکەکان)', style: AppTextStyles.h1),
+                      const SizedBox(height: 4),
+                      Text(
+                        'بەڕێوەبردنی گەڕەکەکان، دیاریکردنی مەندوبەکان و بینینی کڕیارەکانی هەر ڕاوتێک.',
+                        style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                AppButton(
-                  text: 'زیادکردنی ڕاوتی نوێ',
-                  icon: Icons.add_location_alt_outlined,
-                  onPressed: () => _showRouteForm(),
+                const SizedBox(width: AppSpacing.md),
+                SizedBox(
+                  width: 220,
+                  child: AppButton(
+                    text: 'زیادکردنی ڕاوتی نوێ',
+                    icon: Icons.add_location_alt_outlined,
+                    onPressed: () => _showRouteForm(),
+                  ),
                 ),
               ],
             ),
@@ -805,10 +813,13 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                   child: const Text('داخستن', style: TextStyle(fontFamily: 'Rudaw')),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                AppButton(
-                  text: 'دیاریکردن',
-                  isLoading: _isAssigning,
-                  onPressed: _selectedSalesmanId == null ? null : _assign,
+                SizedBox(
+                  width: 120,
+                  child: AppButton(
+                    text: 'دیاریکردن',
+                    isLoading: _isAssigning,
+                    onPressed: _selectedSalesmanId == null ? null : _assign,
+                  ),
                 ),
               ],
             ),
