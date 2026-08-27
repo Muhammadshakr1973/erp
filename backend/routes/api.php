@@ -28,7 +28,11 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('products', ProductController::class);
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store']);
+        Route::get('/salesmen', [RouteController::class, 'getSalesmen']);
         Route::apiResource('routes', RouteController::class);
+        Route::post('/routes/{route}/assign-salesman', [RouteController::class, 'assignSalesman']);
+        Route::delete('/routes/{route}/remove-salesman/{salesmanId}', [RouteController::class, 'removeSalesman']);
+        Route::get('/routes/{route}/customers', [RouteController::class, 'customers']);
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::post('/suppliers', [SupplierController::class, 'store']);
         Route::put('/suppliers/{id}', [SupplierController::class, 'update']);

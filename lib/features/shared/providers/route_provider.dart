@@ -86,4 +86,50 @@ class RouteActions {
       throw Exception(api.parseError(e));
     }
   }
+
+  Future<void> assignSalesman(int routeId, int salesmanId, {String? workDate}) async {
+    try {
+      await api.client.post('/routes/$routeId/assign-salesman', data: {
+        'salesman_id': salesmanId,
+        if (workDate != null) 'work_date': workDate,
+      });
+      ref.invalidate(routeListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> removeSalesman(int routeId, int salesmanId) async {
+    try {
+      await api.client.delete('/routes/$routeId/remove-salesman/$salesmanId');
+      ref.invalidate(routeListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSalesmenList() async {
+    try {
+      final response = await api.client.get('/salesmen');
+      if (response.statusCode == 200 && response.data['data'] is List) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchRouteCustomers(int routeId) async {
+    try {
+      final response = await api.client.get('/routes/$routeId/customers');
+      if (response.statusCode == 200 && response.data['data'] is List) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
 }
+
