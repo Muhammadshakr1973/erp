@@ -95,7 +95,7 @@ class RouteController extends Controller
             'work_date' => 'nullable|date',
         ]);
 
-        $workDate = $validated['work_date'] ?? now()->toDateString();
+        $workDate = $request->input('work_date') ?? now()->toDateString();
 
         $assignment = RouteSalesman::updateOrCreate(
             [

@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/api_client.dart';
 import '../providers/customer_provider.dart';
+import '../providers/route_provider.dart';
 import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
@@ -320,6 +321,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
   Widget _buildInfoTab(BuildContext context, Customer customer) {
     final theme = Theme.of(context);
+    final routesAsync = ref.watch(routeListProvider);
+    String routeName = 'بێ گەڕەک / ڕاوت';
+    routesAsync.whenData((routes) {
+      for (final r in routes) {
+        if (r.id == customer.routeId) {
+          routeName = '${r.name} (${r.code})';
+          break;
+        }
+      }
+    });
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -343,6 +355,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 _buildInfoRow(context, Icons.phone, customer.phone ?? 'بێ ژمارە'),
                 const Divider(),
                 _buildInfoRow(context, Icons.location_on, customer.address ?? 'بێ ناونیشان'),
+                const Divider(),
+                _buildInfoRow(context, Icons.alt_route, routeName),
               ],
             ),
           ),
