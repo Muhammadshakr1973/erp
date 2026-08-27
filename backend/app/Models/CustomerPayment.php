@@ -9,7 +9,7 @@ class CustomerPayment extends Model
 {
     use HasFactory;
     protected $table = 'customer_payments';
-    protected $fillable = ['payment_number', 'customer_id', 'sales_order_id', 'amount', 'payment_method', 'collected_by', 'notes'];
+    protected $fillable = ['payment_number', 'customer_id', 'sales_order_id', 'amount', 'payment_method', 'collected_by', 'notes', 'paid_at', 'received_by'];
     // DEC-010: sales_order_id NULLABLE - payment for total debt
     public function customer()
     {
