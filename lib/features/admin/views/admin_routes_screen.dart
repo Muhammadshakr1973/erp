@@ -54,39 +54,26 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('ڕاوتەکان (گەڕەکەکان)', style: AppTextStyles.h2),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'ڕاوتی نوێ',
+            onPressed: () => _showRouteForm(),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('بەڕێوەبردنی ڕاوتەکان (گەڕەکەکان)', style: AppTextStyles.h1),
-                      const SizedBox(height: 4),
-                      Text(
-                        'بەڕێوەبردنی گەڕەکەکان، دیاریکردنی مەندوبەکان و بینینی کڕیارەکانی هەر ڕاوتێک.',
-                        style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                SizedBox(
-                  width: 220,
-                  child: AppButton(
-                    text: 'زیادکردنی ڕاوتی نوێ',
-                    icon: Icons.add_location_alt_outlined,
-                    onPressed: () => _showRouteForm(),
-                  ),
-                ),
-              ],
+            Text(
+              'بەڕێوەبردنی گەڕەکەکان، دیاریکردنی مەندوبەکان و بینینی کڕیارەکانی هەر ڕاوتێک.',
+              style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.lg),
 

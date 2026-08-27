@@ -364,6 +364,14 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   int? _selectedRoleId;
   bool _isActive = true;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  String _generateRandomString(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final rnd = Random();
+    return String.fromCharCodes(Iterable.generate(
+        length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+  }
 
   @override
   void initState() {
