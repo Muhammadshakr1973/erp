@@ -11,7 +11,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../models/customer.dart';
+import '../models/route_model.dart';
 import '../providers/customer_provider.dart';
+import '../providers/route_provider.dart';
 import 'map_picker_dialog.dart';
 
 class CustomerFormDialog extends ConsumerStatefulWidget {
@@ -39,6 +41,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   late TextEditingController _paymentNotesController;
 
   String _priceType = 'N3';
+  int? _routeId;
   double? _latitude;
   double? _longitude;
 
@@ -59,6 +62,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _addressController = TextEditingController(text: widget.customer?.address);
     _initialDebtController = TextEditingController();
     _priceType = widget.customer?.priceType ?? 'N3';
+    _routeId = widget.customer?.routeId;
     _latitude = widget.customer?.latitude;
     _longitude = widget.customer?.longitude;
 
@@ -98,6 +102,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          routeId: _routeId,
           priceType: _priceType,
           initialDebt: initialDebt,
           latitude: _latitude,
@@ -110,6 +115,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
           address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          routeId: _routeId,
           priceType: _priceType,
           latitude: _latitude,
           longitude: _longitude,
@@ -499,6 +505,42 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 setState(() => _priceType = val);
               }
             },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ref.watch(routeListProvider).when(
+            data: (routes) => DropdownButtonFormField<int>(
+              value: _routeId != null && routes.any((r) => r.id == _routeId) ? _routeId : null,
+              decoration: const InputDecoration(
+                labelText: 'گەڕەک / ڕاوت',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                prefixIcon: Icon(Icons.alt_route),
+              ),
+              items: [
+                const DropdownMenuItem<int>(
+                  value: null,
+                  child: Text('گەڕەک دیاری نەکراوە'),
+                ),
+                ...routes.map((route) => DropdownMenuItem<int>(
+                      value: route.id,
+                      child: Text('${route.name} (${route.code})'),
+                    )),
+              ],
+              onChanged: (val) {
+                setState(() => _routeId = val);
+              },
+            ),
+            loading: () => const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            error: (err, _) => Text(
+              'کێشە لە بارکردنی ڕاوتەکان: $err',
+              style: const TextStyle(color: Colors.red, fontFamily: 'Rudaw'),
+            ),
           ),
           if (widget.customer == null) ...[
             const SizedBox(height: AppSpacing.md),

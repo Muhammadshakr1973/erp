@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../shared/providers/route_provider.dart';
 import '../../shared/views/customer_form_dialog.dart';
 
 class AdminCustomersScreen extends ConsumerStatefulWidget {
@@ -131,6 +132,13 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final customersAsync = ref.watch(customerListProvider);
+    final routesAsync = ref.watch(routeListProvider);
+    final Map<int, String> routeNames = {};
+    routesAsync.whenData((routes) {
+      for (var r in routes) {
+        routeNames[r.id] = r.name;
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -278,7 +286,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}',
+                                    '${customer.phone ?? 'مۆبایل نییە'} • ${customer.address ?? 'ناونیشان نییە'}${customer.routeId != null && routeNames.containsKey(customer.routeId) ? ' • ${routeNames[customer.routeId]}' : ''}',
                                     style: AppTextStyles.caption,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

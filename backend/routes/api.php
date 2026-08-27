@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\RouteController;
 
 Route::prefix('v1')->group(function () {
 
@@ -27,6 +28,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('products', ProductController::class);
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store']);
+        Route::apiResource('routes', RouteController::class);
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::post('/suppliers', [SupplierController::class, 'store']);
         Route::put('/suppliers/{id}', [SupplierController::class, 'update']);

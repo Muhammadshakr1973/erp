@@ -5,6 +5,7 @@ import '../../../core/components/responsive_shell.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_customers_screen.dart';
+import 'admin_routes_screen.dart';
 import 'admin_purchases_screen.dart';
 import 'admin_products_screen.dart';
 import 'admin_reports_screen.dart';
@@ -23,6 +24,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
     const AdminDashboardScreen(),
     const AdminOrdersScreen(),
     const AdminCustomersScreen(),
+    const AdminRoutesScreen(),
     const AdminPurchasesScreen(),
     const AdminProductsScreen(),
     const AdminReportsScreen(),
@@ -53,6 +55,10 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
         NavigationDestination(
           icon: Icon(AppIcons.customers),
           label: 'کڕیارەکان',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.alt_route),
+          label: 'ڕاوتەکان',
         ),
         NavigationDestination(
           icon: Icon(Icons.store), 
