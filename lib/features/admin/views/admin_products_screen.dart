@@ -10,6 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/views/product_form_dialog.dart';
+import '../../products/views/product_details_dialog.dart';
 import '../../products/models/product_model.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
@@ -202,7 +203,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (context) => ProductFormDialog(product: product),
+                            builder: (context) => ProductDetailsDialog(product: product),
                           );
                         },
                         onLongPress: () => _showDeleteDialog(context, ref, product),

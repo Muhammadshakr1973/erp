@@ -22,10 +22,17 @@ class ProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if (empty($request->sku)) {
+            $request->merge(['sku' => 'SKU-' . strtoupper(bin2hex(random_bytes(4)))]);
+        }
+        if ($request->has('barcode') && empty($request->barcode)) {
+            $request->merge(['barcode' => null]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255',
+            'sku' => 'required|string|max:255|unique:products,sku',
+            'barcode' => 'nullable|string|max:255|unique:products,barcode',
             'category_id' => 'nullable|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'nullable|string|max:255',
@@ -56,10 +63,17 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): JsonResponse
     {
+        if (empty($request->sku)) {
+            $request->merge(['sku' => 'SKU-' . strtoupper(bin2hex(random_bytes(4)))]);
+        }
+        if ($request->has('barcode') && empty($request->barcode)) {
+            $request->merge(['barcode' => null]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255',
+            'sku' => 'required|string|max:255|unique:products,sku,' . $product->id,
+            'barcode' => 'nullable|string|max:255|unique:products,barcode,' . $product->id,
             'category_id' => 'nullable|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'nullable|string|max:255',
