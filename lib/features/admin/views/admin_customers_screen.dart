@@ -143,15 +143,14 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     final theme = Theme.of(context);
     final routesAsync = ref.watch(routeListProvider);
 
-    // Build api query parameters
-    final Map<String, dynamic> apiFilters = {
-      'page': _currentPage,
-      if (_selectedRouteId != null) 'route_id': _selectedRouteId,
-      if (_onlyDebtors) 'has_debt': 'true',
-      if (_searchQuery.isNotEmpty) 'search': _searchQuery,
-    };
+    final filters = CustomerFilters(
+      page: _currentPage,
+      routeId: _selectedRouteId,
+      onlyDebtors: _onlyDebtors,
+      searchQuery: _searchQuery,
+    );
 
-    final customersAsync = ref.watch(filteredCustomerListProvider(apiFilters));
+    final customersAsync = ref.watch(filteredCustomerListProvider(filters));
 
     return Scaffold(
       appBar: AppBar(

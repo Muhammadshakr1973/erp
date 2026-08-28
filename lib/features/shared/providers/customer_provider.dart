@@ -2,10 +2,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/customer.dart';
 
-final filteredCustomerListProvider = FutureProvider.family<List<Customer>, Map<String, dynamic>?>((ref, filters) async {
+class CustomerFilters {
+  final int page;
+  final int? routeId;
+  final bool onlyDebtors;
+  final String searchQuery;
+
+  const CustomerFilters({
+    this.page = 1,
+    this.routeId,
+    this.onlyDebtors = false,
+    this.searchQuery = '',
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'page': page,
+      if (routeId != null) 'route_id': routeId,
+      if (onlyDebtors) 'has_debt': 'true',
+      if (searchQuery.isNotEmpty) 'search': searchQuery,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CustomerFilters &&
+        other.page == page &&
+        other.routeId == routeId &&
+        other.onlyDebtors == onlyDebtors &&
+        other.searchQuery == searchQuery;
+  }
+
+  @override
+  int get hashCode => Object.hash(page, routeId, onlyDebtors, searchQuery);
+}
+
+final filteredCustomerListProvider = FutureProvider.family<List<Customer>, CustomerFilters>((ref, filters) async {
   final api = ref.watch(apiClientProvider);
   try {
-    final response = await api.client.get('/customers', queryParameters: filters);
+    final response = await api.client.get('/customers', queryParameters: filters.toMap());
     if (response.statusCode == 200) {
       var rawData = response.data['data'];
       List data = [];
@@ -23,7 +59,7 @@ final filteredCustomerListProvider = FutureProvider.family<List<Customer>, Map<S
 });
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) async {
-  return ref.watch(filteredCustomerListProvider(null).future);
+  return ref.watch(filteredCustomerListProvider(const CustomerFilters()).future);
 });
 
 final singleCustomerProvider = FutureProvider.family<Customer, int>((ref, id) async {
