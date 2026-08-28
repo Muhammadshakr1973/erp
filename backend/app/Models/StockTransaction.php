@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class StockTransaction extends Model
 {
     use HasFactory;
-    protected $fillable = ['warehouse_id', 'product_id', 'type', 'quantity', 'quantity_after', 'reference_type', 'reference_id', 'notes', 'created_by'];
+    protected $fillable = ['warehouse_id', 'product_id', 'type', 'quantity_change', 'quantity_after', 'reference_type', 'reference_id', 'notes', 'created_by'];
     const TYPE_IN = 'in';
     const TYPE_OUT = 'out';
     const TYPE_RESERVED = 'reserved';

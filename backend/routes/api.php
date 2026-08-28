@@ -45,6 +45,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);
+        Route::get('/orders/{id}', [SalesOrderController::class, 'show']);
+        Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus']);
         Route::get('/warehouses', [WarehouseController::class, 'index']);
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::post('/stock-transfers', [StockTransferController::class, 'store']);

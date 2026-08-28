@@ -11,13 +11,13 @@ class SalesOrder extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = ['order_number', 'customer_id', 'salesman_id', 'warehouse_id', 'status', 'subtotal', 'discount_percent', 'discount_amount', 'total_amount', 'total_profit', 'notes', 'confirmed_at', 'ready_at', 'delivered_at'];
     protected $casts = ['discount_percent' => 'decimal:2', 'confirmed_at' => 'datetime', 'ready_at' => 'datetime', 'delivered_at' => 'datetime'];
-    const STATUS_DRAFT = 'draft';
-    const STATUS_CONFIRMED = 'confirmed';
-    const STATUS_PACKING = 'packing';
-    const STATUS_READY = 'ready';
-    const STATUS_IN_DELIVERY = 'in_delivery';
-    const STATUS_DELIVERED = 'delivered';
-    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_DRAFT = 'DRAFT';
+    const STATUS_CONFIRMED = 'CONFIRMED';
+    const STATUS_PACKING = 'PACKING';
+    const STATUS_READY = 'READY';
+    const STATUS_IN_DELIVERY = 'IN_DELIVERY';
+    const STATUS_DELIVERED = 'DELIVERED';
+    const STATUS_CANCELLED = 'CANCELLED';
     public function customer()
     {
         return $this->belongsTo(Customer::class);

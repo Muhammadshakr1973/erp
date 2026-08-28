@@ -36,4 +36,28 @@ class SalesOrderController extends Controller
             'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
         ], 201);
     }
+
+    public function show(int $id): JsonResponse
+    {
+        $order = \App\Models\SalesOrder::with(['customer', 'salesman', 'items.product', 'warehouse'])->findOrFail($id);
+        return response()->json([
+            'message' => 'وردەکاری پسوڵە',
+            'data' => $order
+        ]);
+    }
+
+    public function updateStatus(\Illuminate\Http\Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'status' => ['required', 'string', 'in:DRAFT,CONFIRMED,PACKING,READY,IN_DELIVERY,DELIVERED,CANCELLED'],
+        ]);
+
+        $order = \App\Models\SalesOrder::findOrFail($id);
+        $updatedOrder = $this->salesOrderService->transitionTo($order, $request->input('status'), $request->user());
+
+        return response()->json([
+            'message' => 'دۆخی پسوڵە بە سەرکەوتوویی نوێکرایەوە',
+            'data' => $updatedOrder->load('items')
+        ]);
+    }
 }

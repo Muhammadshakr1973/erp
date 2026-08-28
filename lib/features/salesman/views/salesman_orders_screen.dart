@@ -6,7 +6,6 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 
 class SalesmanOrdersScreen extends ConsumerWidget {
@@ -95,12 +94,37 @@ class SalesmanOrdersScreen extends ConsumerWidget {
               String statusLabel = 'داڕشتن (Draft)';
               StatusBadgeType statusType = StatusBadgeType.warning;
 
-              if (order.status == 'delivered') {
-                statusLabel = 'گەیشتووە';
-                statusType = StatusBadgeType.success;
-              } else if (order.status == 'confirmed' || order.status == 'in_delivery') {
-                statusLabel = 'پشتڕاستکراوەتەوە';
-                statusType = StatusBadgeType.info;
+              final normalizedStatus = order.status.toUpperCase();
+              switch (normalizedStatus) {
+                case 'DELIVERED':
+                  statusLabel = 'گەیشتووە';
+                  statusType = StatusBadgeType.success;
+                  break;
+                case 'CONFIRMED':
+                  statusLabel = 'پشتڕاستکراوەتەوە';
+                  statusType = StatusBadgeType.info;
+                  break;
+                case 'PACKING':
+                  statusLabel = 'لە پاکەتکردندایە';
+                  statusType = StatusBadgeType.info;
+                  break;
+                case 'READY':
+                  statusLabel = 'ئامادەیە بۆ ناردن';
+                  statusType = StatusBadgeType.info;
+                  break;
+                case 'IN_DELIVERY':
+                  statusLabel = 'لە ڕێگەی گەیاندندایە';
+                  statusType = StatusBadgeType.warning;
+                  break;
+                case 'CANCELLED':
+                  statusLabel = 'هەڵوەشاوەتەوە';
+                  statusType = StatusBadgeType.danger;
+                  break;
+                case 'DRAFT':
+                default:
+                  statusLabel = 'داڕشتن (Draft)';
+                  statusType = StatusBadgeType.warning;
+                  break;
               }
 
               return AppCard(
