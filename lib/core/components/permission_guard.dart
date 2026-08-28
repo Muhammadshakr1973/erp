@@ -47,21 +47,21 @@ class PermissionGuard extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isDark 
-                          ? AppColors.errorDark.withValues(alpha: 0.1) 
-                          : AppColors.errorLight.withValues(alpha: 0.1),
+                          ? AppColors.dangerDark.withValues(alpha: 0.1) 
+                          : AppColors.danger.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.shield_outlined,
                       size: 64,
-                      color: isDark ? AppColors.errorDark : AppColors.errorLight,
+                      color: isDark ? AppColors.dangerDark : AppColors.danger,
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     'دەستڕاگەیشتن ڕەتکرایەوە',
                     style: AppTextStyles.displayMedium.copyWith(
-                      color: isDark ? AppColors.errorDark : AppColors.errorLight,
+                      color: isDark ? AppColors.dangerDark : AppColors.danger,
                     ),
                     textAlign: TextAlign.center,
                   ),
