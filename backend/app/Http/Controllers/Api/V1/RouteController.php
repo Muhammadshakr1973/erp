@@ -48,7 +48,9 @@ class RouteController extends Controller
         $route->loadCount('customers')
             ->load([
                 'customers' => function ($q) {
-                    $q->select('id', 'route_id', 'name', 'phone', 'address', 'current_balance', 'is_active');
+                    $q->select('id', 'route_id', 'name', 'phone', 'address', 'current_balance', 'is_active', 'visit_order')
+                      ->orderBy('visit_order')
+                      ->orderBy('name');
                 },
                 'salesmen.salesman:id,name,phone'
             ]);
@@ -62,7 +64,6 @@ class RouteController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:routes,name,' . $route->id,
-            'code' => 'required|string|max:50|unique:routes,code,' . $route->id,
             'color' => 'nullable|string|max:20',
             'is_active' => 'boolean'
         ]);
@@ -137,12 +138,47 @@ class RouteController extends Controller
     public function customers(Route $route): JsonResponse
     {
         $customers = $route->customers()
-            ->select('id', 'route_id', 'name', 'phone', 'address', 'current_balance', 'is_active')
+            ->select('id', 'route_id', 'name', 'phone', 'address', 'current_balance', 'is_active', 'visit_order')
+            ->orderBy('visit_order')
             ->orderBy('name')
             ->get();
 
         return response()->json([
             'data' => $customers
+        ], 200);
+    }
+
+    public function reorderCustomers(Request $request, Route $route): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_ids' => 'required|array',
+            'customer_ids.*' => 'required|exists:customers,id'
+        ]);
+
+        $ids = $validated['customer_ids'];
+        foreach ($ids as $index => $id) {
+            \App\Models\Customer::where('id', $id)
+                ->where('route_id', $route->id)
+                ->update(['visit_order' => $index + 1]);
+        }
+
+        return response()->json([
+            'message' => 'ڕیزبەندی سەردانی کڕیاران بە سەرکەوتوویی نوێکرایەوە'
+        ], 200);
+    }
+
+    public function assignCustomers(Request $request, Route $route): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_ids' => 'required|array',
+            'customer_ids.*' => 'required|exists:customers,id'
+        ]);
+
+        $ids = $validated['customer_ids'];
+        \App\Models\Customer::whereIn('id', $ids)->update(['route_id' => $route->id]);
+
+        return response()->json([
+            'message' => 'کڕیاران بەسەرکەوتوویی بۆ ئەم ڕاوتە دیاریکران'
         ], 200);
     }
 }

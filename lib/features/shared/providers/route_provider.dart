@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/route_model.dart';
+import 'customer_provider.dart';
 
 List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
   if (rawData == null) return [];
@@ -135,6 +136,29 @@ class RouteActions {
         return _parseListResponse(response.data);
       }
       return [];
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> reorderCustomers(int routeId, List<int> customerIds) async {
+    try {
+      await api.client.post('/routes/$routeId/reorder-customers', data: {
+        'customer_ids': customerIds,
+      });
+      ref.invalidate(routeListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> assignCustomers(int routeId, List<int> customerIds) async {
+    try {
+      await api.client.post('/routes/$routeId/assign-customers', data: {
+        'customer_ids': customerIds,
+      });
+      ref.invalidate(routeListProvider);
+      ref.invalidate(customerListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../shared/models/route_model.dart';
 import '../../shared/providers/route_provider.dart';
+import '../../shared/providers/customer_provider.dart';
 
 class AdminRoutesScreen extends ConsumerStatefulWidget {
   const AdminRoutesScreen({super.key});
@@ -843,13 +844,91 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
     }
   }
 
+  Future<void> _showAssignCustomersDialog() async {
+    final customersAsync = ref.read(customerListProvider);
+    List<int> selectedIds = [];
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('دیاریکردنی کڕیار بۆ ئەم ڕاوتە', style: AppTextStyles.h3),
+            content: SizedBox(
+              width: 400,
+              height: 350,
+              child: customersAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('کێشە لە هێنانی کڕیارەکان: $err')),
+                data: (allCustomers) {
+                  final assignable = allCustomers.where((c) => c.routeId != widget.route.id).toList();
+
+                  if (assignable.isEmpty) {
+                    return const Center(
+                      child: Text('هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.', style: TextStyle(fontFamily: 'Rudaw')),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: assignable.length,
+                    itemBuilder: (context, index) {
+                      final c = assignable[index];
+                      final isSelected = selectedIds.contains(c.id);
+
+                      return CheckboxListTile(
+                        value: isSelected,
+                        title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
+                        subtitle: Text(c.phone ?? '', style: const TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                        onChanged: (val) {
+                          setStateDialog(() {
+                            if (val == true) {
+                              selectedIds.add(c.id);
+                            } else {
+                              selectedIds.remove(c.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+              ),
+              ElevatedButton(
+                onPressed: selectedIds.isEmpty
+                    ? null
+                    : () async {
+                        try {
+                          await ref.read(routeActionsProvider).assignCustomers(widget.route.id, selectedIds);
+                          Navigator.pop(context);
+                          _loadCustomers();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('کێشە: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+                          );
+                        }
+                      },
+                child: const Text('دیاریکردن', style: TextStyle(fontFamily: 'Rudaw')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 600,
-        height: 500,
+        height: 550,
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -859,9 +938,19 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                 const Icon(Icons.storefront, color: AppColors.success),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('کڕیارەکانی ڕاوتی ${widget.route.name} ', style: AppTextStyles.h2),
+                  child: Text('کڕیارەکانی ڕاوتی ${widget.route.name}', style: AppTextStyles.h2),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_link, color: AppColors.info),
+                  tooltip: 'زیادکردنی کڕیار بۆ ئەم ڕاوتە',
+                  onPressed: _showAssignCustomersDialog,
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'دەتوانیت کڕیارەکان ڕابکێشیت (Drag) بۆ دەستکاریکردنی ڕیزبەندی سەردانیان.',
+              style: TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'Rudaw'),
             ),
             const SizedBox(height: AppSpacing.md),
 
@@ -892,35 +981,68 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
               )
             else
               Expanded(
-                child: ListView.builder(
+                child: ReorderableListView.builder(
                   itemCount: _customers.length,
+                  onReorder: (oldIndex, newIndex) async {
+                    if (newIndex > oldIndex) {
+                      newIndex -= 1;
+                    }
+                    setState(() {
+                      final item = _customers.removeAt(oldIndex);
+                      _customers.insert(newIndex, item);
+                    });
+
+                    try {
+                      final ids = _customers.map<int>((c) => c['id'] as int).toList();
+                      await ref.read(routeActionsProvider).reorderCustomers(widget.route.id, ids);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('ڕیزبەندی نوێی سەردانەکان پاشەکەوت کرا', style: TextStyle(fontFamily: 'Rudaw')),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('سەرکەوتوو نەبوو لە نوێکردنەوەی ڕیزبەندی: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+                      );
+                      _loadCustomers();
+                    }
+                  },
                   itemBuilder: (context, index) {
                     final c = _customers[index];
                     final balance = c['current_balance'] ?? 0;
 
                     return Card(
+                      key: ValueKey(c['id']),
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: AppColors.success.withValues(alpha: 0.1),
-                          child: const Icon(Icons.store, color: AppColors.success),
+                          child: Text('${index + 1}', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
                         ),
                         title: Text(c['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
                         subtitle: Text('${c['phone'] ?? ''} - ${c['address'] ?? 'بێ ناونیشان'}', style: const TextStyle(fontFamily: 'Rudaw')),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('قەرز:', style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Rudaw')),
-                            Text(
-                              '$balance دینار',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: balance > 0 ? Colors.red : Colors.green,
-                                fontFamily: 'Rudaw',
-                              ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('قەرز:', style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Rudaw')),
+                                Text(
+                                  '$balance دینار',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: balance > 0 ? Colors.red : Colors.green,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.drag_handle, color: Colors.grey),
                           ],
                         ),
                       ),

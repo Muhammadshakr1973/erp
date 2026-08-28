@@ -15,6 +15,7 @@ class Customer {
   final bool isActive;
   final double? latitude;
   final double? longitude;
+  final int? visitOrder;
   final RouteModel? route;
 
   Customer({
@@ -32,6 +33,7 @@ class Customer {
     this.isActive = true,
     this.latitude,
     this.longitude,
+    this.visitOrder,
     this.route,
   });
 
@@ -51,6 +53,7 @@ class Customer {
       isActive: json['is_active'] == 1 || json['is_active'] == true || json['is_active'] == null,
       latitude: double.tryParse(json['latitude']?.toString() ?? ''),
       longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      visitOrder: json['visit_order'] != null ? int.tryParse(json['visit_order'].toString()) : null,
       route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
     );
   }

@@ -54,7 +54,7 @@ class CustomerService
         if (empty($data['route_id'])) {
             $defaultRoute = \App\Models\Route::firstOrCreate(
                 ['name' => 'گشتی'],
-                ['code' => 'GEN', 'is_active' => true]
+                ['color' => '#888888', 'is_active' => true]
             );
             $data['route_id'] = $defaultRoute->id;
         }
@@ -85,7 +85,7 @@ class CustomerService
         if (empty($data['route_id']) && !$customer->route_id) {
             $defaultRoute = \App\Models\Route::firstOrCreate(
                 ['name' => 'گشتی'],
-                ['code' => 'GEN', 'is_active' => true]
+                ['color' => '#888888', 'is_active' => true]
             );
             $data['route_id'] = $defaultRoute->id;
         }

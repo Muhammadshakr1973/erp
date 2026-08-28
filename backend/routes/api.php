@@ -48,6 +48,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/routes/{route}/assign-salesman', [RouteController::class, 'assignSalesman'])->middleware('permission:routes.manage');
         Route::delete('/routes/{route}/remove-salesman/{salesmanId}', [RouteController::class, 'removeSalesman'])->middleware('permission:routes.manage');
         Route::get('/routes/{route}/customers', [RouteController::class, 'customers']);
+        Route::post('/routes/{route}/reorder-customers', [RouteController::class, 'reorderCustomers'])->middleware('permission:routes.manage');
+        Route::post('/routes/{route}/assign-customers', [RouteController::class, 'assignCustomers'])->middleware('permission:routes.manage');
         
         // Suppliers (Admins manage, anyone reads)
         Route::get('/suppliers', [SupplierController::class, 'index']);
