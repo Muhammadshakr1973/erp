@@ -220,63 +220,6 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                     ],
                                   ),
                                 ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, size: 20),
-                                  onSelected: (value) {
-                                    if (value == 'edit') {
-                                      _showRouteForm(route);
-                                    } else if (value == 'salesmen') {
-                                      _showManageSalesmen(route);
-                                    } else if (value == 'customers') {
-                                      _showRouteCustomers(route);
-                                    } else if (value == 'delete') {
-                                      _confirmDelete(route);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.edit_outlined, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('دەستکاری ڕاوت', style: TextStyle(fontFamily: 'Rudaw', fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'salesmen',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.badge_outlined, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('مەندوبەکان', style: TextStyle(fontFamily: 'Rudaw', fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'customers',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.storefront, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('کڕیارەکان', style: TextStyle(fontFamily: 'Rudaw', fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuDivider(),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('سڕینەوە', style: TextStyle(color: Colors.red, fontFamily: 'Rudaw', fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.sm),
