@@ -126,7 +126,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -136,14 +136,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Future<void> _submitOrder(List<ProductModel> products, List<WarehouseModel> warehouses) async {
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'), backgroundColor: AppColors.danger),
       );
       return;
     }
 
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'), backgroundColor: AppColors.danger),
       );
       return;
     }
@@ -179,7 +179,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'), backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -460,7 +460,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger),
                                 onPressed: () => _removeFromCart(productId),
                               ),
                               Text('$qty', style: AppTextStyles.bodyBold),
@@ -600,7 +600,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger),
                                 onPressed: () {
                                   _removeFromCart(productId);
                                   setModalState(() {});
