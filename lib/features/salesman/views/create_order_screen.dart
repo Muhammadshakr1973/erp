@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
@@ -8,21 +10,194 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_breakpoints.dart';
+import '../../products/models/product_model.dart';
+import '../../products/providers/products_provider.dart';
+import '../../shared/models/customer.dart';
+import '../../shared/providers/customer_provider.dart';
+import '../../shared/providers/warehouse_provider.dart';
+import '../../orders/providers/orders_provider.dart';
 
-class CreateOrderScreen extends StatefulWidget {
-  const CreateOrderScreen({super.key});
+class CreateOrderScreen extends ConsumerStatefulWidget {
+  final int? preselectedCustomerId;
+
+  const CreateOrderScreen({super.key, this.preselectedCustomerId});
 
   @override
-  State<CreateOrderScreen> createState() => _CreateOrderScreenState();
+  ConsumerState<CreateOrderScreen> createState() => _CreateOrderScreenState();
 }
 
-class _CreateOrderScreenState extends State<CreateOrderScreen> {
-  int _cartItemCount = 0;
-  double _totalPrice = 0.0;
+class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
+  Customer? _selectedCustomer;
+  int? _selectedWarehouseId;
+  final Map<int, int> _cart = {}; // product_id -> quantity
+  double _discountPercent = 0.0;
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.preselectedCustomerId != null) {
+        _loadPreselectedCustomer();
+      }
+    });
+  }
+
+  void _loadPreselectedCustomer() async {
+    final customers = await ref.read(customerListProvider.future);
+    final match = customers.where((c) => c.id == widget.preselectedCustomerId).firstOrNull;
+    if (match != null) {
+      setState(() {
+        _selectedCustomer = match;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  double _getProductUnitPrice(ProductModel product) {
+    if (_selectedCustomer == null) {
+      return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+    }
+    final tier = _selectedCustomer!.priceType?.toUpperCase() ?? 'N2';
+    switch (tier) {
+      case 'N1':
+        return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
+      case 'N3':
+        return product.priceN3 > 0 ? product.priceN3 : product.costPrice;
+      case 'N2':
+      default:
+        return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+    }
+  }
+
+  double _calculateSubtotal(List<ProductModel> products) {
+    double total = 0.0;
+    _cart.forEach((productId, qty) {
+      final product = products.where((p) => p.id == productId).firstOrNull;
+      if (product != null) {
+        total += _getProductUnitPrice(product) * qty;
+      }
+    });
+    return total;
+  }
+
+  int _getCartTotalCount() {
+    return _cart.values.fold(0, (sum, qty) => sum + qty);
+  }
+
+  void _addToCart(int productId) {
+    setState(() {
+      _cart[productId] = (_cart[productId] ?? 0) + 1;
+    });
+  }
+
+  void _removeFromCart(int productId) {
+    setState(() {
+      if (_cart.containsKey(productId)) {
+        if (_cart[productId]! > 1) {
+          _cart[productId] = _cart[productId]! - 1;
+        } else {
+          _cart.remove(productId);
+        }
+      }
+    });
+  }
+
+  void _scanBarcode(List<ProductModel> products) {
+    CameraBarcodeScanner.show(context, (scannedBarcode) {
+      final matched = products.where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode).firstOrNull;
+      if (matched != null) {
+        _addToCart(matched.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${matched.name} بەکارهێنرا بۆ سەبەتە'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> _submitOrder(List<ProductModel> products, List<WarehouseModel> warehouses) async {
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (_cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final warehouseId = _selectedWarehouseId ?? (warehouses.isNotEmpty ? warehouses.first.id : 1);
+
+    final List<Map<String, dynamic>> itemsList = [];
+    _cart.forEach((productId, qty) {
+      itemsList.add({
+        'product_id': productId,
+        'quantity': qty,
+      });
+    });
+
+    final payload = {
+      'customer_id': _selectedCustomer!.id,
+      'warehouse_id': warehouseId,
+      'discount_percent': _discountPercent,
+      'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'items': itemsList,
+    };
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await ref.read(orderActionsProvider).createOrder(payload);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('پسوڵەکە بە سەرکەوتوویی دروستکرا'), backgroundColor: AppColors.success),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final productsAsync = ref.watch(filteredProductsProvider);
+    final customersAsync = ref.watch(customerListProvider);
+    final warehousesAsync = ref.watch(warehouseListProvider);
+
+    final allProducts = productsAsync.asData?.value ?? [];
+    final allWarehouses = warehousesAsync.asData?.value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -30,14 +205,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         actions: [
           IconButton(
             icon: const Icon(AppIcons.scan),
-            onPressed: () {
-              CameraBarcodeScanner.show(context, (scanned) {
-                setState(() {
-                  _cartItemCount++;
-                  _totalPrice += 15000;
-                });
-              });
-            },
+            tooltip: 'سکانی باڕکۆد',
+            onPressed: () => _scanBarcode(allProducts),
           ),
         ],
       ),
@@ -45,56 +214,141 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         builder: (context, constraints) {
           final isDesktopOrTablet = constraints.maxWidth >= AppBreakpoints.tabletMin;
 
-          if (isDesktopOrTablet) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _buildProductSelection(context),
-                ),
-                const VerticalDivider(width: 1, thickness: 1),
-                Expanded(
-                  flex: 1,
-                  child: _buildCartPanel(context),
-                ),
-              ],
-            );
-          } else {
-            return Column(
-              children: [
-                Expanded(child: _buildProductSelection(context)),
-                _buildMobileCartSummary(context),
-              ],
-            );
-          }
+          return Column(
+            children: [
+              // 1. Customer & Warehouse Selection Bar
+              _buildTopBar(customersAsync, allWarehouses),
+
+              // 2. Product selection & Cart Split
+              Expanded(
+                child: isDesktopOrTablet
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: _buildProductSelectionSection(productsAsync, allProducts),
+                          ),
+                          const VerticalDivider(width: 1, thickness: 1),
+                          Expanded(
+                            flex: 1,
+                            child: _buildCartPanel(allProducts, allWarehouses),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          Expanded(child: _buildProductSelectionSection(productsAsync, allProducts)),
+                          _buildMobileCartBar(allProducts, allWarehouses),
+                        ],
+                      ),
+              ),
+            ],
+          );
         },
       ),
     );
   }
 
-  Widget _buildProductSelection(BuildContext context) {
+  Widget _buildTopBar(AsyncValue<List<Customer>> customersAsync, List<WarehouseModel> warehouses) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      color: theme.colorScheme.surfaceContainerLow,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: customersAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('هەڵە لە بارکردنی کڕیاران'),
+                  data: (customers) {
+                    return DropdownButtonFormField<int>(
+                      value: _selectedCustomer?.id,
+                      decoration: const InputDecoration(
+                        labelText: 'دیاریکردنی کڕیار',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: customers.map((c) {
+                        return DropdownMenuItem<int>(
+                          value: c.id,
+                          child: Text('${c.name} (${c.priceType ?? 'N2'})', overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedCustomer = customers.where((c) => c.id == val).firstOrNull;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              if (_selectedCustomer != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.primary),
+                  ),
+                  child: Text(
+                    'نرخی ${_selectedCustomer!.priceType ?? 'N2'}',
+                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductSelectionSection(AsyncValue<List<ProductModel>> productsAsync, List<ProductModel> allProducts) {
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: AppTextField(
-            hintText: 'گەڕان بۆ کاڵا...',
+            controller: _searchController,
+            hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
             prefixIcon: AppIcons.search,
+            onChanged: (query) {
+              ref.read(productSearchProvider.notifier).search(query);
+            },
           ),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 200,
-              mainAxisSpacing: AppSpacing.md,
-              crossAxisSpacing: AppSpacing.md,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) {
-              return _buildProductCard(context, index);
+          child: productsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(child: Text('هەڵە: $err')),
+            data: (products) {
+              if (products.isEmpty) {
+                return const Center(child: Text('هیچ کاڵایەک نەدۆزرایەوە'));
+              }
+              return GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 180,
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 0.72,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  final qtyInCart = _cart[product.id] ?? 0;
+                  final unitPrice = _getProductUnitPrice(product);
+
+                  return _buildProductCard(product, unitPrice, qtyInCart);
+                },
+              );
             },
           ),
         ),
@@ -102,43 +356,64 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, int index) {
+  Widget _buildProductCard(ProductModel product, double unitPrice, int qtyInCart) {
     final theme = Theme.of(context);
+
     return AppCard(
-      onTap: () {
-        setState(() {
-          _cartItemCount++;
-          _totalPrice += 15000;
-        });
-      },
+      onTap: () => _addToCart(product.id),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(child: Icon(Icons.image, size: 48, color: Colors.grey)),
+            child: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey),
+                  ),
+                ),
+                if (qtyInCart > 0)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: CircleAvatar(
+                      radius: 12,
+                      backgroundColor: theme.colorScheme.primary,
+                      child: Text(
+                        '$qtyInCart',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            'کاڵای ژمارە ${index + 1}',
+            product.name,
             style: AppTextStyles.bodyBold,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
-          Text('15,000 د.ع', style: AppTextStyles.price),
+          const SizedBox(height: 2),
+          Text('${unitPrice.toInt()} د.ع', style: AppTextStyles.price),
         ],
       ),
     );
   }
 
-  Widget _buildCartPanel(BuildContext context) {
+  Widget _buildCartPanel(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
     final theme = Theme.of(context);
+    final subtotal = _calculateSubtotal(allProducts);
+    final discountAmount = (subtotal * _discountPercent) / 100;
+    final totalAmount = subtotal - discountAmount;
+    final cartItemCount = _getCartTotalCount();
+
     return Container(
       color: theme.colorScheme.surface,
       child: Column(
@@ -150,7 +425,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               children: [
                 const Text('سەبەتە', style: AppTextStyles.h2),
                 Chip(
-                  label: Text('$_cartItemCount کاڵا'),
+                  label: Text('$cartItemCount کاڵا'),
                   backgroundColor: theme.colorScheme.primaryContainer,
                   labelStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer),
                 ),
@@ -159,29 +434,40 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: _cartItemCount == 0
+            child: _cart.isEmpty
                 ? const Center(child: Text('سەبەتە بەتاڵە', style: AppTextStyles.bodyMedium))
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: _cartItemCount,
+                    itemCount: _cart.length,
                     separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
+                      final productId = _cart.keys.elementAt(index);
+                      final qty = _cart[productId]!;
+                      final product = allProducts.where((p) => p.id == productId).firstOrNull;
+                      final unitPrice = product != null ? _getProductUnitPrice(product) : 0.0;
+
                       return Row(
                         children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('ناوی کاڵا', style: AppTextStyles.bodyBold),
-                                Text('15,000 د.ع', style: AppTextStyles.caption),
+                                Text(product?.name ?? 'کاڵا', style: AppTextStyles.bodyBold),
+                                Text('${unitPrice.toInt()} د.ع', style: AppTextStyles.caption),
                               ],
                             ),
                           ),
                           Row(
                             children: [
-                              IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: () {}),
-                              const Text('1', style: AppTextStyles.bodyBold),
-                              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () {}),
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                                onPressed: () => _removeFromCart(productId),
+                              ),
+                              Text('$qty', style: AppTextStyles.bodyBold),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                onPressed: () => _addToCart(productId),
+                              ),
                             ],
                           ),
                         ],
@@ -197,14 +483,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('کۆی گشتی', style: AppTextStyles.bodyLarge),
-                    Text('$_totalPrice د.ع', style: AppTextStyles.priceLarge),
+                    const Text('کۆ کۆتایی:', style: AppTextStyles.bodyLarge),
+                    Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.priceLarge),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppButton(
                   text: 'تەواوکردنی پسوڵە',
-                  onPressed: _cartItemCount > 0 ? () {} : null,
+                  isLoading: _isSubmitting,
+                  onPressed: _cart.isNotEmpty ? () => _submitOrder(allProducts, warehouses) : null,
                   size: AppButtonSize.lg,
                 ),
               ],
@@ -215,15 +502,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildMobileCartSummary(BuildContext context) {
+  Widget _buildMobileCartBar(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
     final theme = Theme.of(context);
+    final subtotal = _calculateSubtotal(allProducts);
+    final discountAmount = (subtotal * _discountPercent) / 100;
+    final totalAmount = subtotal - discountAmount;
+    final cartItemCount = _getCartTotalCount();
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -4),
             blurRadius: 8,
           ),
@@ -237,20 +529,152 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('$_cartItemCount کاڵا', style: AppTextStyles.caption),
-                  Text('$_totalPrice د.ع', style: AppTextStyles.price),
+                  Text('$cartItemCount کاڵا لە سەبەتەدا', style: AppTextStyles.caption),
+                  Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.price),
                 ],
               ),
             ),
             AppButton(
-              text: 'بینینی سەبەتە',
-              onPressed: _cartItemCount > 0 ? () {
-                // Show Bottom Sheet for cart details on mobile
-              } : null,
+              text: 'بینین و تەواوکردن',
+              onPressed: _cart.isNotEmpty
+                  ? () {
+                      _showMobileCartBottomSheet(allProducts, warehouses);
+                    }
+                  : null,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showMobileCartBottomSheet(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final subtotal = _calculateSubtotal(allProducts);
+            final discountAmount = (subtotal * _discountPercent) / 100;
+            final totalAmount = subtotal - discountAmount;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                top: AppSpacing.md,
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('تەواوکردنی پسوڵە', style: AppTextStyles.h2),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _cart.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final productId = _cart.keys.elementAt(index);
+                        final qty = _cart[productId]!;
+                        final product = allProducts.where((p) => p.id == productId).firstOrNull;
+                        final unitPrice = product != null ? _getProductUnitPrice(product) : 0.0;
+
+                        return ListTile(
+                          title: Text(product?.name ?? 'کاڵا'),
+                          subtitle: Text('$qty x ${unitPrice.toInt()} = ${(qty * unitPrice).toInt()} د.ع'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
+                                onPressed: () {
+                                  _removeFromCart(productId);
+                                  setModalState(() {});
+                                  setState(() {});
+                                },
+                              ),
+                              Text('$qty'),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                onPressed: () {
+                                  _addToCart(productId);
+                                  setModalState(() {});
+                                  setState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      const Text('داشکاندن (%): '),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: _discountPercent.toString(),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          onChanged: (val) {
+                            final parsed = double.tryParse(val) ?? 0.0;
+                            setModalState(() {
+                              _discountPercent = parsed;
+                            });
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    controller: _notesController,
+                    hintText: 'تێبینی (ئارەزوومەندانە)...',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('کۆی گشتی:', style: AppTextStyles.bodyLarge),
+                      Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.priceLarge),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppButton(
+                    text: 'پشتڕاستکردنەوە و ناردن',
+                    isLoading: _isSubmitting,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _submitOrder(allProducts, warehouses);
+                    },
+                    size: AppButtonSize.lg,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

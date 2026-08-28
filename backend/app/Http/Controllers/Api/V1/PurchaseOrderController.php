@@ -17,6 +17,15 @@ class PurchaseOrderController extends Controller
         $this->purchaseService = $purchaseService;
     }
 
+    public function index(): JsonResponse
+    {
+        $orders = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->orderBy('id', 'desc')->get();
+        return response()->json([
+            'message' => 'لیستی پسوڵەکانی کڕین',
+            'data'    => $orders
+        ]);
+    }
+
     // دروستکردنی پسوڵەی کڕین
     public function store(StorePurchaseOrderRequest $request): JsonResponse
     {

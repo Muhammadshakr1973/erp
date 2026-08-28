@@ -20,3 +20,25 @@ final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((ref
   final orders = await ref.watch(ordersListProvider.future);
   return orders.where((order) => order.customerId == customerId).toList();
 });
+
+final orderActionsProvider = Provider<OrderActions>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return OrderActions(api, ref);
+});
+
+class OrderActions {
+  final ApiClient api;
+  final Ref ref;
+
+  OrderActions(this.api, this.ref);
+
+  Future<void> createOrder(Map<String, dynamic> data) async {
+    try {
+      await api.client.post('/orders', data: data);
+      ref.invalidate(ordersListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+}
+

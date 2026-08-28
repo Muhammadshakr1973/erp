@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\RouteController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WarehouseController;
 
 Route::prefix('v1')->group(function () {
 
@@ -44,6 +45,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store']);
+        Route::get('/warehouses', [WarehouseController::class, 'index']);
         Route::post('/payments', [PaymentController::class, 'store']);
         Route::post('/stock-transfers', [StockTransferController::class, 'store']);
         Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete']);
@@ -51,6 +53,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder']);
         Route::get('/commissions', [CommissionController::class, 'index']);
         Route::post('/commissions/calculate', [CommissionController::class, 'calculate']);
+        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
         Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
         Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive']);
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard']);
