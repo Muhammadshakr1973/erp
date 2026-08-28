@@ -173,6 +173,8 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
 
                       return AppCard(
                         padding: const EdgeInsets.all(AppSpacing.md),
+                        onTap: () => _showRouteForm(route),
+                        onLongPress: () => _confirmDelete(route),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
