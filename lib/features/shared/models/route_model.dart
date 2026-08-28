@@ -1,3 +1,20 @@
+int _toInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+bool _toBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+
+  final normalized = value?.toString().toLowerCase();
+
+  return normalized == '1' ||
+      normalized == 'true' ||
+      normalized == 'yes';
+}
+
 class AssignedSalesmanInfo {
   final int id;
   final int salesmanId;
@@ -16,11 +33,11 @@ class AssignedSalesmanInfo {
   factory AssignedSalesmanInfo.fromJson(Map<String, dynamic> json) {
     final salesmanMap = json['salesman'] as Map<String, dynamic>?;
     return AssignedSalesmanInfo(
-      id: json['id'] ?? 0,
-      salesmanId: json['salesman_id'] ?? (salesmanMap?['id'] ?? 0),
-      name: salesmanMap?['name'] ?? json['name'] ?? '',
-      phone: salesmanMap?['phone'] ?? json['phone'],
-      workDate: json['work_date'],
+      id: _toInt(json['id']),
+      salesmanId: _toInt(json['salesman_id'] ?? salesmanMap?['id']),
+      name: salesmanMap?['name']?.toString() ?? json['name']?.toString() ?? '',
+      phone: salesmanMap?['phone']?.toString() ?? json['phone']?.toString(),
+      workDate: json['work_date']?.toString(),
     );
   }
 }
@@ -52,13 +69,14 @@ class RouteModel {
     }
 
     return RouteModel(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      color: json['color'],
-      isActive: json['is_active'] == 1 || json['is_active'] == true,
-      customersCount: json['customers_count'] ?? 0,
+      id: _toInt(json['id']),
+      name: json['name']?.toString() ?? '',
+      color: json['color']?.toString(),
+      isActive: _toBool(json['is_active']),
+      customersCount: _toInt(json['customers_count']),
       salesmen: parsedSalesmen,
     );
   }
 }
+
 

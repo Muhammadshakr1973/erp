@@ -2,19 +2,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/route_model.dart';
 
+List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
+  if (rawData == null) return [];
+  if (rawData is List) {
+    return List<Map<String, dynamic>>.from(rawData);
+  }
+  if (rawData is Map<String, dynamic>) {
+    if (rawData.containsKey('data')) {
+      final inner = rawData['data'];
+      if (inner is List) {
+        return List<Map<String, dynamic>>.from(inner);
+      }
+      if (inner is Map<String, dynamic> && inner.containsKey('data')) {
+        final doubleInner = inner['data'];
+        if (doubleInner is List) {
+          return List<Map<String, dynamic>>.from(doubleInner);
+        }
+      }
+    }
+  }
+  return [];
+}
+
 final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/routes');
     if (response.statusCode == 200) {
-      var rawData = response.data['data'];
-      List data = [];
-      if (rawData is Map<String, dynamic> && rawData.containsKey('data')) {
-        data = rawData['data'] ?? [];
-      } else if (rawData is List) {
-        data = rawData;
-      }
-      return data.map((json) => RouteModel.fromJson(json)).toList();
+      final list = _parseListResponse(response.data);
+      return list.map((json) => RouteModel.fromJson(json)).toList();
     }
     return [];
   } catch (e) {
@@ -103,8 +119,8 @@ class RouteActions {
   Future<List<Map<String, dynamic>>> fetchSalesmenList() async {
     try {
       final response = await api.client.get('/salesmen');
-      if (response.statusCode == 200 && response.data['data'] is List) {
-        return List<Map<String, dynamic>>.from(response.data['data']);
+      if (response.statusCode == 200) {
+        return _parseListResponse(response.data);
       }
       return [];
     } catch (e) {
@@ -115,8 +131,8 @@ class RouteActions {
   Future<List<Map<String, dynamic>>> fetchRouteCustomers(int routeId) async {
     try {
       final response = await api.client.get('/routes/$routeId/customers');
-      if (response.statusCode == 200 && response.data['data'] is List) {
-        return List<Map<String, dynamic>>.from(response.data['data']);
+      if (response.statusCode == 200) {
+        return _parseListResponse(response.data);
       }
       return [];
     } catch (e) {
@@ -124,4 +140,3 @@ class RouteActions {
     }
   }
 }
-
