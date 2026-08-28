@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_dialog.dart';
+import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -89,6 +90,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
 
   @override
   Widget build(BuildContext context) {
+    return PermissionGuard(
+      permission: 'suppliers.manage',
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),

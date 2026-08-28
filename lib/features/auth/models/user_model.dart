@@ -58,4 +58,23 @@ class UserModel {
       'is_active': isActive,
     };
   }
+
+  bool hasPermission(String permission) {
+    final lowerRole = role.toLowerCase();
+    
+    // Admin and Owner have all permissions
+    if (lowerRole == 'admin' || lowerRole == 'owner') {
+      return true;
+    }
+
+    // Role-specific static permissions mapping (aligns 100% with backend seeders)
+    final Map<String, List<String>> rolePermissions = {
+      'salesman': ['orders.create', 'customers.view'],
+      'warehouse': ['stock.view', 'stock.pack'],
+      'driver': ['delivery.view', 'delivery.update'],
+    };
+
+    final permissions = rolePermissions[lowerRole] ?? [];
+    return permissions.contains(permission);
+  }
 }

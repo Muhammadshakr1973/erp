@@ -27,40 +27,75 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
-        Route::apiResource('products', ProductController::class);
+        
+        // Products & Categories (Admins manage, anyone reads)
+        Route::get('/products', [ProductController::class, 'index']);
+        Route::get('/products/{product}', [ProductController::class, 'show']);
+        Route::post('/products', [ProductController::class, 'store'])->middleware('permission:products.manage');
+        Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/products/{product}', [ProductController::class, 'destroy'])->middleware('permission:products.manage');
+        
         Route::get('/categories', [CategoryController::class, 'index']);
-        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::post('/categories', [CategoryController::class, 'store'])->middleware('permission:products.manage');
+        
+        // Routes & Salesmen Assign (Admins manage, anyone reads)
         Route::get('/salesmen', [RouteController::class, 'getSalesmen']);
-        Route::apiResource('routes', RouteController::class);
-        Route::post('/routes/{route}/assign-salesman', [RouteController::class, 'assignSalesman']);
-        Route::delete('/routes/{route}/remove-salesman/{salesmanId}', [RouteController::class, 'removeSalesman']);
+        Route::get('/routes', [RouteController::class, 'index']);
+        Route::get('/routes/{route}', [RouteController::class, 'show']);
+        Route::post('/routes', [RouteController::class, 'store'])->middleware('permission:routes.manage');
+        Route::put('/routes/{route}', [RouteController::class, 'update'])->middleware('permission:routes.manage');
+        Route::delete('/routes/{route}', [RouteController::class, 'destroy'])->middleware('permission:routes.manage');
+        Route::post('/routes/{route}/assign-salesman', [RouteController::class, 'assignSalesman'])->middleware('permission:routes.manage');
+        Route::delete('/routes/{route}/remove-salesman/{salesmanId}', [RouteController::class, 'removeSalesman'])->middleware('permission:routes.manage');
         Route::get('/routes/{route}/customers', [RouteController::class, 'customers']);
+        
+        // Suppliers (Admins manage, anyone reads)
         Route::get('/suppliers', [SupplierController::class, 'index']);
-        Route::post('/suppliers', [SupplierController::class, 'store']);
-        Route::put('/suppliers/{id}', [SupplierController::class, 'update']);
-        Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy']);
-        Route::post('/suppliers/{id}/pay', [SupplierController::class, 'pay']);
-        Route::get('/suppliers/{id}/ledger', [SupplierController::class, 'ledger']);
-        Route::apiResource('customers', CustomerController::class);
-        Route::apiResource('users', UserController::class);
+        Route::post('/suppliers', [SupplierController::class, 'store'])->middleware('permission:suppliers.manage');
+        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->middleware('permission:suppliers.manage');
+        Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.manage');
+        Route::post('/suppliers/{id}/pay', [SupplierController::class, 'pay'])->middleware('permission:suppliers.manage');
+        Route::get('/suppliers/{id}/ledger', [SupplierController::class, 'ledger'])->middleware('permission:suppliers.manage');
+        
+        // Customers (Fine-grained: view vs manage)
+        Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:customers.view');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:customers.view');
+        Route::post('/customers', [CustomerController::class, 'store'])->middleware('permission:customers.manage');
+        Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware('permission:customers.manage');
+        Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('permission:customers.manage');
+        
+        // Users (Admin only)
+        Route::apiResource('users', UserController::class)->middleware('permission:users.manage');
+        
+        // Orders
         Route::get('/orders', [SalesOrderController::class, 'index']);
-        Route::post('/orders', [SalesOrderController::class, 'store']);
+        Route::post('/orders', [SalesOrderController::class, 'store'])->middleware('permission:orders.create');
         Route::get('/orders/{id}', [SalesOrderController::class, 'show']);
-        Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus']);
-        Route::get('/warehouses', [WarehouseController::class, 'index']);
-        Route::post('/payments', [PaymentController::class, 'store']);
-        Route::post('/stock-transfers', [StockTransferController::class, 'store']);
-        Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete']);
-        Route::post('/delivery-trips', [DeliveryTripController::class, 'store']);
-        Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder']);
-        Route::get('/commissions', [CommissionController::class, 'index']);
-        Route::post('/commissions/calculate', [CommissionController::class, 'calculate']);
-        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
-        Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
-        Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive']);
-        Route::get('/reports/dashboard', [ReportController::class, 'dashboard']);
-        Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts']);
-        Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts']);
-        Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory']);
+        Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus']); // Status permissions checked inside controller method
+        
+        // Warehouses & Stock
+        Route::get('/warehouses', [WarehouseController::class, 'index'])->middleware('permission:stock.view');
+        Route::post('/payments', [PaymentController::class, 'store'])->middleware('permission:orders.create');
+        
+        // Stock Transfers (Requires stock permissions)
+        Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware('permission:stock.pack');
+        Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware('permission:stock.pack');
+        
+        // Delivery Trips (Requires delivery permissions)
+        Route::post('/delivery-trips', [DeliveryTripController::class, 'store'])->middleware('permission:delivery.update');
+        Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware('permission:delivery.update');
+        
+        // Commissions & Purchasing & Reports (Admin / Owner privileges)
+        Route::get('/commissions', [CommissionController::class, 'index'])->middleware('permission:users.manage');
+        Route::post('/commissions/calculate', [CommissionController::class, 'calculate'])->middleware('permission:users.manage');
+        
+        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:suppliers.manage');
+        Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:suppliers.manage');
+        Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:suppliers.manage');
+        
+        Route::get('/reports/dashboard', [ReportController::class, 'dashboard'])->middleware('permission:users.manage');
+        Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');
+        Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts'])->middleware('permission:users.manage');
+        Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory'])->middleware('permission:users.manage');
     });
 });

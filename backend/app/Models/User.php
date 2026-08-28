@@ -77,4 +77,20 @@ class User extends Authenticatable
     {
         return in_array($this->role?->name, [Role::OWNER, Role::ADMIN]);
     }
+
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return true;
+        }
+
+        $permissions = $this->role?->permissions;
+        
+        // In Laravel casts, $permissions might be an array or JSON string depending on db connection/driver, but here it is cast as array
+        if (!is_array($permissions)) {
+            return false;
+        }
+
+        return in_array($permission, $permissions) || in_array('*', $permissions);
+    }
 }

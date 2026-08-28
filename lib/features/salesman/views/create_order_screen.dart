@@ -5,6 +5,7 @@ import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -191,6 +192,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PermissionGuard(
+      permission: 'orders.create',
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(filteredProductsProvider);
     final customersAsync = ref.watch(customerListProvider);

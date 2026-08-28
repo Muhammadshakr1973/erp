@@ -52,8 +52,35 @@ class SalesOrderController extends Controller
             'status' => ['required', 'string', 'in:DRAFT,CONFIRMED,PACKING,READY,IN_DELIVERY,DELIVERED,CANCELLED'],
         ]);
 
+        $status = $request->input('status');
+        $user = $request->user();
+
+        // Enforce status-based authorization
+        if (in_array($status, ['DRAFT', 'CONFIRMED', 'CANCELLED'])) {
+            if (!$user->hasPermission('orders.create')) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
+                    'error' => 'Forbidden. Missing permission: orders.create'
+                ], 403);
+            }
+        } elseif (in_array($status, ['PACKING', 'READY'])) {
+            if (!$user->hasPermission('stock.pack')) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
+                    'error' => 'Forbidden. Missing permission: stock.pack'
+                ], 403);
+            }
+        } elseif (in_array($status, ['IN_DELIVERY', 'DELIVERED'])) {
+            if (!$user->hasPermission('delivery.update')) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
+                    'error' => 'Forbidden. Missing permission: delivery.update'
+                ], 403);
+            }
+        }
+
         $order = \App\Models\SalesOrder::findOrFail($id);
-        $updatedOrder = $this->salesOrderService->transitionTo($order, $request->input('status'), $request->user());
+        $updatedOrder = $this->salesOrderService->transitionTo($order, $status, $user);
 
         return response()->json([
             'message' => 'دۆخی پسوڵە بە سەرکەوتوویی نوێکرایەوە',

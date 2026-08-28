@@ -17,9 +17,81 @@ import '../../features/shared/views/notifications_screen.dart';
 import '../../features/admin/views/admin_purchases_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 
+import '../../features/auth/providers/auth_provider.dart';
+
+class RouterTransitionNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterTransitionNotifier(this._ref) {
+    _ref.listen(authProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}
+
+final routerTransitionProvider = Provider<RouterTransitionNotifier>((ref) {
+  return RouterTransitionNotifier(ref);
+});
+
+String _getDashboardForRole(String role) {
+  final normRole = role.toLowerCase();
+  if (normRole == 'admin' || normRole == 'owner') return '/admin';
+  if (normRole == 'salesman') return '/salesman';
+  if (normRole == 'warehouse') return '/warehouse';
+  if (normRole == 'driver') return '/driver';
+  return '/login';
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final transitionNotifier = ref.watch(routerTransitionProvider);
+
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: transitionNotifier,
+    redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final isLoggedIn = authState.user != null;
+      final isGoingToLogin = state.matchedLocation == '/login';
+
+      if (!isLoggedIn) {
+        return isGoingToLogin ? null : '/login';
+      }
+
+      // If logged in and trying to go to login, redirect to role dashboard
+      if (isGoingToLogin) {
+        return _getDashboardForRole(authState.user!.role);
+      }
+
+      // Role-based route protection
+      final location = state.matchedLocation;
+      final role = authState.user!.role.toLowerCase();
+
+      if (location.startsWith('/admin') && !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/salesman') && role != 'salesman') {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/warehouse') && role != 'warehouse') {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/driver') && role != 'driver') {
+        return _getDashboardForRole(role);
+      }
+      
+      // Shared route-specific checks
+      if (location.startsWith('/pack-order') && !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/trip') && !(role == 'driver' || role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/admin-purchases') && !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/login',
