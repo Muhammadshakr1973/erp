@@ -1,3 +1,5 @@
+import 'route_model.dart';
+
 class Customer {
   final int id;
   final String name;
@@ -13,6 +15,7 @@ class Customer {
   final bool isActive;
   final double? latitude;
   final double? longitude;
+  final RouteModel? route;
 
   Customer({
     required this.id,
@@ -29,6 +32,7 @@ class Customer {
     this.isActive = true,
     this.latitude,
     this.longitude,
+    this.route,
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
@@ -44,9 +48,10 @@ class Customer {
       salesmanId: json['salesman_id'],
       routeId: json['route_id'],
       priceType: json['price_type'] ?? 'N2',
-      isActive: json['is_active'] == 1 || json['is_active'] == true,
+      isActive: json['is_active'] == 1 || json['is_active'] == true || json['is_active'] == null,
       latitude: double.tryParse(json['latitude']?.toString() ?? ''),
       longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
     );
   }
 }

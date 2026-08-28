@@ -11,7 +11,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../models/customer.dart';
-import '../models/route_model.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import 'map_picker_dialog.dart';

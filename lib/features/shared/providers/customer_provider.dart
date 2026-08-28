@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/customer.dart';
 
-final customerListProvider = FutureProvider<List<Customer>>((ref) async {
+final filteredCustomerListProvider = FutureProvider.family<List<Customer>, Map<String, dynamic>?>((ref, filters) async {
   final api = ref.watch(apiClientProvider);
   try {
-    final response = await api.client.get('/customers');
+    final response = await api.client.get('/customers', queryParameters: filters);
     if (response.statusCode == 200) {
       var rawData = response.data['data'];
       List data = [];
@@ -20,6 +20,10 @@ final customerListProvider = FutureProvider<List<Customer>>((ref) async {
   } catch (e) {
     throw Exception(api.parseError(e));
   }
+});
+
+final customerListProvider = FutureProvider<List<Customer>>((ref) async {
+  return ref.watch(filteredCustomerListProvider(null).future);
 });
 
 final singleCustomerProvider = FutureProvider.family<Customer, int>((ref, id) async {
