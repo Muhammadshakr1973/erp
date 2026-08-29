@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -18,7 +19,10 @@ class ProductDetailsDialog extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
-        content: Text('دڵنیایت لە سڕینەوەی "${product.name}"؟', style: const TextStyle(fontFamily: 'Rudaw')),
+        content: Text(
+          'دڵنیایت لە سڕینەوەی "${product.name}"؟',
+          style: const TextStyle(fontFamily: 'Rudaw'),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -26,7 +30,10 @@ class ProductDetailsDialog extends ConsumerWidget {
               Navigator.pop(context); // Close confirm
               Navigator.pop(context); // Close details
             },
-            child: const Text('بەڵێ سڕینەوە', style: TextStyle(color: AppColors.danger, fontFamily: 'Rudaw')),
+            child: const Text(
+              'بەڵێ سڕینەوە',
+              style: TextStyle(color: AppColors.danger, fontFamily: 'Rudaw'),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -76,7 +83,7 @@ class ProductDetailsDialog extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            
+
             // Product Main Info (Image, Name, SKU, Barcode)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +96,9 @@ class ProductDetailsDialog extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: theme.colorScheme.outlineVariant),
                   ),
-                  child: (product.imagePath != null && product.imagePath!.isNotEmpty)
+                  child:
+                      (product.imagePath != null &&
+                          product.imagePath!.isNotEmpty)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: Image.network(
@@ -120,12 +129,16 @@ class ProductDetailsDialog extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'جۆر: ${product.category?['name'] ?? 'دیاری نەکراو'}',
-                        style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'کۆمپانیا: ${product.supplier?['name'] ?? 'دیاری نەکراو'}',
-                        style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -139,19 +152,26 @@ class ProductDetailsDialog extends ConsumerWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: Border.all(color: theme.colorScheme.outlineVariant),
+                side: BorderSide(
+                  color: theme.colorScheme.outlineVariant,
+                  width: 1,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
-                    _buildDetailRow(context, 'بارکۆد:', product.barcode.isEmpty ? 'بێ بارکۆد' : product.barcode),
+                    _buildDetailRow(
+                      context,
+                      'بارکۆد:',
+                      product.barcode.isEmpty ? 'بێ بارکۆد' : product.barcode,
+                    ),
                     const Divider(height: 16),
                     _buildDetailRow(context, 'SKU:', product.sku ?? 'بێ SKU'),
                     const Divider(height: 16),
                     _buildDetailRow(
-                      context, 
-                      'یەکە و کارتۆن:', 
+                      context,
+                      'یەکە و کارتۆن:',
                       '${product.unit ?? "دانە"} (کارتۆنێک = ${product.unitsPerCarton} دانە)',
                     ),
                   ],
@@ -161,50 +181,56 @@ class ProductDetailsDialog extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
 
             // Pricing Tiers (The GARDI Price rules)
-            Text('نرخەکان و ستۆک', style: AppTextStyles.bodyBold.copyWith(fontSize: 15)),
+            Text(
+              'نرخەکان و ستۆک',
+              style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: Border.all(color: theme.colorScheme.outlineVariant),
+                side: BorderSide(
+                  color: theme.colorScheme.outlineVariant,
+                  width: 1,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
                     _buildDetailRowWithColor(
-                      context, 
-                      'تێچوو (کۆست):', 
-                      '${product.costPrice.toInt()} د.ع', 
+                      context,
+                      'تێچوو (کۆست):',
+                      '${product.costPrice.toInt()} د.ع',
                       Colors.grey,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
-                      context, 
-                      'نرخی کڕیاری گەورە (N1):', 
-                      '${product.priceN1.toInt()} د.ع', 
+                      context,
+                      'نرخی کڕیاری گەورە (N1):',
+                      '${product.priceN1.toInt()} د.ع',
                       AppColors.success,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
-                      context, 
-                      'نرخی کڕیاری ناوەند (N2):', 
-                      '${product.priceN2.toInt()} د.ع', 
+                      context,
+                      'نرخی کڕیاری ناوەند (N2):',
+                      '${product.priceN2.toInt()} د.ع',
                       theme.colorScheme.primary,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
-                      context, 
-                      'نرخی تاکفرۆش/ئاسایی (N3):', 
-                      '${product.priceN3.toInt()} د.ع', 
+                      context,
+                      'نرخی تاکفرۆش/ئاسایی (N3):',
+                      '${product.priceN3.toInt()} د.ع',
                       Colors.orange,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithBadge(
-                      context, 
-                      'بڕی ستۆک:', 
-                      '$totalStock دانە', 
+                      context,
+                      'بڕی ستۆک:',
+                      '$totalStock دانە',
                       isLowStock ? AppColors.danger : AppColors.success,
                     ),
                   ],
@@ -223,14 +249,18 @@ class ProductDetailsDialog extends ConsumerWidget {
                       Navigator.pop(context);
                       showDialog(
                         context: context,
-                        builder: (context) => ProductFormDialog(product: product),
+                        builder: (context) =>
+                            ProductFormDialog(product: product),
                       );
                     },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.danger,
+                  ),
                   onPressed: () => _showDeleteDialog(context, ref),
                 ),
               ],
@@ -245,17 +275,34 @@ class ProductDetailsDialog extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Rudaw',
+          ),
+        ),
         Text(value, style: const TextStyle(fontFamily: 'Rudaw')),
       ],
     );
   }
 
-  Widget _buildDetailRowWithColor(BuildContext context, String label, String value, Color color) {
+  Widget _buildDetailRowWithColor(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Rudaw',
+          ),
+        ),
         Text(
           value,
           style: TextStyle(
@@ -269,11 +316,22 @@ class ProductDetailsDialog extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRowWithBadge(BuildContext context, String label, String value, Color badgeColor) {
+  Widget _buildDetailRowWithBadge(
+    BuildContext context,
+    String label,
+    String value,
+    Color badgeColor,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Rudaw',
+          ),
+        ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
