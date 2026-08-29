@@ -46,7 +46,11 @@ class SalesOrder extends Model
     {
         return $q->where('status', self::STATUS_DELIVERED)->whereBetween('delivered_at', [$from, $to]);
     }
-    // In app/Models/SalesOrder.php
+    public function commissionDetail()
+    {
+        return $this->hasOne(SalesmanCommissionDetail::class, 'sales_order_id');
+    }
+
     public function commissionDetails()
     {
         return $this->hasOne(SalesmanCommissionDetail::class, 'sales_order_id');

@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import 'reports/supplier_debts_report_screen.dart';
 import 'reports/customer_debts_report_screen.dart';
 import 'reports/payments_history_report_screen.dart';
+import 'reports/salesman_commissions_report_screen.dart';
 
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
@@ -87,6 +88,11 @@ class AdminReportsScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const PaymentsHistoryReportScreen()),
+                      );
+                    } else if (report == 'ڕاپۆرتی کۆمسیۆنی مەندوبەکان' || report == 'پوختەی کۆمسیۆنی مانگانە') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SalesmanCommissionsReportScreen()),
                       );
                     }
                   },

@@ -21,6 +21,12 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   }
 });
 
+final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
+  final userData = await ref.watch(userAdminProvider.future);
+  final List<UserModel> allUsers = (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
+  return allUsers.where((u) => u.role.toLowerCase() == 'salesman').toList();
+});
+
 final userActionsProvider = Provider<UserActions>((ref) {
   final api = ref.watch(apiClientProvider);
   return UserActions(api, ref);

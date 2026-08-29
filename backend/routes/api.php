@@ -99,9 +99,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/delivery-trips', [DeliveryTripController::class, 'store'])->middleware('permission:delivery.update');
         Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware(['permission:delivery.update', 'idempotent']);
         
-        // Commissions & Purchasing & Reports (Admin / Owner privileges)
+        // Commissions Lifecycle & Reports (Admin / Owner privileges + Salesman self-view)
         Route::get('/commissions', [CommissionController::class, 'index'])->middleware('permission:users.manage');
+        Route::get('/commissions/summary', [CommissionController::class, 'summary'])->middleware('permission:users.manage');
+        Route::get('/commissions/preview', [CommissionController::class, 'preview'])->middleware('permission:users.manage');
+        Route::get('/commissions/my-commissions', [CommissionController::class, 'myCommissions']);
+        Route::get('/commissions/{id}', [CommissionController::class, 'show']);
         Route::post('/commissions/calculate', [CommissionController::class, 'calculate'])->middleware(['permission:users.manage', 'idempotent']);
+        Route::post('/commissions/{id}/approve', [CommissionController::class, 'approve'])->middleware(['permission:users.manage', 'idempotent']);
+        Route::post('/commissions/{id}/pay', [CommissionController::class, 'pay'])->middleware(['permission:users.manage', 'idempotent']);
+        Route::post('/commissions/{id}/cancel', [CommissionController::class, 'cancel'])->middleware(['permission:users.manage', 'idempotent']);
         
         Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:suppliers.manage');

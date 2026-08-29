@@ -10,6 +10,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'salesman_my_commissions_screen.dart';
 
 class SalesmanDashboardScreen extends ConsumerWidget {
   const SalesmanDashboardScreen({super.key});
@@ -126,6 +127,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               children: [
                 _buildActionCard(context, 'پسوڵەی نوێ', AppIcons.newOrder, () {
                   context.push('/salesman/create-order');
+                }),
+                _buildActionCard(context, 'کۆمسیۆنەکانم', Icons.percent, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SalesmanMyCommissionsScreen()),
+                  );
                 }),
                 _buildActionCard(context, 'وەرگرتنی پارە', AppIcons.customerDebt, () {}),
                 _buildActionCard(context, 'داواکاری کاڵا', AppIcons.add, () {}),
