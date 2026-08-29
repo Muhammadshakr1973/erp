@@ -6,7 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/warehouse_provider.dart';
-import '../../providers/reports_provider.dart';
+import '../providers/reports_provider.dart';
 
 class LowStockReportScreen extends ConsumerStatefulWidget {
   const LowStockReportScreen({super.key});
@@ -151,7 +151,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
     );
   }
 
-  Widget _buildTable(List items) {
+  Widget _buildTable(List<dynamic> items) {
     if (items.isEmpty) {
       return const AppCard(
         child: Center(
@@ -192,7 +192,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.danger.withOpacity(0.1),
+                    color: AppColors.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text('${item.availableQuantity} ${item.unit}', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),

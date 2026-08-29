@@ -8,8 +8,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/customer_provider.dart';
 import '../../../shared/providers/route_provider.dart';
 import '../../../shared/providers/warehouse_provider.dart';
-import '../../providers/user_provider.dart';
-import '../../providers/reports_provider.dart';
+import '../providers/user_provider.dart';
+import '../providers/reports_provider.dart';
 
 class SalesReportScreen extends ConsumerStatefulWidget {
   const SalesReportScreen({super.key});
@@ -239,7 +239,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
     );
   }
 
-  Widget _buildSummaryCards(summary) {
+  Widget _buildSummaryCards(dynamic summary) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
@@ -266,7 +266,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight)),
             const SizedBox(height: 4),
             Text(
               value,
@@ -279,7 +279,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
     );
   }
 
-  Widget _buildSalesmanBreakdownTable(List breakdowns) {
+  Widget _buildSalesmanBreakdownTable(List<dynamic> breakdowns) {
     return AppCard(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -305,7 +305,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
     );
   }
 
-  Widget _buildOrdersTable(List orders) {
+  Widget _buildOrdersTable(List<dynamic> orders) {
     if (orders.isEmpty) {
       return const AppCard(
         child: Center(
@@ -359,7 +359,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(statusLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),

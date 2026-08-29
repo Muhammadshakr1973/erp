@@ -6,7 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/warehouse_provider.dart';
-import '../../providers/reports_provider.dart';
+import '../providers/reports_provider.dart';
 
 class StockMovementsReportScreen extends ConsumerStatefulWidget {
   const StockMovementsReportScreen({super.key});
@@ -228,7 +228,7 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
     );
   }
 
-  Widget _buildTable(List transactions) {
+  Widget _buildTable(List<dynamic> transactions) {
     if (transactions.isEmpty) {
       return const AppCard(
         child: Center(

@@ -262,7 +262,7 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.danger.withOpacity(0.1),
+                          color: AppColors.danger.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.danger),
                         ),
@@ -276,7 +276,7 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         decoration: BoxDecoration(
                           color: AppColors.backgroundLight,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,23 +692,23 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
 
     switch (status.toLowerCase()) {
       case 'approved':
-        bg = AppColors.info.withOpacity(0.15);
+        bg = AppColors.info.withValues(alpha: 0.15);
         fg = AppColors.info;
         label = 'پەسەندکراو';
         break;
       case 'paid':
-        bg = AppColors.success.withOpacity(0.15);
+        bg = AppColors.success.withValues(alpha: 0.15);
         fg = AppColors.success;
         label = 'دراوە';
         break;
       case 'cancelled':
-        bg = AppColors.danger.withOpacity(0.15);
+        bg = AppColors.danger.withValues(alpha: 0.15);
         fg = AppColors.danger;
         label = 'هەڵوەشێنراوە';
         break;
       case 'calculated':
       default:
-        bg = AppColors.warning.withOpacity(0.15);
+        bg = AppColors.warning.withValues(alpha: 0.15);
         fg = AppColors.warning;
         label = 'هەژمارکراو';
         break;

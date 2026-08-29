@@ -6,8 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../shared/providers/customer_provider.dart';
-import '../../providers/user_provider.dart';
-import '../../providers/reports_provider.dart';
+import '../providers/user_provider.dart';
+import '../providers/reports_provider.dart';
 
 class ProfitReportScreen extends ConsumerStatefulWidget {
   const ProfitReportScreen({super.key});
@@ -193,7 +193,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
     );
   }
 
-  Widget _buildSummaryCards(summary) {
+  Widget _buildSummaryCards(dynamic summary) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
@@ -220,7 +220,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight)),
             const SizedBox(height: 4),
             Text(
               value,
@@ -233,7 +233,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
     );
   }
 
-  Widget _buildProductsTable(List products) {
+  Widget _buildProductsTable(List<dynamic> products) {
     if (products.isEmpty) {
       return const AppCard(
         child: Center(
@@ -274,7 +274,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text('${p.marginPercent.toStringAsFixed(1)}%', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),

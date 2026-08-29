@@ -10,7 +10,6 @@ import '../../../shared/models/customer.dart';
 import '../../../products/providers/suppliers_provider.dart';
 import '../../../products/models/supplier_model.dart';
 import '../providers/reports_provider.dart';
-import '../../../shared/models/payment_history_model.dart';
 
 class PaymentsHistoryReportScreen extends ConsumerStatefulWidget {
   const PaymentsHistoryReportScreen({super.key});
@@ -82,7 +81,7 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
   ) {
     if (_paymentType == 'customer') {
       return DropdownButtonFormField<int?>(
-        value: _selectedPartyId,
+        initialValue: _selectedPartyId,
         decoration: const InputDecoration(
           labelText: 'کڕیار',
           border: OutlineInputBorder(),
@@ -100,7 +99,7 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
       );
     } else {
       return DropdownButtonFormField<int?>(
-        value: _selectedPartyId,
+        initialValue: _selectedPartyId,
         decoration: const InputDecoration(
           labelText: 'دابینکەر / کۆمپانیا',
           border: OutlineInputBorder(),

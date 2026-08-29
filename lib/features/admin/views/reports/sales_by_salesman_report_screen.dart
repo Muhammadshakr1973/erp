@@ -5,7 +5,7 @@ import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../providers/reports_provider.dart';
+import '../providers/reports_provider.dart';
 
 class SalesBySalesmanReportScreen extends ConsumerStatefulWidget {
   const SalesBySalesmanReportScreen({super.key});
@@ -151,7 +151,7 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
     );
   }
 
-  Widget _buildSummaryCards(data) {
+  Widget _buildSummaryCards(dynamic data) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
@@ -178,7 +178,7 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight)),
             const SizedBox(height: 4),
             Text(
               value,
@@ -191,7 +191,7 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
     );
   }
 
-  Widget _buildSalesmenTable(List salesmen) {
+  Widget _buildSalesmenTable(List<dynamic> salesmen) {
     if (salesmen.isEmpty) {
       return const AppCard(
         child: Center(
