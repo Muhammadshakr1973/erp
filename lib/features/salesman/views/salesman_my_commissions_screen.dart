@@ -4,7 +4,8 @@ import '../../../../core/components/app_card.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../shared/models/commission_model.dart';
+import '../../../../core/api_client.dart';
+import '../../shared/models/commission_model.dart';
 import '../../admin/views/providers/commission_provider.dart';
 
 final myCommissionsProvider = FutureProvider.family<List<CommissionModel>, Map<String, dynamic>>((ref, filters) async {

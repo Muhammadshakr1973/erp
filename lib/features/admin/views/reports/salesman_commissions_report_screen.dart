@@ -274,7 +274,7 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: AppColors.backgroundLight,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                         ),
