@@ -21,10 +21,10 @@ use App\Http\Controllers\Api\V1\WarehouseController;
 Route::prefix('v1')->group(function () {
 
     // ئەوانەی پێویستیان بە تۆکن نییە (Public)
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'throttle:60,1'])->group(function () {
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);

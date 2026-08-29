@@ -16,9 +16,28 @@ class SalesOrderController extends Controller
         $this->salesOrderService = $salesOrderService;
     }
 
-    public function index(): JsonResponse
+    public function index(\Illuminate\Http\Request $request): JsonResponse
     {
-        $orders = \App\Models\SalesOrder::with(['customer', 'salesman'])->orderBy('id', 'desc')->get();
+        $user = $request->user();
+        $query = \App\Models\SalesOrder::with(['customer', 'salesman'])->orderBy('id', 'desc');
+
+        if ($user->role?->name === 'salesman') {
+            $query->where('salesman_id', $user->id);
+        } elseif ($user->role?->name === 'driver') {
+            // Drivers can only see orders assigned to their delivery trips
+            $tripOrderIds = \DB::table('delivery_trip_orders')
+                ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+                ->where('delivery_trips.driver_id', $user->id)
+                ->pluck('sales_order_id')
+                ->toArray();
+            $query->whereIn('id', $tripOrderIds);
+        } elseif ($user->role?->name === 'warehouse') {
+            if ($user->warehouse_id) {
+                $query->where('warehouse_id', $user->warehouse_id);
+            }
+        }
+
+        $orders = $query->get();
         return response()->json([
             'message' => 'لیستی پسوڵەکان',
             'data' => $orders
@@ -27,8 +46,18 @@ class SalesOrderController extends Controller
 
     public function store(StoreSalesOrderRequest $request): JsonResponse
     {
+        // Check if salesman is assigned to the customer they are making order for
+        $user = $request->user();
+        $customerId = $request->input('customer_id');
+        if (!$user->hasCustomerAccess($customerId)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دروستکردنی پسوڵە بۆ ئەم کڕیارە بەهۆی نەبوونی دەسەڵاتی دەستڕاگەیشتن.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         // ناردنی داتاکان و بەکارهێنەرەکە بۆ لۆژیکی Service
-        $order = $this->salesOrderService->createOrder($request->validated(), $request->user());
+        $order = $this->salesOrderService->createOrder($request->validated(), $user);
 
         // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی 201 (Created)
         return response()->json([
@@ -37,9 +66,40 @@ class SalesOrderController extends Controller
         ], 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(\Illuminate\Http\Request $request, int $id): JsonResponse
     {
+        $user = $request->user();
         $order = \App\Models\SalesOrder::with(['customer', 'salesman', 'items.product', 'warehouse'])->findOrFail($id);
+
+        // IDOR Prevention Access Check
+        if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم پسوڵەیە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        if ($user->role?->name === 'driver') {
+            $onTrip = \DB::table('delivery_trip_orders')
+                ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+                ->where('delivery_trip_orders.sales_order_id', $order->id)
+                ->where('delivery_trips.driver_id', $user->id)
+                ->exists();
+            if (!$onTrip) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم پسوڵەیە.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
+        }
+
+        if ($user->role?->name === 'warehouse' && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         return response()->json([
             'message' => 'وردەکاری پسوڵە',
             'data' => $order
@@ -80,6 +140,22 @@ class SalesOrderController extends Controller
         }
 
         $order = \App\Models\SalesOrder::findOrFail($id);
+
+        // IDOR prevention on updateStatus
+        if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی ئەم پسوڵەیە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        if ($user->role?->name === 'warehouse' && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $updatedOrder = $this->salesOrderService->transitionTo($order, $status, $user);
 
         return response()->json([

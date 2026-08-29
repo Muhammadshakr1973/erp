@@ -42,9 +42,12 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (DioException e, handler) {
-          // Handle 401 Unauthorized globally
-          if (e.response?.statusCode == 401) {
-            // Trigger logout / redirect to login
+          // Handle 401 Unauthorized or 403 Forbidden globally to protect client session
+          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+            SharedPreferences.getInstance().then((prefs) {
+              prefs.remove('auth_token');
+              prefs.remove('current_user');
+            });
           }
           return handler.next(e);
         },

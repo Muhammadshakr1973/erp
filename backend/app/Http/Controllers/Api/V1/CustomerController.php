@@ -38,8 +38,15 @@ class CustomerController extends Controller
         ], 201);
     }
 
-    public function show(Customer $customer): JsonResponse
+    public function show(Request $request, Customer $customer): JsonResponse
     {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         return response()->json([
             'data' => $customer->load('route')
         ], 200);
@@ -47,6 +54,13 @@ class CustomerController extends Controller
 
     public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse
     {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ نوێکردنەوەی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $customer = $this->customerService->updateCustomer($customer, $request->validated());
         
         return response()->json([
@@ -55,8 +69,15 @@ class CustomerController extends Controller
         ], 200);
     }
 
-    public function destroy(Customer $customer): JsonResponse
+    public function destroy(Request $request, Customer $customer): JsonResponse
     {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $this->customerService->deleteCustomer($customer);
         
         return response()->json([
@@ -64,8 +85,15 @@ class CustomerController extends Controller
         ], 200);
     }
 
-    public function reconcile(Customer $customer): JsonResponse
+    public function reconcile(Request $request, Customer $customer): JsonResponse
     {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی کردار لێرەدا.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $reconciliation = $customer->reconcileBalance();
         
         return response()->json([

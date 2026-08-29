@@ -31,7 +31,18 @@ class DeliveryTripController extends Controller
     // کاتی گەیاندنی پسوڵەیەک لەلایەن شۆفێرەوە
     public function deliverOrder(DeliverOrderRequest $request, $tripOrderId): JsonResponse
     {
-        $tripOrder = $this->deliveryTripService->deliverOrder($tripOrderId, $request->validated(), $request->user());
+        $user = $request->user();
+        $tripOrder = \App\Models\DeliveryTripOrder::with('trip')->findOrFail($tripOrderId);
+
+        // IDOR/assignment restriction for drivers
+        if ($user->role?->name === 'driver' && $tripOrder->trip->driver_id !== $user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە لەم گەشتەدا چونکە گەشتەکە بۆ تۆ نییە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $tripOrder = $this->deliveryTripService->deliverOrder($tripOrderId, $request->validated(), $user);
 
         return response()->json([
             'message' => 'پسوڵەکە گەیندرا و زانیارییەکان تۆمارکران',

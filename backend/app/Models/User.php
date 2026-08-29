@@ -21,7 +21,8 @@ class User extends Authenticatable
         'commission_rate',
         'barcode',
         'is_active',
-        'last_login_at'
+        'last_login_at',
+        'warehouse_id'
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
@@ -29,11 +30,16 @@ class User extends Authenticatable
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
         'password' => 'hashed',
+        'warehouse_id' => 'integer'
     ];
 
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
     public function deviceTokens(): HasMany
     {
@@ -54,6 +60,10 @@ class User extends Authenticatable
     public function customerPayments(): HasMany
     {
         return $this->hasMany(CustomerPayment::class, 'collected_by');
+    }
+    public function routeSalesmen(): HasMany
+    {
+        return $this->hasMany(RouteSalesman::class, 'salesman_id');
     }
 
     public function scopeActive($q)
@@ -76,6 +86,46 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return in_array($this->role?->name, [Role::OWNER, Role::ADMIN]);
+    }
+
+    public function getAssignedRouteIds(): array
+    {
+        if ($this->isAdmin() || $this->isOwner()) {
+            return Route::pluck('id')->toArray();
+        }
+        return $this->routeSalesmen()->where('is_active', true)->pluck('route_id')->toArray();
+    }
+
+    public function hasCustomerAccess($customer): bool
+    {
+        if ($this->isAdmin() || $this->isOwner()) {
+            return true;
+        }
+
+        $customerId = $customer instanceof Customer ? $customer->id : $customer;
+        $customerModel = $customer instanceof Customer ? $customer : Customer::find($customerId);
+        if (!$customerModel) {
+            return false;
+        }
+
+        // Direct salesman-customer assignments check
+        $hasDirectAssignment = \DB::table('customer_assignments')
+            ->where('customer_id', $customerId)
+            ->where('salesman_id', $this->id)
+            ->where('assigned_from', '<=', now()->toDateString())
+            ->where(function ($q) {
+                $q->whereNull('assigned_until')
+                  ->orWhere('assigned_until', '>=', now()->toDateString());
+            })
+            ->exists();
+
+        if ($hasDirectAssignment) {
+            return true;
+        }
+
+        // Check assigned routes
+        $assignedRoutes = $this->getAssignedRouteIds();
+        return in_array($customerModel->route_id, $assignedRoutes);
     }
 
     public function hasPermission(string $permission): bool

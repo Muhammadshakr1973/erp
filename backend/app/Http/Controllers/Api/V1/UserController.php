@@ -67,6 +67,22 @@ class UserController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $user = User::findOrFail($id);
+        $currentUser = $request->user();
+
+        // Admin/Owner restrictions
+        if ($user->isOwner() && !$currentUser->isOwner()) {
+            return response()->json([
+                'message' => 'تەنها خاوەنکار (Owner) دەتوانێت گۆڕانکاری لە هەژماری خاوەنکاردا بکات.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        if ($user->isAdmin() && !$currentUser->isOwner() && $currentUser->id !== $user->id) {
+            return response()->json([
+                'message' => 'تەنها خاوەنکار (Owner) دەتوانێت گۆڕانکاری لە هەژماری سەرپەرشتیاردا (Admin) بکات.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -85,7 +101,8 @@ class UserController extends Controller
                 'max:50',
                 Rule::unique('users')->ignore($id)->whereNull('deleted_at')
             ],
-            'is_active' => 'nullable|boolean'
+            'is_active' => 'nullable|boolean',
+            'warehouse_id' => 'nullable|exists:warehouses,id'
         ]);
 
         $updateData = [
@@ -95,6 +112,7 @@ class UserController extends Controller
             'commission_rate' => $validated['commission_rate'] ?? 0,
             'barcode' => $validated['barcode'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
+            'warehouse_id' => $validated['warehouse_id'] ?? null,
         ];
 
         if (!empty($validated['password'])) {
@@ -109,12 +127,28 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy($id): JsonResponse
+    public function destroy(Request $request, $id): JsonResponse
     {
         $user = User::findOrFail($id);
+        $currentUser = $request->user();
+
+        // Admin/Owner restrictions
+        if ($user->isOwner() && !$currentUser->isOwner()) {
+            return response()->json([
+                'message' => 'تەنها خاوەنکار (Owner) دەتوانێت ئەم هەژمارە بسڕێتەوە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        if ($user->isAdmin() && !$currentUser->isOwner() && $currentUser->id !== $user->id) {
+            return response()->json([
+                'message' => 'تەنها خاوەنکار (Owner) دەتوانێت هەژماری سەرپەرشتیار بسڕێتەوە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
         
         // Prevent deleting the currently authenticated user
-        if (auth()->id() == $user->id) {
+        if ($currentUser->id == $user->id) {
             return response()->json([
                 'message' => 'ناتوانیت هەژماری خۆت بسڕیتەوە!'
             ], 400);

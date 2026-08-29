@@ -498,6 +498,13 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
         });
+
+        // Add warehouse_id to users table (fully constrained)
+        Schema::table('users', function (Blueprint $table) {
+            if (!Schema::hasColumn('users', 'warehouse_id')) {
+                $table->foreignId('warehouse_id')->nullable()->after('role_id')->constrained('warehouses')->nullOnDelete();
+            }
+        });
     }
 
     public function down(): void
@@ -519,7 +526,10 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->dropForeign(['role_id']);
             $table->dropForeign(['created_by']);
-            $table->dropColumn(['role_id', 'commission_rate', 'barcode', 'is_active', 'last_login_at', 'created_by']);
+            if (Schema::hasColumn('users', 'warehouse_id')) {
+                $table->dropForeign(['warehouse_id']);
+            }
+            $table->dropColumn(['role_id', 'commission_rate', 'barcode', 'is_active', 'last_login_at', 'created_by', 'warehouse_id']);
         });
         Schema::dropIfExists('roles');
         Schema::enableForeignKeyConstraints();
