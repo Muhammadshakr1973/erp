@@ -292,4 +292,70 @@ class WarehousePackingTest extends TestCase
         $stock2 = WarehouseStock::where('product_id', $this->product2->id)->first();
         $this->assertEquals(0, $stock2->reserved_quantity);
     }
+
+    /** @test */
+    public function it_restricts_packer_to_assigned_warehouse_orders_only()
+    {
+        // Create another warehouse
+        $otherWarehouse = Warehouse::create([
+            'name' => 'Other Warehouse',
+            'is_main' => false,
+            'is_active' => true,
+        ]);
+
+        // Restrict packer to the other warehouse
+        $this->packer->update(['warehouse_id' => $otherWarehouse->id]);
+
+        // Create an order in CONFIRMED status assigned to Main Warehouse
+        $orderInMain = SalesOrder::create([
+            'order_number' => 'ORD-MAIN',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->packer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_CONFIRMED,
+            'subtotal' => 15000,
+            'total_amount' => 15000,
+            'total_profit' => 5000,
+            'created_by' => $this->packer->id,
+        ]);
+
+        // List orders to pack - should be empty for this packer since they are assigned to otherWarehouse
+        $response = $this->actingAs($this->packer)
+            ->getJson('/api/v1/warehouse/orders-to-pack');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+
+        // Create item in Main Warehouse order
+        $item = SalesOrderItem::create([
+            'sales_order_id' => $orderInMain->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 1,
+            'unit_price' => 7500,
+            'cost_price' => 5000,
+            'price_type' => 'N2',
+            'line_total' => 7500,
+            'profit' => 2500,
+            'is_packed' => false,
+        ]);
+
+        // Attempting to pack item from Main Warehouse order must be Forbidden (403)
+        $responsePack = $this->actingAs($this->packer)
+            ->postJson('/api/v1/warehouse/pack-item', [
+                'order_item_id' => $item->id,
+                'packed' => true
+            ]);
+
+        $responsePack->assertStatus(403);
+
+        // Attempting to mark order in Main Warehouse as Ready must be Forbidden (403)
+        $responseReady = $this->actingAs($this->packer)
+            ->postJson('/api/v1/warehouse/mark-ready', [
+                'order_id' => $orderInMain->id
+            ]);
+
+        $responseReady->assertStatus(403);
+    }
 }
+

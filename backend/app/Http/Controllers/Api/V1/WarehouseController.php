@@ -23,11 +23,18 @@ class WarehouseController extends Controller
         $this->salesOrderService = $salesOrderService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $warehouses = Warehouse::where('is_active', true)->get();
+        $user = $request->user();
+        $query = Warehouse::where('is_active', true);
 
-        if ($warehouses->isEmpty()) {
+        if ($user && $user->warehouse_id) {
+            $query->where('id', $user->warehouse_id);
+        }
+
+        $warehouses = $query->get();
+
+        if ($warehouses->isEmpty() && (!$user || !$user->warehouse_id)) {
             $mainWarehouse = Warehouse::create([
                 'name' => 'کۆگای سەرەکی',
                 'is_main' => true,
@@ -44,6 +51,13 @@ class WarehouseController extends Controller
 
     public function adjustStock(Request $request, $warehouseId, $productId): JsonResponse
     {
+        $user = $request->user();
+        if ($user && $user->warehouse_id && $warehouseId != $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاری ستۆک لەم کۆگایەدا.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'quantity_change' => 'required|integer',
             'type' => 'required|string|in:ADJUSTMENT,RETURN,PURCHASE,DELIVERY',
@@ -83,7 +97,7 @@ class WarehouseController extends Controller
             $transaction = $stock->adjustStock(
                 $validated['quantity_change'],
                 $validated['type'],
-                $request->user()->id,
+                $user->id,
                 'manual_adjustment',
                 null,
                 $validated['notes'] ?? 'Manual stock adjustment'
@@ -100,8 +114,15 @@ class WarehouseController extends Controller
         }
     }
 
-    public function reconcileStock($warehouseId, $productId): JsonResponse
+    public function reconcileStock(Request $request, $warehouseId, $productId): JsonResponse
     {
+        $user = $request->user();
+        if ($user && $user->warehouse_id && $warehouseId != $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ سەرلەنوێ هاوتاکردنەوەی ستۆک لەم کۆگایەدا.'
+            ], 403);
+        }
+
         $stock = WarehouseStock::where('warehouse_id', $warehouseId)
             ->where('product_id', $productId)
             ->firstOrFail();
@@ -116,10 +137,15 @@ class WarehouseController extends Controller
 
     public function ordersToPack(Request $request): JsonResponse
     {
-        $orders = SalesOrder::with(['customer', 'warehouse', 'items.product'])
-            ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])
-            ->orderBy('id', 'desc')
-            ->get();
+        $user = $request->user();
+        $query = SalesOrder::with(['customer', 'warehouse', 'items.product'])
+            ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
+
+        if ($user && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        }
+
+        $orders = $query->orderBy('id', 'desc')->get();
 
         return response()->json([
             'message' => 'لیستی پسوڵەکانی پاکەتکردن',
@@ -143,6 +169,15 @@ class WarehouseController extends Controller
             ], 404);
         }
 
+        $user = $request->user();
+
+        // Check if user is restricted to a warehouse
+        if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.'
+            ], 403);
+        }
+
         // Check if status is CONFIRMED or PACKING
         if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
             return response()->json([
@@ -151,7 +186,6 @@ class WarehouseController extends Controller
         }
 
         $packed = $validated['packed'];
-        $user = $request->user();
 
         // Idempotency: if already matching requested value, return early
         if ($item->is_packed === $packed) {
@@ -236,6 +270,14 @@ class WarehouseController extends Controller
         ]);
 
         $order = SalesOrder::findOrFail($validated['order_id']);
+        $user = $request->user();
+
+        // Check if user is restricted to a warehouse
+        if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.'
+            ], 403);
+        }
 
         if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
             return response()->json([
@@ -244,7 +286,7 @@ class WarehouseController extends Controller
         }
 
         try {
-            $updatedOrder = $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_READY, $request->user());
+            $updatedOrder = $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_READY, $user);
 
             return response()->json([
                 'message' => 'پسوڵە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا',
@@ -264,9 +306,12 @@ class WarehouseController extends Controller
 
     public function stockList(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = WarehouseStock::with(['warehouse', 'product']);
 
-        if ($request->has('warehouse_id')) {
+        if ($user && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } elseif ($request->has('warehouse_id')) {
             $query->where('warehouse_id', $request->query('warehouse_id'));
         }
 
@@ -284,7 +329,14 @@ class WarehouseController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = StockTransaction::with(['warehouse', 'product', 'creator']);
+
+        if ($user && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } elseif ($request->has('warehouse_id')) {
+            $query->where('warehouse_id', $request->query('warehouse_id'));
+        }
 
         if ($request->has('product_id')) {
             $query->where('product_id', $request->query('product_id'));
