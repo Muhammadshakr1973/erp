@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SalesOrder\StoreSalesOrderRequest;
+use App\Http\Requests\Api\V1\SalesOrder\UpdateSalesOrderRequest;
 use App\Services\SalesOrderService;
 use Illuminate\Http\JsonResponse;
 
@@ -64,6 +65,26 @@ class SalesOrderController extends Controller
             'message' => 'پسوڵە بەسەرکەوتوویی دروستکرا',
             'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
         ], 201);
+    }
+
+    public function update(UpdateSalesOrderRequest $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = \App\Models\SalesOrder::findOrFail($id);
+
+        if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاری ئەم پسوڵەیە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $updatedOrder = $this->salesOrderService->updateOrder($order, $request->validated(), $user);
+
+        return response()->json([
+            'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
+            'data' => $updatedOrder->load('items')
+        ]);
     }
 
     public function show(\Illuminate\Http\Request $request, int $id): JsonResponse

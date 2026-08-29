@@ -104,14 +104,91 @@ class SalesOrderService
                 'total_profit' => $totalProfit,
             ]);
 
+            // ئەگەر دۆخی تایبەت دیاری کرابوو وەک DRAFT ئەوا وەکو خۆی دەیهێڵینەوە، ئەگەرنا دەچێتە ڕەوتی CONFIRMED
+            $requestedStatus = $data['status'] ?? SalesOrder::STATUS_CONFIRMED;
+            if ($requestedStatus === SalesOrder::STATUS_DRAFT) {
+                return $order;
+            }
+
             // کاتێک پسوڵە بە سەرکەوتوویی دروستکرا، ڕاستەوخۆ دەیدەینە ڕەوتی پشتڕاستکردنەوە (CONFIRMED) بۆ حجزکردنی ستۆک
             return $this->transitionTo($order, SalesOrder::STATUS_CONFIRMED, $user);
         });
 
         // Notify new order created AFTER database commit (NOT-001)
-        app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+            app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+        }
 
         return $order;
+    }
+
+    public function updateOrder(SalesOrder $order, array $data, $user): SalesOrder
+    {
+        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => 'تەنها پسوڵەی DRAFT دەتوانرێت دەستکاری بکرێت.'
+            ]);
+        }
+
+        return DB::transaction(function () use ($order, $data, $user) {
+            $customer = Customer::lockForUpdate()->findOrFail($order->customer_id);
+
+            // Update basic info
+            $order->update([
+                'discount_percent' => $data['discount_percent'] ?? $order->discount_percent,
+                'notes' => $data['notes'] ?? $order->notes,
+                'warehouse_id' => $data['warehouse_id'] ?? $order->warehouse_id,
+            ]);
+
+            // Remove old items
+            $order->items()->delete();
+
+            $subtotal = 0;
+            $totalProfit = 0;
+
+            foreach ($data['items'] as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $unitPrice = $customer->getCurrentPriceForProduct($product);
+                $lineTotal = $unitPrice * $item['quantity'];
+                $profit = ($unitPrice - $product->cost_price) * $item['quantity'];
+
+                $order->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $unitPrice,
+                    'cost_price' => $product->cost_price,
+                    'price_type' => $customer->price_type,
+                    'line_total' => $lineTotal,
+                    'profit' => $profit,
+                    'is_packed' => false,
+                ]);
+
+                $subtotal += $lineTotal;
+                $totalProfit += $profit;
+            }
+
+            $discountAmount = 0;
+            if ($order->discount_percent > 0) {
+                $discountAmount = ($subtotal * $order->discount_percent) / 100;
+            }
+            $totalAmount = $subtotal - $discountAmount;
+
+            $order->update([
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'total_amount' => $totalAmount,
+                'total_profit' => $totalProfit,
+            ]);
+
+            $requestedStatus = $data['status'] ?? $order->status;
+            if ($requestedStatus !== SalesOrder::STATUS_DRAFT) {
+                $order = $this->transitionTo($order, $requestedStatus, $user);
+                app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+                return $order;
+            }
+
+            return $order;
+        });
     }
 
     /**

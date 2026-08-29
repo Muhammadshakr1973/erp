@@ -77,6 +77,7 @@ Route::prefix('v1')->group(function () {
         // Orders
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
+        Route::put('/orders/{id}', [SalesOrderController::class, 'update'])->middleware(['permission:orders.create', 'idempotent']);
         Route::get('/orders/{id}', [SalesOrderController::class, 'show']);
         Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus']); // Status permissions checked inside controller method
         
