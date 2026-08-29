@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class PurchaseRequirement extends Model
 {
     use HasFactory;
-    protected $fillable = ['product_id', 'warehouse_id', 'supplier_id', 'required_quantity', 'current_stock', 'suggested_quantity', 'is_urgent', 'status'];
+    protected $fillable = ['product_id', 'warehouse_id', 'supplier_id', 'required_quantity', 'current_stock', 'suggested_quantity', 'is_urgent', 'status', 'created_by', 'sales_order_id'];
     protected $casts = ['is_urgent' => 'boolean'];
-    const STATUS_PENDING = 'pending';
+    const STATUS_PENDING = 'OPEN';
+    const STATUS_ORDERED = 'ORDERED';
+    const STATUS_CLOSED = 'CLOSED';
+
     public function product()
     {
         return $this->belongsTo(Product::class);
@@ -22,5 +25,13 @@ class PurchaseRequirement extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+    public function salesOrder()
+    {
+        return $this->belongsTo(SalesOrder::class, 'sales_order_id');
+    }
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\StockTransferController;
 use App\Http\Controllers\Api\V1\DeliveryTripController;
 use App\Http\Controllers\Api\V1\CommissionController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
+use App\Http\Controllers\Api\V1\PurchaseRequirementController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -104,6 +105,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:suppliers.manage');
+        
+        Route::get('/purchase-requirements', [PurchaseRequirementController::class, 'index'])->middleware('permission:suppliers.manage');
+        Route::get('/purchase-requirements/group', [PurchaseRequirementController::class, 'group'])->middleware('permission:suppliers.manage');
+        Route::post('/purchase-requirements/convert', [PurchaseRequirementController::class, 'convert'])->middleware('permission:suppliers.manage');
         
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard'])->middleware('permission:users.manage');
         Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');

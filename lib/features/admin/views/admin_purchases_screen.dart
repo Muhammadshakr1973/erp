@@ -11,6 +11,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
+import '../models/purchase_requirement_model.dart';
+import '../models/purchase_order_model.dart';
+import '../providers/purchase_provider.dart';
 import 'supplier_form_dialog.dart';
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
@@ -22,6 +25,8 @@ class AdminPurchasesScreen extends ConsumerStatefulWidget {
 
 class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Set<int> _selectedRequirementIds = {};
+  bool _isConverting = false;
 
   @override
   void initState() {
@@ -88,6 +93,113 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
     }
   }
 
+  void _convertSelectedToPO() async {
+    if (_selectedRequirementIds.isEmpty) return;
+
+    final notesController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('دروستکردنی پسوڵەی کڕین', style: AppTextStyles.bodyBold),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('ئایا دڵنیایت لە گۆڕینی ${_selectedRequirementIds.length} داواکاری بۆ پسوڵەی کڕین؟', style: AppTextStyles.caption),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'تێبینییەکان (ئارەزوومەندانە)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('پاشگەزبوونەوە'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('تۆمارکردن'),
+            ),
+          ],
+        );
+      }
+    );
+
+    if (confirmed == true && context.mounted) {
+      setState(() {
+        _isConverting = true;
+      });
+      try {
+        await ref.read(purchaseActionsProvider).convertRequirementsToPO(
+          requirementIds: _selectedRequirementIds.toList(),
+          notes: notesController.text,
+        );
+        setState(() {
+          _selectedRequirementIds.clear();
+        });
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      } finally {
+        if (context.mounted) {
+          setState(() {
+            _isConverting = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _receivePO(PurchaseOrderModel order) async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'وەرگرتنی کاڵاکان لە کۆگا',
+      message: 'ئایا دڵنیایت لە وەرگرتنی کاڵاکانی پسوڵەی کڕینی #${order.orderNumber}؟ ئەم کردارە ستۆکی کۆگا زیاد دەکات و قەرزەکە دەخاتە سەر کۆمپانیا.',
+      confirmText: 'وەرگرتن',
+      cancelText: 'پەشیمانبوونەوە',
+    );
+
+    if (confirmed == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('داواکارییەکە جێبەجێ دەکرێت...')),
+      );
+      try {
+        await ref.read(purchaseActionsProvider).receivePurchaseOrder(order.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('پسوڵەی کڕین بەسەرکەوتوویی وەرگیرا و ستۆک نوێکرایەوە'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PermissionGuard(
@@ -129,37 +241,193 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
   }
 
   Widget _buildRequirementsTab(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-      itemCount: 5,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        return AppCard(
-          child: Row(
+    final reqsAsync = ref.watch(purchaseRequirementsProvider);
+    final theme = Theme.of(context);
+
+    return reqsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.danger.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.inventory_2_outlined, color: AppColors.danger),
+              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              const SizedBox(height: AppSpacing.md),
+              const Text('کێشەیەک لە بارکردنی داواکارییەکان دروستبوو'),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                err.toString().replaceAll('Exception: ', ''),
+                style: AppTextStyles.caption,
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
+              const SizedBox(height: AppSpacing.lg),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(purchaseRequirementsProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('دووبارە هەوڵبدەرەوە'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (requirements) {
+        if (requirements.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(purchaseRequirementsProvider),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.6,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('کاڵای پێویست ژمارە ${index + 1}', style: AppTextStyles.bodyBold),
-                    const SizedBox(height: 4),
-                    const Text('کۆگای سەرەکی • داواکراو: 50', style: AppTextStyles.caption),
+                    Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'هیچ داواکاری کڕینێکی کراوە بەردەست نییە',
+                      style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'کاتێک ستۆک تەواو دەبێت لە کاتی پسوڵەی فرۆشتن، داواکاری لێرە دەردەکەوێت',
+                      style: AppTextStyles.caption,
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
-                onPressed: () {},
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(purchaseRequirementsProvider),
+          child: Column(
+            children: [
+              if (_selectedRequirementIds.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  child: Row(
+                    children: [
+                      Text(
+                        'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
+                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.onPrimaryContainer),
+                      ),
+                      const Spacer(),
+                      _isConverting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: _convertSelectedToPO,
+                              icon: const Icon(Icons.shopping_cart_checkout),
+                              label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
+                            ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                  itemCount: requirements.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final req = requirements[index];
+                    final isSelected = _selectedRequirementIds.contains(req.id);
+
+                    return AppCard(
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedRequirementIds.add(req.id);
+                                } else {
+                                  _selectedRequirementIds.remove(req.id);
+                                }
+                              });
+                            },
+                          ),
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: req.isUrgent
+                                  ? AppColors.danger.withValues(alpha: 0.1)
+                                  : theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              req.isUrgent ? Icons.warning_amber_rounded : Icons.inventory_2_outlined,
+                              color: req.isUrgent ? AppColors.danger : theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        req.productName,
+                                        style: AppTextStyles.bodyBold,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (req.isUrgent)
+                                      const StatusBadge(
+                                        label: 'بەپەلە',
+                                        type: StatusBadgeType.danger,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'کۆمپانیا: ${req.supplierName ?? 'بێ کۆمپانیا'} • کۆگا: ${req.warehouseName}',
+                                  style: AppTextStyles.caption,
+                                ),
+                                if (req.salesOrderId != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2.0),
+                                    child: Text(
+                                      'لەلایەن پسوڵەی فرۆشتنی: #${req.salesOrderId}',
+                                      style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              StatusBadge(
+                                label: 'بڕی پێویست: ${req.requiredQuantity}',
+                                type: StatusBadgeType.warning,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'مەوجود: ${req.currentStock}',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -169,26 +437,111 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
   }
 
   Widget _buildPurchaseOrdersTab(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-      itemCount: 6,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final isReceived = index % 2 == 0;
-        return AppCard(
-          onTap: () {},
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: const Icon(AppIcons.order),
+    final posAsync = ref.watch(purchaseOrdersProvider);
+    final theme = Theme.of(context);
+
+    return posAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              const SizedBox(height: AppSpacing.md),
+              const Text('کێشەیەک لە بارکردنی پسوڵەکان دروستبوو'),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                err.toString().replaceAll('Exception: ', ''),
+                style: AppTextStyles.caption,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(purchaseOrdersProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('دووبارە هەوڵبدەرەوە'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (orders) {
+        if (orders.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(purchaseOrdersProvider),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.6,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey.shade400),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'هیچ پسوڵەیەکی کڕین تۆمار نەکراوە',
+                      style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            title: Text('پسوڵەی کڕین #500$index', style: AppTextStyles.bodyBold),
-            subtitle: const Text('کۆمپانیای جێگر • 10 کاڵا', style: AppTextStyles.caption),
-            trailing: StatusBadge(
-              label: isReceived ? 'گەیشتووە' : 'چاوەڕوانە',
-              type: isReceived ? StatusBadgeType.success : StatusBadgeType.warning,
-            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(purchaseOrdersProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            itemCount: orders.length,
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              final isDraft = order.status.toUpperCase() == 'DRAFT';
+
+              return AppCard(
+                onTap: isDraft ? () => _receivePO(order) : null,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: isDraft
+                        ? theme.colorScheme.primaryContainer
+                        : AppColors.success.withValues(alpha: 0.1),
+                    child: Icon(
+                      AppIcons.order,
+                      color: isDraft ? theme.colorScheme.primary : AppColors.success,
+                    ),
+                  ),
+                  title: Text(
+                    'پسوڵەی کڕین #${order.orderNumber}',
+                    style: AppTextStyles.bodyBold,
+                  ),
+                  subtitle: Text(
+                    '${order.supplierName} • ${order.itemsCount} کاڵا • ${_formatCurrency(order.totalAmount)}',
+                    style: AppTextStyles.caption,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StatusBadge(
+                        label: isDraft ? 'چاوەڕوانە' : 'وەرگیراوە',
+                        type: isDraft ? StatusBadgeType.warning : StatusBadgeType.success,
+                      ),
+                      if (isDraft)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4.0),
+                          child: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

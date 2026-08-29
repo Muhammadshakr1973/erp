@@ -263,18 +263,22 @@ class SalesOrderService
                 $shortage = $item->quantity - max(0, $availableStock);
 
                 $existingReq = PurchaseRequirement::where('product_id', $item->product_id)
-                    ->where('warehouse_id', $order->warehouse_id)
+                    ->where('sales_order_id', $order->id)
                     ->where('status', 'OPEN')
                     ->first();
 
                 if ($existingReq) {
-                    $existingReq->increment('required_quantity', $shortage);
+                    $existingReq->update([
+                        'required_quantity' => $shortage,
+                        'current_stock' => $warehouseStock->quantity,
+                    ]);
                 } else {
                     $product = Product::find($item->product_id);
                     PurchaseRequirement::create([
                         'product_id' => $item->product_id,
                         'warehouse_id' => $order->warehouse_id,
-                        'supplier_id' => $product->supplier_id,
+                        'supplier_id' => $product ? $product->supplier_id : null,
+                        'sales_order_id' => $order->id,
                         'required_quantity' => $shortage,
                         'current_stock' => $warehouseStock->quantity,
                         'status' => 'OPEN',
@@ -282,7 +286,6 @@ class SalesOrderService
                     ]);
                 }
 
-                // حجزکردنی ئەوەی کە بەردەستە
                 $reservedToAdd = max(0, $availableStock);
             } else {
                 $reservedToAdd = $item->quantity;
