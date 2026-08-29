@@ -75,6 +75,16 @@ class SupplierController extends Controller
         });
     }
 
+    
+    public function show($id): JsonResponse
+    {
+        $supplier = Supplier::findOrFail($id);
+        return response()->json([
+            'message' => 'وردەکاری دابینکەر',
+            'data' => $supplier
+        ]);
+    }
+
     public function update(Request $request, $id): JsonResponse
     {
         $supplier = Supplier::findOrFail($id);

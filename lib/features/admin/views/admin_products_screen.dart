@@ -66,7 +66,17 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         title: const Text('کاڵاکان و کۆگا', style: AppTextStyles.h2),
         actions: [
           IconButton(
+              icon: const Icon(Icons.category),
+              tooltip: 'بەڕێوەبردنی جۆرەکان',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const AdminCategoriesDialog(),
+                );
+              }),
+          IconButton(
               icon: const Icon(AppIcons.add),
+              tooltip: 'زیادکردنی کاڵا',
               onPressed: () {
                 showDialog(
                   context: context,

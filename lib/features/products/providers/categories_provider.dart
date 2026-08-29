@@ -36,4 +36,23 @@ class CategoryActions {
       throw Exception(api.parseError(e));
     }
   }
+
+  Future<CategoryModel> updateCategory(int id, String name) async {
+    try {
+      final response = await api.client.put('/categories/$id', data: {'name': name});
+      ref.invalidate(categoriesListProvider);
+      return CategoryModel.fromJson(response.data['data']);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> deleteCategory(int id) async {
+    try {
+      await api.client.delete('/categories/$id');
+      ref.invalidate(categoriesListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
 }

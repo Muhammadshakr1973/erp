@@ -40,6 +40,9 @@ Route::prefix('v1')->group(function () {
         
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store'])->middleware('permission:products.manage');
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
+        Route::put('/categories/{category}', [CategoryController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->middleware('permission:products.manage');
         
         // Routes & Salesmen Assign (Admins manage, anyone reads)
         Route::get('/salesmen', [RouteController::class, 'getSalesmen']);
@@ -56,6 +59,7 @@ Route::prefix('v1')->group(function () {
         
         // Suppliers (Admins manage, anyone reads)
         Route::get('/suppliers', [SupplierController::class, 'index']);
+        Route::get('/suppliers/{id}', [SupplierController::class, 'show']);
         Route::post('/suppliers', [SupplierController::class, 'store'])->middleware('permission:suppliers.manage');
         Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->middleware('permission:suppliers.manage');
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.manage');
