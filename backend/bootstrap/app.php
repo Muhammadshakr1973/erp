@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => \App\Http\Middleware\EnsureHasPermission::class,
             'active' => \App\Http\Middleware\CheckActiveUser::class,
+            'idempotent' => \App\Http\Middleware\Idempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

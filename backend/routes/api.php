@@ -74,13 +74,13 @@ Route::prefix('v1')->group(function () {
         
         // Orders
         Route::get('/orders', [SalesOrderController::class, 'index']);
-        Route::post('/orders', [SalesOrderController::class, 'store'])->middleware('permission:orders.create');
+        Route::post('/orders', [SalesOrderController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
         Route::get('/orders/{id}', [SalesOrderController::class, 'show']);
         Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus']); // Status permissions checked inside controller method
         
         // Warehouses & Stock
         Route::get('/warehouses', [WarehouseController::class, 'index'])->middleware('permission:stock.view');
-        Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware('permission:stock.pack');
+        Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::get('/warehouses/{warehouseId}/stock/{productId}/reconcile', [WarehouseController::class, 'reconcileStock'])->middleware('permission:stock.view');
         
         Route::get('/warehouse/orders-to-pack', [WarehouseController::class, 'ordersToPack'])->middleware('permission:stock.pack');
@@ -88,23 +88,23 @@ Route::prefix('v1')->group(function () {
         Route::post('/warehouse/mark-ready', [WarehouseController::class, 'markReady'])->middleware('permission:stock.pack');
         Route::get('/warehouse/stock', [WarehouseController::class, 'stockList'])->middleware('permission:stock.view');
         Route::get('/warehouse/transactions', [WarehouseController::class, 'transactions'])->middleware('permission:stock.view');
-        Route::post('/payments', [PaymentController::class, 'store'])->middleware('permission:orders.create');
+        Route::post('/payments', [PaymentController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
         
         // Stock Transfers (Requires stock permissions)
-        Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware('permission:stock.pack');
-        Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware('permission:stock.pack');
+        Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware(['permission:stock.pack', 'idempotent']);
+        Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware(['permission:stock.pack', 'idempotent']);
         
         // Delivery Trips (Requires delivery permissions)
         Route::post('/delivery-trips', [DeliveryTripController::class, 'store'])->middleware('permission:delivery.update');
-        Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware('permission:delivery.update');
+        Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware(['permission:delivery.update', 'idempotent']);
         
         // Commissions & Purchasing & Reports (Admin / Owner privileges)
         Route::get('/commissions', [CommissionController::class, 'index'])->middleware('permission:users.manage');
-        Route::post('/commissions/calculate', [CommissionController::class, 'calculate'])->middleware('permission:users.manage');
+        Route::post('/commissions/calculate', [CommissionController::class, 'calculate'])->middleware(['permission:users.manage', 'idempotent']);
         
         Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:suppliers.manage');
-        Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:suppliers.manage');
+        Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware(['permission:suppliers.manage', 'idempotent']);
         
         Route::get('/purchase-requirements', [PurchaseRequirementController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::get('/purchase-requirements/group', [PurchaseRequirementController::class, 'group'])->middleware('permission:suppliers.manage');
