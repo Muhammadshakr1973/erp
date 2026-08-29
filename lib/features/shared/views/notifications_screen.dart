@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -15,10 +16,12 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with SingleTickerProviderStateMixin {
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String? _selectedWhatsAppStatus;
 
@@ -57,7 +60,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(authProvider).user;
-    final isPrivileged = user != null && (user.role.toLowerCase() == 'admin' || user.role.toLowerCase() == 'owner');
+    final isPrivileged =
+        user != null &&
+        (user.role.toLowerCase() == 'admin' ||
+            user.role.toLowerCase() == 'owner');
 
     final notificationsAsync = ref.watch(notificationsListProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
@@ -81,14 +87,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                         if (unreadCount > 0) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(AppRadius.full),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
                             ),
                             child: Text(
                               '$unreadCount',
-                              style: AppTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -105,7 +119,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
               onPressed: () {
                 ref.read(notificationsListProvider.notifier).markAllAsRead();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('هەموو ئاگادارکردنەوەکان خوێندرانەوە')),
+                  const SnackBar(
+                    content: Text('هەموو ئاگادارکردنەوەکان خوێندرانەوە'),
+                  ),
                 );
               },
               icon: const Icon(Icons.done_all, size: 18),
@@ -117,11 +133,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
           ? TabBarView(
               controller: _tabController,
               children: [
-                _buildInAppNotificationsTab(context, notificationsAsync, selectedFilter),
+                _buildInAppNotificationsTab(
+                  context,
+                  notificationsAsync,
+                  selectedFilter,
+                ),
                 _buildWhatsAppLogsTab(context),
               ],
             )
-          : _buildInAppNotificationsTab(context, notificationsAsync, selectedFilter),
+          : _buildInAppNotificationsTab(
+              context,
+              notificationsAsync,
+              selectedFilter,
+            ),
     );
   }
 
@@ -136,7 +160,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
       children: [
         // Filter Chips Bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           color: theme.colorScheme.surface,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -163,7 +190,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
-              await ref.read(notificationsListProvider.notifier).loadNotifications();
+              await ref
+                  .read(notificationsListProvider.notifier)
+                  .loadNotifications();
             },
             child: notificationsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -173,12 +202,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: AppColors.danger,
+                      ),
                       const SizedBox(height: AppSpacing.md),
-                      Text('$error', textAlign: TextAlign.center, style: AppTextStyles.bodyMedium),
+                      Text(
+                        '$error',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMedium,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       ElevatedButton(
-                        onPressed: () => ref.read(notificationsListProvider.notifier).loadNotifications(),
+                        onPressed: () => ref
+                            .read(notificationsListProvider.notifier)
+                            .loadNotifications(),
                         child: const Text('دووبارە هەوڵ بدەرەوە'),
                       ),
                     ],
@@ -193,11 +232,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.notifications_none_outlined, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                          Icon(
+                            Icons.notifications_none_outlined,
+                            size: 64,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.3,
+                            ),
+                          ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
                             'هیچ ئاگادارکردنەوەیەک نییە',
-                            style: AppTextStyles.h3.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                            style: AppTextStyles.h3.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Text(
@@ -214,7 +263,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                 return ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
                   itemCount: notifications.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final notification = notifications[index];
                     return _buildNotificationCard(context, notification);
@@ -239,7 +289,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, AppNotification notification) {
+  Widget _buildNotificationCard(
+    BuildContext context,
+    AppNotification notification,
+  ) {
     final theme = Theme.of(context);
 
     return AppCard(
@@ -251,7 +304,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: notification.iconColor.withOpacity(0.12),
+              color: notification.iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(
@@ -275,9 +328,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                         notification.title,
                         style: AppTextStyles.bodyBold.copyWith(
                           color: notification.isRead
-                              ? theme.colorScheme.onSurface.withOpacity(0.7)
+                              ? theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                )
                               : theme.colorScheme.onSurface,
-                          fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.bold,
+                          fontWeight: notification.isRead
+                              ? FontWeight.w500
+                              : FontWeight.bold,
                         ),
                       ),
                     ),
@@ -297,7 +354,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                 Text(
                   notification.body,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(notification.isRead ? 0.65 : 0.88),
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: notification.isRead ? 0.65 : 0.88,
+                    ),
                     height: 1.4,
                   ),
                 ),
@@ -308,7 +367,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                     Text(
                       notification.timeAgoKurdish,
                       style: AppTextStyles.caption.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                     ),
                     Text(
@@ -341,7 +402,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
       children: [
         // Filter bar for WhatsApp status
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           color: theme.colorScheme.surface,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -350,25 +414,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                 FilterChip(
                   selected: _selectedWhatsAppStatus == null,
                   label: const Text('هەموو'),
-                  onSelected: (_) => setState(() => _selectedWhatsAppStatus = null),
+                  onSelected: (_) =>
+                      setState(() => _selectedWhatsAppStatus = null),
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
                   selected: _selectedWhatsAppStatus == 'SENT',
                   label: const Text('نێردراو'),
-                  onSelected: (_) => setState(() => _selectedWhatsAppStatus = 'SENT'),
+                  onSelected: (_) =>
+                      setState(() => _selectedWhatsAppStatus = 'SENT'),
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
                   selected: _selectedWhatsAppStatus == 'SIMULATED',
                   label: const Text('تۆمارکراو (ئامادەکاری)'),
-                  onSelected: (_) => setState(() => _selectedWhatsAppStatus = 'SIMULATED'),
+                  onSelected: (_) =>
+                      setState(() => _selectedWhatsAppStatus = 'SIMULATED'),
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
                   selected: _selectedWhatsAppStatus == 'FAILED',
                   label: const Text('سەرکەوتوو نەبوو'),
-                  onSelected: (_) => setState(() => _selectedWhatsAppStatus = 'FAILED'),
+                  onSelected: (_) =>
+                      setState(() => _selectedWhatsAppStatus = 'FAILED'),
                 ),
               ],
             ),
@@ -383,16 +451,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
             },
             child: logsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('هەڵە لە بارکردنی لۆگەکان: $error')),
+              error: (error, _) =>
+                  Center(child: Text('هەڵە لە بارکردنی لۆگەکان: $error')),
               data: (logs) {
                 if (logs.isEmpty) {
-                  return const Center(child: Text('هیچ مێژوویەکی وەتسئاپ بەردەست نییە'));
+                  return const Center(
+                    child: Text('هیچ مێژوویەکی وەتسئاپ بەردەست نییە'),
+                  );
                 }
 
                 return ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
                   itemCount: logs.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final log = logs[index];
                     return _buildWhatsAppLogCard(context, log);
@@ -418,7 +490,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
             children: [
               Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline, color: AppColors.success, size: 20),
+                  const Icon(
+                    Icons.chat_bubble_outline,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     log.recipientName ?? log.recipientPhone,
@@ -428,15 +504,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
               ),
               StatusBadge(
                 label: log.statusLabelKurdish,
-                color: log.statusColor,
+                type: log.statusBadgeType,
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            'ژمارە: ${log.recipientPhone}',
-            style: AppTextStyles.caption,
-          ),
+          Text('ژمارە: ${log.recipientPhone}', style: AppTextStyles.caption),
           const SizedBox(height: 8),
 
           // Message Preview Container
@@ -444,15 +517,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
             padding: const EdgeInsets.all(10),
             width: double.infinity,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.1),
+              ),
             ),
             child: Text(
               log.message,
               style: AppTextStyles.caption.copyWith(
                 height: 1.5,
-                color: theme.colorScheme.onSurface.withOpacity(0.85),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
               ),
             ),
           ),
@@ -461,7 +538,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
             const SizedBox(height: 6),
             Text(
               'هەڵە: ${log.errorMessage}',
-              style: AppTextStyles.caption.copyWith(color: AppColors.error),
+              style: AppTextStyles.caption.copyWith(color: AppColors.danger),
             ),
           ],
 
@@ -477,12 +554,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
                 TextButton.icon(
                   onPressed: () async {
                     try {
-                      await ref.read(notificationActionsProvider).retryWhatsApp(log.id);
+                      await ref
+                          .read(notificationActionsProvider)
+                          .retryWhatsApp(log.id);
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('دووبارە ناردنەوە ئەنجامدرا')),
+                        const SnackBar(
+                          content: Text('دووبارە ناردنەوە ئەنجامدرا'),
+                        ),
                       );
                       ref.invalidate(whatsAppLogsProvider);
                     } catch (e) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('نەتوانرا بنێردرێتەوە: $e')),
                       );

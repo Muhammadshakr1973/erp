@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../features/shared/providers/notification_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
@@ -8,10 +9,7 @@ import '../theme/app_icons.dart';
 class NotificationBadgeButton extends ConsumerWidget {
   final Color? color;
 
-  const NotificationBadgeButton({
-    super.key,
-    this.color,
-  });
+  const NotificationBadgeButton({super.key, this.color});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,13 +32,10 @@ class NotificationBadgeButton extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                color: AppColors.error,
+                color: AppColors.danger,
                 shape: BoxShape.circle,
               ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 unreadCount > 99 ? '99+' : '$unreadCount',
                 style: const TextStyle(

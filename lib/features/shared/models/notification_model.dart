@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 
@@ -32,9 +34,13 @@ class AppNotification {
       type: json['type'] as String? ?? 'system',
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
-      data: json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : null,
+      data: json['data'] is Map<String, dynamic>
+          ? json['data'] as Map<String, dynamic>
+          : null,
       isRead: json['is_read'] as bool? ?? (json['read_at'] != null),
-      readAt: json['read_at'] != null ? DateTime.tryParse(json['read_at'].toString()) : null,
+      readAt: json['read_at'] != null
+          ? DateTime.tryParse(json['read_at'].toString())
+          : null,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -124,7 +130,7 @@ class AppNotification {
         return AppColors.info;
       case 'system':
       default:
-        return AppColors.textSecondary;
+        return AppColors.textSecondaryLight;
     }
   }
 }
@@ -176,7 +182,9 @@ class WhatsAppLog {
       status: json['status'] as String? ?? 'PENDING',
       provider: json['provider'] as String?,
       errorMessage: json['error_message'] as String?,
-      sentAt: json['sent_at'] != null ? DateTime.tryParse(json['sent_at'].toString()) : null,
+      sentAt: json['sent_at'] != null
+          ? DateTime.tryParse(json['sent_at'].toString())
+          : null,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -198,18 +206,18 @@ class WhatsAppLog {
     }
   }
 
-  Color get statusColor {
+  StatusBadgeType get statusBadgeType {
     switch (status.toUpperCase()) {
       case 'SENT':
-        return AppColors.success;
+        return StatusBadgeType.success;
       case 'SIMULATED':
-        return AppColors.info;
+        return StatusBadgeType.info;
       case 'PENDING':
-        return AppColors.warning;
+        return StatusBadgeType.warning;
       case 'FAILED':
-        return AppColors.error;
+        return StatusBadgeType.danger;
       default:
-        return AppColors.textSecondary;
+        return StatusBadgeType.neutral;
     }
   }
 }
