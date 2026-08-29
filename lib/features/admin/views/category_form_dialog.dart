@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/category_model.dart';
 import '../../products/providers/categories_provider.dart';
@@ -63,7 +62,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
       content: Form(
         key: _formKey,
         child: AppTextField(
-          label: 'ناوی جۆر',
+          labelText: 'ناوی جۆر',
           controller: _nameController,
           validator: (v) => v == null || v.isEmpty ? 'ناوی جۆر پێویستە' : null,
         ),

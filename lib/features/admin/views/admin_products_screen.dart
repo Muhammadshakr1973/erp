@@ -10,6 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/views/product_form_dialog.dart';
+import 'admin_categories_dialog.dart';
 import '../../products/views/product_details_dialog.dart';
 import '../../products/models/product_model.dart';
 
@@ -58,8 +59,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final productsAsync = ref.watch(filteredProductsProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isDesktop = screenWidth >= 900;
 
     return Scaffold(
       appBar: AppBar(
