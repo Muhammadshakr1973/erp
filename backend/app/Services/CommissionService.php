@@ -197,6 +197,11 @@ class CommissionService
 
             return $commission->load(['salesman', 'details.order.customer', 'calculator']);
         });
+
+        // Notify salesman and owner after commission calculation commits
+        app(NotificationService::class)->notifyCommissionCalculated($result);
+
+        return $result;
     }
 
     /**
@@ -331,6 +336,11 @@ class CommissionService
 
             return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver', 'payer']);
         });
+
+        // Notify salesman after commission payment commits
+        app(NotificationService::class)->notifyCommissionPaid($result);
+
+        return $result;
     }
 
     /**

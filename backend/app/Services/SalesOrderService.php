@@ -107,6 +107,11 @@ class SalesOrderService
             // کاتێک پسوڵە بە سەرکەوتوویی دروستکرا، ڕاستەوخۆ دەیدەینە ڕەوتی پشتڕاستکردنەوە (CONFIRMED) بۆ حجزکردنی ستۆک
             return $this->transitionTo($order, SalesOrder::STATUS_CONFIRMED, $user);
         });
+
+        // Notify new order created AFTER database commit (NOT-001)
+        app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+
+        return $order;
     }
 
     /**
@@ -114,10 +119,12 @@ class SalesOrderService
      */
     public function transitionTo(SalesOrder $order, string $newStatus, $user): SalesOrder
     {
-        return DB::transaction(function () use ($order, $newStatus, $user) {
+        $oldStatus = null;
+        $updatedOrder = DB::transaction(function () use ($order, $newStatus, $user, &$oldStatus) {
             // Lock order for update to prevent race conditions and concurrent transitions (Idempotency)
             $lockedOrder = SalesOrder::lockForUpdate()->findOrFail($order->id);
             $currentStatus = $lockedOrder->status;
+            $oldStatus = $currentStatus;
 
             if ($currentStatus === $newStatus) {
                 return $lockedOrder;
@@ -242,6 +249,14 @@ class SalesOrderService
 
             return $lockedOrder;
         });
+
+        if ($oldStatus !== $newStatus) {
+            if ($newStatus === SalesOrder::STATUS_READY) {
+                app(NotificationService::class)->notifyOrderReadyForDelivery($updatedOrder, $user);
+            }
+        }
+
+        return $updatedOrder;
     }
 
     /**

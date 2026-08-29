@@ -99,7 +99,22 @@ class PaymentService
                 'user'        => $user,
             ]);
 
-            return $payment;
+            return [
+                'payment' => $payment,
+                'previous_balance' => $previousBalance,
+                'new_balance' => $newBalance,
+            ];
         });
+
+        // Trigger Notifications ONLY AFTER financial transaction is committed
+        app(NotificationService::class)->notifyPaymentReceived($result['payment'], $user);
+        app(WhatsAppService::class)->sendCustomerPaymentNotification(
+            $result['payment'],
+            $result['previous_balance'],
+            $result['new_balance'],
+            $user
+        );
+
+        return $result['payment'];
     }
 }

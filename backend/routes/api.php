@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\RouteController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\NotificationController;
 
 Route::prefix('v1')->group(function () {
 
@@ -133,5 +134,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:users.manage');
         Route::get('/audit-logs/{id}', [AuditLogController::class, 'show'])->middleware('permission:users.manage');
         Route::get('/audit-logs/entity/{entityType}/{entityId}', [AuditLogController::class, 'entityHistory'])->middleware('permission:users.manage');
+
+        // Notifications & Device Tokens
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/read', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+        Route::post('/device-token', [NotificationController::class, 'registerDeviceToken']);
+        Route::delete('/device-token', [NotificationController::class, 'removeDeviceToken']);
+        Route::get('/notifications/whatsapp-logs', [NotificationController::class, 'whatsAppLogs'])->middleware('permission:users.manage');
+        Route::post('/notifications/whatsapp/{id}/retry', [NotificationController::class, 'retryWhatsApp'])->middleware('permission:users.manage');
     });
 });

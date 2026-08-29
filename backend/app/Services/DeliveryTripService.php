@@ -81,6 +81,11 @@ class DeliveryTripService
 
             return $trip;
         });
+
+        // Notify driver after trip transaction commits
+        app(NotificationService::class)->notifyDeliveryTripAssigned($trip);
+
+        return $trip;
     }
 
     /**
@@ -88,7 +93,7 @@ class DeliveryTripService
      */
     public function deliverOrder(int $tripOrderId, array $data, $user)
     {
-        return DB::transaction(function () use ($tripOrderId, $data, $user) {
+        $result = DB::transaction(function () use ($tripOrderId, $data, $user) {
 
             // هێنانی ئۆردەری ناو گەشتەکە لەگەڵ پسوڵە سەرەکییەکە و کڕیارەکە
             $tripOrder = \App\Models\DeliveryTripOrder::with(['order.customer', 'trip'])->findOrFail($tripOrderId);
@@ -100,6 +105,9 @@ class DeliveryTripService
             }
 
             $receivedAmount = $data['received_amount'];
+            $paymentRecord = null;
+            $previousBalance = $customer->current_balance;
+            $newBalance = $previousBalance;
 
             // ١. گۆڕینی دۆخی پسوڵەکان بۆ گەیندراو
             $tripOrder->update([
@@ -120,8 +128,9 @@ class DeliveryTripService
             if ($receivedAmount > 0) {
                 // Lock the customer row to prevent race conditions
                 $lockedCustomer = Customer::lockForUpdate()->find($customer->id);
+                $previousBalance = $lockedCustomer->current_balance;
 
-                $payment = CustomerPayment::create([
+                $paymentRecord = CustomerPayment::create([
                     'payment_number' => 'PAY-' . strtoupper(Str::random(8)),
                     'customer_id'    => $lockedCustomer->id,
                     'sales_order_id' => $salesOrder->id,
@@ -132,7 +141,7 @@ class DeliveryTripService
                     'received_by'    => $user->id,
                 ]);
 
-                $newBalance = $lockedCustomer->current_balance - $receivedAmount;
+                $newBalance = $previousBalance - $receivedAmount;
 
                 CustomerLedger::create([
                     'customer_id'    => $lockedCustomer->id,
@@ -141,10 +150,10 @@ class DeliveryTripService
                     'debit'          => 0,
                     'credit'         => $receivedAmount,
                     'amount'         => $receivedAmount,
-                    'balance_before' => $lockedCustomer->current_balance,
+                    'balance_before' => $previousBalance,
                     'balance_after'  => $newBalance,
                     'reference_type' => 'delivery_payment',
-                    'reference_id'   => $payment->id,
+                    'reference_id'   => $paymentRecord->id,
                     'description'    => "پارەدان لە کاتی گەیاندنی پسوڵەی {$salesOrder->order_number}",
                     'created_by'     => $user->id,
                 ]);
@@ -170,7 +179,33 @@ class DeliveryTripService
                 'user'        => $user,
             ]);
 
-            return $tripOrder;
+            return [
+                'trip_order' => $tripOrder,
+                'order' => $salesOrder,
+                'payment' => $paymentRecord,
+                'received_amount' => $receivedAmount,
+                'previous_balance' => $previousBalance,
+                'new_balance' => $newBalance,
+            ];
         });
+
+        // Notifications AFTER commit
+        $order = $result['order'];
+        app(NotificationService::class)->notifyOrderDelivered($order, $user);
+
+        if ($result['payment']) {
+            app(NotificationService::class)->notifyPaymentReceived($result['payment'], $user);
+        }
+
+        // WhatsApp Debt/Delivery notification to customer per BR-F05
+        app(WhatsAppService::class)->sendDeliveryDebtNotification(
+            $order,
+            $result['previous_balance'],
+            $result['received_amount'],
+            $result['new_balance'],
+            $user
+        );
+
+        return $result['trip_order'];
     }
 }
