@@ -71,20 +71,13 @@ class PurchaseOrderService
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $warehouseStock->increment('quantity', $item->quantity);
-
-                // (دەتوانیت لێرەدا Average Cost ی کاڵاکەش هەژمار بکەیت و ئەپدەیتی بکەیت لە مۆدێلی Product ئەگەر پێویست بوو)
-
-                // ٢. تۆمارکردنی جوڵەی ستۆک (PURCHASE)
-                StockTransaction::create([
-                    'warehouse_id'    => $order->warehouse_id,
-                    'product_id'      => $item->product_id,
-                    'type'            => 'PURCHASE', // هاتنە ناوەوەی کاڵا
-                    'quantity_change' => $item->quantity, // موجەبە چونکە زیاد دەکات
-                    'reference_type'  => 'purchase_order',
-                    'reference_id'    => $order->id,
-                    'created_by'      => $user->id,
-                ]);
+                $warehouseStock->adjustStock(
+                    $item->quantity,
+                    'PURCHASE',
+                    $user->id,
+                    'purchase_order',
+                    $order->id
+                );
 
                 // نوێکردنەوەی بڕی وەرگیراو لەناو ئایتمەکە
                 $item->update(['received_quantity' => $item->quantity]);

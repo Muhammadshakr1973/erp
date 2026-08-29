@@ -49,11 +49,24 @@ class ProductController extends Controller
         
         $initial_stock = $request->input('initial_stock', 0);
         $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
-        WarehouseStock::create([
+        
+        $stock = WarehouseStock::create([
             'product_id' => $product->id,
             'warehouse_id' => $warehouse->id,
-            'quantity' => $initial_stock
+            'quantity' => 0,
+            'reserved_quantity' => 0
         ]);
+
+        if ($initial_stock > 0) {
+            $stock->adjustStock(
+                $initial_stock,
+                'ADJUSTMENT',
+                $request->user()->id ?? 1,
+                'product',
+                $product->id,
+                'ستۆکی سەرەتایی کاڵا'
+            );
+        }
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی زیادکرا',
@@ -89,14 +102,27 @@ class ProductController extends Controller
         $product->update($validated);
 
         if ($request->has('initial_stock')) {
-            $initial_stock = $request->input('initial_stock');
+            $initial_stock = (int)$request->input('initial_stock');
             $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
-            $stock = WarehouseStock::firstOrNew([
+            $stock = WarehouseStock::firstOrCreate([
                 'product_id' => $product->id,
                 'warehouse_id' => $warehouse->id
+            ], [
+                'quantity' => 0,
+                'reserved_quantity' => 0
             ]);
-            $stock->quantity = $initial_stock;
-            $stock->save();
+            
+            $diff = $initial_stock - $stock->quantity;
+            if ($diff != 0) {
+                $stock->adjustStock(
+                    $diff,
+                    'ADJUSTMENT',
+                    $request->user()->id ?? 1,
+                    'product',
+                    $product->id,
+                    'نوێکردنەوەی بڕی دەستپێک'
+                );
+            }
         }
 
         return response()->json([

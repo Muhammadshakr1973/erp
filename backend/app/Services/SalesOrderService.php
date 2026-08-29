@@ -217,19 +217,7 @@ class SalesOrderService
             }
 
             if ($reservedToAdd > 0) {
-                $warehouseStock->increment('reserved_quantity', $reservedToAdd);
-
-                // تۆمارکردنی جوڵەی ستۆک (RESERVE)
-                StockTransaction::create([
-                    'warehouse_id' => $order->warehouse_id,
-                    'product_id' => $item->product_id,
-                    'type' => 'RESERVE',
-                    'quantity_change' => $reservedToAdd,
-                    'quantity_after' => $warehouseStock->quantity,
-                    'reference_type' => 'sales_order',
-                    'reference_id' => $order->id,
-                    'created_by' => $user->id,
-                ]);
+                $warehouseStock->reserveStock($reservedToAdd, $user->id, 'sales_order', $order->id);
             }
         }
     }
@@ -246,26 +234,13 @@ class SalesOrderService
             ])->first();
 
             if ($warehouseStock) {
-                // کەمکردنەوەی بڕی گشتی و بڕی حجزکراو بە تێکڕا
-                $newQty = max(0, $warehouseStock->quantity - $item->quantity);
-                $newReserved = max(0, $warehouseStock->reserved_quantity - $item->quantity);
-
-                $warehouseStock->update([
-                    'quantity' => $newQty,
-                    'reserved_quantity' => $newReserved
-                ]);
-
-                // تۆمارکردنی کەمبوونەکە (DELIVERY/out)
-                StockTransaction::create([
-                    'warehouse_id' => $order->warehouse_id,
-                    'product_id' => $item->product_id,
-                    'type' => 'DELIVERY',
-                    'quantity_change' => -$item->quantity,
-                    'quantity_after' => $newQty,
-                    'reference_type' => 'sales_order',
-                    'reference_id' => $order->id,
-                    'created_by' => $user->id,
-                ]);
+                $warehouseStock->adjustStock(
+                    -$item->quantity,
+                    'DELIVERY',
+                    $user->id,
+                    'sales_order',
+                    $order->id
+                );
             }
         }
     }
@@ -282,23 +257,7 @@ class SalesOrderService
             ])->first();
 
             if ($warehouseStock) {
-                // ئەگەر پێشتر حجز کرابوو، بڕی حجزکراوی لێ دەردەکەینەوە
-                $releasedQty = min($warehouseStock->reserved_quantity, $item->quantity);
-
-                if ($releasedQty > 0) {
-                    $warehouseStock->decrement('reserved_quantity', $releasedQty);
-
-                    StockTransaction::create([
-                        'warehouse_id' => $order->warehouse_id,
-                        'product_id' => $item->product_id,
-                        'type' => 'RELEASE',
-                        'quantity_change' => -$releasedQty,
-                        'quantity_after' => $warehouseStock->quantity,
-                        'reference_type' => 'sales_order',
-                        'reference_id' => $order->id,
-                        'created_by' => $user->id,
-                    ]);
-                }
+                $warehouseStock->releaseStock($item->quantity, $user->id, 'sales_order', $order->id);
             }
         }
     }

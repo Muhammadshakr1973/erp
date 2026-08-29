@@ -20,7 +20,23 @@ class StockTransaction extends Model
     const TYPE_RETURN = 'return';
     protected static function booted()
     {
-        static::creating(function ($model) { /* quantity_after calculated in service */
+        static::creating(function ($model) {
+            // Automatically calculate quantity_after if not provided
+            if (is_null($model->quantity_after)) {
+                $stock = \App\Models\WarehouseStock::where('warehouse_id', $model->warehouse_id)
+                    ->where('product_id', $model->product_id)
+                    ->first();
+                $model->quantity_after = $stock ? (int)$stock->quantity : 0;
+            }
+        });
+
+        // Strict immutability of transaction logs
+        static::updating(function ($model) {
+            return false;
+        });
+
+        static::deleting(function ($model) {
+            return false;
         });
     }
     public function warehouse()

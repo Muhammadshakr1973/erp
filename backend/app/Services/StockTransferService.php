@@ -67,18 +67,14 @@ class StockTransferService
                     ]);
                 }
 
-                // کەمکردنەوەی ستۆک لە کۆگای نێرەر
-                $sourceStock->decrement('quantity', $item->quantity);
-
-                StockTransaction::create([
-                    'warehouse_id'    => $transfer->from_warehouse_id,
-                    'product_id'      => $item->product_id,
-                    'type'            => 'TRANSFER_OUT',
-                    'quantity_change' => -$item->quantity, // بە سالب دەچێتە دەرەوە
-                    'reference_type'  => 'stock_transfer',
-                    'reference_id'    => $transfer->id,
-                    'created_by'      => $user->id,
-                ]);
+                // کەمکردنەوەی ستۆک لە کۆگای نێرەر و تۆمارکردنی جوڵەکە بە مێتۆدی نوێی ئەنیمەی ستۆک
+                $sourceStock->adjustStock(
+                    -$item->quantity,
+                    'TRANSFER_OUT',
+                    $user->id,
+                    'stock_transfer',
+                    $transfer->id
+                );
 
                 // ٢. زیادکردنی ستۆک بۆ کۆگای دووەم (To Warehouse)
                 $destinationStock = WarehouseStock::lockForUpdate()->firstOrCreate(
@@ -86,17 +82,13 @@ class StockTransferService
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $destinationStock->increment('quantity', $item->quantity);
-
-                StockTransaction::create([
-                    'warehouse_id'    => $transfer->to_warehouse_id,
-                    'product_id'      => $item->product_id,
-                    'type'            => 'TRANSFER_IN',
-                    'quantity_change' => $item->quantity, // بە موجەب دێتە ناوەوە
-                    'reference_type'  => 'stock_transfer',
-                    'reference_id'    => $transfer->id,
-                    'created_by'      => $user->id,
-                ]);
+                $destinationStock->adjustStock(
+                    $item->quantity,
+                    'TRANSFER_IN',
+                    $user->id,
+                    'stock_transfer',
+                    $transfer->id
+                );
             }
 
             // ٣. گۆڕینی دۆخی گواستنەوەکە بۆ تەواوبوو
