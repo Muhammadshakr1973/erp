@@ -20,7 +20,7 @@ class SalesOrderService
         SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
-        SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED],
+        SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_DELIVERED => [],
         SalesOrder::STATUS_CANCELLED => [],
     ];
@@ -115,10 +115,12 @@ class SalesOrderService
     public function transitionTo(SalesOrder $order, string $newStatus, $user): SalesOrder
     {
         return DB::transaction(function () use ($order, $newStatus, $user) {
-            $currentStatus = $order->status;
+            // Lock order for update to prevent race conditions and concurrent transitions (Idempotency)
+            $lockedOrder = SalesOrder::lockForUpdate()->findOrFail($order->id);
+            $currentStatus = $lockedOrder->status;
 
             if ($currentStatus === $newStatus) {
-                return $order;
+                return $lockedOrder;
             }
 
             // ١. دڵنیابوونەوە لەوەی کە گواستنەوەکە یاساییە بەپێی نەخشەی گواستنەوەی دۆخەکان
@@ -152,8 +154,8 @@ class SalesOrderService
             // ٣. ئەنجامدانی کردارە لۆجیکییە پەیوەندیدارەکان بە هەر دۆخێکەوە
             switch ($newStatus) {
                 case SalesOrder::STATUS_CONFIRMED:
-                    $this->reserveStock($order, $user);
-                    $order->confirmed_at = now();
+                    $this->reserveStock($lockedOrder, $user);
+                    $lockedOrder->confirmed_at = now();
                     break;
 
                 case SalesOrder::STATUS_PACKING:
@@ -161,28 +163,28 @@ class SalesOrderService
 
                 case SalesOrder::STATUS_READY:
                     // Count packed items
-                    $packedCount = $order->items()->where('is_packed', true)->count();
+                    $packedCount = $lockedOrder->items()->where('is_packed', true)->count();
                     if ($packedCount === 0) {
                         throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵە بە ئامادەکراو دابنرێت ئەگەر هیچ کاڵایەکی پاکەت نەکراوە.']);
                     }
 
                     // Handle unpacked items (partial packing)
-                    $unpackedItems = $order->items()->where('is_packed', false)->get();
+                    $unpackedItems = $lockedOrder->items()->where('is_packed', false)->get();
                     foreach ($unpackedItems as $item) {
                         $warehouseStock = WarehouseStock::lockForUpdate()->where([
-                            'warehouse_id' => $order->warehouse_id,
+                            'warehouse_id' => $lockedOrder->warehouse_id,
                             'product_id' => $item->product_id
                         ])->first();
 
                         if ($warehouseStock) {
-                            $warehouseStock->releaseStock($item->quantity, $user->id, 'sales_order', $order->id, 'Partial packing release');
+                            $warehouseStock->releaseStock($item->quantity, $user->id, 'sales_order', $lockedOrder->id, 'Partial packing release');
                         }
                         $item->delete();
                     }
 
                     // Recalculate order totals if any items were deleted
                     if ($unpackedItems->count() > 0) {
-                        $remainingItems = $order->items()->where('is_packed', true)->get();
+                        $remainingItems = $lockedOrder->items()->where('is_packed', true)->get();
                         $subtotal = 0;
                         $totalProfit = 0;
                         foreach ($remainingItems as $item) {
@@ -191,12 +193,12 @@ class SalesOrderService
                         }
 
                         $discountAmount = 0;
-                        if ($order->discount_percent > 0) {
-                            $discountAmount = ($subtotal * $order->discount_percent) / 100;
+                        if ($lockedOrder->discount_percent > 0) {
+                            $discountAmount = ($subtotal * $lockedOrder->discount_percent) / 100;
                         }
                         $totalAmount = $subtotal - $discountAmount;
 
-                        $order->update([
+                        $lockedOrder->update([
                             'subtotal' => $subtotal,
                             'discount_amount' => $discountAmount,
                             'total_amount' => $totalAmount,
@@ -204,23 +206,27 @@ class SalesOrderService
                         ]);
                     }
 
-                    $order->ready_at = now();
+                    $lockedOrder->ready_at = now();
                     break;
 
                 case SalesOrder::STATUS_IN_DELIVERY:
                     break;
 
                 case SalesOrder::STATUS_DELIVERED:
-                    $this->finalizeStockSale($order, $user);
-                    $this->postToCustomerLedger($order, $user);
-                    $order->delivered_at = now();
+                    $this->finalizeStockSale($lockedOrder, $user);
+                    $this->postToCustomerLedger($lockedOrder, $user);
+                    $lockedOrder->delivered_at = now();
+                    // Delivery Synchronization
+                    $this->syncDeliveryOnDelivery($lockedOrder);
                     break;
 
                 case SalesOrder::STATUS_CANCELLED:
-                    // Only release stock if it was actually reserved (i.e. status was CONFIRMED, PACKING, or READY)
-                    if (in_array($currentStatus, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY])) {
-                        $this->releaseStock($order, $user);
+                    // Only release stock if it was actually reserved (i.e. status was CONFIRMED, PACKING, READY, or IN_DELIVERY)
+                    if (in_array($currentStatus, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_IN_DELIVERY])) {
+                        $this->releaseStock($lockedOrder, $user);
                     }
+                    // Delivery Synchronization
+                    $this->syncDeliveryOnCancellation($lockedOrder);
                     break;
 
                 default:
@@ -228,13 +234,13 @@ class SalesOrderService
             }
 
             // ئەگەر پسوڵەکە لێرە ئەبدەیت کرا
-            $order->status = $newStatus;
-            $order->save();
+            $lockedOrder->status = $newStatus;
+            $lockedOrder->save();
 
             // تۆمارکردنی مێژووی چالاکی بۆ سیستەم (Audit Logging)
-            $this->logActivity($order, $currentStatus, $newStatus, $user);
+            $this->logActivity($lockedOrder, $currentStatus, $newStatus, $user);
 
-            return $order;
+            return $lockedOrder;
         });
     }
 
@@ -444,5 +450,34 @@ class SalesOrderService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Synchronize delivery trip orders when sales order is delivered directly
+     */
+    private function syncDeliveryOnDelivery(SalesOrder $order): void
+    {
+        DB::table('delivery_trip_orders')
+            ->where('sales_order_id', $order->id)
+            ->where('status', 'PENDING')
+            ->update([
+                'status' => 'DELIVERED',
+                'delivered_at' => now(),
+                'received_amount' => $order->total_amount,
+            ]);
+    }
+
+    /**
+     * Synchronize delivery trip orders when sales order is cancelled
+     */
+    private function syncDeliveryOnCancellation(SalesOrder $order): void
+    {
+        DB::table('delivery_trip_orders')
+            ->where('sales_order_id', $order->id)
+            ->whereIn('status', ['PENDING', 'DELIVERED'])
+            ->update([
+                'status' => 'FAILED',
+                'failed_reason' => 'Cancelled via Sales Order',
+            ]);
     }
 }

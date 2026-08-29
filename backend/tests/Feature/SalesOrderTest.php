@@ -467,4 +467,69 @@ class SalesOrderTest extends TestCase
         $this->assertStringContainsString('CONFIRMED', $log->payload);
         $this->assertStringContainsString('PACKING', $log->payload);
     }
+
+    /** @test */
+    public function it_correctly_releases_stock_and_syncs_delivery_trip_on_in_delivery_cancellation_and_delivery()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack', 'delivery.update']]);
+
+        // 1. Create order (auto-confirmed)
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 2,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first();
+
+        // 2. Transition to PACKING
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_PACKING]);
+
+        // Pack item
+        $item = $order->items()->first();
+        $item->update(['is_packed' => true]);
+
+        // 3. Transition to READY
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_READY]);
+
+        // 4. Transition to IN_DELIVERY
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_IN_DELIVERY]);
+
+        // Verify stock is still reserved
+        $stock = WarehouseStock::first();
+        $this->assertEquals(2, $stock->reserved_quantity);
+
+        // Associate with a delivery trip order manually for testing sync
+        $trip = \App\Models\DeliveryTrip::create([
+            'trip_number' => 'TRP-123456',
+            'driver_id' => $this->salesman->id,
+            'trip_date' => now()->toDateString(),
+            'status' => 'IN_PROGRESS',
+            'created_by' => $this->salesman->id,
+        ]);
+
+        $tripOrder = $trip->orders()->create([
+            'sales_order_id' => $order->id,
+            'status' => 'PENDING',
+            'delivery_order' => 1,
+        ]);
+
+        // 5. Cancel the order from IN_DELIVERY status
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_CANCELLED
+        ]);
+        $response->assertStatus(200);
+
+        // Assert stock was successfully released!
+        $stock->refresh();
+        $this->assertEquals(0, $stock->reserved_quantity);
+
+        // Assert delivery trip order was updated to FAILED with reason
+        $tripOrder->refresh();
+        $this->assertEquals('FAILED', $tripOrder->status);
+        $this->assertEquals('Cancelled via Sales Order', $tripOrder->failed_reason);
+    }
 }
