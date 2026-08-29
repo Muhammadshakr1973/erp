@@ -13,6 +13,13 @@ use Illuminate\Support\Str;
 
 class DeliveryTripService
 {
+    protected SalesOrderService $salesOrderService;
+
+    public function __construct(SalesOrderService $salesOrderService)
+    {
+        $this->salesOrderService = $salesOrderService;
+    }
+
     /**
      * دروستکردنی گەشت و پێدانی پسوڵەکان بە شۆفێر
      */
@@ -45,8 +52,8 @@ class DeliveryTripService
                     ]);
                 }
 
-                // گۆڕینی دۆخی پسوڵەکە بۆ (لە ڕێگایە)
-                $order->update(['status' => 'IN_DELIVERY']);
+                // گۆڕینی دۆخی پسوڵەکە بۆ (لە ڕێگایە) بە شێوەیەکی دەوڵەتی لەگەڵ نوێکردنەوەی هەموو لۆجیکەکان
+                $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_IN_DELIVERY, $user);
 
                 // بەستنەوەی پسوڵەکە بە گەشتەکەوە
                 $trip->orders()->create([
@@ -86,10 +93,8 @@ class DeliveryTripService
                 'notes'           => $data['notes'] ?? null,
             ]);
 
-            $salesOrder->update([
-                'status'       => 'DELIVERED',
-                'delivered_at' => now(),
-            ]);
+            // گۆڕینی دۆخی پسوڵەکە بۆ گەیندراو بە شێوەیەکی دەوڵەتی (State Machine) و سەلامەت
+            $this->salesOrderService->transitionTo($salesOrder, SalesOrder::STATUS_DELIVERED, $user);
 
             // ٢. زیادکردنی کۆی پارەی وەرگیراو بۆ ناو گەشتەکە
             $tripOrder->trip->increment('total_amount_collected', $receivedAmount);

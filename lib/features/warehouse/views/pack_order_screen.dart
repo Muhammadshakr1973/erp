@@ -179,17 +179,18 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         actions: [
           ordersAsync.maybeWhen(
             data: (orders) {
-              WarehouseOrderModel? order;
+              WarehouseOrderModel? foundOrder;
               for (final o in orders) {
                 if (o.id.toString() == widget.orderId || o.orderNumber == widget.orderId) {
-                  order = o;
+                  foundOrder = o;
                   break;
                 }
               }
-              if (order != null) {
+              if (foundOrder != null) {
+                final WarehouseOrderModel currentOrder = foundOrder;
                 return IconButton(
                   icon: const Icon(AppIcons.scan),
-                  onPressed: () => _onScanBarcode(order!),
+                  onPressed: () => _onScanBarcode(currentOrder),
                 );
               }
               return const SizedBox.shrink();
@@ -216,15 +217,15 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           ),
         ),
         data: (orders) {
-          WarehouseOrderModel? order;
+          WarehouseOrderModel? foundOrder;
           for (final o in orders) {
             if (o.id.toString() == widget.orderId || o.orderNumber == widget.orderId) {
-              order = o;
+              foundOrder = o;
               break;
             }
           }
 
-          if (order == null) {
+          if (foundOrder == null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -254,20 +255,21 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
             );
           }
 
-          final int totalItemsCount = order.items.length;
-          final int packedItemsCount = order.items.where((e) => e.isPacked).length;
+          final WarehouseOrderModel currentOrder = foundOrder;
+          final int totalItemsCount = currentOrder.items.length;
+          final int packedItemsCount = currentOrder.items.where((e) => e.isPacked).length;
           final bool isAnyPacked = packedItemsCount > 0;
 
           return Column(
             children: [
-              _buildOrderSummary(theme, order, packedItemsCount, totalItemsCount),
+              _buildOrderSummary(theme, currentOrder, packedItemsCount, totalItemsCount),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: order.items.length,
+                  itemCount: currentOrder.items.length,
                   separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
-                    final item = order.items[index];
+                    final item = currentOrder.items[index];
                     final isPacked = item.isPacked;
                     final isItemLoading = _packingItemIds.contains(item.id);
 
@@ -322,7 +324,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                   },
                 ),
               ),
-              _buildBottomAction(theme, order, isAnyPacked),
+              _buildBottomAction(theme, currentOrder, isAnyPacked),
             ],
           );
         },

@@ -15,6 +15,15 @@ use Illuminate\Validation\ValidationException;
 
 class SalesOrderService
 {
+    protected array $validTransitions = [
+        SalesOrder::STATUS_DRAFT => [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED],
+        SalesOrder::STATUS_DELIVERED => [],
+        SalesOrder::STATUS_CANCELLED => [],
+    ];
     /**
      * دروستکردنی پسوڵەی فرۆشتن بە شێوەی تۆکمە و سەلامەت
      */
@@ -112,27 +121,45 @@ class SalesOrderService
                 return $order;
             }
 
-            // دڵنیابوونەوە لە ڕاستی دۆخی نوێ و یاساکانی گواستنەوە
+            // ١. دڵنیابوونەوە لەوەی کە گواستنەوەکە یاساییە بەپێی نەخشەی گواستنەوەی دۆخەکان
+            if (!isset($this->validTransitions[$currentStatus]) || !in_array($newStatus, $this->validTransitions[$currentStatus])) {
+                throw ValidationException::withMessages([
+                    'status' => "گواستنەوەی دۆخەکە نادروستە. ناتوانرێت لە دۆخی {$currentStatus} بگۆڕدرێت بۆ {$newStatus}."
+                ]);
+            }
+
+            // ٢. سەپاندنی دەسەڵاتەکان و مۆڵەتەکان بەپێی دۆخی نوێ لەناو خودی سێرڤسەکەدا بۆ پاراستنی هێمنیی سیستەمەکە
+            if (in_array($newStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED])) {
+                if (!$user->hasPermission('orders.create')) {
+                    throw ValidationException::withMessages([
+                        'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
+                    ]);
+                }
+            } elseif (in_array($newStatus, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY])) {
+                if (!$user->hasPermission('stock.pack')) {
+                    throw ValidationException::withMessages([
+                        'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
+                    ]);
+                }
+            } elseif (in_array($newStatus, [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_DELIVERED])) {
+                if (!$user->hasPermission('delivery.update')) {
+                    throw ValidationException::withMessages([
+                        'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
+                    ]);
+                }
+            }
+
+            // ٣. ئەنجامدانی کردارە لۆجیکییە پەیوەندیدارەکان بە هەر دۆخێکەوە
             switch ($newStatus) {
                 case SalesOrder::STATUS_CONFIRMED:
-                    if ($currentStatus !== SalesOrder::STATUS_DRAFT) {
-                        throw ValidationException::withMessages(['status' => 'تەنها پسوڵەی داڕشتن (Draft) دەکرێت پشتڕاست بکرێتەوە.']);
-                    }
                     $this->reserveStock($order, $user);
                     $order->confirmed_at = now();
                     break;
 
                 case SalesOrder::STATUS_PACKING:
-                    if ($currentStatus !== SalesOrder::STATUS_CONFIRMED) {
-                        throw ValidationException::withMessages(['status' => 'پێویستە سەرەتا پسوڵەکە پشتڕاستکراوە بێت (Confirmed).']);
-                    }
                     break;
 
                 case SalesOrder::STATUS_READY:
-                    if ($currentStatus !== SalesOrder::STATUS_PACKING && $currentStatus !== SalesOrder::STATUS_CONFIRMED) {
-                        throw ValidationException::withMessages(['status' => 'گۆڕین بۆ ئامادە تەنها لە حاڵەتی پشتڕاستکردنەوە یان پاکەتکردن دەبێت.']);
-                    }
-
                     // Count packed items
                     $packedCount = $order->items()->where('is_packed', true)->count();
                     if ($packedCount === 0) {
@@ -181,25 +208,19 @@ class SalesOrderService
                     break;
 
                 case SalesOrder::STATUS_IN_DELIVERY:
-                    if ($currentStatus !== SalesOrder::STATUS_READY) {
-                        throw ValidationException::withMessages(['status' => 'تەنها پسوڵەی ئامادەکراو (Ready) دەتوانێت بنێردرێت بۆ گەیاندن.']);
-                    }
                     break;
 
                 case SalesOrder::STATUS_DELIVERED:
-                    if ($currentStatus !== SalesOrder::STATUS_IN_DELIVERY) {
-                        throw ValidationException::withMessages(['status' => 'گۆڕین بۆ گەیشتوو تەنها بۆ ئەو پسوڵانەیە کە لە ڕێگەی گەیاندندان.']);
-                    }
                     $this->finalizeStockSale($order, $user);
                     $this->postToCustomerLedger($order, $user);
                     $order->delivered_at = now();
                     break;
 
                 case SalesOrder::STATUS_CANCELLED:
-                    if ($currentStatus === SalesOrder::STATUS_DELIVERED || $currentStatus === SalesOrder::STATUS_IN_DELIVERY) {
-                        throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی گەیندراو یان لە ڕێگەی گەیاندن هەڵبوەشێنرێتەوە.']);
+                    // Only release stock if it was actually reserved (i.e. status was CONFIRMED, PACKING, or READY)
+                    if (in_array($currentStatus, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY])) {
+                        $this->releaseStock($order, $user);
                     }
-                    $this->releaseStock($order, $user);
                     break;
 
                 default:

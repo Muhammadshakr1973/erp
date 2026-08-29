@@ -133,7 +133,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                             Text('پسوڵەی #${order.orderNumber}', style: AppTextStyles.bodyBold),
                             const SizedBox(height: 4),
                             Text(
-                              'کڕیار: ${order.customerName} • $totalItems دانە • $packedItems/$packedItems پاکەتکراو',
+                              'کڕیار: ${order.customerName} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
                               style: AppTextStyles.caption,
                             ),
                           ],

@@ -239,6 +239,9 @@ class SalesOrderTest extends TestCase
     /** @test */
     public function it_posts_to_ledger_and_updates_balance_on_delivery()
     {
+        // Give salesman role all permissions for simplicity in this full-flow test
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack', 'delivery.update']]);
+
         // 1. Create order (auto-confirmed)
         $payload = [
             'customer_id' => $this->customer->id,
@@ -256,6 +259,11 @@ class SalesOrderTest extends TestCase
 
         // 2. Transition status flow: CONFIRMED -> PACKING -> READY -> IN_DELIVERY -> DELIVERED
         $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_PACKING]);
+        
+        // Pack the item first so we can transition to READY
+        $item = $order->items()->first();
+        $item->update(['is_packed' => true]);
+
         $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_READY]);
         $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_IN_DELIVERY]);
 
@@ -281,5 +289,182 @@ class SalesOrderTest extends TestCase
         // Assert customer current balance was updated
         $customer = Customer::first();
         $this->assertEquals(15000, $customer->current_balance);
+    }
+
+    /** @test */
+    public function it_rejects_invalid_transitions()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack', 'delivery.update']]);
+
+        // 1. Create order (auto-confirmed)
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first(); // Currently CONFIRMED
+
+        // Attempt invalid transitions: CONFIRMED -> DELIVERED (Must go through PACKING -> READY -> IN_DELIVERY first)
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_DELIVERED
+        ]);
+        $response->assertStatus(422); // Rejects invalid transitions
+
+        // Attempt invalid transition: CONFIRMED -> IN_DELIVERY
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_IN_DELIVERY
+        ]);
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_enforces_permissions_for_each_state_transition()
+    {
+        // 1. Create a pure salesman user who has ONLY orders.create
+        $salesmanRole = Role::create([
+            'name' => 'salesman_test',
+            'display_name' => 'Salesman Test',
+            'permissions' => ['orders.create']
+        ]);
+        $salesmanUser = User::factory()->create(['role_id' => $salesmanRole->id]);
+
+        // 2. Create a pure packer user who has ONLY stock.pack
+        $packerRole = Role::create([
+            'name' => 'packer_test',
+            'display_name' => 'Packer Test',
+            'permissions' => ['stock.pack']
+        ]);
+        $packerUser = User::factory()->create(['role_id' => $packerRole->id]);
+
+        // 3. Create order
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 1,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first(); // CONFIRMED
+
+        // Salesman attempts to start PACKING (Requires stock.pack) -> Should fail
+        $response = $this->actingAs($salesmanUser)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_PACKING
+        ]);
+        $response->assertStatus(403);
+
+        // Packer attempts to cancel or deliver (Requires orders.create or delivery.update) -> Should fail
+        $response = $this->actingAs($packerUser)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_CANCELLED
+        ]);
+        $response->assertStatus(403);
+
+        // Packer can transition to PACKING
+        $response = $this->actingAs($packerUser)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_PACKING
+        ]);
+        $response->assertStatus(200);
+    }
+
+    /** @test */
+    public function it_only_releases_stock_on_cancellation_if_reserved()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack']]);
+
+        // Scenario A: Order in DRAFT (no stock reserved yet) -> cancel
+        $orderDraft = SalesOrder::create([
+            'order_number' => 'ORD-DRAFT-1',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_DRAFT,
+            'subtotal' => 15000,
+            'total_amount' => 15000,
+            'total_profit' => 5000,
+            'created_by' => $this->salesman->id,
+        ]);
+
+        $stockBefore = WarehouseStock::first()->reserved_quantity;
+
+        // Cancel the DRAFT order
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$orderDraft->id}/status", [
+            'status' => SalesOrder::STATUS_CANCELLED
+        ]);
+        $response->assertStatus(200);
+
+        // Verify reserved stock didn't change (still 0)
+        $stockAfter = WarehouseStock::first()->reserved_quantity;
+        $this->assertEquals($stockBefore, $stockAfter);
+
+        // Scenario B: Order in CONFIRMED (stock is reserved) -> cancel
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 3,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $orderConfirmed = SalesOrder::orderBy('id', 'desc')->first();
+
+        $stockReserved = WarehouseStock::first()->reserved_quantity;
+        $this->assertEquals(3, $stockReserved);
+
+        // Cancel the CONFIRMED order
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$orderConfirmed->id}/status", [
+            'status' => SalesOrder::STATUS_CANCELLED
+        ]);
+        $response->assertStatus(200);
+
+        // Verify reserved stock decremented back to 0
+        $stockReleased = WarehouseStock::first()->reserved_quantity;
+        $this->assertEquals(0, $stockReleased);
+    }
+
+    /** @test */
+    public function it_logs_activity_audit_trail_on_transition()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack']]);
+
+        // 1. Create order
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 1,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first();
+
+        // 2. Transition to PACKING
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_PACKING
+        ]);
+
+        // Assert sync log was inserted
+        $log = \DB::table('sync_logs')
+            ->where('entity_type', 'sales_order')
+            ->where('entity_id', $order->id)
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertEquals('UPDATE', $log->action);
+        $this->assertEquals('sales_orders', $log->table_name);
+        
+        $payloadData = json_encode($log->payload);
+        $this->assertStringContainsString('CONFIRMED', $log->payload);
+        $this->assertStringContainsString('PACKING', $log->payload);
     }
 }
