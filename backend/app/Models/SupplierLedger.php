@@ -9,7 +9,7 @@ class SupplierLedger extends Model
 {
     use HasFactory;
     protected $table = 'supplier_ledger';
-    protected $fillable = ['supplier_id', 'entry_type', 'type', 'debit', 'credit', 'amount', 'balance_after', 'reference_type', 'reference_id', 'description', 'created_by'];
+    protected $fillable = ['supplier_id', 'entry_type', 'type', 'debit', 'credit', 'amount', 'balance_before', 'balance_after', 'reference_type', 'reference_id', 'description', 'created_by'];
     const TYPE_DEBIT = 'debit';
     const TYPE_CREDIT = 'credit';
     public function supplier()

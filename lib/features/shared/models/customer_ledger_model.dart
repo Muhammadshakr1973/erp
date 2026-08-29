@@ -6,6 +6,7 @@ class CustomerLedgerModel {
   final int debit;
   final int credit;
   final int amount;
+  final int balanceBefore;
   final int balanceAfter;
   final String? referenceType;
   final int? referenceId;
@@ -21,6 +22,7 @@ class CustomerLedgerModel {
     required this.debit,
     required this.credit,
     required this.amount,
+    required this.balanceBefore,
     required this.balanceAfter,
     this.referenceType,
     this.referenceId,
@@ -38,6 +40,7 @@ class CustomerLedgerModel {
       debit: json['debit'] ?? 0,
       credit: json['credit'] ?? 0,
       amount: json['amount'] ?? 0,
+      balanceBefore: json['balance_before'] ?? 0,
       balanceAfter: json['balance_after'] ?? 0,
       referenceType: json['reference_type'],
       referenceId: json['reference_id'],

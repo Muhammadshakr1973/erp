@@ -293,6 +293,7 @@ return new class extends Migration
             $table->unsignedBigInteger('debit')->default(0);
             $table->unsignedBigInteger('credit')->default(0);
             $table->unsignedBigInteger('amount')->default(0);
+            $table->bigInteger('balance_before')->default(0);
             $table->bigInteger('balance_after')->default(0);
             $table->string('reference_type', 50)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
@@ -419,6 +420,7 @@ return new class extends Migration
             $table->unsignedBigInteger('debit')->default(0);
             $table->unsignedBigInteger('credit')->default(0);
             $table->unsignedBigInteger('amount')->default(0);
+            $table->bigInteger('balance_before')->default(0);
             $table->bigInteger('balance_after')->default(0);
             $table->string('reference_type', 50)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();

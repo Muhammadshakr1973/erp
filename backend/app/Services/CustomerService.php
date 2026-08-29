@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Customer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class CustomerService
 {
@@ -46,38 +47,41 @@ class CustomerService
 
     public function createCustomer(array $data, int $userId): Customer
     {
-        $data['created_by'] = $userId;
+        return DB::transaction(function () use ($data, $userId) {
+            $data['created_by'] = $userId;
 
-        $initialDebt = !empty($data['initial_debt']) ? (int)$data['initial_debt'] : 0;
-        unset($data['initial_debt']);
+            $initialDebt = !empty($data['initial_debt']) ? (int)$data['initial_debt'] : 0;
+            unset($data['initial_debt']);
 
-        if (empty($data['route_id'])) {
-            $defaultRoute = \App\Models\Route::firstOrCreate(
-                ['name' => 'گشتی'],
-                ['color' => '#888888', 'is_active' => true]
-            );
-            $data['route_id'] = $defaultRoute->id;
-        }
+            if (empty($data['route_id'])) {
+                $defaultRoute = \App\Models\Route::firstOrCreate(
+                    ['name' => 'گشتی'],
+                    ['color' => '#888888', 'is_active' => true]
+                );
+                $data['route_id'] = $defaultRoute->id;
+            }
 
-        $data['current_balance'] = $initialDebt;
+            $data['current_balance'] = $initialDebt;
 
-        $customer = Customer::create($data);
+            $customer = Customer::create($data);
 
-        if ($initialDebt > 0) {
-            \App\Models\CustomerLedger::create([
-                'customer_id' => $customer->id,
-                'entry_type' => 'ADJUSTMENT',
-                'type' => 'debit',
-                'debit' => $initialDebt,
-                'credit' => 0,
-                'amount' => $initialDebt,
-                'balance_after' => $initialDebt,
-                'description' => 'قەرزی پێشینە / قەرزی سەرەتا',
-                'created_by' => $userId,
-            ]);
-        }
+            if ($initialDebt > 0) {
+                \App\Models\CustomerLedger::create([
+                    'customer_id' => $customer->id,
+                    'entry_type' => 'ADJUSTMENT',
+                    'type' => 'debit',
+                    'debit' => $initialDebt,
+                    'credit' => 0,
+                    'amount' => $initialDebt,
+                    'balance_before' => 0,
+                    'balance_after' => $initialDebt,
+                    'description' => 'قەرزی پێشینە / قەرزی سەرەتا',
+                    'created_by' => $userId,
+                ]);
+            }
 
-        return $customer;
+            return $customer;
+        });
     }
 
     public function updateCustomer(Customer $customer, array $data): Customer

@@ -60,4 +60,37 @@ class Customer extends Model
         if ($special) return $special->price;
         return $product->getPriceForType($this->price_type);
     }
+
+    public function reconcileBalance(): array
+    {
+        $entries = $this->ledger()->orderBy('id', 'asc')->get();
+        $recalculatedBalance = 0;
+        $discrepancies = [];
+
+        foreach ($entries as $entry) {
+            $previousBalance = $recalculatedBalance;
+            if ($entry->type === 'debit') {
+                $recalculatedBalance += $entry->amount;
+            } else {
+                $recalculatedBalance -= $entry->amount;
+            }
+
+            if ($entry->balance_before != $previousBalance) {
+                $discrepancies[] = "Entry ID {$entry->id}: balance_before stored as {$entry->balance_before}, calculated as {$previousBalance}";
+            }
+
+            if ($entry->balance_after != $recalculatedBalance) {
+                $discrepancies[] = "Entry ID {$entry->id}: balance_after stored as {$entry->balance_after}, calculated as {$recalculatedBalance}";
+            }
+        }
+
+        $isConsistent = empty($discrepancies) && ($this->current_balance == $recalculatedBalance);
+
+        return [
+            'is_consistent' => $isConsistent,
+            'stored_balance' => (int) $this->current_balance,
+            'recalculated_balance' => (int) $recalculatedBalance,
+            'discrepancies' => $discrepancies,
+        ];
+    }
 }

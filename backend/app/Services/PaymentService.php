@@ -10,11 +10,32 @@ use Illuminate\Support\Str;
 
 class PaymentService
 {
+    private function checkPaymentIdempotency(int $customerId, int $amount, ?int $salesOrderId = null): ?CustomerPayment
+    {
+        return CustomerPayment::where('customer_id', $customerId)
+            ->where('amount', $amount)
+            ->where('sales_order_id', $salesOrderId)
+            ->where('created_at', '>=', now()->subSeconds(90))
+            ->orderBy('id', 'desc')
+            ->first();
+    }
+
     public function collectPayment(array $data, $user): CustomerPayment
     {
-        return DB::transaction(function () use ($data, $user) {
+        // First check idempotency outside the transaction lock for faster check, or inside
+        $existing = $this->checkPaymentIdempotency($data['customer_id'], $data['amount'], $data['sales_order_id'] ?? null);
+        if ($existing) {
+            return $existing;
+        }
 
+        return DB::transaction(function () use ($data, $user) {
             $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
+
+            // Double check inside the transaction lock to prevent concurrent double-submissions
+            $existing = $this->checkPaymentIdempotency($customer->id, $data['amount'], $data['sales_order_id'] ?? null);
+            if ($existing) {
+                return $existing;
+            }
 
             // دروستکردنی ژمارەی پسوڵەی پارەدان
             $paymentNumber = 'PAY-' . strtoupper(Str::random(8));
@@ -41,12 +62,14 @@ class PaymentService
                 'customer_id'    => $customer->id,
                 'entry_type'     => 'PAYMENT',
                 'type'           => 'credit', // Credit واتە پارەهاتنە ناوەوە / کەمبوونەوەی قەرز
+                'debit'          => 0,
                 'credit'         => $data['amount'],
                 'amount'         => $data['amount'],
+                'balance_before' => $previousBalance,
                 'balance_after'  => $newBalance,
                 'reference_type' => 'customer_payment',
                 'reference_id'   => $payment->id,
-                'description'    => 'وەرگرتنی پارە',
+                'description'    => $data['notes'] ?? 'وەرگرتنی پارە',
                 'created_by'     => $user->id,
             ]);
 
@@ -55,7 +78,25 @@ class PaymentService
                 'current_balance' => $newBalance
             ]);
 
-            // ئەگەر نۆتیفیکەیشن هەبوو، دەتوانین لێرە نۆتیفیکەیشنی وەتسئاپ/سیستەم بنێرین (BR-F05)
+            // ٥. تۆمارکردنی جوڵەکە لە لۆگی چالاکیەکان (Audit Trail)
+            DB::table('sync_logs')->insert([
+                'user_id' => $user->id,
+                'entity_type' => 'customer_payment',
+                'entity_id' => $payment->id,
+                'table_name' => 'customer_payments',
+                'action' => 'CREATE',
+                'status' => 'success',
+                'payload' => json_encode([
+                    'payment_number' => $payment->payment_number,
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'amount' => $payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'timestamp' => now()->toDateTimeString(),
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             return $payment;
         });

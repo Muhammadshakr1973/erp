@@ -310,7 +310,8 @@ class SalesOrderService
     {
         $customer = Customer::lockForUpdate()->findOrFail($order->customer_id);
 
-        $newBalance = $customer->current_balance + $order->total_amount;
+        $previousBalance = $customer->current_balance;
+        $newBalance = $previousBalance + $order->total_amount;
 
         CustomerLedger::create([
             'customer_id' => $customer->id,
@@ -319,6 +320,7 @@ class SalesOrderService
             'debit' => $order->total_amount,
             'credit' => 0,
             'amount' => $order->total_amount,
+            'balance_before' => $previousBalance,
             'balance_after' => $newBalance,
             'reference_type' => 'sales_order',
             'reference_id' => $order->id,

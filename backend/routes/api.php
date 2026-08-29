@@ -58,6 +58,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.manage');
         Route::post('/suppliers/{id}/pay', [SupplierController::class, 'pay'])->middleware('permission:suppliers.manage');
         Route::get('/suppliers/{id}/ledger', [SupplierController::class, 'ledger'])->middleware('permission:suppliers.manage');
+        Route::get('/suppliers/{id}/reconcile', [SupplierController::class, 'reconcile'])->middleware('permission:users.manage');
         
         // Customers (Fine-grained: view vs manage)
         Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:customers.view');
@@ -65,6 +66,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/customers', [CustomerController::class, 'store'])->middleware('permission:customers.manage');
         Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware('permission:customers.manage');
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('permission:customers.manage');
+        Route::get('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
         
         // Users (Admin only)
         Route::apiResource('users', UserController::class)->middleware('permission:users.manage');

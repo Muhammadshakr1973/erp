@@ -63,4 +63,14 @@ class CustomerController extends Controller
             'message' => 'کڕیار بەسەرکەوتوویی سڕایەوە'
         ], 200);
     }
+
+    public function reconcile(Customer $customer): JsonResponse
+    {
+        $reconciliation = $customer->reconcileBalance();
+        
+        return response()->json([
+            'message' => 'کڕیار لێکترازانی دارایی / Reconciliation report',
+            'data' => $reconciliation
+        ], 200);
+    }
 }
