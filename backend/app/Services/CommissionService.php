@@ -77,6 +77,27 @@ class CommissionService
                 ]);
             }
 
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'COMMISSION_CALCULATE',
+                'entity_type' => 'SalesmanCommission',
+                'entity_id'   => $commission->id,
+                'table_name'  => 'salesman_commissions',
+                'old_values'  => null,
+                'new_values'  => [
+                    'salesman_id'       => $salesman->id,
+                    'salesman_name'     => $salesman->name,
+                    'period_from'       => $data['period_from'],
+                    'period_to'         => $data['period_to'],
+                    'total_sales'       => $totalSales,
+                    'total_profit'      => $totalProfit,
+                    'commission_rate'   => $rate,
+                    'commission_amount' => $commissionAmount,
+                    'orders_count'      => $orders->count(),
+                ],
+                'description' => "کۆمسیۆنی مەندوب {$salesman->name} هەژمارکرا بە بڕی {$commissionAmount} بۆ ماوەی {$data['period_from']} تا {$data['period_to']}",
+                'user'        => $user,
+            ]);
+
             return $commission;
         });
     }

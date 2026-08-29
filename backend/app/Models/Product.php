@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Traits\Auditable;
 
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Auditable;
     protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'supplier_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
     protected $casts = ['is_active' => 'boolean', 'units_per_carton' => 'integer'];
     public function category()

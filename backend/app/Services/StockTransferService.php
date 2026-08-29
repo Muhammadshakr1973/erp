@@ -36,6 +36,22 @@ class StockTransferService
                 ]);
             }
 
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'CREATE',
+                'entity_type' => 'StockTransfer',
+                'entity_id'   => $transfer->id,
+                'table_name'  => 'stock_transfers',
+                'old_values'  => null,
+                'new_values'  => [
+                    'transfer_number'   => $transfer->transfer_number,
+                    'from_warehouse_id' => $transfer->from_warehouse_id,
+                    'to_warehouse_id'   => $transfer->to_warehouse_id,
+                    'items_count'       => count($data['items']),
+                ],
+                'description' => "داواکاری گواستنەوەی ستۆک دروستکرا: {$transfer->transfer_number}",
+                'user'        => $user,
+            ]);
+
             return $transfer;
         });
     }
@@ -96,6 +112,22 @@ class StockTransferService
                 'status'       => 'COMPLETED',
                 'completed_at' => now(),
                 'approved_by'  => $user->id,
+            ]);
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'STOCK_TRANSFER_COMPLETE',
+                'entity_type' => 'StockTransfer',
+                'entity_id'   => $transfer->id,
+                'table_name'  => 'stock_transfers',
+                'old_values'  => ['status' => 'DRAFT'],
+                'new_values'  => [
+                    'status'            => 'COMPLETED',
+                    'transfer_number'   => $transfer->transfer_number,
+                    'from_warehouse_id' => $transfer->from_warehouse_id,
+                    'to_warehouse_id'   => $transfer->to_warehouse_id,
+                ],
+                'description' => "گواستنەوەی ستۆک تەواوکرا: {$transfer->transfer_number} لە کۆگای #{$transfer->from_warehouse_id} بۆ #{$transfer->to_warehouse_id}",
+                'user'        => $user,
             ]);
 
             return $transfer;

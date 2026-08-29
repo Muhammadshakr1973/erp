@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\RouteController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WarehouseController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 
 Route::prefix('v1')->group(function () {
 
@@ -114,5 +115,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');
         Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts'])->middleware('permission:users.manage');
         Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory'])->middleware('permission:users.manage');
+
+        // Audit Trail (Admin / Owner inspection)
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:users.manage');
+        Route::get('/audit-logs/{id}', [AuditLogController::class, 'show'])->middleware('permission:users.manage');
+        Route::get('/audit-logs/entity/{entityType}/{entityId}', [AuditLogController::class, 'entityHistory'])->middleware('permission:users.manage');
     });
 });

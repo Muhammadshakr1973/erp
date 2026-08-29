@@ -46,6 +46,9 @@ class AuthService
         // دروستکردنی تۆکنی Sanctum
         $token = $user->createToken($deviceName)->plainTextToken;
 
+        // تۆمارکردنی لە دەفتەری چاودێری (Audit Log)
+        app(AuditService::class)->logAuthEvent('LOGIN', $user, null, $deviceName);
+
         return [
             'user' => $user,
             'token' => $token,
@@ -54,6 +57,9 @@ class AuthService
 
     public function logout(User $user)
     {
+        // تۆمارکردنی لە دەفتەری چاودێری (Audit Log)
+        app(AuditService::class)->logAuthEvent('LOGOUT', $user);
+
         // سڕینەوەی تەنها ئەو تۆکنەی کە ئێستا بەکاریدەهێنێت
         /** @var \Laravel\Sanctum\HasApiTokens $user */
         $user->currentAccessToken()->delete();

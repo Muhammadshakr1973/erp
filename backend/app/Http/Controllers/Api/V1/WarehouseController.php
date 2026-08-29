@@ -228,22 +228,22 @@ class WarehouseController extends Controller
                 $item->save();
 
                 // Log audit trail
-                DB::table('sync_logs')->insert([
-                    'user_id' => $user->id,
-                    'entity_type' => 'sales_order_item',
-                    'entity_id' => $item->id,
-                    'table_name' => 'sales_order_items',
-                    'action' => 'UPDATE',
-                    'status' => 'success',
-                    'payload' => json_encode([
+                app(\App\Services\AuditService::class)->log([
+                    'action'      => 'PACK_ITEM',
+                    'entity_type' => 'SalesOrderItem',
+                    'entity_id'   => $item->id,
+                    'table_name'  => 'sales_order_items',
+                    'old_values'  => [
+                        'is_packed' => !$packed,
+                    ],
+                    'new_values'  => [
                         'order_number' => $order->order_number,
-                        'product_id' => $item->product_id,
-                        'is_packed' => $item->is_packed,
-                        'packed_by' => $user->name,
-                        'timestamp' => now()->toDateTimeString(),
-                    ]),
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                        'product_id'   => $item->product_id,
+                        'is_packed'    => $item->is_packed,
+                        'packed_by'    => $user->name,
+                    ],
+                    'description' => $packed ? "کاڵای پسوڵەی {$order->order_number} پاکەت کرا" : "کاڵای پسوڵەی {$order->order_number} لە پاکەتکردن لادرا",
+                    'user'        => $user,
                 ]);
             });
 

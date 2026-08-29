@@ -436,22 +436,22 @@ class SalesOrderService
      */
     private function logActivity(SalesOrder $order, string $oldStatus, string $newStatus, $user): void
     {
-        DB::table('sync_logs')->insert([
-            'user_id' => $user->id,
-            'entity_type' => 'sales_order',
-            'entity_id' => $order->id,
-            'table_name' => 'sales_orders',
-            'action' => 'UPDATE',
-            'status' => 'success',
-            'payload' => json_encode([
+        app(AuditService::class)->log([
+            'action'      => 'STATUS_CHANGE',
+            'entity_type' => 'SalesOrder',
+            'entity_id'   => $order->id,
+            'table_name'  => 'sales_orders',
+            'old_values'  => [
+                'status'       => $oldStatus,
                 'order_number' => $order->order_number,
-                'old_status' => $oldStatus,
-                'new_status' => $newStatus,
-                'user_name' => $user->name,
-                'timestamp' => now()->toDateTimeString(),
-            ]),
-            'created_at' => now(),
-            'updated_at' => now(),
+            ],
+            'new_values'  => [
+                'status'       => $newStatus,
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+            ],
+            'description' => "دۆخی پسوڵەی فرۆشتن {$order->order_number} گۆڕدرا لە [{$oldStatus}] بۆ [{$newStatus}]",
+            'user'        => $user,
         ]);
     }
 

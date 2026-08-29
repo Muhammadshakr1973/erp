@@ -79,23 +79,24 @@ class PaymentService
             ]);
 
             // ٥. تۆمارکردنی جوڵەکە لە لۆگی چالاکیەکان (Audit Trail)
-            DB::table('sync_logs')->insert([
-                'user_id' => $user->id,
-                'entity_type' => 'customer_payment',
-                'entity_id' => $payment->id,
-                'table_name' => 'customer_payments',
-                'action' => 'CREATE',
-                'status' => 'success',
-                'payload' => json_encode([
-                    'payment_number' => $payment->payment_number,
-                    'customer_id' => $customer->id,
-                    'customer_name' => $customer->name,
-                    'amount' => $payment->amount,
-                    'payment_method' => $payment->payment_method,
-                    'timestamp' => now()->toDateTimeString(),
-                ]),
-                'created_at' => now(),
-                'updated_at' => now(),
+            app(AuditService::class)->log([
+                'action'      => 'PAYMENT',
+                'entity_type' => 'CustomerPayment',
+                'entity_id'   => $payment->id,
+                'table_name'  => 'customer_payments',
+                'old_values'  => [
+                    'customer_balance' => $previousBalance,
+                ],
+                'new_values'  => [
+                    'payment_number'   => $payment->payment_number,
+                    'customer_id'      => $customer->id,
+                    'customer_name'    => $customer->name,
+                    'amount'           => $payment->amount,
+                    'payment_method'   => $payment->payment_method,
+                    'customer_balance' => $newBalance,
+                ],
+                'description' => "پارەدانی کڕیار تۆمارکرا: {$payment->payment_number} بە بڕی {$payment->amount} بۆ کڕیار {$customer->name}",
+                'user'        => $user,
             ]);
 
             return $payment;

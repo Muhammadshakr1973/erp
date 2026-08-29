@@ -136,19 +136,21 @@ class PurchaseRequirementController extends Controller
                         $req->update(['status' => 'ORDERED']);
 
                         // تۆمارکردنی لۆگ لە داتابەیس بۆ چاودێری گۆڕانکارییەکە (Audit Trail)
-                        DB::table('sync_logs')->insert([
-                            'table_name' => 'purchase_requirements',
-                            'record_id'  => $req->id,
-                            'action'     => 'CONVERTED_TO_PO',
-                            'payload'    => json_encode([
+                        app(\App\Services\AuditService::class)->log([
+                            'action'      => 'CONVERTED_TO_PO',
+                            'entity_type' => 'PurchaseRequirement',
+                            'entity_id'   => $req->id,
+                            'table_name'  => 'purchase_requirements',
+                            'old_values'  => ['status' => 'OPEN'],
+                            'new_values'  => [
+                                'status'            => 'ORDERED',
                                 'purchase_order_id' => $purchaseOrder->id,
                                 'order_number'      => $orderNumber,
                                 'product_id'        => $req->product_id,
                                 'quantity'          => $req->required_quantity,
-                                'converted_by'      => $user->id,
-                            ]),
-                            'created_at' => now(),
-                            'updated_at' => now(),
+                            ],
+                            'description' => "داواکاری کڕینی #{$req->id} گۆڕدرا بۆ پسوڵەی کڕینی {$orderNumber}",
+                            'user'        => $user,
                         ]);
                     }
 

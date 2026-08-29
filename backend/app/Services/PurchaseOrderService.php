@@ -47,6 +47,23 @@ class PurchaseOrderService
 
             $order->update(['total_amount' => $totalAmount]);
 
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'CREATE',
+                'entity_type' => 'PurchaseOrder',
+                'entity_id'   => $order->id,
+                'table_name'  => 'purchase_orders',
+                'old_values'  => null,
+                'new_values'  => [
+                    'order_number' => $order->order_number,
+                    'supplier_id'  => $order->supplier_id,
+                    'warehouse_id' => $order->warehouse_id,
+                    'total_amount' => $totalAmount,
+                    'items_count'  => count($data['items']),
+                ],
+                'description' => "پسوڵەی کڕین دروستکرا: {$order->order_number} بە بڕی {$totalAmount}",
+                'user'        => $user,
+            ]);
+
             return $order;
         });
     }
@@ -111,6 +128,25 @@ class PurchaseOrderService
             $order->update([
                 'status'      => 'RECEIVED',
                 'received_at' => now(),
+            ]);
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'RECEIVE',
+                'entity_type' => 'PurchaseOrder',
+                'entity_id'   => $order->id,
+                'table_name'  => 'purchase_orders',
+                'old_values'  => [
+                    'status' => 'DRAFT',
+                ],
+                'new_values'  => [
+                    'status'           => 'RECEIVED',
+                    'order_number'     => $order->order_number,
+                    'supplier_id'      => $supplier->id,
+                    'supplier_balance' => $newBalance,
+                    'total_amount'     => $order->total_amount,
+                ],
+                'description' => "کاڵاکانی پسوڵەی کڕین {$order->order_number} بە سەرکەوتوویی وەرگیران لە کۆگا و ستۆک زیادکرا",
+                'user'        => $user,
             ]);
 
             return $order;

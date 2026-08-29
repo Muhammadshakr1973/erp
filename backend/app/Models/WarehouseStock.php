@@ -61,7 +61,7 @@ class WarehouseStock extends Model
             $locked->reserved_quantity = $newReserved;
             $locked->save();
 
-            return StockTransaction::create([
+            $transaction = StockTransaction::create([
                 'warehouse_id' => $locked->warehouse_id,
                 'product_id' => $locked->product_id,
                 'type' => strtoupper($type),
@@ -72,6 +72,20 @@ class WarehouseStock extends Model
                 'notes' => $notes,
                 'created_by' => $userId,
             ]);
+
+            app(\App\Services\AuditService::class)->logStockMovement(
+                strtoupper($type),
+                $locked->warehouse_id,
+                $locked->product_id,
+                $quantityChange,
+                $newQty,
+                $notes ?? "دەستکاری ستۆک: {$quantityChange} یەکە لە کۆگای #{$locked->warehouse_id}",
+                $referenceType,
+                $referenceId,
+                $userId
+            );
+
+            return $transaction;
         });
     }
 
@@ -92,7 +106,7 @@ class WarehouseStock extends Model
             $locked->reserved_quantity += $amount;
             $locked->save();
 
-            return StockTransaction::create([
+            $transaction = StockTransaction::create([
                 'warehouse_id' => $locked->warehouse_id,
                 'product_id' => $locked->product_id,
                 'type' => 'RESERVE',
@@ -103,6 +117,20 @@ class WarehouseStock extends Model
                 'notes' => $notes,
                 'created_by' => $userId,
             ]);
+
+            app(\App\Services\AuditService::class)->logStockMovement(
+                'STOCK_RESERVE',
+                $locked->warehouse_id,
+                $locked->product_id,
+                $amount,
+                $locked->quantity,
+                $notes ?? "حجزکردنی ستۆک: {$amount} یەکە بۆ کاڵا #{$locked->product_id}",
+                $referenceType,
+                $referenceId,
+                $userId
+            );
+
+            return $transaction;
         });
     }
 
@@ -120,7 +148,7 @@ class WarehouseStock extends Model
                 $locked->reserved_quantity -= $released;
                 $locked->save();
 
-                return StockTransaction::create([
+                $transaction = StockTransaction::create([
                     'warehouse_id' => $locked->warehouse_id,
                     'product_id' => $locked->product_id,
                     'type' => 'RELEASE',
@@ -131,6 +159,20 @@ class WarehouseStock extends Model
                     'notes' => $notes,
                     'created_by' => $userId,
                 ]);
+
+                app(\App\Services\AuditService::class)->logStockMovement(
+                    'STOCK_RELEASE',
+                    $locked->warehouse_id,
+                    $locked->product_id,
+                    -$released,
+                    $locked->quantity,
+                    $notes ?? "ئازادکردنی ستۆکی حجزکراو: {$released} یەکە",
+                    $referenceType,
+                    $referenceId,
+                    $userId
+                );
+
+                return $transaction;
             }
 
             return null;

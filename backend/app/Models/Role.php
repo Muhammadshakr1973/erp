@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\Auditable;
 
 /**
  * Role Model - V4.0
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Role extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
     protected $fillable = ['name', 'display_name', 'description', 'permissions', 'is_system'];
     protected $casts = ['permissions' => 'array', 'is_system' => 'boolean'];
 

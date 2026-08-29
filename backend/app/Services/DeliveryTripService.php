@@ -63,6 +63,22 @@ class DeliveryTripService
                 ]);
             }
 
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'CREATE',
+                'entity_type' => 'DeliveryTrip',
+                'entity_id'   => $trip->id,
+                'table_name'  => 'delivery_trips',
+                'old_values'  => null,
+                'new_values'  => [
+                    'trip_number'  => $trip->trip_number,
+                    'driver_id'    => $trip->driver_id,
+                    'trip_date'    => $trip->trip_date,
+                    'total_orders' => $trip->total_orders,
+                ],
+                'description' => "گەشتی گەیاندن دروستکرا: {$trip->trip_number} بۆ شۆفێر #{$trip->driver_id}",
+                'user'        => $user,
+            ]);
+
             return $trip;
         });
     }
@@ -135,6 +151,24 @@ class DeliveryTripService
 
                 $lockedCustomer->update(['current_balance' => $newBalance]);
             }
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'DELIVERY_CONFIRM',
+                'entity_type' => 'DeliveryTripOrder',
+                'entity_id'   => $tripOrder->id,
+                'table_name'  => 'delivery_trip_orders',
+                'old_values'  => [
+                    'status' => 'PENDING',
+                ],
+                'new_values'  => [
+                    'status'          => 'DELIVERED',
+                    'order_number'    => $salesOrder->order_number,
+                    'received_amount' => $receivedAmount,
+                    'driver_id'       => $user->id,
+                ],
+                'description' => "پسوڵەی {$salesOrder->order_number} بە سەرکەوتوویی گەیندرا بە کڕیار",
+                'user'        => $user,
+            ]);
 
             return $tripOrder;
         });

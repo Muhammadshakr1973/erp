@@ -169,22 +169,23 @@ class SupplierController extends Controller
             ]);
 
             // Write audit trail log
-            DB::table('sync_logs')->insert([
-                'user_id' => $userId,
-                'entity_type' => 'supplier_payment',
-                'entity_id' => $payment->id,
-                'table_name' => 'supplier_payments',
-                'action' => 'CREATE',
-                'status' => 'success',
-                'payload' => json_encode([
-                    'supplier_id' => $supplier->id,
-                    'supplier_name' => $supplier->name,
-                    'amount' => $payment->amount,
-                    'payment_method' => $payment->payment_method,
-                    'timestamp' => now()->toDateTimeString(),
-                ]),
-                'created_at' => now(),
-                'updated_at' => now(),
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'SUPPLIER_PAYMENT',
+                'entity_type' => 'SupplierPayment',
+                'entity_id'   => $payment->id,
+                'table_name'  => 'supplier_payments',
+                'old_values'  => [
+                    'supplier_balance' => $previousBalance,
+                ],
+                'new_values'  => [
+                    'supplier_id'      => $supplier->id,
+                    'supplier_name'    => $supplier->name,
+                    'amount'           => $payment->amount,
+                    'payment_method'   => $payment->payment_method,
+                    'supplier_balance' => $newBalance,
+                ],
+                'description' => "پارەدانی دابینکەر تۆمارکرا بە بڕی {$payment->amount} بۆ {$supplier->name}",
+                'user'        => $user,
             ]);
 
             return response()->json([
