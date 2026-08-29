@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -19,8 +21,15 @@ class StockListScreen extends ConsumerStatefulWidget {
 }
 
 class _StockListScreenState extends ConsumerState<StockListScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _filterLowStock = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _showAdjustStockDialog(WarehouseStockModel stock) {
     final TextEditingController amountController = TextEditingController();
@@ -34,12 +43,18 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text('دەستکاریکردنی ستۆک: ${stock.productName}', style: AppTextStyles.bodyBold),
+              title: Text(
+                'دەستکاریکردنی ستۆک: ${stock.productName}',
+                style: AppTextStyles.bodyBold,
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('کۆگای دیاریکراو: ${stock.warehouseName}', style: AppTextStyles.caption),
+                    Text(
+                      'کۆگای دیاریکراو: ${stock.warehouseName}',
+                      style: AppTextStyles.caption,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
                       value: adjustType,
@@ -48,9 +63,18 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('جیاوازی کۆگا (ADJUSTMENT)')),
-                        DropdownMenuItem(value: 'RETURN', child: Text('گەڕانەوەی کاڵا (RETURN)')),
-                        DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین (PURCHASE)')),
+                        DropdownMenuItem(
+                          value: 'ADJUSTMENT',
+                          child: Text('جیاوازی کۆگا (ADJUSTMENT)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'RETURN',
+                          child: Text('گەڕانەوەی کاڵا (RETURN)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PURCHASE',
+                          child: Text('کڕین (PURCHASE)'),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -86,7 +110,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           final change = int.tryParse(amountController.text);
                           if (change == null || change == 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')),
+                              const SnackBar(
+                                content: Text('تکایە بڕێکی دروست بنووسە'),
+                              ),
                             );
                             return;
                           }
@@ -96,7 +122,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           });
 
                           try {
-                            await ref.read(warehouseActionsProvider).adjustStock(
+                            await ref
+                                .read(warehouseActionsProvider)
+                                .adjustStock(
                                   warehouseId: stock.warehouseId,
                                   productId: stock.productId,
                                   quantityChange: change,
@@ -107,7 +135,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('ستۆک بە سەرکەوتوویی نوێکرایەوە'),
+                                  content: Text(
+                                    'ستۆک بە سەرکەوتوویی نوێکرایەوە',
+                                  ),
                                   backgroundColor: AppColors.success,
                                 ),
                               );
@@ -115,7 +145,11 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+                                SnackBar(
+                                  content: Text(
+                                    e.toString().replaceAll('Exception: ', ''),
+                                  ),
+                                ),
                               );
                             }
                           } finally {
@@ -163,7 +197,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           });
 
                           try {
-                            await ref.read(warehouseActionsProvider).reconcileStock(
+                            await ref
+                                .read(warehouseActionsProvider)
+                                .reconcileStock(
                                   warehouseId: stock.warehouseId,
                                   productId: stock.productId,
                                 );
@@ -171,7 +207,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('هاوتاکردنەوە بە سەرکەوتوویی جێبەجێ کرا'),
+                                  content: Text(
+                                    'هاوتاکردنەوە بە سەرکەوتوویی جێبەجێ کرا',
+                                  ),
                                   backgroundColor: AppColors.success,
                                 ),
                               );
@@ -179,7 +217,11 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+                                SnackBar(
+                                  content: Text(
+                                    e.toString().replaceAll('Exception: ', ''),
+                                  ),
+                                ),
                               );
                             }
                           } finally {
@@ -210,6 +252,18 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
         title: const Text('لیستی ستۆک', style: AppTextStyles.h2),
         actions: [
           IconButton(
+            icon: const Icon(AppIcons.scan),
+            tooltip: 'سکانی باڕکۆد',
+            onPressed: () {
+              CameraBarcodeScanner.show(context, (barcode) {
+                setState(() {
+                  _searchQuery = barcode;
+                  _searchController.text = barcode;
+                });
+              });
+            },
+          ),
+          IconButton(
             icon: Icon(
               _filterLowStock ? Icons.filter_list_alt : Icons.filter_list,
               color: _filterLowStock ? theme.colorScheme.primary : null,
@@ -237,8 +291,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
             Padding(
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
               child: AppTextField(
-                hintText: 'گەڕان بۆ کاڵا لە کۆگا...',
+                hintText: 'گەڕان بۆ کاڵا لە کۆگا (بە ناو یان باڕکۆد)...',
                 prefixIcon: AppIcons.search,
+                controller: _searchController,
                 onChanged: (val) {
                   setState(() {
                     _searchQuery = val;
@@ -256,7 +311,11 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: theme.colorScheme.error,
+                        ),
                         const SizedBox(height: AppSpacing.md),
                         const Text('کێشەیەک ڕوویدا لە بارکردنی ستۆکەکان'),
                         const SizedBox(height: AppSpacing.sm),
@@ -267,7 +326,8 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         ElevatedButton.icon(
-                          onPressed: () => ref.invalidate(warehouseStocksProvider),
+                          onPressed: () =>
+                              ref.invalidate(warehouseStocksProvider),
                           icon: const Icon(Icons.refresh),
                           label: const Text('دووبارە هەوڵبدەرەوە'),
                         ),
@@ -277,7 +337,10 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                 ),
                 data: (stocks) {
                   var filtered = stocks.where((stock) {
-                    final matchesSearch = stock.productName.toLowerCase().contains(_searchQuery.toLowerCase());
+                    final searchLower = _searchQuery.toLowerCase();
+                    final matchesSearch =
+                        stock.productName.toLowerCase().contains(searchLower) ||
+                        stock.barcode.toLowerCase().contains(searchLower);
                     if (_filterLowStock) {
                       return matchesSearch && stock.quantity < 20;
                     }
@@ -292,13 +355,19 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 80,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: AppSpacing.md),
                             Text(
                               _searchQuery.isNotEmpty
                                   ? 'هیچ کاڵایەک نەدۆزرایەوە بۆ گەڕانەکەت'
                                   : 'هیچ ستۆکێک لە کۆگادا تۆمار نەکراوە',
-                              style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                              style: AppTextStyles.bodyBold.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
@@ -307,9 +376,12 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                    ),
                     itemCount: filtered.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final stock = filtered[index];
                       final bool isLow = stock.quantity < 20;
@@ -321,17 +393,24 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHighest,
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+                              child: const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Colors.grey,
+                              ),
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(stock.productName, style: AppTextStyles.bodyBold),
+                                  Text(
+                                    stock.productName,
+                                    style: AppTextStyles.bodyBold,
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${stock.warehouseName} • حجزکراو: ${stock.reservedQuantity}',
@@ -345,21 +424,31 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               children: [
                                 StatusBadge(
                                   label: 'بڕ: ${stock.quantity}',
-                                  type: isLow ? StatusBadgeType.danger : StatusBadgeType.info,
+                                  type: isLow
+                                      ? StatusBadgeType.danger
+                                      : StatusBadgeType.info,
                                 ),
                                 const SizedBox(height: 8),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.edit_outlined, size: 20),
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 20,
+                                      ),
                                       tooltip: 'دەستکاریکردنی ستۆک',
-                                      onPressed: () => _showAdjustStockDialog(stock),
+                                      onPressed: () =>
+                                          _showAdjustStockDialog(stock),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.sync_outlined, size: 20),
+                                      icon: const Icon(
+                                        Icons.sync_outlined,
+                                        size: 20,
+                                      ),
                                       tooltip: 'هاوتاکردنەوە',
-                                      onPressed: () => _showReconcileDialog(stock),
+                                      onPressed: () =>
+                                          _showReconcileDialog(stock),
                                     ),
                                   ],
                                 ),
