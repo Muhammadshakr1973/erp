@@ -6,11 +6,23 @@ use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
 use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
+use App\Models\SalesOrder;
+use App\Models\SalesOrderItem;
+use App\Services\SalesOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WarehouseController extends Controller
 {
+    protected SalesOrderService $salesOrderService;
+
+    public function __construct(SalesOrderService $salesOrderService)
+    {
+        $this->salesOrderService = $salesOrderService;
+    }
+
     public function index(): JsonResponse
     {
         $warehouses = Warehouse::where('is_active', true)->get();
@@ -99,6 +111,194 @@ class WarehouseController extends Controller
         return response()->json([
             'message' => 'ئەنجامی سەرلەنوێ هاوتاکردنەوەی ستۆک',
             'data' => $result
+        ]);
+    }
+
+    public function ordersToPack(Request $request): JsonResponse
+    {
+        $orders = SalesOrder::with(['customer', 'warehouse', 'items.product'])
+            ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json([
+            'message' => 'لیستی پسوڵەکانی پاکەتکردن',
+            'data' => $orders
+        ]);
+    }
+
+    public function packItem(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order_item_id' => 'required|integer|exists:sales_order_items,id',
+            'packed' => 'required|boolean',
+        ]);
+
+        $item = SalesOrderItem::findOrFail($validated['order_item_id']);
+        $order = $item->order;
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'پسوڵە نەدۆزرایەوە.'
+            ], 404);
+        }
+
+        // Check if status is CONFIRMED or PACKING
+        if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+            return response()->json([
+                'message' => 'تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەتوانرێت دەستکاری بکرێت.'
+            ], 400);
+        }
+
+        $packed = $validated['packed'];
+        $user = $request->user();
+
+        // Idempotency: if already matching requested value, return early
+        if ($item->is_packed === $packed) {
+            return response()->json([
+                'message' => 'کردارەکە پێشتر جێبەجێ کراوە',
+                'data' => $order->load(['customer', 'warehouse', 'items.product'])
+            ], 200);
+        }
+
+        try {
+            DB::transaction(function () use ($item, $order, $packed, $user) {
+                // If the order status was CONFIRMED, transition to PACKING
+                if ($order->status === SalesOrder::STATUS_CONFIRMED) {
+                    $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
+                }
+
+                if ($packed) {
+                    // Check physical stock in correct warehouse
+                    $warehouseStock = WarehouseStock::lockForUpdate()->where([
+                        'warehouse_id' => $order->warehouse_id,
+                        'product_id' => $item->product_id
+                    ])->first();
+
+                    if (!$warehouseStock || $warehouseStock->quantity < $item->quantity) {
+                        $available = $warehouseStock ? $warehouseStock->quantity : 0;
+                        throw ValidationException::withMessages([
+                            'order_item_id' => "بڕی پێویست لە کۆگادا بەردەست نییە بۆ پاکەتکردن. بڕی داواکراو: {$item->quantity}، بڕی بەردەست لە کۆگا: {$available}"
+                        ]);
+                    }
+
+                    $item->is_packed = true;
+                    $item->packed_at = now();
+                    $item->packed_by = $user->id;
+                } else {
+                    $item->is_packed = false;
+                    $item->packed_at = null;
+                    $item->packed_by = null;
+                }
+
+                $item->save();
+
+                // Log audit trail
+                DB::table('sync_logs')->insert([
+                    'user_id' => $user->id,
+                    'entity_type' => 'sales_order_item',
+                    'entity_id' => $item->id,
+                    'table_name' => 'sales_order_items',
+                    'action' => 'UPDATE',
+                    'status' => 'success',
+                    'payload' => json_encode([
+                        'order_number' => $order->order_number,
+                        'product_id' => $item->product_id,
+                        'is_packed' => $item->is_packed,
+                        'packed_by' => $user->name,
+                        'timestamp' => now()->toDateTimeString(),
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+
+            return response()->json([
+                'message' => $packed ? 'کاڵاکە بە سەرکەوتوویی پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
+                'data' => $order->fresh(['customer', 'warehouse', 'items.product'])
+            ]);
+        } catch (ValidationException $ve) {
+            return response()->json([
+                'message' => $ve->getMessage(),
+                'errors' => $ve->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function markReady(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|integer|exists:sales_orders,id',
+        ]);
+
+        $order = SalesOrder::findOrFail($validated['order_id']);
+
+        if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+            return response()->json([
+                'message' => 'تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەکرێت بە ئامادەکراو بنرێت.'
+            ], 400);
+        }
+
+        try {
+            $updatedOrder = $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_READY, $request->user());
+
+            return response()->json([
+                'message' => 'پسوڵە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا',
+                'data' => $updatedOrder->load(['customer', 'warehouse', 'items.product'])
+            ]);
+        } catch (ValidationException $ve) {
+            return response()->json([
+                'message' => $ve->getMessage(),
+                'errors' => $ve->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function stockList(Request $request): JsonResponse
+    {
+        $query = WarehouseStock::with(['warehouse', 'product']);
+
+        if ($request->has('warehouse_id')) {
+            $query->where('warehouse_id', $request->query('warehouse_id'));
+        }
+
+        if ($request->has('product_id')) {
+            $query->where('product_id', $request->query('product_id'));
+        }
+
+        $stocks = $query->get();
+
+        return response()->json([
+            'message' => 'لیستی ستۆکی کۆگاکان',
+            'data' => $stocks
+        ]);
+    }
+
+    public function transactions(Request $request): JsonResponse
+    {
+        $query = StockTransaction::with(['warehouse', 'product', 'creator']);
+
+        if ($request->has('product_id')) {
+            $query->where('product_id', $request->query('product_id'));
+        }
+
+        if ($request->has('date_from')) {
+            $query->where('created_at', '>=', $request->query('date_from'));
+        }
+
+        $transactions = $query->orderBy('id', 'desc')->get();
+
+        return response()->json([
+            'message' => 'مێژووی جوڵەی کۆگا',
+            'data' => $transactions
         ]);
     }
 }

@@ -132,6 +132,51 @@ class SalesOrderService
                     if ($currentStatus !== SalesOrder::STATUS_PACKING && $currentStatus !== SalesOrder::STATUS_CONFIRMED) {
                         throw ValidationException::withMessages(['status' => 'گۆڕین بۆ ئامادە تەنها لە حاڵەتی پشتڕاستکردنەوە یان پاکەتکردن دەبێت.']);
                     }
+
+                    // Count packed items
+                    $packedCount = $order->items()->where('is_packed', true)->count();
+                    if ($packedCount === 0) {
+                        throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵە بە ئامادەکراو دابنرێت ئەگەر هیچ کاڵایەکی پاکەت نەکراوە.']);
+                    }
+
+                    // Handle unpacked items (partial packing)
+                    $unpackedItems = $order->items()->where('is_packed', false)->get();
+                    foreach ($unpackedItems as $item) {
+                        $warehouseStock = WarehouseStock::lockForUpdate()->where([
+                            'warehouse_id' => $order->warehouse_id,
+                            'product_id' => $item->product_id
+                        ])->first();
+
+                        if ($warehouseStock) {
+                            $warehouseStock->releaseStock($item->quantity, $user->id, 'sales_order', $order->id, 'Partial packing release');
+                        }
+                        $item->delete();
+                    }
+
+                    // Recalculate order totals if any items were deleted
+                    if ($unpackedItems->count() > 0) {
+                        $remainingItems = $order->items()->where('is_packed', true)->get();
+                        $subtotal = 0;
+                        $totalProfit = 0;
+                        foreach ($remainingItems as $item) {
+                            $subtotal += $item->line_total;
+                            $totalProfit += $item->profit;
+                        }
+
+                        $discountAmount = 0;
+                        if ($order->discount_percent > 0) {
+                            $discountAmount = ($subtotal * $order->discount_percent) / 100;
+                        }
+                        $totalAmount = $subtotal - $discountAmount;
+
+                        $order->update([
+                            'subtotal' => $subtotal,
+                            'discount_amount' => $discountAmount,
+                            'total_amount' => $totalAmount,
+                            'total_profit' => $totalProfit,
+                        ]);
+                    }
+
                     $order->ready_at = now();
                     break;
 

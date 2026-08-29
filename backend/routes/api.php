@@ -81,6 +81,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/warehouses', [WarehouseController::class, 'index'])->middleware('permission:stock.view');
         Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware('permission:stock.pack');
         Route::get('/warehouses/{warehouseId}/stock/{productId}/reconcile', [WarehouseController::class, 'reconcileStock'])->middleware('permission:stock.view');
+        
+        Route::get('/warehouse/orders-to-pack', [WarehouseController::class, 'ordersToPack'])->middleware('permission:stock.pack');
+        Route::post('/warehouse/pack-item', [WarehouseController::class, 'packItem'])->middleware('permission:stock.pack');
+        Route::post('/warehouse/mark-ready', [WarehouseController::class, 'markReady'])->middleware('permission:stock.pack');
+        Route::get('/warehouse/stock', [WarehouseController::class, 'stockList'])->middleware('permission:stock.view');
+        Route::get('/warehouse/transactions', [WarehouseController::class, 'transactions'])->middleware('permission:stock.view');
         Route::post('/payments', [PaymentController::class, 'store'])->middleware('permission:orders.create');
         
         // Stock Transfers (Requires stock permissions)
