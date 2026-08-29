@@ -119,9 +119,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/purchase-requirements/convert', [PurchaseRequirementController::class, 'convert'])->middleware('permission:suppliers.manage');
         
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard'])->middleware('permission:users.manage');
-        Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');
+        Route::get('/reports/sales', [ReportController::class, 'sales'])->middleware('permission:users.manage');
+        Route::get('/reports/profit', [ReportController::class, 'profit'])->middleware('permission:users.manage');
+        Route::get('/reports/sales-by-salesman', [ReportController::class, 'salesBySalesman'])->middleware('permission:users.manage');
         Route::get('/reports/customer-debts', [ReportController::class, 'customerDebts'])->middleware('permission:users.manage');
+        Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');
         Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory'])->middleware('permission:users.manage');
+        Route::get('/reports/low-stock', [ReportController::class, 'lowStock'])->middleware('permission:users.manage');
+        Route::get('/reports/stock-movements', [ReportController::class, 'stockMovements'])->middleware('permission:users.manage');
+        Route::get('/reports/stock-transfers', [ReportController::class, 'stockTransfers'])->middleware('permission:users.manage');
 
         // Audit Trail (Admin / Owner inspection)
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:users.manage');

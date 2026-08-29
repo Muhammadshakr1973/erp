@@ -8,6 +8,11 @@ import 'reports/supplier_debts_report_screen.dart';
 import 'reports/customer_debts_report_screen.dart';
 import 'reports/payments_history_report_screen.dart';
 import 'reports/salesman_commissions_report_screen.dart';
+import 'reports/sales_report_screen.dart';
+import 'reports/profit_report_screen.dart';
+import 'reports/sales_by_salesman_report_screen.dart';
+import 'reports/low_stock_report_screen.dart';
+import 'reports/stock_movements_report_screen.dart';
 
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
@@ -26,15 +31,23 @@ class AdminReportsScreen extends StatelessWidget {
             'فرۆشتن و قازانج',
             Icons.bar_chart,
             AppColors.primary,
-            ['ڕاپۆرتی فرۆشتنی ئەمڕۆ', 'ڕاپۆرتی قازانجی مانگانە', 'فرۆشتن بەپێی مەندوب'],
+            [
+              _ReportItem('ڕاپۆرتی فرۆشتنی گشتی', () => const SalesReportScreen()),
+              _ReportItem('ڕاپۆرتی قازانجی کاڵاکان', () => const ProfitReportScreen()),
+              _ReportItem('فرۆشتن بەپێی مەندوب', () => const SalesBySalesmanReportScreen()),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           _buildReportCategory(
             context,
-            'قەرزەکان',
+            'قەرز و شایستەکان',
             AppIcons.customerDebt,
             AppColors.danger,
-            ['قەرزی کڕیارەکان', 'قەرزی کۆمپانیاکان', 'مێژووی پارەدان'],
+            [
+              _ReportItem('قەرزی کڕیارەکان', () => const CustomerDebtsReportScreen()),
+              _ReportItem('قەرزی کۆمپانیاکان', () => const SupplierDebtsReportScreen()),
+              _ReportItem('مێژووی پارەدان و وەرگرتن', () => const PaymentsHistoryReportScreen()),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           _buildReportCategory(
@@ -42,7 +55,9 @@ class AdminReportsScreen extends StatelessWidget {
             'کۆمسیۆن و مەندوب',
             Icons.percent,
             AppColors.purple,
-            ['ڕاپۆرتی کۆمسیۆنی مەندوبەکان', 'پوختەی کۆمسیۆنی مانگانە'],
+            [
+              _ReportItem('ڕاپۆرتی کۆمسیۆنی مەندوبەکان', () => const SalesmanCommissionsReportScreen()),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           _buildReportCategory(
@@ -50,14 +65,17 @@ class AdminReportsScreen extends StatelessWidget {
             'کۆگا و ستۆک',
             Icons.inventory_2_outlined,
             AppColors.info,
-            ['ڕاپۆرتی کاڵا کەمبووەکان', 'جوڵەی ستۆک', 'ڕاپۆرتی گواستنەوەی کۆگاکان'],
+            [
+              _ReportItem('ڕاپۆرتی کاڵا کەمبووەکان (Low Stock)', () => const LowStockReportScreen()),
+              _ReportItem('جوڵەی ستۆک (Stock Movements)', () => const StockMovementsReportScreen()),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildReportCategory(BuildContext context, String title, IconData icon, Color color, List<String> reports) {
+  Widget _buildReportCategory(BuildContext context, String title, IconData icon, Color color, List<_ReportItem> reports) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,38 +88,24 @@ class AdminReportsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          ...reports.map((report) => Padding(
+          ...reports.map((item) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: InkWell(
                   onTap: () {
-                    if (report == 'قەرزی کۆمپانیاکان') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SupplierDebtsReportScreen()),
-                      );
-                    } else if (report == 'قەرزی کڕیارەکان') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CustomerDebtsReportScreen()),
-                      );
-                    } else if (report == 'مێژووی پارەدان') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PaymentsHistoryReportScreen()),
-                      );
-                    } else if (report == 'ڕاپۆرتی کۆمسیۆنی مەندوبەکان' || report == 'پوختەی کۆمسیۆنی مانگانە') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SalesmanCommissionsReportScreen()),
-                      );
-                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => item.builder()),
+                    );
                   },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(report, style: AppTextStyles.bodyMedium),
-                      const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(item.title, style: AppTextStyles.bodyMedium),
+                        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                      ],
+                    ),
                   ),
                 ),
               )),
@@ -109,4 +113,11 @@ class AdminReportsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ReportItem {
+  final String title;
+  final Widget Function() builder;
+
+  _ReportItem(this.title, this.builder);
 }
