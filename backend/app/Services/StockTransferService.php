@@ -71,21 +71,30 @@ class StockTransferService
             $sortedItems = $transfer->items->sortBy('product_id');
             foreach ($sortedItems as $item) {
 
-                // ١. هێنانی ستۆک لە کۆگای یەکەم (From Warehouse)
+                // ١. قفڵکردنی ڕیزی ستۆکی کۆگای نێرەر (Step 1: Lock the source stock row)
                 $sourceStock = WarehouseStock::lockForUpdate()->firstOrCreate(
                     ['warehouse_id' => $transfer->from_warehouse_id, 'product_id' => $item->product_id],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                // پشکنین بزانین ئایا ستۆکی بەردەست بەشی ئەم گواستنەوەیە دەکات؟ (quantity - reserved)
-                $availableStock = $sourceStock->quantity - $sourceStock->reserved_quantity;
+                // ٢. خوێندنەوەی بڕی فیزیکی پێشوو (Step 2: Re-read authoritative current quantity)
+                $currentQty = $sourceStock->quantity;
+
+                // ٣. خوێندنەوەی بڕی حجزکراوی پێشوو (Step 3: Re-read authoritative reserved quantity)
+                $reservedQty = $sourceStock->reserved_quantity;
+
+                // ٤. هەژمارکردنی بڕی بەردەستی باوەڕپێکراو (Step 4: Calculate authoritative available quantity)
+                $availableStock = $currentQty - $reservedQty;
+
+                // ٥. پشکنینی گونجاویی بڕی داواکراوی گواستنەوە (Step 5: Validate requested deduction)
                 if ($availableStock < $item->quantity) {
+                    // ٦. هەڵدانی هەڵەی گونجاو لە کاتی نەبوونی ستۆکی بەردەست (Step 6: Throw business validation exception if insufficient)
                     throw ValidationException::withMessages([
-                        'stock' => "کاڵای ژمارە {$item->product_id} بڕی پێویست بەردەست نییە لە کۆگای نێرەر. بەردەست: {$availableStock}",
+                        'stock' => "کاڵای ژمارە {$item->product_id} بڕی پێویست بەردەست نییە لە کۆگای نێرەر. بەردەست بۆ ناردن: {$availableStock}، بڕی داواکراو: {$item->quantity}",
                     ]);
                 }
 
-                // کەمکردنەوەی ستۆک لە کۆگای نێرەر و تۆمارکردنی جوڵەکە بە مێتۆدی نوێی ئەنیمەی ستۆک
+                // ٧. کەمکردنەوەی ستۆک لە کۆگای نێرەر پاش پەسەندکردنی مەرجەکان (Step 7: Only then modify stock)
                 $sourceStock->adjustStock(
                     -$item->quantity,
                     'TRANSFER_OUT',

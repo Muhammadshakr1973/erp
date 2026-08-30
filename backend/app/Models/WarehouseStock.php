@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WarehouseStock extends Model
 {
@@ -45,16 +45,30 @@ class WarehouseStock extends Model
     public function adjustStock(int $quantityChange, string $type, $userId, $referenceType = null, $referenceId = null, $notes = null): StockTransaction
     {
         return DB::transaction(function () use ($quantityChange, $type, $userId, $referenceType, $referenceId, $notes) {
+            // ١. قفڵکردنی ڕیزی پەیوەندیداری ستۆک (Step 1: Lock the stock row)
             $locked = self::lockForUpdate()->find($this->id);
 
-            $newQty = $locked->quantity + $quantityChange;
+            // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی پێشوو بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
+            $currentQty = $locked->quantity;
+
+            // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراو بە شێوەی باوەڕپێکراو (Step 3: Re-read authoritative reserved quantity)
+            $reservedQty = $locked->reserved_quantity;
+
+            // ٤. هەژمارکردنی بڕی فیزیکی نوێ (Step 4: Calculate new quantity)
+            $newQty = $currentQty + $quantityChange;
+
+            // ٥. پشکنینی دروستیی گۆڕانکاری داواکراو (Step 5: Validate requested deduction)
             if ($newQty < 0) {
-                throw new \Exception("کۆی گشتی ستۆک ناتوانێت لە صفر کەمتر بێت. بڕی پێشتر: {$locked->quantity}، گۆڕانکاری: {$quantityChange}");
+                // ٦. هەڵدانی هەڵەی گونجاو لە کاتی نەبوونی ستۆک (Step 6: Throw business validation exception if insufficient)
+                throw ValidationException::withMessages([
+                    'stock' => "بڕی پێویست لە ستۆکی فیزیکی بەردەست نییە. کۆی گشتی ستۆک ناتوانێت لە صفر کەمتر بێت. بەردەست: {$currentQty}، بڕی داواکراوی کەمکردنەوە: " . abs($quantityChange)
+                ]);
             }
 
-            $newReserved = $locked->reserved_quantity;
+            // ٧. گۆڕینی ستۆک و پاشەکەوتکردن (Step 7: Only then modify stock)
+            $newReserved = $reservedQty;
             if ($quantityChange < 0 && in_array(strtoupper($type), ['DELIVERY', 'SALE'])) {
-                $newReserved = max(0, $locked->reserved_quantity - abs($quantityChange));
+                $newReserved = max(0, $reservedQty - abs($quantityChange));
             }
 
             $locked->quantity = $newQty;
@@ -96,13 +110,27 @@ class WarehouseStock extends Model
         }
 
         return DB::transaction(function () use ($amount, $userId, $referenceType, $referenceId, $notes) {
+            // ١. قفڵکردنی ڕیزی ستۆکی پەیوەندیدار (Step 1: Lock the stock row)
             $locked = self::lockForUpdate()->find($this->id);
 
-            $available = $locked->quantity - $locked->reserved_quantity;
+            // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
+            $currentQty = $locked->quantity;
+
+            // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراوی پێشوو (Step 3: Re-read authoritative reserved quantity)
+            $reservedQty = $locked->reserved_quantity;
+
+            // ٤. هەژمارکردنی ستۆکی بەردەست بە شێوەی باوەڕپێکراو (Step 4: Calculate authoritative available quantity)
+            $available = $currentQty - $reservedQty;
+
+            // ٥. پشکنینی بڕی حجزکردنی داواکراو (Step 5: Validate requested reservation)
             if ($available < $amount) {
-                throw new \Exception("بڕی پێویست لە ستۆکی بەردەست نییە بۆ حجزکردن. بەردەست: {$available}");
+                // ٦. هەڵدانی هەڵەی گونجاوی بازرگانی لە کاتی نەبوونی ستۆکی بەردەست (Step 6: Throw business validation exception)
+                throw ValidationException::withMessages([
+                    'stock' => "بڕی پێویست لە ستۆکی بەردەست نییە بۆ حجزکردن. بەردەست بۆ حجز: {$available}، بڕی داواکراو: {$amount}"
+                ]);
             }
 
+            // ٧. ئەنجامدانی حجزەکە پاش سەرکەوتنی پشکنینەکان (Step 7: Only then modify stock)
             $locked->reserved_quantity += $amount;
             $locked->save();
 

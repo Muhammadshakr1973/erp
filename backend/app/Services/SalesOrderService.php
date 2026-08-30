@@ -403,20 +403,44 @@ class SalesOrderService
         // Sort items deterministically by product_id ASC to eliminate deadlock risks
         $sortedItems = $order->items->sortBy('product_id');
         foreach ($sortedItems as $item) {
+            // ١. قفڵکردنی ڕیزی ستۆکی پەیوەندیدار (Step 1: Lock the stock row)
             $warehouseStock = WarehouseStock::lockForUpdate()->where([
                 'warehouse_id' => $order->warehouse_id,
                 'product_id' => $item->product_id
             ])->first();
 
-            if ($warehouseStock) {
-                $warehouseStock->adjustStock(
-                    -$item->quantity,
-                    'DELIVERY',
-                    $user->id,
-                    'sales_order',
-                    $order->id
-                );
+            if (!$warehouseStock) {
+                // ٦. ئەگەر کاڵاکە لەم کۆگایەدا نەبوو (Step 6: Throw validation exception if record doesn't exist)
+                throw ValidationException::withMessages([
+                    'stock' => "کاڵای ژمارە {$item->product_id} لەم کۆگایەدا بوونی نییە."
+                ]);
             }
+
+            // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
+            $currentQty = $warehouseStock->quantity;
+
+            // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراو (Step 3: Re-read authoritative reserved quantity)
+            $reservedQty = $warehouseStock->reserved_quantity;
+
+            // ٤. هەژمارکردنی بڕی فیزیکی نوێ دوای کەمکردنەوە (Step 4: Calculate new quantity)
+            $newQty = $currentQty - $item->quantity;
+
+            // ٥. پشکنینی دروستیی گۆڕانکاری داواکراو (Step 5: Validate requested deduction)
+            if ($newQty < 0) {
+                // ٦. هەڵدانی هەڵەی بازرگانی لە کاتی نەبوونی ستۆک (Step 6: Throw business validation exception)
+                throw ValidationException::withMessages([
+                    'stock' => "بڕی پێویست لە ستۆکی فیزیکی کۆگا بەردەست نییە بۆ جێبەجێکردنی فرۆشتن. کاڵا: {$item->product_id}، بەردەست: {$currentQty}، داواکراو: {$item->quantity}"
+                ]);
+            }
+
+            // ٧. ئەنجامدانی کردارەکە پاش سەرکەوتنی پشکنینەکان (Step 7: Only then modify stock)
+            $warehouseStock->adjustStock(
+                -$item->quantity,
+                'DELIVERY',
+                $user->id,
+                'sales_order',
+                $order->id
+            );
         }
     }
 

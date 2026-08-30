@@ -389,4 +389,75 @@ class InventoryStockEngineTest extends TestCase
         $this->assertEquals(5, WarehouseStock::where('product_id', $product1->id)->first()->reserved_quantity);
         $this->assertEquals(5, WarehouseStock::where('product_id', $product2->id)->first()->reserved_quantity);
     }
+
+    /** @test */
+    public function test_stock_exact_and_less_and_greater_than_available()
+    {
+        $stock = WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'reserved_quantity' => 2,
+        ]);
+
+        // Available quantity is 10 - 2 = 8
+
+        // 1. Less than available: deducting 5 should succeed (physical qty becomes 5, reserved becomes 0 since max(0, 2 - 5) is 0)
+        $stock->adjustStock(-5, 'DELIVERY', $this->admin->id);
+        $this->assertEquals(5, $stock->fresh()->quantity);
+        $this->assertEquals(0, $stock->fresh()->reserved_quantity);
+
+        // Reset
+        $stock->update(['quantity' => 10, 'reserved_quantity' => 2]);
+
+        // 2. Exact available: deducting 10 (which is the physical quantity) should succeed (physical qty becomes 0, reserved becomes 0)
+        $stock->fresh()->adjustStock(-10, 'DELIVERY', $this->admin->id);
+        $this->assertEquals(0, $stock->fresh()->quantity);
+        $this->assertEquals(0, $stock->fresh()->reserved_quantity);
+
+        // Reset
+        $stock->update(['quantity' => 10, 'reserved_quantity' => 2]);
+
+        // 3. Greater than available physical quantity: deducting 11 should fail
+        try {
+            $stock->fresh()->adjustStock(-11, 'DELIVERY', $this->admin->id);
+            $this->fail('Should have thrown ValidationException for exceeding physical stock');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('stock', $e->errors());
+        }
+    }
+
+    /** @test */
+    public function test_concurrent_deduction_and_rollback()
+    {
+        $stock = WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 15,
+            'reserved_quantity' => 0,
+        ]);
+
+        // Scenario: Two transactions try to deduct stock concurrently.
+        // We simulate a rollback inside a transaction when deduction exceeds available stock.
+        DB::transaction(function () use ($stock) {
+            $lockedStock = WarehouseStock::lockForUpdate()->find($stock->id);
+            $lockedStock->adjustStock(-10, 'DELIVERY', $this->admin->id);
+            $this->assertEquals(5, $lockedStock->fresh()->quantity);
+        });
+
+        // The above deduction succeeded. Now we start another transaction that attempts to deduct more than remaining.
+        try {
+            DB::transaction(function () use ($stock) {
+                $lockedStock = WarehouseStock::lockForUpdate()->find($stock->id);
+                // Attempting to deduct 10 when only 5 is remaining must throw validation exception and roll back
+                $lockedStock->adjustStock(-10, 'DELIVERY', $this->admin->id);
+            });
+            $this->fail('Deduction should have thrown ValidationException');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('stock', $e->errors());
+        }
+
+        // Assert that the second transaction rolled back and quantity remained 5
+        $this->assertEquals(5, $stock->fresh()->quantity);
+    }
 }
