@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class PurchaseRequirement extends Model
 {
     use HasFactory;
-    protected $fillable = ['product_id', 'warehouse_id', 'supplier_id', 'required_quantity', 'current_stock', 'suggested_quantity', 'is_urgent', 'status', 'created_by', 'sales_order_id'];
+    protected $fillable = ['product_id', 'warehouse_id', 'supplier_id', 'required_quantity', 'current_stock', 'suggested_quantity', 'is_urgent', 'status', 'created_by', 'sales_order_id', 'purchase_order_id'];
     protected $casts = [
         'is_urgent' => 'boolean',
         'required_quantity' => 'integer',
         'current_stock' => 'integer',
         'suggested_quantity' => 'integer',
+        'sales_order_id' => 'integer',
+        'purchase_order_id' => 'integer',
     ];
     const STATUS_OPEN = 'OPEN';
     const STATUS_PENDING = 'OPEN';
@@ -35,6 +37,10 @@ class PurchaseRequirement extends Model
     public function salesOrder()
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
+    }
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
     public function creator()
     {

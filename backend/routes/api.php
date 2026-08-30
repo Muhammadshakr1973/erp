@@ -124,6 +124,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/purchase-orders/{id}', [PurchaseOrderController::class, 'show'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:suppliers.manage');
         Route::post('/purchase-orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware(['permission:suppliers.manage', 'idempotent']);
+        Route::post('/purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware(['permission:suppliers.manage', 'idempotent']);
         
         Route::get('/purchase-requirements', [PurchaseRequirementController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::get('/purchase-requirements/group', [PurchaseRequirementController::class, 'group'])->middleware('permission:suppliers.manage');

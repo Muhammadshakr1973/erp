@@ -215,6 +215,41 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
   }
 
+  void _cancelPO(PurchaseOrderModel order) async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'هەڵوەشاندنەوەی پسوڵەی کڕین',
+      message:
+          'ئایا دڵنیایت لە هەڵوەشاندنەوەی پسوڵەی کڕینی #${order.orderNumber}؟ بەم کارە داواکارییەکان دەگەڕێنەوە لیستی داواکاری کراوە.',
+      confirmText: 'هەڵوەشاندنەوە',
+      cancelText: 'پەشیمانبوونەوە',
+      isDestructive: true,
+    );
+
+    if (confirmed == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('پسوڵەی کڕین هەڵدەوەشێنرێتەوە...')),
+      );
+      try {
+        await ref.read(purchaseActionsProvider).cancelPurchaseOrder(order.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('پسوڵەی کڕین بەسەرکەوتوویی هەڵوەشێنرایەوە'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PermissionGuard(
@@ -579,11 +614,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       StatusBadge(
-                        label: isDraft ? 'چاوەڕوانە' : 'وەرگیراوە',
+                        label: isDraft ? 'چاوەڕوانە' : (order.status.toUpperCase() == 'CANCELLED' ? 'هەڵوەشاوە' : 'وەرگیراوە'),
                         type: isDraft
                             ? StatusBadgeType.warning
-                            : StatusBadgeType.success,
+                            : (order.status.toUpperCase() == 'CANCELLED' ? StatusBadgeType.error : StatusBadgeType.success),
                       ),
+                      if (isDraft)
+                        IconButton(
+                          icon: const Icon(Icons.cancel_outlined, color: AppColors.error),
+                          tooltip: 'هەڵوەشاندنەوە',
+                          onPressed: () => _cancelPO(order),
+                        ),
                       if (isDraft)
                         const Padding(
                           padding: EdgeInsets.only(right: 4.0),

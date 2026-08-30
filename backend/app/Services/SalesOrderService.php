@@ -406,6 +406,10 @@ class SalesOrderService
                     if (in_array($currentStatus, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_IN_DELIVERY])) {
                         $this->releaseStock($lockedOrder, $user);
                     }
+                    // Close any open purchase requirements linked to this cancelled order
+                    PurchaseRequirement::where('sales_order_id', $lockedOrder->id)
+                        ->where('status', 'OPEN')
+                        ->update(['status' => 'CLOSED']);
                     // Delivery Synchronization
                     $this->syncDeliveryOnCancellation($lockedOrder);
                     break;

@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\Purchase\StorePurchaseOrderRequest;
 use App\Models\PurchaseOrder;
 use App\Services\PurchaseOrderService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
 {
@@ -90,6 +91,26 @@ class PurchaseOrderController extends Controller
         return response()->json([
             'message' => 'کاڵاکان بەسەرکەوتوویی وەرگیران و ستۆک زیاد کرا',
             'data'    => $completedOrder
+        ], 200);
+    }
+
+    public function cancel(Request $request, $id): JsonResponse
+    {
+        $order = PurchaseOrder::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم پسوڵەی کڕینە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $cancelledOrder = $this->purchaseService->cancelOrder($order, $user);
+
+        return response()->json([
+            'message' => 'پسوڵەی کڕین بەسەرکەوتوویی هەڵوەشێنرایەوە',
+            'data'    => $cancelledOrder
         ], 200);
     }
 }

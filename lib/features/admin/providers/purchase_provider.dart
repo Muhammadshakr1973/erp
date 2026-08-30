@@ -69,4 +69,16 @@ class PurchaseActions {
       throw Exception(apiClient.parseError(e));
     }
   }
+
+  Future<void> cancelPurchaseOrder(int orderId) async {
+    final apiClient = _ref.read(apiClientProvider);
+    try {
+      await apiClient.client.post('/purchase-orders/$orderId/cancel');
+      // Invalidate both lists
+      _ref.invalidate(purchaseOrdersProvider);
+      _ref.invalidate(purchaseRequirementsProvider);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
 }

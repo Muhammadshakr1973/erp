@@ -133,7 +133,10 @@ class PurchaseRequirementController extends Controller
                         ]);
 
                         // ئەپدەیتی دۆخی داواکارییەکە بۆ ORDERED
-                        $req->update(['status' => 'ORDERED']);
+                        $req->update([
+                            'status' => 'ORDERED',
+                            'purchase_order_id' => $purchaseOrder->id
+                        ]);
 
                         // تۆمارکردنی لۆگ لە داتابەیس بۆ چاودێری گۆڕانکارییەکە (Audit Trail)
                         app(\App\Services\AuditService::class)->log([

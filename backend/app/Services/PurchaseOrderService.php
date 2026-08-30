@@ -73,8 +73,12 @@ class PurchaseOrderService
      */
     public function receiveOrder(PurchaseOrder $order, $user): PurchaseOrder
     {
-        if ($order->status === 'RECEIVED') {
+        if ($order->status === PurchaseOrder::STATUS_RECEIVED || $order->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
             throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر وەرگیراوە.']);
+        }
+
+        if ($order->status === PurchaseOrder::STATUS_CANCELLED) {
+            throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی هەڵوەشاوە وەربگیرێت.']);
         }
 
         return DB::transaction(function () use ($order, $user) {
@@ -132,6 +136,9 @@ class PurchaseOrderService
                 'received_at' => now(),
             ]);
 
+            // دۆخی داواکارییەکانی کڕینی پەیوەستکراو دادەخرێت
+            $order->requirements()->update(['status' => 'CLOSED']);
+
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'RECEIVE',
                 'entity_type' => 'PurchaseOrder',
@@ -148,6 +155,44 @@ class PurchaseOrderService
                     'total_amount'     => $order->total_amount,
                 ],
                 'description' => "کاڵاکانی پسوڵەی کڕین {$order->order_number} بە سەرکەوتوویی وەرگیران لە کۆگا و ستۆک زیادکرا",
+                'user'        => $user,
+            ]);
+
+            return $order;
+        });
+    }
+
+    /**
+     * هەڵوەشاندنەوەی پسوڵەی کڕین
+     */
+    public function cancelOrder(PurchaseOrder $order, $user): PurchaseOrder
+    {
+        if ($order->status === PurchaseOrder::STATUS_RECEIVED || $order->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
+            throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی کڕین هەڵبوەشێنرێتەوە چونکە پێشتر وەرگیراوە.']);
+        }
+
+        if ($order->status === PurchaseOrder::STATUS_CANCELLED) {
+            throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر هەڵوەشاوەتەوە.']);
+        }
+
+        return DB::transaction(function () use ($order, $user) {
+            $oldStatus = $order->status;
+            $order->update(['status' => PurchaseOrder::STATUS_CANCELLED]);
+
+            // داواکارییەکانی کڕین دەکرێنەوە بۆ ئەوەی دووبارە بکرێن بە پسوڵە ئەگەر پێویست بکات
+            $order->requirements()->update([
+                'status' => 'OPEN',
+                'purchase_order_id' => null
+            ]);
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'CANCEL',
+                'entity_type' => 'PurchaseOrder',
+                'entity_id'   => $order->id,
+                'table_name'  => 'purchase_orders',
+                'old_values'  => ['status' => $oldStatus],
+                'new_values'  => ['status' => PurchaseOrder::STATUS_CANCELLED],
+                'description' => "پسوڵەی کڕینی {$order->order_number} هەڵوەشێنرایەوە",
                 'user'        => $user,
             ]);
 
