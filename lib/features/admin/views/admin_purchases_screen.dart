@@ -12,7 +12,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
-import '../models/purchase_requirement_model.dart';
 import '../models/purchase_order_model.dart';
 import '../providers/purchase_provider.dart';
 import 'supplier_form_dialog.dart';
@@ -78,16 +77,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       isDanger: true,
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       try {
         await ref.read(supplierActionsProvider).deleteSupplier(supplier.id);
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('کۆمپانیا بە سەرکەوتوویی سڕایەوە')),
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text('کێشە لە سڕینەوە: $e')));
         }
@@ -139,7 +138,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       },
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       setState(() {
         _isConverting = true;
       });
@@ -153,7 +152,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         setState(() {
           _selectedRequirementIds.clear();
         });
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -164,13 +163,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
           );
         }
       } finally {
-        if (context.mounted) {
+        if (mounted) {
           setState(() {
             _isConverting = false;
           });
@@ -189,13 +188,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       cancelText: 'پەشیمانبوونەوە',
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('داواکارییەکە جێبەجێ دەکرێت...')),
       );
       try {
         await ref.read(purchaseActionsProvider).receivePurchaseOrder(order.id);
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -206,7 +205,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
           );
@@ -223,16 +222,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           'ئایا دڵنیایت لە هەڵوەشاندنەوەی پسوڵەی کڕینی #${order.orderNumber}؟ بەم کارە داواکارییەکان دەگەڕێنەوە لیستی داواکاری کراوە.',
       confirmText: 'هەڵوەشاندنەوە',
       cancelText: 'پەشیمانبوونەوە',
-      isDestructive: true,
+      isDanger: true,
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('پسوڵەی کڕین هەڵدەوەشێنرێتەوە...')),
       );
       try {
         await ref.read(purchaseActionsProvider).cancelPurchaseOrder(order.id);
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('پسوڵەی کڕین بەسەرکەوتوویی هەڵوەشێنرایەوە'),
@@ -241,7 +240,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
           );
@@ -617,11 +616,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         label: isDraft ? 'چاوەڕوانە' : (order.status.toUpperCase() == 'CANCELLED' ? 'هەڵوەشاوە' : 'وەرگیراوە'),
                         type: isDraft
                             ? StatusBadgeType.warning
-                            : (order.status.toUpperCase() == 'CANCELLED' ? StatusBadgeType.error : StatusBadgeType.success),
+                            : (order.status.toUpperCase() == 'CANCELLED' ? StatusBadgeType.danger : StatusBadgeType.success),
                       ),
                       if (isDraft)
                         IconButton(
-                          icon: const Icon(Icons.cancel_outlined, color: AppColors.error),
+                          icon: const Icon(Icons.cancel_outlined, color: AppColors.danger),
                           tooltip: 'هەڵوەشاندنەوە',
                           onPressed: () => _cancelPO(order),
                         ),
@@ -708,7 +707,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
