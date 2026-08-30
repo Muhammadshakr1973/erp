@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
 import 'app_text_field.dart';
@@ -24,7 +23,7 @@ class AppSearchFilterBar extends StatelessWidget {
   final Widget? trailing;
 
   const AppSearchFilterBar({
-    Key? key,
+    super.key,
     this.searchHint = 'گەڕان...',
     this.onSearchChanged,
     this.searchController,
@@ -33,7 +32,7 @@ class AppSearchFilterBar extends StatelessWidget {
     this.onFiltersChanged,
     this.onClearSearch,
     this.trailing,
-  }) : super(key: key);
+  });
 
   void _onChipToggled(String filterId, bool isSelected) {
     if (onFiltersChanged == null || selectedFilterIds == null) return;
@@ -123,7 +122,7 @@ class AppSearchFilterBar extends StatelessWidget {
                     selectedShadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: AppRadius.radiusPill,
-                      borderSide: BorderSide(
+                      side: BorderSide(
                         color: isSelected
                             ? theme.colorScheme.primary
                             : theme.colorScheme.outline.withValues(alpha: 0.5),
