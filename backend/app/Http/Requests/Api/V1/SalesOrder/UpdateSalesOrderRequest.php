@@ -17,6 +17,8 @@ class UpdateSalesOrderRequest extends FormRequest
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'discount_type' => ['nullable', 'string', 'in:PERCENT,FIXED,percent,fixed'],
             'notes' => ['nullable', 'string'],
 
             // داواکردنی ئایتمەکانی پسوڵەکە (لانی کەم دەبێت ١ کاڵای تێدابێت)

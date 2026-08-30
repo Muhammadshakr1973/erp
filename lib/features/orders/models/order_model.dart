@@ -50,8 +50,11 @@ class OrderModel {
   final int salesmanId;
   final int? warehouseId;
   final double subtotal;
+  final double permanentDiscountPercent;
+  final double permanentDiscountAmount;
   final double discountAmount;
   final double discountPercent;
+  final String discountType;
   final double totalAmount;
   final double totalProfit;
   final String status;
@@ -69,8 +72,11 @@ class OrderModel {
     required this.salesmanId,
     this.warehouseId,
     required this.subtotal,
+    this.permanentDiscountPercent = 0.0,
+    this.permanentDiscountAmount = 0.0,
     required this.discountAmount,
     required this.discountPercent,
+    this.discountType = 'PERCENT',
     required this.totalAmount,
     required this.totalProfit,
     required this.status,
@@ -97,10 +103,21 @@ class OrderModel {
       salesmanId: json['salesman_id'] ?? 0,
       warehouseId: json['warehouse_id'],
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
+      permanentDiscountPercent:
+          double.tryParse(
+            json['permanent_discount_percent']?.toString() ?? '0',
+          ) ??
+          0.0,
+      permanentDiscountAmount:
+          double.tryParse(
+            json['permanent_discount_amount']?.toString() ?? '0',
+          ) ??
+          0.0,
       discountAmount:
           double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0.0,
       discountPercent:
           double.tryParse(json['discount_percent']?.toString() ?? '0') ?? 0.0,
+      discountType: (json['discount_type'] ?? 'PERCENT').toString(),
       totalAmount:
           double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
       totalProfit:

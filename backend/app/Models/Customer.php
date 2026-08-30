@@ -12,8 +12,8 @@ use App\Models\Traits\Auditable;
 class Customer extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
-    protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
-    protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'is_active' => 'boolean', 'visit_order' => 'integer'];
+    protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
+    protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'permanent_discount' => 'decimal:2', 'is_active' => 'boolean', 'visit_order' => 'integer'];
     const PRICE_N1 = 'N1';
     const PRICE_N2 = 'N2';
     const PRICE_N3 = 'N3';
@@ -55,11 +55,36 @@ class Customer extends Model
     }
     public function getCurrentPriceForProduct(Product $product): int
     {
-        $special = $this->specialPrices()->where('product_id', $product->id)->where(function ($q) {
-            $q->whereNull('end_date')->orWhere('end_date', '>=', now());
-        })->first();
-        if ($special) return $special->price;
-        return $product->getPriceForType($this->price_type);
+        return $this->getPriceDetailsForProduct($product)['price'];
+    }
+
+    public function getPriceDetailsForProduct(Product $product): array
+    {
+        $today = now()->toDateString();
+        $special = $this->specialPrices()
+            ->where('product_id', $product->id)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+            })
+            ->first();
+
+        if ($special) {
+            return [
+                'price' => (int) $special->price,
+                'price_type' => 'SPECIAL',
+            ];
+        }
+
+        $tier = strtoupper($this->price_type ?? 'N2');
+        $effectiveTier = in_array($tier, ['N1', 'N2', 'N3']) ? $tier : 'N2';
+
+        return [
+            'price' => (int) $product->getPriceForType($effectiveTier),
+            'price_type' => $effectiveTier,
+        ];
     }
 
     public function reconcileBalance(): array

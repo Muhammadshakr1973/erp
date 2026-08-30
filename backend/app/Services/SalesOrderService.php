@@ -57,11 +57,14 @@ class SalesOrderService
                 'warehouse_id' => $data['warehouse_id'],
                 'order_date' => now()->toDateString(),
                 'status' => SalesOrder::STATUS_DRAFT,
-                'discount_percent' => $data['discount_percent'] ?? 0,
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $user->id,
                 'subtotal' => 0,
+                'permanent_discount_percent' => 0,
+                'permanent_discount_amount' => 0,
+                'discount_percent' => 0,
                 'discount_amount' => 0,
+                'discount_type' => 'PERCENT',
                 'total_amount' => 0,
                 'total_profit' => 0,
             ]);
@@ -71,21 +74,34 @@ class SalesOrderService
 
             // پاشەکەوتکردنی کاڵاکان بە شێوەی سێریاڵ
             foreach ($data['items'] as $item) {
+                $quantity = (int) $item['quantity'];
+                if ($quantity <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                    ]);
+                }
+
                 $product = Product::findOrFail($item['product_id']);
 
                 // دیاریکردنی نرخ بەپێی تایپ و کڕیار (تۆمارکردنی مێژوویی - Snapshot)
-                $unitPrice = $customer->getCurrentPriceForProduct($product);
+                $priceDetails = $customer->getPriceDetailsForProduct($product);
+                $unitPrice = (int) $priceDetails['price'];
+                $priceType = $priceDetails['price_type'];
+                $costPrice = (int) $product->cost_price; // Snapshot نرخی کڕین
 
-                $lineTotal = $unitPrice * $item['quantity'];
-                $profit = ($unitPrice - $product->cost_price) * $item['quantity'];
+                $lineTotal = $unitPrice * $quantity;
+                $profit = ($unitPrice - $costPrice) * $quantity;
 
                 $order->items()->create([
                     'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'unit_price' => $unitPrice,
-                    'cost_price' => $product->cost_price, // Snapshot
-                    'price_type' => $customer->price_type,
+                    'cost_price' => $costPrice, // Snapshot
+                    'price_type' => $priceType,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
                     'line_total' => $lineTotal,
+                    'total_price' => $lineTotal,
                     'profit' => $profit,
                     'is_packed' => false,
                 ]);
@@ -94,16 +110,37 @@ class SalesOrderService
                 $totalProfit += $profit;
             }
 
-            // هەژمارکردنی داشکاندن و نرخی کۆتایی پسوڵە
-            $discountAmount = 0;
-            if ($order->discount_percent > 0) {
-                $discountAmount = ($subtotal * $order->discount_percent) / 100;
+            // ١. داشکاندنی بەردەوامی کڕیار (Permanent Customer Discount)
+            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountAmount = 0;
+            if ($permDiscountPercent > 0) {
+                $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
             }
-            $totalAmount = $subtotal - $discountAmount;
+            $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
+
+            // ٢. داشکاندنی تایبەت بەم پسوڵەیە (Invoice / Order Discount)
+            $discountType = strtoupper($data['discount_type'] ?? 'PERCENT');
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : 0.0;
+            $invoiceDiscountAmount = 0;
+
+            if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
+                $discountType = 'FIXED';
+                $fixedAmount = (int) ($data['discount_amount'] ?? 0);
+                $invoiceDiscountAmount = min($amountAfterPermDiscount, max(0, $fixedAmount));
+            } elseif ($invoiceDiscountPercent > 0) {
+                $discountType = 'PERCENT';
+                $invoiceDiscountAmount = (int) round(($amountAfterPermDiscount * $invoiceDiscountPercent) / 100);
+            }
+
+            $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
 
             $order->update([
                 'subtotal' => $subtotal,
-                'discount_amount' => $discountAmount,
+                'permanent_discount_percent' => $permDiscountPercent,
+                'permanent_discount_amount' => $permDiscountAmount,
+                'discount_percent' => $invoiceDiscountPercent,
+                'discount_amount' => $invoiceDiscountAmount,
+                'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
                 'total_profit' => $totalProfit,
             ]);
@@ -139,7 +176,6 @@ class SalesOrderService
 
             // Update basic info
             $order->update([
-                'discount_percent' => $data['discount_percent'] ?? $order->discount_percent,
                 'notes' => $data['notes'] ?? $order->notes,
                 'warehouse_id' => $data['warehouse_id'] ?? $order->warehouse_id,
             ]);
@@ -151,18 +187,32 @@ class SalesOrderService
             $totalProfit = 0;
 
             foreach ($data['items'] as $item) {
+                $quantity = (int) $item['quantity'];
+                if ($quantity <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                    ]);
+                }
+
                 $product = Product::findOrFail($item['product_id']);
-                $unitPrice = $customer->getCurrentPriceForProduct($product);
-                $lineTotal = $unitPrice * $item['quantity'];
-                $profit = ($unitPrice - $product->cost_price) * $item['quantity'];
+                $priceDetails = $customer->getPriceDetailsForProduct($product);
+                $unitPrice = (int) $priceDetails['price'];
+                $priceType = $priceDetails['price_type'];
+                $costPrice = (int) $product->cost_price;
+
+                $lineTotal = $unitPrice * $quantity;
+                $profit = ($unitPrice - $costPrice) * $quantity;
 
                 $order->items()->create([
                     'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'unit_price' => $unitPrice,
-                    'cost_price' => $product->cost_price,
-                    'price_type' => $customer->price_type,
+                    'cost_price' => $costPrice,
+                    'price_type' => $priceType,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
                     'line_total' => $lineTotal,
+                    'total_price' => $lineTotal,
                     'profit' => $profit,
                     'is_packed' => false,
                 ]);
@@ -171,15 +221,37 @@ class SalesOrderService
                 $totalProfit += $profit;
             }
 
-            $discountAmount = 0;
-            if ($order->discount_percent > 0) {
-                $discountAmount = ($subtotal * $order->discount_percent) / 100;
+            // ١. داشکاندنی بەردەوامی کڕیار (Permanent Customer Discount)
+            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountAmount = 0;
+            if ($permDiscountPercent > 0) {
+                $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
             }
-            $totalAmount = $subtotal - $discountAmount;
+            $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
+
+            // ٢. داشکاندنی تایبەت بەم پسوڵەیە (Invoice / Order Discount)
+            $discountType = strtoupper($data['discount_type'] ?? ($order->discount_type ?? 'PERCENT'));
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : (float) $order->discount_percent;
+            $invoiceDiscountAmount = 0;
+
+            if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
+                $discountType = 'FIXED';
+                $fixedAmount = isset($data['discount_amount']) ? (int)$data['discount_amount'] : (int)$order->discount_amount;
+                $invoiceDiscountAmount = min($amountAfterPermDiscount, max(0, $fixedAmount));
+            } elseif ($invoiceDiscountPercent > 0) {
+                $discountType = 'PERCENT';
+                $invoiceDiscountAmount = (int) round(($amountAfterPermDiscount * $invoiceDiscountPercent) / 100);
+            }
+
+            $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
 
             $order->update([
                 'subtotal' => $subtotal,
-                'discount_amount' => $discountAmount,
+                'permanent_discount_percent' => $permDiscountPercent,
+                'permanent_discount_amount' => $permDiscountAmount,
+                'discount_percent' => $invoiceDiscountPercent,
+                'discount_amount' => $invoiceDiscountAmount,
+                'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
                 'total_profit' => $totalProfit,
             ]);
@@ -292,15 +364,24 @@ class SalesOrderService
                             $totalProfit += $item->profit;
                         }
 
-                        $discountAmount = 0;
-                        if ($lockedOrder->discount_percent > 0) {
-                            $discountAmount = ($subtotal * $lockedOrder->discount_percent) / 100;
+                        $permDiscountAmount = 0;
+                        if ($lockedOrder->permanent_discount_percent > 0) {
+                            $permDiscountAmount = (int) round(($subtotal * $lockedOrder->permanent_discount_percent) / 100);
                         }
-                        $totalAmount = $subtotal - $discountAmount;
+                        $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
+
+                        $invoiceDiscountAmount = 0;
+                        if ($lockedOrder->discount_type === 'FIXED') {
+                            $invoiceDiscountAmount = min($amountAfterPermDiscount, (int) $lockedOrder->discount_amount);
+                        } elseif ($lockedOrder->discount_percent > 0) {
+                            $invoiceDiscountAmount = (int) round(($amountAfterPermDiscount * $lockedOrder->discount_percent) / 100);
+                        }
+                        $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
 
                         $lockedOrder->update([
                             'subtotal' => $subtotal,
-                            'discount_amount' => $discountAmount,
+                            'permanent_discount_amount' => $permDiscountAmount,
+                            'discount_amount' => $invoiceDiscountAmount,
                             'total_amount' => $totalAmount,
                             'total_profit' => $totalProfit,
                         ]);

@@ -27,6 +27,7 @@ class UpdateCustomerRequest extends FormRequest
             'latitude'   => ['nullable', 'numeric'],
             'longitude'  => ['nullable', 'numeric'],
             'price_type' => ['nullable', 'in:N1,N2,N3'],
+            'permanent_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active'  => ['boolean'],
         ];
     }

@@ -12,6 +12,7 @@ class Customer {
   final int? salesmanId;
   final int? routeId;
   final String? priceType;
+  final double permanentDiscount;
   final bool isActive;
   final double? latitude;
   final double? longitude;
@@ -30,6 +31,7 @@ class Customer {
     this.salesmanId,
     this.routeId,
     this.priceType = 'N2',
+    this.permanentDiscount = 0.0,
     this.isActive = true,
     this.latitude,
     this.longitude,
@@ -57,6 +59,9 @@ class Customer {
       salesmanId: json['salesman_id'],
       routeId: json['route_id'],
       priceType: json['price_type'] ?? 'N2',
+      permanentDiscount:
+          double.tryParse(json['permanent_discount']?.toString() ?? '0') ??
+          0.0,
       isActive:
           json['is_active'] == 1 ||
           json['is_active'] == true ||

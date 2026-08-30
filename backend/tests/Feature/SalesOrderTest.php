@@ -610,4 +610,126 @@ class SalesOrderTest extends TestCase
         ]);
         $response->assertStatus(422);
     }
+
+    /** @test */
+    public function it_calculates_price_tiers_and_snapshots_historical_prices_correctly()
+    {
+        // 1. Customer with tier N1
+        $this->customer->update(['price_type' => 'N1']);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::with('items')->latest('id')->first();
+        $this->assertEquals(16000, $order->subtotal); // 2 * 8000 (price_n1)
+        $this->assertEquals(16000, $order->total_amount);
+        $this->assertEquals(6000, $order->total_profit); // (8000 - 5000) * 2
+
+        $item = $order->items->first();
+        $this->assertEquals(8000, $item->unit_price);
+        $this->assertEquals(5000, $item->cost_price);
+        $this->assertEquals(16000, $item->line_total);
+        $this->assertEquals(6000, $item->profit);
+
+        // Change product price now, old order and item must NOT change
+        $this->product->update([
+            'price_n1' => 12000,
+            'cost_price' => 9000,
+        ]);
+
+        $order->refresh();
+        $item->refresh();
+        $this->assertEquals(16000, $order->subtotal);
+        $this->assertEquals(8000, $item->unit_price);
+        $this->assertEquals(5000, $item->cost_price);
+    }
+
+    /** @test */
+    public function it_applies_active_special_customer_price_over_standard_tier()
+    {
+        // Add special price of 6500 for customer and product
+        \App\Models\CustomerSpecialPrice::create([
+            'customer_id' => $this->customer->id,
+            'product_id' => $this->product->id,
+            'price' => 6500,
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::with('items')->latest('id')->first();
+        $this->assertEquals(13000, $order->subtotal); // 2 * 6500
+        $this->assertEquals(13000, $order->total_amount);
+        $this->assertEquals(3000, $order->total_profit); // (6500 - 5000) * 2
+
+        $item = $order->items->first();
+        $this->assertEquals(6500, $item->unit_price);
+        $this->assertEquals('SPECIAL', $item->price_type);
+    }
+
+    /** @test */
+    public function it_calculates_permanent_discount_and_invoice_discount_in_proper_order()
+    {
+        // Customer has 10% permanent discount
+        $this->customer->update([
+            'price_type' => 'N2', // Unit price 7500
+            'permanent_discount' => 10,
+        ]);
+
+        // Order has 5% invoice discount
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_percent' => 5,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2, // 2 * 7500 = 15,000 subtotal
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        // Subtotal = 15,000
+        // Permanent Discount 10% = 1,500
+        // Remaining after Perm = 13,500
+        // Invoice Discount 5% of 13,500 = 675
+        // Final Total = 13,500 - 675 = 12,825
+        $this->assertEquals(15000, $order->subtotal);
+        $this->assertEquals(10, (float)$order->permanent_discount_percent);
+        $this->assertEquals(1500, $order->permanent_discount_amount);
+        $this->assertEquals(5, (float)$order->discount_percent);
+        $this->assertEquals(675, $order->discount_amount);
+        $this->assertEquals(12825, $order->total_amount);
+        $this->assertEquals(5000, $order->total_profit); // Profit on items: (7500 - 5000) * 2
+    }
 }
+

@@ -483,8 +483,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
-    final discountAmount = (subtotal * _discountPercent) / 100;
-    final totalAmount = subtotal - discountAmount;
+    final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
+    final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
+    final amountAfterPerm = subtotal - permDiscountAmount;
+    final invoiceDiscountAmount = (amountAfterPerm * _discountPercent) / 100;
+    final totalAmount = amountAfterPerm - invoiceDiscountAmount;
     final cartItemCount = _getCartTotalCount();
 
     return Container(
@@ -577,6 +580,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               children: [
+                if (permDiscountPercent > 0) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'داشکاندنی بەردەوامی کڕیار (${permDiscountPercent.toStringAsFixed(1)}%):',
+                        style: AppTextStyles.caption,
+                      ),
+                      Text(
+                        '-${Formatters.currency(permDiscountAmount)}',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -610,8 +629,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
-    final discountAmount = (subtotal * _discountPercent) / 100;
-    final totalAmount = subtotal - discountAmount;
+    final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
+    final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
+    final amountAfterPerm = subtotal - permDiscountAmount;
+    final invoiceDiscountAmount = (amountAfterPerm * _discountPercent) / 100;
+    final totalAmount = amountAfterPerm - invoiceDiscountAmount;
     final cartItemCount = _getCartTotalCount();
 
     return Container(
@@ -670,8 +692,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final subtotal = _calculateSubtotal(allProducts);
-            final discountAmount = (subtotal * _discountPercent) / 100;
-            final totalAmount = subtotal - discountAmount;
+            final permDiscountPercent =
+                _selectedCustomer?.permanentDiscount ?? 0.0;
+            final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
+            final amountAfterPerm = subtotal - permDiscountAmount;
+            final invoiceDiscountAmount =
+                (amountAfterPerm * _discountPercent) / 100;
+            final totalAmount = amountAfterPerm - invoiceDiscountAmount;
 
             return Padding(
               padding: EdgeInsets.only(
@@ -750,6 +777,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
+                  if (permDiscountPercent > 0) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'داشکاندنی بەردەوامی کڕیار (${permDiscountPercent.toStringAsFixed(1)}%):',
+                          style: AppTextStyles.caption,
+                        ),
+                        Text(
+                          '-${Formatters.currency(permDiscountAmount)}',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                  ],
                   Row(
                     children: [
                       const Text('داشکاندن (%): '),

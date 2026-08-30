@@ -9,8 +9,33 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class SalesOrder extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['order_number', 'customer_id', 'salesman_id', 'warehouse_id', 'status', 'subtotal', 'discount_percent', 'discount_amount', 'total_amount', 'total_profit', 'notes', 'confirmed_at', 'ready_at', 'delivered_at'];
-    protected $casts = ['discount_percent' => 'decimal:2', 'confirmed_at' => 'datetime', 'ready_at' => 'datetime', 'delivered_at' => 'datetime'];
+    protected $fillable = [
+        'order_number',
+        'customer_id',
+        'salesman_id',
+        'warehouse_id',
+        'status',
+        'subtotal',
+        'permanent_discount_percent',
+        'permanent_discount_amount',
+        'discount_percent',
+        'discount_amount',
+        'discount_type',
+        'total_amount',
+        'total_profit',
+        'notes',
+        'confirmed_at',
+        'ready_at',
+        'delivered_at',
+        'created_by',
+    ];
+    protected $casts = [
+        'permanent_discount_percent' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
+        'confirmed_at' => 'datetime',
+        'ready_at' => 'datetime',
+        'delivered_at' => 'datetime',
+    ];
     const STATUS_DRAFT = 'DRAFT';
     const STATUS_CONFIRMED = 'CONFIRMED';
     const STATUS_PACKING = 'PACKING';

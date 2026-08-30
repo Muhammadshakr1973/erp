@@ -223,6 +223,27 @@ class OrderDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (order.permanentDiscountAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'داشکاندنی بەردەوامی کڕیار (${order.permanentDiscountPercent.toStringAsFixed(1)}%)',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      Text(
+                        '- ${Formatters.currency(order.permanentDiscountAmount)}',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: AppColors.danger,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (order.discountAmount > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
@@ -230,7 +251,9 @@ class OrderDetailScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'داشکاندن (${order.discountPercent}%)',
+                        order.discountType == 'FIXED'
+                            ? 'داشکاندنی پسوڵە (بڕی دیاریکراو)'
+                            : 'داشکاندنی پسوڵە (${order.discountPercent}%)',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.danger,
                         ),
