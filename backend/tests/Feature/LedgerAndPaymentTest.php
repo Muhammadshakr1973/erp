@@ -198,4 +198,56 @@ class LedgerAndPaymentTest extends TestCase
         // Verify balance has rolled back and remains untouched
         $this->assertEquals(50000, $this->customer->fresh()->current_balance);
     }
+
+    /** @test */
+    public function test_supplier_balance_and_payment_updates()
+    {
+        // 1. Initially balance is 0
+        $this->assertEquals(0, $this->supplier->fresh()->current_balance);
+
+        // 2. Perform a payment
+        $payload = [
+            'amount' => 3000,
+            'payment_method' => 'cash',
+            'notes' => 'Supplier Payment Test'
+        ];
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/suppliers/{$this->supplier->id}/pay", $payload);
+        $response->assertStatus(200);
+
+        // Balance should decrease by 3000 (meaning -3000)
+        $this->assertEquals(-3000, $this->supplier->fresh()->current_balance);
+
+        // 3. Duplicate payment check (Idempotency)
+        $responseDuplicate = $this->actingAs($this->admin)->postJson("/api/v1/suppliers/{$this->supplier->id}/pay", $payload);
+        $responseDuplicate->assertStatus(200);
+
+        // Because of idempotency within 90 seconds, only 1 ledger and 1 payment entry should exist, and balance remains -3000
+        $this->assertEquals(-3000, $this->supplier->fresh()->current_balance);
+        $this->assertEquals(1, SupplierLedger::where('supplier_id', $this->supplier->id)->count());
+    }
+
+    /** @test */
+    public function test_reconciliation_fixing_discrepancies()
+    {
+        // 1. Customer reconciliation fix
+        // Manually introduce discrepancy
+        $this->customer->update(['current_balance' => 99999]); // Doesn't match ledger (which has 0)
+        
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/customers/{$this->customer->id}/reconcile?fix=true");
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.is_consistent', true);
+        $response->assertJsonPath('data.stored_balance', 0); // Corrected to 0
+        $this->assertEquals(0, $this->customer->fresh()->current_balance);
+
+        // 2. Supplier reconciliation fix
+        // Manually introduce discrepancy
+        $this->supplier->update(['current_balance' => 88888]); // Doesn't match ledger (which has 0)
+
+        $responseSupplier = $this->actingAs($this->admin)->postJson("/api/v1/suppliers/{$this->supplier->id}/reconcile?fix=true");
+        $responseSupplier->assertStatus(200);
+        $responseSupplier->assertJsonPath('data.is_consistent', true);
+        $responseSupplier->assertJsonPath('data.stored_balance', 0); // Corrected to 0
+        $this->assertEquals(0, $this->supplier->fresh()->current_balance);
+    }
 }

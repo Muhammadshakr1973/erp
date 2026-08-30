@@ -94,6 +94,17 @@ class CustomerController extends Controller
             ], 403);
         }
 
+        if ($request->boolean('fix') && $request->user()->isAdmin()) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($customer) {
+                $customer->lockForUpdate();
+                $reconciliation = $customer->reconcileBalance();
+                if (!$reconciliation['is_consistent']) {
+                    $customer->update(['current_balance' => $reconciliation['recalculated_balance']]);
+                }
+            });
+            $customer->refresh();
+        }
+
         $reconciliation = $customer->reconcileBalance();
         
         return response()->json([

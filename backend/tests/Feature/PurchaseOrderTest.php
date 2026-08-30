@@ -117,7 +117,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(2000, $ledger->balance_after);
 
         // Verify supplier debt helper returns correctly
-        $this->assertEquals(2000, $this->supplier->debt);
+        $this->assertEquals(2000, $this->supplier->refresh()->debt);
     }
 
     /** @test */

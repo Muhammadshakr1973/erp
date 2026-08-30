@@ -107,12 +107,7 @@ class PurchaseOrderService
             }
 
             // ٣. هەژمارکردنی قەرزی کۆمپانیا (ئێمە قەرزدار دەبین)
-            // پێویستە لە داتابەیسەکەتدا current_balance بۆ Supplier هەبێت، یان لە لیجەرەوە کۆی بکەیتەوە
-            // بۆ سادەیی، لێرە ڕاستەوخۆ دەیخەینە ناو SupplierLedger بە دۆخی Credit (واتە پارەی لای ئێمەیە)
-
-            // هەژمارکردنی بالانسی پێشوو لە لیجەرەوە (وەک ئەوەی لە CustomerLedger کردمان)
-            $lastLedger = SupplierLedger::where('supplier_id', $supplier->id)->orderByDesc('id')->first();
-            $previousBalance = $lastLedger ? $lastLedger->balance_after : 0;
+            $previousBalance = (int) $supplier->current_balance;
             $newBalance = $previousBalance + $order->total_amount; // قەرزەکەمان زیاد دەکات
 
             SupplierLedger::create([
@@ -129,6 +124,9 @@ class PurchaseOrderService
                 'description'    => "کڕینی کاڵا بە پسوڵەی {$order->order_number}",
                 'created_by'     => $user->id,
             ]);
+
+            // نوێکردنەوەی بالانسی سەپڵایەر لە داتابەیسدا
+            $supplier->update(['current_balance' => $newBalance]);
 
             // ٤. گۆڕینی دۆخی پسوڵەکە بۆ RECEIVED
             $order->update([

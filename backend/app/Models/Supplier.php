@@ -10,8 +10,8 @@ use App\Models\Traits\Auditable;
 class Supplier extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
-    protected $fillable = ['name', 'phone', 'address', 'contact_person', 'is_active'];
-    protected $casts = ['is_active' => 'boolean'];
+    protected $fillable = ['name', 'phone', 'address', 'contact_person', 'is_active', 'current_balance'];
+    protected $casts = ['is_active' => 'boolean', 'current_balance' => 'integer'];
     protected $appends = ['debt'];
 
     public function products()
@@ -32,8 +32,7 @@ class Supplier extends Model
     }
     public function getDebtAttribute(): int
     {
-        $lastLedger = $this->ledger()->orderByDesc('id')->first();
-        return $lastLedger ? (int) $lastLedger->balance_after : 0;
+        return (int) $this->current_balance;
     }
 
     public function reconcileBalance(): array
@@ -59,13 +58,11 @@ class Supplier extends Model
             }
         }
 
-        $lastLedger = $this->ledger()->orderByDesc('id')->first();
-        $lastLedgerBalance = $lastLedger ? $lastLedger->balance_after : 0;
-        $isConsistent = empty($discrepancies) && ($lastLedgerBalance == $recalculatedBalance);
+        $isConsistent = empty($discrepancies) && ($this->current_balance == $recalculatedBalance);
 
         return [
             'is_consistent' => $isConsistent,
-            'last_ledger_balance' => (int) $lastLedgerBalance,
+            'stored_balance' => (int) $this->current_balance,
             'recalculated_balance' => (int) $recalculatedBalance,
             'discrepancies' => $discrepancies,
         ];

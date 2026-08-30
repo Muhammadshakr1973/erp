@@ -48,6 +48,7 @@ class SupplierController extends Controller
                 'phone' => $validated['phone'],
                 'address' => $validated['address'],
                 'contact_person' => $validated['contact_person'],
+                'current_balance' => $validated['initial_debt'] ?? 0,
                 'created_by' => $validated['created_by'] ?? 1,
             ]);
 
@@ -159,8 +160,7 @@ class SupplierController extends Controller
                 'created_by' => $userId,
             ]);
 
-            $lastLedger = SupplierLedger::where('supplier_id', $supplier->id)->orderByDesc('id')->first();
-            $previousBalance = $lastLedger ? $lastLedger->balance_after : 0;
+            $previousBalance = (int) $supplier->current_balance;
             $newBalance = $previousBalance - $validated['amount'];
 
             SupplierLedger::create([
@@ -177,6 +177,9 @@ class SupplierController extends Controller
                 'description' => $validated['notes'] ?? 'تۆمارکردنی پارەدانی قەرز',
                 'created_by' => $userId,
             ]);
+
+            // نوێکردنەوەی بالانسی سەپڵایەر لە داتابەیسدا
+            $supplier->update(['current_balance' => $newBalance]);
 
             // Write audit trail log
             app(\App\Services\AuditService::class)->log([
@@ -218,9 +221,21 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function reconcile($id): JsonResponse
+    public function reconcile(Request $request, $id): JsonResponse
     {
         $supplier = Supplier::findOrFail($id);
+
+        if ($request->boolean('fix') && auth()->user() && auth()->user()->isAdmin()) {
+            DB::transaction(function () use ($supplier) {
+                $supplier->lockForUpdate();
+                $reconciliation = $supplier->reconcileBalance();
+                if (!$reconciliation['is_consistent']) {
+                    $supplier->update(['current_balance' => $reconciliation['recalculated_balance']]);
+                }
+            });
+            $supplier->refresh();
+        }
+
         $reconciliation = $supplier->reconcileBalance();
 
         return response()->json([
