@@ -28,7 +28,7 @@ class PaymentService
             return $existing;
         }
 
-        return DB::transaction(function () use ($data, $user) {
+        $result = DB::transaction(function () use ($data, $user) {
             $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
 
             // Double check inside the transaction lock to prevent concurrent double-submissions

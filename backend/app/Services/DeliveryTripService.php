@@ -25,7 +25,7 @@ class DeliveryTripService
      */
     public function createTrip(array $data, $user): DeliveryTrip
     {
-        return DB::transaction(function () use ($data, $user) {
+        $trip = DB::transaction(function () use ($data, $user) {
 
             $tripNumber = 'TRP-' . strtoupper(Str::random(8));
 

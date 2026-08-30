@@ -35,7 +35,7 @@ class SalesOrderService
             return $existingOrder;
         }
 
-        return DB::transaction(function () use ($data, $user) {
+        $order = DB::transaction(function () use ($data, $user) {
             // ٢. قفڵکردنی ڕیزی کڕیار بۆ ڕێگری لە گۆڕانکاری هاوکات
             $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
 

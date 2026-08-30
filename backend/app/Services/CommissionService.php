@@ -86,7 +86,7 @@ class CommissionService
      */
     public function calculateCommission(array $data, User $user): SalesmanCommission
     {
-        return DB::transaction(function () use ($data, $user) {
+        $result = DB::transaction(function () use ($data, $user) {
             $salesman = User::lockForUpdate()->findOrFail($data['salesman_id']);
 
             $periodFrom = $data['period_from'];
@@ -273,7 +273,7 @@ class CommissionService
      */
     public function payCommission(int $commissionId, User $user, array $paymentData): SalesmanCommission
     {
-        return DB::transaction(function () use ($commissionId, $user, $paymentData) {
+        $result = DB::transaction(function () use ($commissionId, $user, $paymentData) {
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_PAID) {
