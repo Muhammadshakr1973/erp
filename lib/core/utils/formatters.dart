@@ -1,11 +1,10 @@
-import 'package:pos_app/core/utils/formatters.dart';
 import 'package:intl/intl.dart';
 
 class Formatters {
   static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
 
   static String currency(num amount) {
-    return '${Formatters.currency(_currencyFormat.format(amount))}';
+    return '${_currencyFormat.format(amount)} د.ع';
   }
 
   static String number(num value) {

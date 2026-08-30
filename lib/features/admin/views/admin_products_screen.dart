@@ -2,6 +2,7 @@ import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -427,7 +428,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        '${Formatters.currency(product.priceN1)}',
+                                        Formatters.currency(product.priceN1),
                                         style: AppTextStyles.bodyBold.copyWith(
                                           color: isLowStock
                                               ? AppColors.danger
