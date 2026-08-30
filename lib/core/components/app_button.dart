@@ -16,6 +16,7 @@ class AppButton extends StatelessWidget {
   final AppButtonSize size;
   final bool isLoading;
   final IconData? icon;
+  final double? width;
 
   const AppButton({
     Key? key,
@@ -25,6 +26,7 @@ class AppButton extends StatelessWidget {
     this.size = AppButtonSize.md,
     this.isLoading = false,
     this.icon,
+    this.width = double.infinity,
   }) : super(key: key);
 
   @override
@@ -122,7 +124,7 @@ class AppButton extends StatelessWidget {
 
     return SizedBox(
       height: height,
-      width: double.infinity,
+      width: width,
       child: type == AppButtonType.outline
           ? OutlinedButton(
               onPressed: isDisabled ? null : onPressed,

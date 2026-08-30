@@ -71,6 +71,7 @@ void main() {
         warehouseName: 'کۆگای سەرەکی',
         productId: 101,
         productName: 'شامپۆی برۆکس',
+        barcode: '12345678',
         quantity: 15,
         reservedQuantity: 2,
       )
