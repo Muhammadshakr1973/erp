@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -34,8 +35,10 @@ class WarehouseDashboardScreen extends ConsumerWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 int crossAxisCount = 2;
-                if (constraints.maxWidth >= 1024) crossAxisCount = 4;
-                else if (constraints.maxWidth >= 600) crossAxisCount = 3;
+                if (constraints.maxWidth >= 1024)
+                  crossAxisCount = 4;
+                else if (constraints.maxWidth >= 600)
+                  crossAxisCount = 3;
 
                 return GridView.count(
                   crossAxisCount: crossAxisCount,

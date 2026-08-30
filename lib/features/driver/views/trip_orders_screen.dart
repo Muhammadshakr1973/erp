@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/status_badge.dart';
@@ -28,7 +29,8 @@ class TripOrdersScreen extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
               itemCount: 8,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final isDelivered = index < 3;
                 return AppCard(
@@ -38,17 +40,26 @@ class TripOrdersScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('مارکێتی ژمارە ${index + 1}', style: AppTextStyles.bodyBold),
+                          Text(
+                            'مارکێتی ژمارە ${index + 1}',
+                            style: AppTextStyles.bodyBold,
+                          ),
                           StatusBadge(
                             label: isDelivered ? 'گەیشتووە' : 'لە گەیاندنە',
-                            type: isDelivered ? StatusBadgeType.success : StatusBadgeType.warning,
+                            type: isDelivered
+                                ? StatusBadgeType.success
+                                : StatusBadgeType.warning,
                           ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Text('گەڕەکی بەختیاری', style: AppTextStyles.caption),
                         ],
@@ -101,7 +112,9 @@ class TripOrdersScreen extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: AppTextStyles.h2.copyWith(color: color ?? AppColors.textPrimaryLight),
+          style: AppTextStyles.h2.copyWith(
+            color: color ?? AppColors.textPrimaryLight,
+          ),
         ),
       ],
     );

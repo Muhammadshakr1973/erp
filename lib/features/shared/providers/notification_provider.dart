@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../../../core/network/api_constants.dart';
 import '../models/notification_model.dart';
@@ -10,18 +11,24 @@ final unreadNotificationsCountProvider = StateProvider<int>((ref) => 0);
 final notificationFilterTypeProvider = StateProvider<String?>((ref) => null);
 
 // Notifications list provider
-final notificationsListProvider = StateNotifierProvider<NotificationsNotifier, AsyncValue<List<AppNotification>>>((ref) {
-  final api = ref.watch(apiClientProvider);
-  final filterType = ref.watch(notificationFilterTypeProvider);
-  return NotificationsNotifier(api, ref, filterType);
-});
+final notificationsListProvider =
+    StateNotifierProvider<
+      NotificationsNotifier,
+      AsyncValue<List<AppNotification>>
+    >((ref) {
+      final api = ref.watch(apiClientProvider);
+      final filterType = ref.watch(notificationFilterTypeProvider);
+      return NotificationsNotifier(api, ref, filterType);
+    });
 
-class NotificationsNotifier extends StateNotifier<AsyncValue<List<AppNotification>>> {
+class NotificationsNotifier
+    extends StateNotifier<AsyncValue<List<AppNotification>>> {
   final ApiClient _api;
   final Ref _ref;
   final String? _filterType;
 
-  NotificationsNotifier(this._api, this._ref, this._filterType) : super(const AsyncValue.loading()) {
+  NotificationsNotifier(this._api, this._ref, this._filterType)
+    : super(const AsyncValue.loading()) {
     loadNotifications();
   }
 
@@ -40,14 +47,22 @@ class NotificationsNotifier extends StateNotifier<AsyncValue<List<AppNotificatio
 
       if (response.statusCode == 200) {
         final List list = response.data['data'] ?? [];
-        final items = list.map((json) => AppNotification.fromJson(json)).toList();
-        
-        final unreadCount = response.data['unread_count'] as int? ?? items.where((n) => !n.isRead).length;
-        _ref.read(unreadNotificationsCountProvider.notifier).state = unreadCount;
+        final items = list
+            .map((json) => AppNotification.fromJson(json))
+            .toList();
+
+        final unreadCount =
+            response.data['unread_count'] as int? ??
+            items.where((n) => !n.isRead).length;
+        _ref.read(unreadNotificationsCountProvider.notifier).state =
+            unreadCount;
 
         state = AsyncValue.data(items);
       } else {
-        state = AsyncValue.error('هەڵەی وەرگرتنی ئاگادارکردنەوەکان', StackTrace.current);
+        state = AsyncValue.error(
+          'هەڵەی وەرگرتنی ئاگادارکردنەوەکان',
+          StackTrace.current,
+        );
       }
     } catch (e, stack) {
       state = AsyncValue.error(_api.parseError(e), stack);
@@ -75,7 +90,9 @@ class NotificationsNotifier extends StateNotifier<AsyncValue<List<AppNotificatio
     }
 
     try {
-      await _api.client.post('${ApiConstants.notifications}/$notificationId/read');
+      await _api.client.post(
+        '${ApiConstants.notifications}/$notificationId/read',
+      );
     } catch (e) {
       // Revert if failed
       loadNotifications();
@@ -88,7 +105,9 @@ class NotificationsNotifier extends StateNotifier<AsyncValue<List<AppNotificatio
 
     // Optimistically mark all as read
     state = AsyncValue.data(
-      currentData.map((n) => n.copyWith(isRead: true, readAt: DateTime.now())).toList(),
+      currentData
+          .map((n) => n.copyWith(isRead: true, readAt: DateTime.now()))
+          .toList(),
     );
     _ref.read(unreadNotificationsCountProvider.notifier).state = 0;
 
@@ -101,23 +120,27 @@ class NotificationsNotifier extends StateNotifier<AsyncValue<List<AppNotificatio
 }
 
 // WhatsApp Logs Provider (BR-R04)
-final whatsAppLogsProvider = FutureProvider.family<List<WhatsAppLog>, Map<String, dynamic>>((ref, filters) async {
-  final api = ref.watch(apiClientProvider);
-  try {
-    final response = await api.client.get(
-      ApiConstants.whatsAppLogs,
-      queryParameters: filters,
-    );
+final whatsAppLogsProvider =
+    FutureProvider.family<List<WhatsAppLog>, Map<String, dynamic>>((
+      ref,
+      filters,
+    ) async {
+      final api = ref.watch(apiClientProvider);
+      try {
+        final response = await api.client.get(
+          ApiConstants.whatsAppLogs,
+          queryParameters: filters,
+        );
 
-    if (response.statusCode == 200) {
-      final List list = response.data['data'] ?? [];
-      return list.map((json) => WhatsAppLog.fromJson(json)).toList();
-    }
-    return [];
-  } catch (e) {
-    throw Exception(api.parseError(e));
-  }
-});
+        if (response.statusCode == 200) {
+          final List list = response.data['data'] ?? [];
+          return list.map((json) => WhatsAppLog.fromJson(json)).toList();
+        }
+        return [];
+      } catch (e) {
+        throw Exception(api.parseError(e));
+      }
+    });
 
 // General notification actions
 final notificationActionsProvider = Provider<NotificationActions>((ref) {
@@ -141,29 +164,38 @@ class NotificationActions {
     } catch (_) {}
   }
 
-  Future<void> registerDeviceToken(String token, {String deviceType = 'android', String? deviceName}) async {
+  Future<void> registerDeviceToken(
+    String token, {
+    String deviceType = 'android',
+    String? deviceName,
+  }) async {
     try {
-      await _api.client.post(ApiConstants.deviceToken, data: {
-        'token': token,
-        'device_token': token,
-        'device_type': deviceType,
-        'device_name': deviceName,
-      });
+      await _api.client.post(
+        ApiConstants.deviceToken,
+        data: {
+          'token': token,
+          'device_token': token,
+          'device_type': deviceType,
+          'device_name': deviceName,
+        },
+      );
     } catch (_) {}
   }
 
   Future<void> removeDeviceToken(String token) async {
     try {
-      await _api.client.delete(ApiConstants.deviceToken, data: {
-        'token': token,
-        'device_token': token,
-      });
+      await _api.client.delete(
+        ApiConstants.deviceToken,
+        data: {'token': token, 'device_token': token},
+      );
     } catch (_) {}
   }
 
   Future<WhatsAppLog> retryWhatsApp(int logId) async {
     try {
-      final res = await _api.client.post('${ApiConstants.notifications}/whatsapp/$logId/retry');
+      final res = await _api.client.post(
+        '${ApiConstants.notifications}/whatsapp/$logId/retry',
+      );
       return WhatsAppLog.fromJson(res.data['data']);
     } catch (e) {
       throw Exception(_api.parseError(e));

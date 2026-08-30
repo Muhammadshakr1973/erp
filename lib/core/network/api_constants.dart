@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 
 class ApiConstants {
@@ -13,7 +14,7 @@ class ApiConstants {
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
-  
+
   static const String customers = '/customers';
   static const String orders = '/orders';
   static const String payments = '/payments';

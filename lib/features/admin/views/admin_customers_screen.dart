@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +20,8 @@ class AdminCustomersScreen extends ConsumerStatefulWidget {
   const AdminCustomersScreen({super.key});
 
   @override
-  ConsumerState<AdminCustomersScreen> createState() => _AdminCustomersScreenState();
+  ConsumerState<AdminCustomersScreen> createState() =>
+      _AdminCustomersScreenState();
 }
 
 class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
@@ -78,16 +80,25 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.danger.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.danger,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'ئاگاداربە: ئەم کڕیارە بڕی ${customer.balance.toInt()} د.ع قەرزی لەسەرە!',
-                        style: AppTextStyles.caption.copyWith(color: AppColors.danger, fontWeight: FontWeight.bold),
+                        'ئاگاداربە: ئەم کڕیارە بڕی ${Formatters.currency(customer.balance)} قەرزی لەسەرە!',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -109,7 +120,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await ref.read(customerActionsProvider).deleteCustomer(customer.id);
+                await ref
+                    .read(customerActionsProvider)
+                    .deleteCustomer(customer.id);
                 ref.invalidate(filteredCustomerListProvider);
                 ref.invalidate(customerListProvider);
                 if (context.mounted) {
@@ -190,13 +203,21 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
 
           // Filters Row (Routes & Debt Filter)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
             child: routesAsync.when(
               data: (routes) => _buildFiltersBar(context, routes),
-              loading: () => const SizedBox(height: 48, child: Center(child: LinearProgressIndicator())),
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(child: LinearProgressIndicator()),
+              ),
               error: (err, _) => Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text('هەڵە لە بارکردنی ڕاوتەکان: $err', style: const TextStyle(color: AppColors.danger)),
+                child: Text(
+                  'هەڵە لە بارکردنی ڕاوتەکان: $err',
+                  style: const TextStyle(color: AppColors.danger),
+                ),
               ),
             ),
           ),
@@ -217,11 +238,24 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: AppColors.danger,
+                        ),
                         const SizedBox(height: AppSpacing.md),
-                        Text('کێشەیەک ڕوویدا لە بارکردنی داتاکان:', style: AppTextStyles.bodyMedium),
+                        Text(
+                          'کێشەیەک ڕوویدا لە بارکردنی داتاکان:',
+                          style: AppTextStyles.bodyMedium,
+                        ),
                         const SizedBox(height: 4),
-                        Text('$error', style: AppTextStyles.caption.copyWith(color: theme.colorScheme.error), textAlign: TextAlign.center),
+                        Text(
+                          '$error',
+                          style: AppTextStyles.caption.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: AppSpacing.md),
                         AppButton(
                           text: 'دووبارە هەوڵبدەرەوە',
@@ -256,12 +290,13 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                             vertical: AppSpacing.xs,
                           ),
                           itemCount: customers.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: AppSpacing.md,
-                            mainAxisSpacing: AppSpacing.md,
-                            mainAxisExtent: 145,
-                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: AppSpacing.md,
+                                mainAxisSpacing: AppSpacing.md,
+                                mainAxisExtent: 170,
+                              ),
                           itemBuilder: (context, index) {
                             final customer = customers[index];
                             return _buildCustomerCard(context, customer);
@@ -298,7 +333,11 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('قەرزارەکان '),
-                  Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.danger),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 14,
+                    color: AppColors.danger,
+                  ),
                 ],
               ),
               onSelected: (selected) {
@@ -310,7 +349,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
               selectedColor: AppColors.danger.withValues(alpha: 0.15),
               checkmarkColor: AppColors.danger,
               labelStyle: AppTextStyles.caption.copyWith(
-                color: _onlyDebtors ? AppColors.danger : theme.colorScheme.onSurface,
+                color: _onlyDebtors
+                    ? AppColors.danger
+                    : theme.colorScheme.onSurface,
                 fontWeight: _onlyDebtors ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -339,8 +380,12 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
               selectedColor: theme.colorScheme.primaryContainer,
               checkmarkColor: theme.colorScheme.primary,
               labelStyle: AppTextStyles.caption.copyWith(
-                color: _selectedRouteId == null ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                fontWeight: _selectedRouteId == null ? FontWeight.bold : FontWeight.normal,
+                color: _selectedRouteId == null
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+                fontWeight: _selectedRouteId == null
+                    ? FontWeight.bold
+                    : FontWeight.normal,
               ),
             ),
           ),
@@ -362,7 +407,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                 selectedColor: theme.colorScheme.primaryContainer,
                 checkmarkColor: theme.colorScheme.primary,
                 labelStyle: AppTextStyles.caption.copyWith(
-                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -388,7 +435,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     }
 
     String formatCurrency(num amount) {
-      return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+      return '${Formatters.currency(amount)}';
     }
 
     return AppCard(
@@ -405,7 +452,8 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                image: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
+                image:
+                    customer.imageUrl != null && customer.imageUrl!.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(customer.imageUrl!),
                         fit: BoxFit.cover,
@@ -413,7 +461,11 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     : null,
               ),
               child: customer.imageUrl == null || customer.imageUrl!.isEmpty
-                  ? Icon(Icons.person, color: theme.colorScheme.primary, size: 28)
+                  ? Icon(
+                      Icons.person,
+                      color: theme.colorScheme.primary,
+                      size: 28,
+                    )
                   : null,
             ),
             const SizedBox(width: AppSpacing.md),
@@ -430,21 +482,28 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                         child: Text(
                           customer.name,
                           style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (!customer.isActive) ...[
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'ناچالاک',
-                            style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontFamily: 'Rudaw'),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade700,
+                              fontFamily: 'Rudaw',
+                            ),
                           ),
                         ),
                       ],
@@ -453,22 +512,31 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                   const SizedBox(height: 2),
                   Text(
                     customer.phone ?? 'مۆبایل نییە',
-                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       // Route badge
-                      Icon(Icons.alt_route, size: 12, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                      Icon(
+                        Icons.alt_route,
+                        size: 12,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           customer.route?.name ?? 'گەڕەک دیارینەکراوە',
                           style: AppTextStyles.caption.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.8),
                             fontSize: 11,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -486,7 +554,10 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
               children: [
                 // Price tier badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: tierColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -504,7 +575,10 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
 
                 // Balance badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: hasDebt
                         ? AppColors.danger.withValues(alpha: 0.1)
@@ -537,10 +611,15 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: AppSpacing.screenHorizontal),
+      padding: const EdgeInsets.symmetric(
+        vertical: 12,
+        horizontal: AppSpacing.screenHorizontal,
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4))),
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -561,7 +640,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
           // Current page indicator
           Text(
             'لاپەڕە $_currentPage',
-            style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
+            style: AppTextStyles.bodyBold.copyWith(
+              color: theme.colorScheme.primary,
+            ),
           ),
 
           // Next page button
@@ -592,17 +673,18 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
               Icon(
                 Icons.people_outline,
                 size: 64,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.4,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'هیچ کڕیارێک نییە',
-                style: AppTextStyles.h3,
-              ),
+              Text('هیچ کڕیارێک نییە', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'هیچ کڕیارێک بەو مەرجانە نەدۆزرایەوە کە دیاریت کردوون.',
-                style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.lg),

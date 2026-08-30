@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -60,7 +61,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _phoneController = TextEditingController(text: widget.customer?.phone);
     _phone2Controller = TextEditingController(text: widget.customer?.phone2);
     _addressController = TextEditingController(text: widget.customer?.address);
-    _imageUrlController = TextEditingController(text: widget.customer?.imageUrl);
+    _imageUrlController = TextEditingController(
+      text: widget.customer?.imageUrl,
+    );
     _initialDebtController = TextEditingController();
     _priceType = widget.customer?.priceType ?? 'N3';
     _routeId = widget.customer?.routeId;
@@ -85,7 +88,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _submit() async {
@@ -101,10 +104,18 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         final initialDebt = int.tryParse(_initialDebtController.text.trim());
         await actions.addCustomer(
           name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          phone2: _phone2Controller.text.trim().isEmpty
+              ? null
+              : _phone2Controller.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          imageUrl: _imageUrlController.text.trim().isEmpty
+              ? null
+              : _imageUrlController.text.trim(),
           routeId: _routeId,
           priceType: _priceType,
           initialDebt: initialDebt,
@@ -115,10 +126,18 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         await actions.updateCustomer(
           widget.customer!.id,
           name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          phone2: _phone2Controller.text.trim().isEmpty
+              ? null
+              : _phone2Controller.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          imageUrl: _imageUrlController.text.trim().isEmpty
+              ? null
+              : _imageUrlController.text.trim(),
           routeId: _routeId,
           priceType: _priceType,
           latitude: _latitude,
@@ -134,7 +153,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.customer == null ? 'کڕیار بەسەرکەوتوویی زیادکرا' : 'زانیاری کڕیار نوێکرایەوە'),
+            content: Text(
+              widget.customer == null
+                  ? 'کڕیار بەسەرکەوتوویی زیادکرا'
+                  : 'زانیاری کڕیار نوێکرایەوە',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -163,9 +186,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     final amountText = _paymentAmountController.text.trim();
     final amount = int.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')));
       return;
     }
 
@@ -173,12 +196,17 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.client.post('/payments', data: {
-        'customer_id': widget.customer!.id,
-        'amount': amount,
-        'notes': _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
-        'payment_method': 'CASH',
-      });
+      final response = await api.client.post(
+        '/payments',
+        data: {
+          'customer_id': widget.customer!.id,
+          'amount': amount,
+          'notes': _paymentNotesController.text.trim().isEmpty
+              ? null
+              : _paymentNotesController.text.trim(),
+          'payment_method': 'CASH',
+        },
+      );
 
       if (response.statusCode == 201) {
         ref.invalidate(customerListProvider);
@@ -213,9 +241,12 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     setState(() {
       _ledgerFilters = {
         'customer_id': widget.customer!.id.toString(),
-        if (_ledgerEntryType != null && _ledgerEntryType != 'ALL') 'entry_type': _ledgerEntryType,
-        if (_ledgerStartDate != null) 'start_date': _ledgerStartDate!.toIso8601String().split('T').first,
-        if (_ledgerEndDate != null) 'end_date': _ledgerEndDate!.toIso8601String().split('T').first,
+        if (_ledgerEntryType != null && _ledgerEntryType != 'ALL')
+          'entry_type': _ledgerEntryType,
+        if (_ledgerStartDate != null)
+          'start_date': _ledgerStartDate!.toIso8601String().split('T').first,
+        if (_ledgerEndDate != null)
+          'end_date': _ledgerEndDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -287,7 +318,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                     height: 420,
                     child: TabBarView(
                       children: [
-                        SingleChildScrollView(child: _buildProfileFormFields(context)),
+                        SingleChildScrollView(
+                          child: _buildProfileFormFields(context),
+                        ),
                         SingleChildScrollView(child: _buildDebtForm(context)),
                         _buildLedgerHistory(context),
                       ],
@@ -420,24 +453,35 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               const SizedBox(width: AppSpacing.sm),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _latitude != null ? Colors.green.shade50 : Colors.blue.shade50,
-                  foregroundColor: _latitude != null ? Colors.green : Colors.blue,
+                  backgroundColor: _latitude != null
+                      ? Colors.green.shade50
+                      : Colors.blue.shade50,
+                  foregroundColor: _latitude != null
+                      ? Colors.green
+                      : Colors.blue,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: _latitude != null ? Colors.green.shade300 : Colors.blue.shade300,
+                      color: _latitude != null
+                          ? Colors.green.shade300
+                          : Colors.blue.shade300,
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
                 onPressed: () async {
-                  final LatLng? initialLoc = _latitude != null && _longitude != null
+                  final LatLng? initialLoc =
+                      _latitude != null && _longitude != null
                       ? LatLng(_latitude!, _longitude!)
                       : null;
                   final result = await showDialog<LatLng>(
                     context: context,
-                    builder: (context) => MapPickerDialog(initialLocation: initialLoc),
+                    builder: (context) =>
+                        MapPickerDialog(initialLocation: initialLoc),
                   );
                   if (result != null) {
                     setState(() {
@@ -460,7 +504,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               padding: const EdgeInsets.only(left: 4),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, color: Colors.green.shade600, size: 16),
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green.shade600,
+                    size: 16,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'پۆتانەکان: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
@@ -484,7 +532,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       foregroundColor: Colors.red,
                     ),
-                    child: const Text('سڕینەوە', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                    child: const Text(
+                      'سڕینەوە',
+                      style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                    ),
                   ),
                 ],
               ),
@@ -503,13 +554,25 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             decoration: const InputDecoration(
               labelText: 'جۆری نرخ',
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               prefixIcon: Icon(Icons.sell_outlined),
             ),
             items: const [
-              DropdownMenuItem(value: 'N1', child: Text('نرخی یەکەم (N1 - تاک)')),
-              DropdownMenuItem(value: 'N2', child: Text('نرخی دووەم (N2 - کۆ)')),
-              DropdownMenuItem(value: 'N3', child: Text('نرخی سێیەم (N3 - تایبەت)')),
+              DropdownMenuItem(
+                value: 'N1',
+                child: Text('نرخی یەکەم (N1 - تاک)'),
+              ),
+              DropdownMenuItem(
+                value: 'N2',
+                child: Text('نرخی دووەم (N2 - کۆ)'),
+              ),
+              DropdownMenuItem(
+                value: 'N3',
+                child: Text('نرخی سێیەم (N3 - تایبەت)'),
+              ),
             ],
             onChanged: (val) {
               if (val != null) {
@@ -518,41 +581,53 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             },
           ),
           const SizedBox(height: AppSpacing.md),
-          ref.watch(routeListProvider).when(
-            data: (routes) => DropdownButtonFormField<int>(
-              value: _routeId != null && routes.any((r) => r.id == _routeId) ? _routeId : null,
-              decoration: const InputDecoration(
-                labelText: 'گەڕەک / ڕاوت',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                prefixIcon: Icon(Icons.alt_route),
-              ),
-              items: [
-                const DropdownMenuItem<int>(
-                  value: null,
-                  child: Text('گەڕەک دیاری نەکراوە'),
+          ref
+              .watch(routeListProvider)
+              .when(
+                data: (routes) => DropdownButtonFormField<int>(
+                  value: _routeId != null && routes.any((r) => r.id == _routeId)
+                      ? _routeId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'گەڕەک / ڕاوت',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    prefixIcon: Icon(Icons.alt_route),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: null,
+                      child: Text('گەڕەک دیاری نەکراوە'),
+                    ),
+                    ...routes.map(
+                      (route) => DropdownMenuItem<int>(
+                        value: route.id,
+                        child: Text(route.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    setState(() => _routeId = val);
+                  },
                 ),
-                ...routes.map((route) => DropdownMenuItem<int>(
-                      value: route.id,
-                      child: Text(route.name),
-                    )),
-              ],
-              onChanged: (val) {
-                setState(() => _routeId = val);
-              },
-            ),
-            loading: () => const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                loading: () => const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (err, _) => Text(
+                  'کێشە لە بارکردنی ڕاوتەکان: $err',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Rudaw',
+                  ),
+                ),
               ),
-            ),
-            error: (err, _) => Text(
-              'کێشە لە بارکردنی ڕاوتەکان: $err',
-              style: const TextStyle(color: Colors.red, fontFamily: 'Rudaw'),
-            ),
-          ),
           if (widget.customer == null) ...[
             const SizedBox(height: AppSpacing.md),
             AppTextField(
@@ -589,11 +664,16 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             color: AppColors.danger.withValues(alpha: 0.08),
             child: Column(
               children: [
-                const Text('بڕی قەرزی ئێستای کڕیار', style: AppTextStyles.caption),
+                const Text(
+                  'بڕی قەرزی ئێستای کڕیار',
+                  style: AppTextStyles.caption,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   _formatCurrency(widget.customer?.balance ?? 0),
-                  style: AppTextStyles.priceLarge.copyWith(color: AppColors.danger),
+                  style: AppTextStyles.priceLarge.copyWith(
+                    color: AppColors.danger,
+                  ),
                 ),
               ],
             ),
@@ -647,7 +727,8 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -660,16 +741,29 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       decoration: const InputDecoration(
                         labelText: 'جۆری جوڵە',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-                        DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
+                        DropdownMenuItem(
+                          value: 'PAYMENT',
+                          child: Text('پارەدان'),
+                        ),
                         DropdownMenuItem(value: 'SALE', child: Text('فرۆشتن')),
-                        DropdownMenuItem(value: 'RETURN', child: Text('گەڕانەوە')),
-                        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
+                        DropdownMenuItem(
+                          value: 'RETURN',
+                          child: Text('گەڕانەوە'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'ADJUSTMENT',
+                          child: Text('ڕاستکردنەوە'),
+                        ),
                       ],
-                      onChanged: (val) => setState(() => _ledgerEntryType = val),
+                      onChanged: (val) =>
+                          setState(() => _ledgerEntryType = val),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -680,9 +774,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         decoration: const InputDecoration(
                           labelText: 'لە بەرواری',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        child: Text(_ledgerStartDate != null ? _ledgerStartDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                        child: Text(
+                          _ledgerStartDate != null
+                              ? _ledgerStartDate!
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first
+                              : 'دیارینەکراوە',
+                          style: AppTextStyles.caption,
+                        ),
                       ),
                     ),
                   ),
@@ -694,9 +799,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         decoration: const InputDecoration(
                           labelText: 'تا بەرواری',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        child: Text(_ledgerEndDate != null ? _ledgerEndDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                        child: Text(
+                          _ledgerEndDate != null
+                              ? _ledgerEndDate!
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first
+                              : 'دیارینەکراوە',
+                          style: AppTextStyles.caption,
+                        ),
                       ),
                     ),
                   ),
@@ -708,7 +824,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 children: [
                   TextButton(
                     onPressed: _clearLedgerFilters,
-                    child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                    child: const Text(
+                      'پاککردنەوە',
+                      style: TextStyle(color: AppColors.danger),
+                    ),
                   ),
                   SizedBox(
                     width: 120,
@@ -735,16 +854,22 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 itemBuilder: (context, index) {
                   final entry = ledgerList[index];
                   final isCredit = entry.type == 'credit';
-                  final amountColor = isCredit ? AppColors.success : AppColors.danger;
+                  final amountColor = isCredit
+                      ? AppColors.success
+                      : AppColors.danger;
 
                   String entryTypeLabel = entry.entryType;
                   if (entryTypeLabel == 'PAYMENT') entryTypeLabel = 'پارەدان';
                   if (entryTypeLabel == 'SALE') entryTypeLabel = 'فرۆشتن';
                   if (entryTypeLabel == 'RETURN') entryTypeLabel = 'گەڕانەوە';
-                  if (entryTypeLabel == 'ADJUSTMENT') entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
+                  if (entryTypeLabel == 'ADJUSTMENT')
+                    entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
 
                   return ListTile(
-                    title: Text(entry.description ?? entryTypeLabel, style: AppTextStyles.bodyBold),
+                    title: Text(
+                      entry.description ?? entryTypeLabel,
+                      style: AppTextStyles.bodyBold,
+                    ),
                     subtitle: Text(
                       '${entry.createdAt?.split('T').first ?? ''} • $entryTypeLabel',
                       style: AppTextStyles.caption,
@@ -755,7 +880,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       children: [
                         Text(
                           '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
-                          style: AppTextStyles.bodyBold.copyWith(color: amountColor),
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: amountColor,
+                          ),
                           textDirection: TextDirection.ltr,
                         ),
                         Text(

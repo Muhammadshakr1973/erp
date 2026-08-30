@@ -35,15 +35,21 @@ class PurchaseRequirementModel {
       productId: json['product_id'],
       productName: json['product'] != null ? json['product']['name'] ?? '' : '',
       warehouseId: json['warehouse_id'],
-      warehouseName: json['warehouse'] != null ? json['warehouse']['name'] ?? '' : '',
+      warehouseName: json['warehouse'] != null
+          ? json['warehouse']['name'] ?? ''
+          : '',
       supplierId: json['supplier_id'],
-      supplierName: json['supplier'] != null ? json['supplier']['name'] ?? '' : null,
+      supplierName: json['supplier'] != null
+          ? json['supplier']['name'] ?? ''
+          : null,
       requiredQuantity: json['required_quantity'] ?? 0,
       currentStock: json['current_stock'] ?? 0,
       isUrgent: json['is_urgent'] == true || json['is_urgent'] == 1,
       status: json['status'] ?? 'OPEN',
       salesOrderId: json['sales_order_id'],
-      createdByName: json['creator'] != null ? json['creator']['name'] ?? '' : '',
+      createdByName: json['creator'] != null
+          ? json['creator']['name'] ?? ''
+          : '',
     );
   }
 }

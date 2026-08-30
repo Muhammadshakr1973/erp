@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
 import 'admin_dashboard_screen.dart';
@@ -50,47 +51,26 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
             maintainState: true,
             child: FocusScope(
               canRequestFocus: isSelected,
-              child: TickerMode(
-                enabled: isSelected,
-                child: _screens[index],
-              ),
+              child: TickerMode(enabled: isSelected, child: _screens[index]),
             ),
           );
         }),
       ),
       destinations: const [
-        NavigationDestination(
-          icon: Icon(AppIcons.home),
-          label: 'سەرەکی',
-        ),
-        NavigationDestination(
-          icon: Icon(AppIcons.order),
-          label: 'پسوڵەکان',
-        ),
+        NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
+        NavigationDestination(icon: Icon(AppIcons.order), label: 'پسوڵەکان'),
         NavigationDestination(
           icon: Icon(AppIcons.customers),
           label: 'کڕیارەکان',
         ),
+        NavigationDestination(icon: Icon(Icons.alt_route), label: 'ڕاوتەکان'),
+        NavigationDestination(icon: Icon(Icons.store), label: 'کۆمپانیا'),
         NavigationDestination(
-          icon: Icon(Icons.alt_route),
-          label: 'ڕاوتەکان',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.store), 
-          label: 'کۆمپانیا',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.inventory_2_outlined), 
+          icon: Icon(Icons.inventory_2_outlined),
           label: 'کاڵاکان',
         ),
-        NavigationDestination(
-          icon: Icon(Icons.bar_chart), 
-          label: 'ڕاپۆرت',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.people), 
-          label: 'بەکارهێنەران',
-        ),
+        NavigationDestination(icon: Icon(Icons.bar_chart), label: 'ڕاپۆرت'),
+        NavigationDestination(icon: Icon(Icons.people), label: 'بەکارهێنەران'),
       ],
     );
   }

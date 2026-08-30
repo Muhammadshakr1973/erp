@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -14,13 +15,12 @@ class TodayTripsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text('گەشتەکانی ئەمڕۆ', style: AppTextStyles.h2),
-      ),
+      appBar: AppBar(title: Text('گەشتەکانی ئەمڕۆ', style: AppTextStyles.h2)),
       body: ListView.separated(
         padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
         itemCount: 2,
-        separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           return AppCard(
             onTap: () {
@@ -36,7 +36,10 @@ class TodayTripsScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: Icon(AppIcons.orderDelivered, color: theme.colorScheme.primary),
+                    child: Icon(
+                      AppIcons.orderDelivered,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -44,15 +47,23 @@ class TodayTripsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('گەشتی ژمارە ${index + 1}', style: AppTextStyles.bodyBold),
+                      Text(
+                        'گەشتی ژمارە ${index + 1}',
+                        style: AppTextStyles.bodyBold,
+                      ),
                       const SizedBox(height: 4),
-                      Text('10 پسوڵە • گەڕەکی بەختیاری', style: AppTextStyles.caption),
+                      Text(
+                        '10 پسوڵە • گەڕەکی بەختیاری',
+                        style: AppTextStyles.caption,
+                      ),
                     ],
                   ),
                 ),
                 StatusBadge(
                   label: index == 0 ? 'لە گەیاندن' : 'تەواوبوو',
-                  type: index == 0 ? StatusBadgeType.warning : StatusBadgeType.success,
+                  type: index == 0
+                      ? StatusBadgeType.warning
+                      : StatusBadgeType.success,
                 ),
               ],
             ),

@@ -25,9 +25,12 @@ class CommissionDetailModel {
 
     return CommissionDetailModel(
       id: json['id'] ?? 0,
-      salesmanCommissionId: json['salesman_commission_id'] ?? json['commission_id'] ?? 0,
+      salesmanCommissionId:
+          json['salesman_commission_id'] ?? json['commission_id'] ?? 0,
       salesOrderId: json['sales_order_id'] ?? 0,
-      orderNumber: order?['order_number']?.toString() ?? json['order_number']?.toString(),
+      orderNumber:
+          order?['order_number']?.toString() ??
+          json['order_number']?.toString(),
       customerName: customer?['name'] ?? json['customer_name'],
       salesAmount: (json['sales_amount'] as num?)?.toInt() ?? 0,
       profitAmount: (json['profit_amount'] as num?)?.toInt() ?? 0,
@@ -103,8 +106,10 @@ class CommissionModel {
       periodFrom: (json['period_from'] as String?)?.split('T').first ?? '',
       periodTo: (json['period_to'] as String?)?.split('T').first ?? '',
       totalSales: (json['total_sales'] as num?)?.toInt() ?? 0,
-      totalProfit: (json['total_profit'] ?? json['profit_amount'] as num?)?.toInt() ?? 0,
-      commissionRate: double.tryParse(json['commission_rate']?.toString() ?? '0') ?? 0.0,
+      totalProfit:
+          (json['total_profit'] ?? json['profit_amount'] as num?)?.toInt() ?? 0,
+      commissionRate:
+          double.tryParse(json['commission_rate']?.toString() ?? '0') ?? 0.0,
       commissionAmount: (json['commission_amount'] as num?)?.toInt() ?? 0,
       status: (json['status'] as String?)?.toLowerCase() ?? 'calculated',
       calculatedByName: calculator?['name'],
@@ -118,7 +123,9 @@ class CommissionModel {
       cancellationReason: json['cancellation_reason'],
       notes: json['notes'],
       createdAt: json['created_at'],
-      details: rawDetails.map((e) => CommissionDetailModel.fromJson(e as Map<String, dynamic>)).toList(),
+      details: rawDetails
+          .map((e) => CommissionDetailModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

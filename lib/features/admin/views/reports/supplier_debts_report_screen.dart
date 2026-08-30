@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -13,25 +15,31 @@ class SupplierDebtsReportScreen extends ConsumerStatefulWidget {
   const SupplierDebtsReportScreen({super.key});
 
   @override
-  ConsumerState<SupplierDebtsReportScreen> createState() => _SupplierDebtsReportScreenState();
+  ConsumerState<SupplierDebtsReportScreen> createState() =>
+      _SupplierDebtsReportScreenState();
 }
 
-class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportScreen> {
+class _SupplierDebtsReportScreenState
+    extends ConsumerState<SupplierDebtsReportScreen> {
   int? _selectedSupplierId;
   String? _selectedEntryType;
   DateTime? _startDate;
   DateTime? _endDate;
-  
+
   // Create a map to trigger the future provider with current filters
   Map<String, dynamic> _filters = {};
 
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_selectedSupplierId != null) 'supplier_id': _selectedSupplierId.toString(),
-        if (_selectedEntryType != null && _selectedEntryType != 'ALL') 'entry_type': _selectedEntryType,
-        if (_startDate != null) 'start_date': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'end_date': _endDate!.toIso8601String().split('T').first,
+        if (_selectedSupplierId != null)
+          'supplier_id': _selectedSupplierId.toString(),
+        if (_selectedEntryType != null && _selectedEntryType != 'ALL')
+          'entry_type': _selectedEntryType,
+        if (_startDate != null)
+          'start_date': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'end_date': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -47,7 +55,7 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -68,7 +76,9 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
     }
   }
 
-  Widget _buildSupplierDropdown(AsyncValue<List<SupplierModel>> suppliersAsync) {
+  Widget _buildSupplierDropdown(
+    AsyncValue<List<SupplierModel>> suppliersAsync,
+  ) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedSupplierId,
       decoration: const InputDecoration(
@@ -79,7 +89,9 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
         ...suppliersAsync.when(
-          data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+          data: (suppliers) => suppliers
+              .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),
@@ -115,7 +127,11 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _startDate != null
+              ? _startDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -129,7 +145,11 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _endDate != null
+              ? _endDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -158,7 +178,10 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
                       const Text('فلتەرکردن', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
@@ -166,7 +189,7 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 600;
-                      
+
                       if (isMobile) {
                         return Column(
                           children: [
@@ -192,18 +215,30 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
                           ],
                         );
                       }
-                      
+
                       return Column(
                         children: [
                           Row(
                             children: [
-                              Expanded(flex: 2, child: _buildSupplierDropdown(suppliersAsync)),
+                              Expanded(
+                                flex: 2,
+                                child: _buildSupplierDropdown(suppliersAsync),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(flex: 1, child: _buildEntryTypeDropdown()),
+                              Expanded(
+                                flex: 1,
+                                child: _buildEntryTypeDropdown(),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(flex: 1, child: _buildStartDatePicker(context)),
+                              Expanded(
+                                flex: 1,
+                                child: _buildStartDatePicker(context),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(flex: 1, child: _buildEndDatePicker(context)),
+                              Expanded(
+                                flex: 1,
+                                child: _buildEndDatePicker(context),
+                              ),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -222,18 +257,24 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            
+
             // Results Table
             Expanded(
               child: AppCard(
                 child: reportAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
                   data: (ledgers) {
                     if (ledgers.isEmpty) {
-                      return const Center(child: Text('هیچ داتایەک نەدۆزرایەوە', style: AppTextStyles.h3));
+                      return const Center(
+                        child: Text(
+                          'هیچ داتایەک نەدۆزرایەوە',
+                          style: AppTextStyles.h3,
+                        ),
+                      );
                     }
-                    
+
                     return SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SingleChildScrollView(
@@ -250,29 +291,43 @@ class _SupplierDebtsReportScreenState extends ConsumerState<SupplierDebtsReportS
                           ],
                           rows: ledgers.map((entry) {
                             final isCredit = entry.type == 'credit';
-                            final amountColor = isCredit ? AppColors.success : AppColors.danger;
-                            
+                            final amountColor = isCredit
+                                ? AppColors.success
+                                : AppColors.danger;
+
                             String entryTypeLabel = entry.entryType;
-                            if (entryTypeLabel == 'PAYMENT') entryTypeLabel = 'پارەدان';
-                            if (entryTypeLabel == 'PURCHASE') entryTypeLabel = 'کڕین';
-                            if (entryTypeLabel == 'ADJUSTMENT') entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
-                            
+                            if (entryTypeLabel == 'PAYMENT')
+                              entryTypeLabel = 'پارەدان';
+                            if (entryTypeLabel == 'PURCHASE')
+                              entryTypeLabel = 'کڕین';
+                            if (entryTypeLabel == 'ADJUSTMENT')
+                              entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
+
                             return DataRow(
                               cells: [
-                                DataCell(Text(entry.createdAt?.split('T').first ?? '')),
-                                DataCell(Text(entry.supplierName ?? 'نەزانراو')),
+                                DataCell(
+                                  Text(entry.createdAt?.split('T').first ?? ''),
+                                ),
+                                DataCell(
+                                  Text(entry.supplierName ?? 'نەزانراو'),
+                                ),
                                 DataCell(Text(entryTypeLabel)),
                                 DataCell(
                                   Text(
                                     '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
-                                    style: TextStyle(color: amountColor, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      color: amountColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     textDirection: TextDirection.ltr,
                                   ),
                                 ),
                                 DataCell(
                                   Text(
                                     _formatCurrency(entry.balanceAfter),
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                     textDirection: TextDirection.ltr,
                                   ),
                                 ),

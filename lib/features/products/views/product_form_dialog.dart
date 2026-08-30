@@ -458,7 +458,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.4,
+                              ),
                               width: 1,
                             ),
                           ),
@@ -468,14 +470,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 // Category Selector
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                     child: categoriesAsync.when(
                                       data: (categories) {
-                                        final int? validValue = categories.any(
-                                          (c) => c.id == _selectedCategoryId,
-                                        )
-                                        ? _selectedCategoryId
-                                        : null;
+                                        final int? validValue =
+                                            categories.any(
+                                              (c) =>
+                                                  c.id == _selectedCategoryId,
+                                            )
+                                            ? _selectedCategoryId
+                                            : null;
                                         return DropdownButtonHideUnderline(
                                           child: DropdownButtonFormField<int>(
                                             value: validValue,
@@ -492,7 +498,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                               ...categories.map(
                                                 (c) => DropdownMenuItem(
                                                   value: c.id,
-                                                  child: Text(c.name, overflow: TextOverflow.ellipsis),
+                                                  child: Text(
+                                                    c.name,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
                                                 ),
                                               ),
                                               DropdownMenuItem(
@@ -500,7 +510,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                                 child: Text(
                                                   '+ زیادکردنی نوێ',
                                                   style: TextStyle(
-                                                    color: theme.colorScheme.primary,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -510,7 +522,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                               if (v == -1) {
                                                 _showAddCategoryDialog();
                                               } else {
-                                                setState(() => _selectedCategoryId = v);
+                                                setState(
+                                                  () => _selectedCategoryId = v,
+                                                );
                                               }
                                             },
                                           ),
@@ -520,10 +534,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         child: SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
                                         ),
                                       ),
-                                      error: (err, stack) => const Text('کێشە لە جۆرەکان'),
+                                      error: (err, stack) =>
+                                          const Text('کێشە لە جۆرەکان'),
                                     ),
                                   ),
                                 ),
@@ -531,24 +548,32 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 VerticalDivider(
                                   width: 1,
                                   thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                  color: theme.colorScheme.outline.withValues(
+                                    alpha: 0.4,
+                                  ),
                                 ),
                                 // Supplier Selector
                                 Expanded(
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                     child: suppliersAsync.when(
                                       data: (suppliers) {
-                                        final int? validValue = suppliers.any(
-                                          (s) => s.id == _selectedSupplierId,
-                                        )
-                                        ? _selectedSupplierId
-                                        : null;
+                                        final int? validValue =
+                                            suppliers.any(
+                                              (s) =>
+                                                  s.id == _selectedSupplierId,
+                                            )
+                                            ? _selectedSupplierId
+                                            : null;
                                         return DropdownButtonHideUnderline(
                                           child: DropdownButtonFormField<int>(
                                             value: validValue,
                                             isExpanded: true,
-                                            hint: const Text('کۆمپانیا هەڵبژێرە'),
+                                            hint: const Text(
+                                              'کۆمپانیا هەڵبژێرە',
+                                            ),
                                             decoration: const InputDecoration(
                                               labelText: 'کۆمپانیا',
                                               border: InputBorder.none,
@@ -560,7 +585,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                               ...suppliers.map(
                                                 (s) => DropdownMenuItem(
                                                   value: s.id,
-                                                  child: Text(s.name, overflow: TextOverflow.ellipsis),
+                                                  child: Text(
+                                                    s.name,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
                                                 ),
                                               ),
                                               DropdownMenuItem(
@@ -568,7 +597,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                                 child: Text(
                                                   '+ زیادکردنی نوێ',
                                                   style: TextStyle(
-                                                    color: theme.colorScheme.primary,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -578,7 +609,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                               if (v == -1) {
                                                 _showAddSupplierDialog();
                                               } else {
-                                                setState(() => _selectedSupplierId = v);
+                                                setState(
+                                                  () => _selectedSupplierId = v,
+                                                );
                                               }
                                             },
                                           ),
@@ -588,10 +621,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         child: SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
                                         ),
                                       ),
-                                      error: (err, stack) => const Text('کێشە لە کۆمپانیاکان'),
+                                      error: (err, stack) =>
+                                          const Text('کێشە لە کۆمپانیاکان'),
                                     ),
                                   ),
                                 ),
@@ -606,7 +642,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.4,
+                                ),
                                 width: 1,
                               ),
                             ),
@@ -621,44 +659,63 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         child: TextFormField(
                                           controller: _costPriceController,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium.copyWith(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
                                           decoration: InputDecoration(
                                             labelText: 'کۆست',
-                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                             hintText: 'کۆست',
                                             border: InputBorder.none,
                                             enabledBorder: InputBorder.none,
                                             focusedBorder: InputBorder.none,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
                                           ),
                                         ),
                                       ),
                                       VerticalDivider(
                                         width: 1,
                                         thickness: 1,
-                                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                        color: theme.colorScheme.outline
+                                            .withValues(alpha: 0.4),
                                       ),
                                       Expanded(
                                         child: TextFormField(
                                           controller: _priceN1Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium.copyWith(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
                                           decoration: InputDecoration(
                                             labelText: 'نرخی ١',
-                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                             hintText: 'N1',
                                             border: InputBorder.none,
                                             enabledBorder: InputBorder.none,
                                             focusedBorder: InputBorder.none,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
                                           ),
                                         ),
                                       ),
@@ -668,7 +725,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 Divider(
                                   height: 1,
                                   thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                  color: theme.colorScheme.outline.withValues(
+                                    alpha: 0.4,
+                                  ),
                                 ),
                                 // Second row: Price N2 and Price N3
                                 IntrinsicHeight(
@@ -678,44 +737,63 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         child: TextFormField(
                                           controller: _priceN2Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium.copyWith(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
                                           decoration: InputDecoration(
                                             labelText: 'نرخی ٢',
-                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                             hintText: 'N2',
                                             border: InputBorder.none,
                                             enabledBorder: InputBorder.none,
                                             focusedBorder: InputBorder.none,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
                                           ),
                                         ),
                                       ),
                                       VerticalDivider(
                                         width: 1,
                                         thickness: 1,
-                                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                        color: theme.colorScheme.outline
+                                            .withValues(alpha: 0.4),
                                       ),
                                       Expanded(
                                         child: TextFormField(
                                           controller: _priceN3Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium.copyWith(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
                                           decoration: InputDecoration(
                                             labelText: 'نرخی ٣',
-                                            labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                             hintText: 'N3',
                                             border: InputBorder.none,
                                             enabledBorder: InputBorder.none,
                                             focusedBorder: InputBorder.none,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
                                           ),
                                         ),
                                       ),
@@ -730,7 +808,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.4,
+                                ),
                                 width: 1,
                               ),
                             ),
@@ -747,21 +827,30 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       ),
                                       decoration: InputDecoration(
                                         labelText: 'کۆست',
-                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                         hintText: 'کۆست',
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,
                                         focusedBorder: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
                                   VerticalDivider(
                                     width: 1,
                                     thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
                                   ),
                                   // Price N1
                                   Expanded(
@@ -773,21 +862,30 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       ),
                                       decoration: InputDecoration(
                                         labelText: 'نرخی ١',
-                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                         hintText: 'N1',
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,
                                         focusedBorder: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
                                   VerticalDivider(
                                     width: 1,
                                     thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
                                   ),
                                   // Price N2
                                   Expanded(
@@ -799,21 +897,30 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       ),
                                       decoration: InputDecoration(
                                         labelText: 'نرخی ٢',
-                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                         hintText: 'N2',
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,
                                         focusedBorder: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
                                   VerticalDivider(
                                     width: 1,
                                     thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
                                   ),
                                   // Price N3
                                   Expanded(
@@ -825,14 +932,21 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       ),
                                       decoration: InputDecoration(
                                         labelText: 'نرخی ٣',
-                                        labelStyle: AppTextStyles.bodyMedium.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
                                         hintText: 'N3',
                                         border: InputBorder.none,
                                         enabledBorder: InputBorder.none,
                                         focusedBorder: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -874,8 +988,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             const SizedBox(width: AppSpacing.sm),
                             Switch(
                               value: _isActive,
-                              onChanged: (v) =>
-                                  setState(() => _isActive = v),
+                              onChanged: (v) => setState(() => _isActive = v),
                             ),
                           ],
                         ),

@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -15,15 +17,17 @@ class PaymentsHistoryReportScreen extends ConsumerStatefulWidget {
   const PaymentsHistoryReportScreen({super.key});
 
   @override
-  ConsumerState<PaymentsHistoryReportScreen> createState() => _PaymentsHistoryReportScreenState();
+  ConsumerState<PaymentsHistoryReportScreen> createState() =>
+      _PaymentsHistoryReportScreenState();
 }
 
-class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryReportScreen> {
+class _PaymentsHistoryReportScreenState
+    extends ConsumerState<PaymentsHistoryReportScreen> {
   String _paymentType = 'customer'; // 'customer' or 'supplier'
   int? _selectedPartyId;
   DateTime? _startDate;
   DateTime? _endDate;
-  
+
   Map<String, dynamic> _filters = {'type': 'customer'};
 
   @override
@@ -36,10 +40,13 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
     setState(() {
       _filters = {
         'type': _paymentType,
-        if (_selectedPartyId != null) 
-          _paymentType == 'customer' ? 'customer_id' : 'supplier_id': _selectedPartyId!.toString(),
-        if (_startDate != null) 'start_date': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'end_date': _endDate!.toIso8601String().split('T').first,
+        if (_selectedPartyId != null)
+          _paymentType == 'customer' ? 'customer_id' : 'supplier_id':
+              _selectedPartyId!.toString(),
+        if (_startDate != null)
+          'start_date': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'end_date': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -54,7 +61,7 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -90,7 +97,9 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
         items: [
           const DropdownMenuItem(value: null, child: Text('گشت کڕیارەکان')),
           ...customersAsync.when(
-            data: (customers) => customers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+            data: (customers) => customers
+                .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                .toList(),
             loading: () => [],
             error: (_, _) => [],
           ),
@@ -108,7 +117,9 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
         items: [
           const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
           ...suppliersAsync.when(
-            data: (suppliers) => suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+            data: (suppliers) => suppliers
+                .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                .toList(),
             loading: () => [],
             error: (_, _) => [],
           ),
@@ -127,7 +138,11 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _startDate != null
+              ? _startDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -141,7 +156,11 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _endDate != null
+              ? _endDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -171,12 +190,15 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                       const Text('فلتەرکردن', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  
+
                   // Payment Type Selection (Tabs/Segmented Control style)
                   Container(
                     decoration: BoxDecoration(
@@ -201,13 +223,17 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                               alignment: Alignment.center,
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: _paymentType == 'customer' ? AppColors.primary : Colors.transparent,
+                                color: _paymentType == 'customer'
+                                    ? AppColors.primary
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'پارەدانی کڕیارەکان',
                                 style: AppTextStyles.bodyBold.copyWith(
-                                  color: _paymentType == 'customer' ? Colors.white : Colors.black87,
+                                  color: _paymentType == 'customer'
+                                      ? Colors.white
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
@@ -228,13 +254,17 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                               alignment: Alignment.center,
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: _paymentType == 'supplier' ? AppColors.primary : Colors.transparent,
+                                color: _paymentType == 'supplier'
+                                    ? AppColors.primary
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'پارەدانی کۆمپانیاکان',
                                 style: AppTextStyles.bodyBold.copyWith(
-                                  color: _paymentType == 'supplier' ? Colors.white : Colors.black87,
+                                  color: _paymentType == 'supplier'
+                                      ? Colors.white
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
@@ -248,7 +278,7 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 600;
-                      
+
                       if (isMobile) {
                         return Column(
                           children: [
@@ -272,16 +302,28 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                           ],
                         );
                       }
-                      
+
                       return Column(
                         children: [
                           Row(
                             children: [
-                              Expanded(flex: 2, child: _buildPartyDropdown(customersAsync, suppliersAsync)),
+                              Expanded(
+                                flex: 2,
+                                child: _buildPartyDropdown(
+                                  customersAsync,
+                                  suppliersAsync,
+                                ),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(flex: 1, child: _buildStartDatePicker(context)),
+                              Expanded(
+                                flex: 1,
+                                child: _buildStartDatePicker(context),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(flex: 1, child: _buildEndDatePicker(context)),
+                              Expanded(
+                                flex: 1,
+                                child: _buildEndDatePicker(context),
+                              ),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -300,18 +342,24 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            
+
             // Results Table
             Expanded(
               child: AppCard(
                 child: reportAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
                   data: (payments) {
                     if (payments.isEmpty) {
-                      return const Center(child: Text('هیچ داتایەک نەدۆزرایەوە', style: AppTextStyles.h3));
+                      return const Center(
+                        child: Text(
+                          'هیچ داتایەک نەدۆزرایەوە',
+                          style: AppTextStyles.h3,
+                        ),
+                      );
                     }
-                    
+
                     return Column(
                       children: [
                         // Brief statistics summary
@@ -326,7 +374,9 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                               ),
                               Text(
                                 'کۆی پارەی وەرگیراو/دراو: ${_formatCurrency(payments.fold<num>(0, (prev, element) => prev + element.amount))}',
-                                style: AppTextStyles.bodyBold.copyWith(color: AppColors.success),
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: AppColors.success,
+                                ),
                               ),
                             ],
                           ),
@@ -341,30 +391,50 @@ class _PaymentsHistoryReportScreenState extends ConsumerState<PaymentsHistoryRep
                                 dataTextStyle: AppTextStyles.bodyMedium,
                                 columns: [
                                   const DataColumn(label: Text('بەروار')),
-                                  DataColumn(label: Text(_paymentType == 'customer' ? 'کڕیار' : 'کۆمپانیا')),
-                                  const DataColumn(label: Text('شێوازی پارەدان')),
+                                  DataColumn(
+                                    label: Text(
+                                      _paymentType == 'customer'
+                                          ? 'کڕیار'
+                                          : 'کۆمپانیا',
+                                    ),
+                                  ),
+                                  const DataColumn(
+                                    label: Text('شێوازی پارەدان'),
+                                  ),
                                   const DataColumn(label: Text('بڕی پارە')),
-                                  const DataColumn(label: Text('سەرچاوە/ڕوونکردنەوە')),
+                                  const DataColumn(
+                                    label: Text('سەرچاوە/ڕوونکردنەوە'),
+                                  ),
                                   const DataColumn(label: Text('تێبینی')),
                                 ],
                                 rows: payments.map((payment) {
                                   final isCustomer = payment.type == 'customer';
-                                  final amountColor = isCustomer ? AppColors.success : AppColors.danger;
-                                  
+                                  final amountColor = isCustomer
+                                      ? AppColors.success
+                                      : AppColors.danger;
+
                                   String methodLabel = payment.paymentMethod;
-                                  if (methodLabel == 'CASH') methodLabel = 'نەختینە (کاش)';
-                                  if (methodLabel == 'BANK') methodLabel = 'بانک';
-                                  if (methodLabel == 'TRANSFER') methodLabel = 'حەواڵە';
-                                  
+                                  if (methodLabel == 'CASH')
+                                    methodLabel = 'نەختینە (کاش)';
+                                  if (methodLabel == 'BANK')
+                                    methodLabel = 'بانک';
+                                  if (methodLabel == 'TRANSFER')
+                                    methodLabel = 'حەواڵە';
+
                                   return DataRow(
                                     cells: [
-                                      DataCell(Text(payment.paidAt.split('T').first)),
+                                      DataCell(
+                                        Text(payment.paidAt.split('T').first),
+                                      ),
                                       DataCell(Text(payment.partyName)),
                                       DataCell(Text(methodLabel)),
                                       DataCell(
                                         Text(
                                           _formatCurrency(payment.amount),
-                                          style: TextStyle(color: amountColor, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                            color: amountColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                           textDirection: TextDirection.ltr,
                                         ),
                                       ),

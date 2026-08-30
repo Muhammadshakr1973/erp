@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../models/supplier_model.dart';
 import '../models/supplier_ledger_model.dart';
@@ -17,19 +18,25 @@ final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
   }
 });
 
-final supplierLedgerProvider = FutureProvider.family<List<SupplierLedgerModel>, int>((ref, supplierId) async {
-  final api = ref.watch(apiClientProvider);
-  try {
-    final response = await api.client.get('/suppliers/$supplierId/ledger');
-    if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
-      return data.map((json) => SupplierLedgerModel.fromJson(json)).toList();
-    }
-    return [];
-  } catch (e) {
-    return [];
-  }
-});
+final supplierLedgerProvider =
+    FutureProvider.family<List<SupplierLedgerModel>, int>((
+      ref,
+      supplierId,
+    ) async {
+      final api = ref.watch(apiClientProvider);
+      try {
+        final response = await api.client.get('/suppliers/$supplierId/ledger');
+        if (response.statusCode == 200) {
+          final List data = response.data['data'] ?? [];
+          return data
+              .map((json) => SupplierLedgerModel.fromJson(json))
+              .toList();
+        }
+        return [];
+      } catch (e) {
+        return [];
+      }
+    });
 
 final supplierActionsProvider = Provider<SupplierActions>((ref) {
   final api = ref.watch(apiClientProvider);
@@ -50,13 +57,16 @@ class SupplierActions {
     int? initialDebt,
   }) async {
     try {
-      final response = await api.client.post('/suppliers', data: {
-        'name': name,
-        'phone': phone,
-        'address': address,
-        'contact_person': contactPerson,
-        'initial_debt': initialDebt,
-      });
+      final response = await api.client.post(
+        '/suppliers',
+        data: {
+          'name': name,
+          'phone': phone,
+          'address': address,
+          'contact_person': contactPerson,
+          'initial_debt': initialDebt,
+        },
+      );
       ref.invalidate(suppliersListProvider);
       return SupplierModel.fromJson(response.data['data']);
     } catch (e) {
@@ -72,12 +82,15 @@ class SupplierActions {
     String? contactPerson,
   }) async {
     try {
-      final response = await api.client.put('/suppliers/$id', data: {
-        'name': name,
-        'phone': phone,
-        'address': address,
-        'contact_person': contactPerson,
-      });
+      final response = await api.client.put(
+        '/suppliers/$id',
+        data: {
+          'name': name,
+          'phone': phone,
+          'address': address,
+          'contact_person': contactPerson,
+        },
+      );
       ref.invalidate(suppliersListProvider);
       return SupplierModel.fromJson(response.data['data']);
     } catch (e) {
@@ -101,11 +114,14 @@ class SupplierActions {
     String? notes,
   }) async {
     try {
-      final response = await api.client.post('/suppliers/$id/pay', data: {
-        'amount': amount,
-        'payment_method': paymentMethod ?? 'cash',
-        'notes': notes,
-      });
+      final response = await api.client.post(
+        '/suppliers/$id/pay',
+        data: {
+          'amount': amount,
+          'payment_method': paymentMethod ?? 'cash',
+          'notes': notes,
+        },
+      );
       ref.invalidate(suppliersListProvider);
       ref.invalidate(supplierLedgerProvider(id));
       return SupplierModel.fromJson(response.data['data']);

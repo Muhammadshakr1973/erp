@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_durations.dart';
 import '../theme/app_radius.dart';
@@ -31,10 +32,11 @@ class _LoadingSkeletonState extends State<LoadingSkeleton>
       vsync: this,
       duration: AppDurations.shimmerLoop,
     )..repeat(reverse: true);
-    
-    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+
+    _opacity = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -47,7 +49,7 @@ class _LoadingSkeletonState extends State<LoadingSkeleton>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final baseColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return FadeTransition(
@@ -77,7 +79,11 @@ class ProductCardSkeleton extends StatelessWidget {
       ),
       child: Row(
         children: [
-          LoadingSkeleton(width: 56, height: 56, borderRadius: AppRadius.radiusMd),
+          LoadingSkeleton(
+            width: 56,
+            height: 56,
+            borderRadius: AppRadius.radiusMd,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

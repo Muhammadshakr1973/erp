@@ -1,21 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+
 import '../../../core/api_client.dart';
 import '../models/purchase_requirement_model.dart';
 import '../models/purchase_order_model.dart';
 
-final purchaseRequirementsProvider = FutureProvider<List<PurchaseRequirementModel>>((ref) async {
-  final apiClient = ref.watch(apiClientProvider);
-  try {
-    final response = await apiClient.client.get('/purchase-requirements');
-    final List<dynamic> data = response.data['data'] ?? [];
-    return data.map((json) => PurchaseRequirementModel.fromJson(json)).toList();
-  } catch (e) {
-    throw Exception(apiClient.parseError(e));
-  }
-});
+final purchaseRequirementsProvider =
+    FutureProvider<List<PurchaseRequirementModel>>((ref) async {
+      final apiClient = ref.watch(apiClientProvider);
+      try {
+        final response = await apiClient.client.get('/purchase-requirements');
+        final List<dynamic> data = response.data['data'] ?? [];
+        return data
+            .map((json) => PurchaseRequirementModel.fromJson(json))
+            .toList();
+      } catch (e) {
+        throw Exception(apiClient.parseError(e));
+      }
+    });
 
-final purchaseOrdersProvider = FutureProvider<List<PurchaseOrderModel>>((ref) async {
+final purchaseOrdersProvider = FutureProvider<List<PurchaseOrderModel>>((
+  ref,
+) async {
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.client.get('/purchase-orders');
@@ -43,10 +49,7 @@ class PurchaseActions {
     try {
       await apiClient.client.post(
         '/purchase-requirements/convert',
-        data: {
-          'requirement_ids': requirementIds,
-          'notes': notes,
-        },
+        data: {'requirement_ids': requirementIds, 'notes': notes},
       );
       // Invalidate the lists to trigger a refresh
       _ref.invalidate(purchaseRequirementsProvider);

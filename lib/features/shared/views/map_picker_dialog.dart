@@ -24,10 +24,16 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    _selectedLocation = widget.initialLocation ?? const LatLng(36.1912, 44.0091); // Default Erbil Coordinate
-    
-    _latController = TextEditingController(text: _selectedLocation!.latitude.toStringAsFixed(6));
-    _lngController = TextEditingController(text: _selectedLocation!.longitude.toStringAsFixed(6));
+    _selectedLocation =
+        widget.initialLocation ??
+        const LatLng(36.1912, 44.0091); // Default Erbil Coordinate
+
+    _latController = TextEditingController(
+      text: _selectedLocation!.latitude.toStringAsFixed(6),
+    );
+    _lngController = TextEditingController(
+      text: _selectedLocation!.longitude.toStringAsFixed(6),
+    );
 
     // If no initial location is provided, automatically find the user's location on startup
     if (widget.initialLocation == null) {
@@ -59,7 +65,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   void _onManualCoordinateChange(String _) {
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
-    if (lat != null && lng != null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+    if (lat != null &&
+        lng != null &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180) {
       final newLoc = LatLng(lat, lng);
       setState(() {
         _selectedLocation = newLoc;
@@ -82,7 +93,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('تکایە لۆکەیشنی ئامێرەکەت (GPS) کار پێ بکە، یان بە دەستی شوێنەکە نیشان بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+                content: Text(
+                  'تکایە لۆکەیشنی ئامێرەکەت (GPS) کار پێ بکە، یان بە دەستی شوێنەکە نیشان بکە.',
+                  style: TextStyle(fontFamily: 'Rudaw'),
+                ),
                 backgroundColor: Colors.orangeAccent,
               ),
             );
@@ -99,7 +113,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('دەسەڵاتی خوێندنەوەی لۆکەیشن ڕەتکرایەوە، تکایە بە دەست لۆکەیشنەکە دیاری بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+                content: Text(
+                  'دەسەڵاتی خوێندنەوەی لۆکەیشن ڕەتکرایەوە، تکایە بە دەست لۆکەیشنەکە دیاری بکە.',
+                  style: TextStyle(fontFamily: 'Rudaw'),
+                ),
                 backgroundColor: Colors.orangeAccent,
               ),
             );
@@ -113,7 +130,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('دەسەڵاتی لۆکەیشن بلۆک کراوە. تکایە بە دەست لۆکەیشنەکە لەسەر نەخشەکە نیشان بکە.', style: TextStyle(fontFamily: 'Rudaw')),
+              content: Text(
+                'دەسەڵاتی لۆکەیشن بلۆک کراوە. تکایە بە دەست لۆکەیشنەکە لەسەر نەخشەکە نیشان بکە.',
+                style: TextStyle(fontFamily: 'Rudaw'),
+              ),
               backgroundColor: Colors.orangeAccent,
             ),
           );
@@ -193,12 +213,22 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                   Expanded(
                     child: TextField(
                       controller: _latController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'پانی (Latitude)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.location_on_outlined,
+                          size: 18,
+                        ),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onChanged: _onManualCoordinateChange,
@@ -208,12 +238,22 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                   Expanded(
                     child: TextField(
                       controller: _lngController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'درێژی (Longitude)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.location_on_outlined,
+                          size: 18,
+                        ),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onChanged: _onManualCoordinateChange,
@@ -229,7 +269,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _selectedLocation ?? const LatLng(36.1912, 44.0091),
+                      initialCenter:
+                          _selectedLocation ?? const LatLng(36.1912, 44.0091),
                       initialZoom: 13.0,
                       onTap: (tapPosition, point) {
                         _updateLocation(point);
@@ -237,7 +278,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.gardipos.app',
                       ),
                       if (_selectedLocation != null)
@@ -298,7 +340,10 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(context, _selectedLocation);

@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
-final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) async {
+final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((
+  ref,
+) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/warehouse/orders-to-pack');
@@ -17,7 +20,9 @@ final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) asy
   }
 });
 
-final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) async {
+final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((
+  ref,
+) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/warehouse/stock');
@@ -46,10 +51,7 @@ class WarehouseActions {
     try {
       await api.client.post(
         '/warehouse/pack-item',
-        data: {
-          'order_item_id': itemId,
-          'packed': packed,
-        },
+        data: {'order_item_id': itemId, 'packed': packed},
       );
       ref.invalidate(ordersToPackProvider);
       ref.invalidate(warehouseStocksProvider);
@@ -62,9 +64,7 @@ class WarehouseActions {
     try {
       await api.client.post(
         '/warehouse/mark-ready',
-        data: {
-          'order_id': orderId,
-        },
+        data: {'order_id': orderId},
       );
       ref.invalidate(ordersToPackProvider);
       ref.invalidate(warehouseStocksProvider);
@@ -83,11 +83,7 @@ class WarehouseActions {
     try {
       await api.client.post(
         '/warehouses/$warehouseId/stock/$productId/adjust',
-        data: {
-          'quantity_change': quantityChange,
-          'type': type,
-          'notes': notes,
-        },
+        data: {'quantity_change': quantityChange, 'type': type, 'notes': notes},
       );
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
@@ -109,4 +105,3 @@ class WarehouseActions {
     }
   }
 }
-

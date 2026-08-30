@@ -158,9 +158,22 @@ class SalesReportData {
 
     return SalesReportData(
       summary: SalesReportSummary.fromJson(summaryJson),
-      bySalesman: salesmanList.map((e) => SalesReportSalesmanBreakdown.fromJson(e as Map<String, dynamic>)).toList(),
-      byRoute: routeList.map((e) => SalesReportRouteBreakdown.fromJson(e as Map<String, dynamic>)).toList(),
-      orders: ordersList.map((e) => SalesReportOrderItem.fromJson(e as Map<String, dynamic>)).toList(),
+      bySalesman: salesmanList
+          .map(
+            (e) => SalesReportSalesmanBreakdown.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      byRoute: routeList
+          .map(
+            (e) =>
+                SalesReportRouteBreakdown.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+      orders: ordersList
+          .map((e) => SalesReportOrderItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -237,10 +250,7 @@ class ProfitReportData {
   final ProfitReportSummary summary;
   final List<ProfitProductBreakdown> topProducts;
 
-  ProfitReportData({
-    required this.summary,
-    required this.topProducts,
-  });
+  ProfitReportData({required this.summary, required this.topProducts});
 
   factory ProfitReportData.fromJson(Map<String, dynamic> json) {
     final summaryJson = json['summary'] as Map<String, dynamic>? ?? {};
@@ -249,7 +259,11 @@ class ProfitReportData {
 
     return ProfitReportData(
       summary: ProfitReportSummary.fromJson(summaryJson),
-      topProducts: productsList.map((e) => ProfitProductBreakdown.fromJson(e as Map<String, dynamic>)).toList(),
+      topProducts: productsList
+          .map(
+            (e) => ProfitProductBreakdown.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
     );
   }
 }
@@ -327,7 +341,11 @@ class SalesBySalesmanReportData {
       totalProfitAmount: (summaryJson['total_profit_amount'] ?? 0) as int,
       totalCommission: (summaryJson['total_commission'] ?? 0) as int,
       totalCollectedCash: (summaryJson['total_collected_cash'] ?? 0) as int,
-      salesmen: list.map((e) => SalesmanPerformanceItem.fromJson(e as Map<String, dynamic>)).toList(),
+      salesmen: list
+          .map(
+            (e) => SalesmanPerformanceItem.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
     );
   }
 }
@@ -406,7 +424,9 @@ class LowStockReportData {
     return LowStockReportData(
       totalLowStockItems: (summaryJson['total_low_stock_items'] ?? 0) as int,
       estimatedReorderCost: (summaryJson['estimated_reorder_cost'] ?? 0) as int,
-      items: list.map((e) => LowStockItem.fromJson(e as Map<String, dynamic>)).toList(),
+      items: list
+          .map((e) => LowStockItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -483,7 +503,9 @@ class StockMovementsReportData {
       totalTransactions: (summaryJson['total_transactions'] ?? 0) as int,
       totalQuantityIn: (summaryJson['total_quantity_in'] ?? 0) as int,
       totalQuantityOut: (summaryJson['total_quantity_out'] ?? 0) as int,
-      transactions: list.map((e) => StockMovementItem.fromJson(e as Map<String, dynamic>)).toList(),
+      transactions: list
+          .map((e) => StockMovementItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -546,7 +568,11 @@ class StockTransfersReportData {
     return StockTransfersReportData(
       totalTransfers: (summaryJson['total_transfers'] ?? 0) as int,
       completedTransfers: (summaryJson['completed_transfers'] ?? 0) as int,
-      transfers: list.map((e) => StockTransferReportItem.fromJson(e as Map<String, dynamic>)).toList(),
+      transfers: list
+          .map(
+            (e) => StockTransferReportItem.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
     );
   }
 }

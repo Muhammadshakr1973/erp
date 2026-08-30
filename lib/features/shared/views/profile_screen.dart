@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,9 +19,7 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('پڕۆفایل', style: AppTextStyles.h2),
-      ),
+      appBar: AppBar(title: const Text('پڕۆفایل', style: AppTextStyles.h2)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
         children: [
@@ -30,16 +29,25 @@ class ProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 50,
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Icon(AppIcons.profile, size: 50, color: theme.colorScheme.primary),
+                  child: Icon(
+                    AppIcons.profile,
+                    size: 50,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(user?.name ?? 'ناوی بەکارهێنەر', style: AppTextStyles.h2),
                 Text(
                   user?.role.toUpperCase() ?? 'ROLE',
-                  style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.primary),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(user?.phone ?? '0750 000 0000', style: AppTextStyles.caption),
+                Text(
+                  user?.phone ?? '0750 000 0000',
+                  style: AppTextStyles.caption,
+                ),
               ],
             ),
           ),
@@ -52,13 +60,19 @@ class ProfileScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.language),
                   title: const Text('زمان', style: AppTextStyles.bodyBold),
-                  trailing: const Text('کوردی (سۆرانی)', style: AppTextStyles.caption),
+                  trailing: const Text(
+                    'کوردی (سۆرانی)',
+                    style: AppTextStyles.caption,
+                  ),
                   onTap: () {},
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.dark_mode_outlined),
-                  title: const Text('دۆخی تاریک', style: AppTextStyles.bodyBold),
+                  title: const Text(
+                    'دۆخی تاریک',
+                    style: AppTextStyles.bodyBold,
+                  ),
                   trailing: Switch(
                     value: theme.brightness == Brightness.dark,
                     onChanged: (val) {
@@ -69,7 +83,10 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.lock_outline),
-                  title: const Text('گۆڕینی وشەی نهێنی', style: AppTextStyles.bodyBold),
+                  title: const Text(
+                    'گۆڕینی وشەی نهێنی',
+                    style: AppTextStyles.bodyBold,
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {},
                 ),

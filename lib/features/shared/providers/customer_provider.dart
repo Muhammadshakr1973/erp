@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../models/customer.dart';
 
@@ -38,31 +39,43 @@ class CustomerFilters {
   int get hashCode => Object.hash(page, routeId, onlyDebtors, searchQuery);
 }
 
-final filteredCustomerListProvider = FutureProvider.family<List<Customer>, CustomerFilters>((ref, filters) async {
-  final api = ref.watch(apiClientProvider);
-  try {
-    final response = await api.client.get('/customers', queryParameters: filters.toMap());
-    if (response.statusCode == 200) {
-      var rawData = response.data['data'];
-      List data = [];
-      if (rawData is Map<String, dynamic> && rawData.containsKey('data')) {
-        data = rawData['data'] ?? [];
-      } else if (rawData is List) {
-        data = rawData;
+final filteredCustomerListProvider =
+    FutureProvider.family<List<Customer>, CustomerFilters>((
+      ref,
+      filters,
+    ) async {
+      final api = ref.watch(apiClientProvider);
+      try {
+        final response = await api.client.get(
+          '/customers',
+          queryParameters: filters.toMap(),
+        );
+        if (response.statusCode == 200) {
+          var rawData = response.data['data'];
+          List data = [];
+          if (rawData is Map<String, dynamic> && rawData.containsKey('data')) {
+            data = rawData['data'] ?? [];
+          } else if (rawData is List) {
+            data = rawData;
+          }
+          return data.map((json) => Customer.fromJson(json)).toList();
+        }
+        return [];
+      } catch (e) {
+        throw Exception(api.parseError(e));
       }
-      return data.map((json) => Customer.fromJson(json)).toList();
-    }
-    return [];
-  } catch (e) {
-    throw Exception(api.parseError(e));
-  }
-});
+    });
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) async {
-  return ref.watch(filteredCustomerListProvider(const CustomerFilters()).future);
+  return ref.watch(
+    filteredCustomerListProvider(const CustomerFilters()).future,
+  );
 });
 
-final singleCustomerProvider = FutureProvider.family<Customer, int>((ref, id) async {
+final singleCustomerProvider = FutureProvider.family<Customer, int>((
+  ref,
+  id,
+) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/customers/$id');
@@ -99,18 +112,22 @@ class CustomerActions {
     double? longitude,
   }) async {
     try {
-      final response = await api.client.post('/customers', data: {
-        'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
-        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-        if (address != null && address.isNotEmpty) 'address': address,
-        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-        if (routeId != null) 'route_id': routeId,
-        if (priceType != null) 'price_type': priceType,
-        if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
-      });
+      final response = await api.client.post(
+        '/customers',
+        data: {
+          'name': name,
+          if (phone != null && phone.isNotEmpty) 'phone': phone,
+          if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+          if (address != null && address.isNotEmpty) 'address': address,
+          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+          if (routeId != null) 'route_id': routeId,
+          if (priceType != null) 'price_type': priceType,
+          if (initialDebt != null && initialDebt > 0)
+            'initial_debt': initialDebt,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        },
+      );
       ref.invalidate(customerListProvider);
       return Customer.fromJson(response.data['data']);
     } catch (e) {
@@ -132,18 +149,21 @@ class CustomerActions {
     double? longitude,
   }) async {
     try {
-      final response = await api.client.put('/customers/$id', data: {
-        'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
-        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-        if (address != null && address.isNotEmpty) 'address': address,
-        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-        if (routeId != null) 'route_id': routeId,
-        if (priceType != null) 'price_type': priceType,
-        if (isActive != null) 'is_active': isActive,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
-      });
+      final response = await api.client.put(
+        '/customers/$id',
+        data: {
+          'name': name,
+          if (phone != null && phone.isNotEmpty) 'phone': phone,
+          if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+          if (address != null && address.isNotEmpty) 'address': address,
+          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+          if (routeId != null) 'route_id': routeId,
+          if (priceType != null) 'price_type': priceType,
+          if (isActive != null) 'is_active': isActive,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        },
+      );
       ref.invalidate(customerListProvider);
       ref.invalidate(singleCustomerProvider(id));
       return Customer.fromJson(response.data['data']);
@@ -161,4 +181,3 @@ class CustomerActions {
     }
   }
 }
-

@@ -13,17 +13,15 @@ class AppShadows {
 
   static const List<BoxShadow> cardDark = [
     BoxShadow(
-      color: Color(0x1A000000), // Slightly darker shadow for dark mode perception
+      color: Color(
+        0x1A000000,
+      ), // Slightly darker shadow for dark mode perception
       blurRadius: 12,
       offset: Offset(0, 4),
     ),
   ];
 
   static const List<BoxShadow> elevated = [
-    BoxShadow(
-      color: Color(0x14000000),
-      blurRadius: 24,
-      offset: Offset(0, 8),
-    ),
+    BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 8)),
   ];
 }

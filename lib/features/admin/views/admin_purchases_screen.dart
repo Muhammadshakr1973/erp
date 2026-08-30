@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,10 +21,12 @@ class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
 
   @override
-  ConsumerState<AdminPurchasesScreen> createState() => _AdminPurchasesScreenState();
+  ConsumerState<AdminPurchasesScreen> createState() =>
+      _AdminPurchasesScreenState();
 }
 
-class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> with SingleTickerProviderStateMixin {
+class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Set<int> _selectedRequirementIds = {};
   bool _isConverting = false;
@@ -85,9 +88,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('کێشە لە سڕینەوە: $e')),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('کێشە لە سڕینەوە: $e')));
         }
       }
     }
@@ -101,12 +103,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('دروستکردنی پسوڵەی کڕین', style: AppTextStyles.bodyBold),
+          title: const Text(
+            'دروستکردنی پسوڵەی کڕین',
+            style: AppTextStyles.bodyBold,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ئایا دڵنیایت لە گۆڕینی ${_selectedRequirementIds.length} داواکاری بۆ پسوڵەی کڕین؟', style: AppTextStyles.caption),
+              Text(
+                'ئایا دڵنیایت لە گۆڕینی ${_selectedRequirementIds.length} داواکاری بۆ پسوڵەی کڕین؟',
+                style: AppTextStyles.caption,
+              ),
               const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: notesController,
@@ -128,7 +136,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
             ),
           ],
         );
-      }
+      },
     );
 
     if (confirmed == true && context.mounted) {
@@ -136,17 +144,21 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
         _isConverting = true;
       });
       try {
-        await ref.read(purchaseActionsProvider).convertRequirementsToPO(
-          requirementIds: _selectedRequirementIds.toList(),
-          notes: notesController.text,
-        );
+        await ref
+            .read(purchaseActionsProvider)
+            .convertRequirementsToPO(
+              requirementIds: _selectedRequirementIds.toList(),
+              notes: notesController.text,
+            );
         setState(() {
           _selectedRequirementIds.clear();
         });
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین'),
+              content: Text(
+                'داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین',
+              ),
               backgroundColor: AppColors.success,
             ),
           );
@@ -171,7 +183,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
     final confirmed = await AppDialog.showConfirm(
       context,
       title: 'وەرگرتنی کاڵاکان لە کۆگا',
-      message: 'ئایا دڵنیایت لە وەرگرتنی کاڵاکانی پسوڵەی کڕینی #${order.orderNumber}؟ ئەم کردارە ستۆکی کۆگا زیاد دەکات و قەرزەکە دەخاتە سەر کۆمپانیا.',
+      message:
+          'ئایا دڵنیایت لە وەرگرتنی کاڵاکانی پسوڵەی کڕینی #${order.orderNumber}؟ ئەم کردارە ستۆکی کۆگا زیاد دەکات و قەرزەکە دەخاتە سەر کۆمپانیا.',
       confirmText: 'وەرگرتن',
       cancelText: 'پەشیمانبوونەوە',
     );
@@ -185,7 +198,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('پسوڵەی کڕین بەسەرکەوتوویی وەرگیرا و ستۆک نوێکرایەوە'),
+              content: Text(
+                'پسوڵەی کڕین بەسەرکەوتوویی وەرگیرا و ستۆک نوێکرایەوە',
+              ),
               backgroundColor: AppColors.success,
             ),
           );
@@ -253,7 +268,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Text('کێشەیەک لە بارکردنی داواکارییەکان دروستبوو'),
               const SizedBox(height: AppSpacing.sm),
@@ -285,11 +304,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'هیچ داواکاری کڕینێکی کراوە بەردەست نییە',
-                      style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -311,12 +336,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
               if (_selectedRequirementIds.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
                   child: Row(
                     children: [
                       Text(
                         'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
-                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.onPrimaryContainer),
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
                       ),
                       const Spacer(),
                       _isConverting
@@ -337,7 +366,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
                   itemCount: requirements.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final req = requirements[index];
                     final isSelected = _selectedRequirementIds.contains(req.id);
@@ -363,12 +393,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                             decoration: BoxDecoration(
                               color: req.isUrgent
                                   ? AppColors.danger.withValues(alpha: 0.1)
-                                  : theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+                                  : theme.colorScheme.primaryContainer
+                                        .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              req.isUrgent ? Icons.warning_amber_rounded : Icons.inventory_2_outlined,
-                              color: req.isUrgent ? AppColors.danger : theme.colorScheme.primary,
+                              req.isUrgent
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.inventory_2_outlined,
+                              color: req.isUrgent
+                                  ? AppColors.danger
+                                  : theme.colorScheme.primary,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -402,7 +437,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                                     padding: const EdgeInsets.only(top: 2.0),
                                     child: Text(
                                       'لەلایەن پسوڵەی فرۆشتنی: #${req.salesOrderId}',
-                                      style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -449,7 +486,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Text('کێشەیەک لە بارکردنی پسوڵەکان دروستبوو'),
               const SizedBox(height: AppSpacing.sm),
@@ -481,11 +522,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'هیچ پسوڵەیەکی کڕین تۆمار نەکراوە',
-                      style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -499,7 +546,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
           child: ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             itemCount: orders.length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final order = orders[index];
               final isDraft = order.status.toUpperCase() == 'DRAFT';
@@ -514,7 +562,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                         : AppColors.success.withValues(alpha: 0.1),
                     child: Icon(
                       AppIcons.order,
-                      color: isDraft ? theme.colorScheme.primary : AppColors.success,
+                      color: isDraft
+                          ? theme.colorScheme.primary
+                          : AppColors.success,
                     ),
                   ),
                   title: Text(
@@ -530,12 +580,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                     children: [
                       StatusBadge(
                         label: isDraft ? 'چاوەڕوانە' : 'وەرگیراوە',
-                        type: isDraft ? StatusBadgeType.warning : StatusBadgeType.success,
+                        type: isDraft
+                            ? StatusBadgeType.warning
+                            : StatusBadgeType.success,
                       ),
                       if (isDraft)
                         const Padding(
                           padding: EdgeInsets.only(right: 4.0),
-                          child: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                          child: Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
                         ),
                     ],
                   ),
@@ -596,12 +652,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
             mainAxisSpacing: AppSpacing.md,
             mainAxisExtent: 130,
           ),
-          itemBuilder: (context, index) => _buildSupplierCard(context, suppliers[index]),
+          itemBuilder: (context, index) =>
+              _buildSupplierCard(context, suppliers[index]),
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(
         child: Text(
           'شکست لە هێنانی زانیارییەکان: $error',
@@ -612,7 +667,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
@@ -633,7 +688,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                 color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(Icons.storefront, color: theme.colorScheme.primary, size: 28),
+              child: Icon(
+                Icons.storefront,
+                color: theme.colorScheme.primary,
+                size: 28,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -648,12 +707,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                   const SizedBox(height: 2),
                   Text(
                     'کەسی پەیوەندی: ${supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty ? supplier.contactPerson : '-'}',
-                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
-                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8)),
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -666,13 +731,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                 Text(
                   'کۆد: #${supplier.id}',
                   style: AppTextStyles.caption.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.7,
+                    ),
                     fontSize: 11,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: hasDebt
                         ? AppColors.danger.withValues(alpha: 0.1)
@@ -691,7 +761,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen> wit
                       ),
                       const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: hasDebt ? AppColors.danger : AppColors.success,
                           borderRadius: BorderRadius.circular(12),

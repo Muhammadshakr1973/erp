@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 
@@ -24,8 +25,10 @@ class AppIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
-    final bg = backgroundColor ?? (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
+
+    final bg =
+        backgroundColor ??
+        (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
     final fg = iconColor ?? theme.colorScheme.primary;
 
     return Container(

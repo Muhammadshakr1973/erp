@@ -140,7 +140,10 @@ class SyncService {
         final response = await api.client.post('/orders', data: entry.payload);
         return response.data;
       case 'UPDATE_ORDER':
-        final response2 = await api.client.put('/orders/${entry.entityId}', data: entry.payload);
+        final response2 = await api.client.put(
+          '/orders/${entry.entityId}',
+          data: entry.payload,
+        );
         return response2.data;
       case 'UPDATE_CUSTOMER':
         final response = await api.client.put(

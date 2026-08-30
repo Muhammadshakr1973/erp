@@ -66,7 +66,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final role = authState.user!.role.toLowerCase();
 
-      if (location.startsWith('/admin') && !(role == 'admin' || role == 'owner')) {
+      if (location.startsWith('/admin') &&
+          !(role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
       if (location.startsWith('/salesman') && role != 'salesman') {
@@ -78,15 +79,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location.startsWith('/driver') && role != 'driver') {
         return _getDashboardForRole(role);
       }
-      
+
       // Shared route-specific checks
-      if (location.startsWith('/pack-order') && !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
+      if (location.startsWith('/pack-order') &&
+          !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
-      if (location.startsWith('/trip') && !(role == 'driver' || role == 'admin' || role == 'owner')) {
+      if (location.startsWith('/trip') &&
+          !(role == 'driver' || role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
-      if (location.startsWith('/admin-purchases') && !(role == 'admin' || role == 'owner')) {
+      if (location.startsWith('/admin-purchases') &&
+          !(role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
 

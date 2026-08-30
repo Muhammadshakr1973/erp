@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_extension.dart';
@@ -20,7 +21,7 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = theme.extension<AppThemeExtension>()!;
-    
+
     Color bgColor;
     Color textColor;
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
 
@@ -24,10 +25,7 @@ class AppCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final hasTap = onTap != null || onLongPress != null;
 
-    final content = Padding(
-      padding: padding,
-      child: child,
-    );
+    final content = Padding(padding: padding, child: child);
 
     return Container(
       decoration: BoxDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 // ignore: unused_import
 import '../theme/app_colors.dart';
 // ignore: unused_import
@@ -41,10 +42,7 @@ class AppIconBadge extends StatelessWidget {
                 color: theme.colorScheme.error,
                 shape: BoxShape.circle,
               ),
-              constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
-              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               child: Center(
                 child: Text(
                   count > 99 ? '99+' : count.toString(),

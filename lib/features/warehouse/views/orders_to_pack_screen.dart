@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -33,9 +34,7 @@ class OrdersToPackScreen extends ConsumerWidget {
           await ref.read(ordersToPackProvider.future);
         },
         child: ordersAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -43,11 +42,17 @@ class OrdersToPackScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: theme.colorScheme.error,
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     'کێشەیەک ڕوویدا لە بارکردنی پسوڵەکان',
-                    style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.error),
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -74,11 +79,17 @@ class OrdersToPackScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(AppIcons.orderStatus, size: 80, color: Colors.grey.shade400),
+                      Icon(
+                        AppIcons.orderStatus,
+                        size: 80,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'هیچ پسوڵەیەک نییە بۆ پاکەتکردن',
-                        style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade600),
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       const Text(
@@ -94,18 +105,24 @@ class OrdersToPackScreen extends ConsumerWidget {
             return ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
               itemCount: orders.length,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final order = orders[index];
-                final int totalItems = order.items.fold(0, (sum, item) => sum + item.quantity);
-                final int packedItems = order.items.where((e) => e.isPacked).length;
+                final int totalItems = order.items.fold(
+                  0,
+                  (sum, item) => sum + item.quantity,
+                );
+                final int packedItems = order.items
+                    .where((e) => e.isPacked)
+                    .length;
 
-                final StatusBadgeType badgeType = order.status == 'PACKING' 
-                    ? StatusBadgeType.warning 
+                final StatusBadgeType badgeType = order.status == 'PACKING'
+                    ? StatusBadgeType.warning
                     : StatusBadgeType.info;
 
-                final String badgeLabel = order.status == 'PACKING' 
-                    ? 'لە پاکەتکردندایە' 
+                final String badgeLabel = order.status == 'PACKING'
+                    ? 'لە پاکەتکردندایە'
                     : 'پشتڕاستکراوە';
 
                 return AppCard(
@@ -122,7 +139,10 @@ class OrdersToPackScreen extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Center(
-                          child: Icon(AppIcons.orderStatus, color: theme.colorScheme.primary),
+                          child: Icon(
+                            AppIcons.orderStatus,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -130,7 +150,10 @@ class OrdersToPackScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('پسوڵەی #${order.orderNumber}', style: AppTextStyles.bodyBold),
+                            Text(
+                              'پسوڵەی #${order.orderNumber}',
+                              style: AppTextStyles.bodyBold,
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               'کڕیار: ${order.customerName} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
@@ -139,10 +162,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      StatusBadge(
-                        label: badgeLabel,
-                        type: badgeType,
-                      ),
+                      StatusBadge(label: badgeLabel, type: badgeType),
                     ],
                   ),
                 );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../features/auth/providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -46,8 +47,8 @@ class PermissionGuard extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark 
-                          ? AppColors.dangerDark.withValues(alpha: 0.1) 
+                      color: isDark
+                          ? AppColors.dangerDark.withValues(alpha: 0.1)
                           : AppColors.danger.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
@@ -69,7 +70,9 @@ class PermissionGuard extends ConsumerWidget {
                   Text(
                     'ببورە، تۆ مۆڵەتی پێویستت نییە بۆ بینینی ئەم پەڕەیە یان ئەنجامدانی ئەم کردارە.',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                     textAlign: TextAlign.center,
                   ),

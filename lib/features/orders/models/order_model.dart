@@ -27,7 +27,8 @@ class OrderModel {
       orderNumber: json['order_number'] ?? '',
       customerId: json['customer_id'] ?? 0,
       salesmanId: json['salesman_id'] ?? 0,
-      totalAmount: double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
+      totalAmount:
+          double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
       status: json['status'] ?? 'PENDING',
       createdAt: json['created_at'] ?? '',
       customer: json['customer'],

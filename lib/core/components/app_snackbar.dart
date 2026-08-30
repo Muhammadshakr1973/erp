@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_durations.dart';
 import '../theme/app_radius.dart';

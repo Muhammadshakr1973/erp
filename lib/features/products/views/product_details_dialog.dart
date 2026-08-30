@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -202,28 +203,28 @@ class ProductDetailsDialog extends ConsumerWidget {
                     _buildDetailRowWithColor(
                       context,
                       'تێچوو (کۆست):',
-                      '${product.costPrice.toInt()} د.ع',
+                      '${Formatters.currency(product.costPrice)}',
                       Colors.grey,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی کڕیاری گەورە (N1):',
-                      '${product.priceN1.toInt()} د.ع',
+                      '${Formatters.currency(product.priceN1)}',
                       AppColors.success,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی کڕیاری ناوەند (N2):',
-                      '${product.priceN2.toInt()} د.ع',
+                      '${Formatters.currency(product.priceN2)}',
                       theme.colorScheme.primary,
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی تاکفرۆش/ئاسایی (N3):',
-                      '${product.priceN3.toInt()} د.ع',
+                      '${Formatters.currency(product.priceN3)}',
                       Colors.orange,
                     ),
                     const Divider(height: 16),

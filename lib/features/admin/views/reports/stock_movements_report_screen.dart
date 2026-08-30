@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -12,10 +13,12 @@ class StockMovementsReportScreen extends ConsumerStatefulWidget {
   const StockMovementsReportScreen({super.key});
 
   @override
-  ConsumerState<StockMovementsReportScreen> createState() => _StockMovementsReportScreenState();
+  ConsumerState<StockMovementsReportScreen> createState() =>
+      _StockMovementsReportScreenState();
 }
 
-class _StockMovementsReportScreenState extends ConsumerState<StockMovementsReportScreen> {
+class _StockMovementsReportScreenState
+    extends ConsumerState<StockMovementsReportScreen> {
   int? _selectedWarehouseId;
   String? _selectedType;
   DateTime? _startDate;
@@ -35,10 +38,14 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_selectedWarehouseId != null) 'warehouse_id': _selectedWarehouseId.toString(),
-        if (_selectedType != null && _selectedType != 'ALL') 'type': _selectedType,
-        if (_startDate != null) 'start_date': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'end_date': _endDate!.toIso8601String().split('T').first,
+        if (_selectedWarehouseId != null)
+          'warehouse_id': _selectedWarehouseId.toString(),
+        if (_selectedType != null && _selectedType != 'ALL')
+          'type': _selectedType,
+        if (_startDate != null)
+          'start_date': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'end_date': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -60,7 +67,9 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
+      initialDate: isStart
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
@@ -97,10 +106,16 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('فلتەرکردنی جوڵەی ستۆک', style: AppTextStyles.h3),
+                      const Text(
+                        'فلتەرکردنی جوڵەی ستۆک',
+                        style: AppTextStyles.h3,
+                      ),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
@@ -125,7 +140,10 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                             const SizedBox(height: AppSpacing.md),
                             SizedBox(
                               width: double.infinity,
-                              child: AppButton(text: 'جێبەجێکردنی فلتەر', onPressed: _applyFilters),
+                              child: AppButton(
+                                text: 'جێبەجێکردنی فلتەر',
+                                onPressed: _applyFilters,
+                              ),
                             ),
                           ],
                         );
@@ -137,12 +155,17 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                           const SizedBox(width: AppSpacing.md),
                           Expanded(child: _buildEndDatePicker(context)),
                           const SizedBox(width: AppSpacing.md),
-                          Expanded(child: _buildWarehouseDropdown(warehousesAsync)),
+                          Expanded(
+                            child: _buildWarehouseDropdown(warehousesAsync),
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(child: _buildTypeDropdown()),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
-                            child: AppButton(text: 'جێبەجێکردن', onPressed: _applyFilters),
+                            child: AppButton(
+                              text: 'جێبەجێکردن',
+                              onPressed: _applyFilters,
+                            ),
                           ),
                         ],
                       );
@@ -164,7 +187,10 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Text('هەڵەیەک ڕوویدا: $err', style: const TextStyle(color: AppColors.danger)),
+                  child: Text(
+                    'هەڵەیەک ڕوویدا: $err',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
                 ),
               ),
               data: (data) => Column(
@@ -178,9 +204,18 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('کۆی جوڵەکان', style: AppTextStyles.bodySmall),
+                              const Text(
+                                'کۆی جوڵەکان',
+                                style: AppTextStyles.bodySmall,
+                              ),
                               const SizedBox(height: 4),
-                              Text('${data.totalTransactions}', style: AppTextStyles.h3.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                              Text(
+                                '${data.totalTransactions}',
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -191,9 +226,18 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('کۆی هاتوو (+)', style: AppTextStyles.bodySmall),
+                              const Text(
+                                'کۆی هاتوو (+)',
+                                style: AppTextStyles.bodySmall,
+                              ),
                               const SizedBox(height: 4),
-                              Text('+${data.totalQuantityIn}', style: AppTextStyles.h3.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
+                              Text(
+                                '+${data.totalQuantityIn}',
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -204,9 +248,18 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('کۆی دەرچوو (-)', style: AppTextStyles.bodySmall),
+                              const Text(
+                                'کۆی دەرچوو (-)',
+                                style: AppTextStyles.bodySmall,
+                              ),
                               const SizedBox(height: 4),
-                              Text('-${data.totalQuantityOut}', style: AppTextStyles.h3.copyWith(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                              Text(
+                                '-${data.totalQuantityOut}',
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -234,7 +287,10 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text('هیچ جوڵەیەکی ستۆک نەدۆزرایەوە', style: AppTextStyles.bodyMedium),
+            child: Text(
+              'هیچ جوڵەیەکی ستۆک نەدۆزرایەوە',
+              style: AppTextStyles.bodyMedium,
+            ),
           ),
         ),
       );
@@ -258,24 +314,31 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
           ],
           rows: transactions.map((t) {
             final isPositive = t.quantityChange > 0;
-            return DataRow(cells: [
-              DataCell(Text(t.createdAt.split('T').first)),
-              DataCell(Text(t.warehouseName)),
-              DataCell(Text(t.productName, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(t.sku)),
-              DataCell(Text(t.type)),
-              DataCell(
-                Text(
-                  '${isPositive ? '+' : ''}${t.quantityChange} ${t.unit}',
-                  style: TextStyle(
-                    color: isPositive ? AppColors.success : AppColors.danger,
-                    fontWeight: FontWeight.bold,
+            return DataRow(
+              cells: [
+                DataCell(Text(t.createdAt.split('T').first)),
+                DataCell(Text(t.warehouseName)),
+                DataCell(
+                  Text(
+                    t.productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              DataCell(Text('${t.quantityAfter} ${t.unit}')),
-              DataCell(Text(t.notes ?? '-')),
-            ]);
+                DataCell(Text(t.sku)),
+                DataCell(Text(t.type)),
+                DataCell(
+                  Text(
+                    '${isPositive ? '+' : ''}${t.quantityChange} ${t.unit}',
+                    style: TextStyle(
+                      color: isPositive ? AppColors.success : AppColors.danger,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                DataCell(Text('${t.quantityAfter} ${t.unit}')),
+                DataCell(Text(t.notes ?? '-')),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -291,7 +354,11 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _startDate != null
+              ? _startDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -305,7 +372,11 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _endDate != null
+              ? _endDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -321,7 +392,11 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت کۆگاکان')),
         ...warehousesAsync.when(
-          data: (list) => list.map<DropdownMenuItem<int?>>((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
+          data: (list) => list
+              .map<DropdownMenuItem<int?>>(
+                (w) => DropdownMenuItem(value: w.id, child: Text(w.name)),
+              )
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),
@@ -342,9 +417,18 @@ class _StockMovementsReportScreenState extends ConsumerState<StockMovementsRepor
         DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
         DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین (Purchase)')),
         DropdownMenuItem(value: 'SALE', child: Text('فرۆشتن (Sale)')),
-        DropdownMenuItem(value: 'TRANSFER_IN', child: Text('گواستنەوە بۆ ناوەوە')),
-        DropdownMenuItem(value: 'TRANSFER_OUT', child: Text('گواستنەوە بۆ دەرەوە')),
-        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕێکخستن (Adjustment)')),
+        DropdownMenuItem(
+          value: 'TRANSFER_IN',
+          child: Text('گواستنەوە بۆ ناوەوە'),
+        ),
+        DropdownMenuItem(
+          value: 'TRANSFER_OUT',
+          child: Text('گواستنەوە بۆ دەرەوە'),
+        ),
+        DropdownMenuItem(
+          value: 'ADJUSTMENT',
+          child: Text('ڕێکخستن (Adjustment)'),
+        ),
         DropdownMenuItem(value: 'RETURN', child: Text('گەڕانەوە (Return)')),
       ],
       onChanged: (val) => setState(() => _selectedType = val),

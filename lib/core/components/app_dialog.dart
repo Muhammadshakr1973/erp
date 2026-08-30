@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
@@ -20,18 +21,22 @@ class AppDialog {
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
-        
+
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
           title: Text(
             title,
-            style: AppTextStyles.h2.copyWith(color: theme.colorScheme.onSurface),
+            style: AppTextStyles.h2.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
           ),
           content: Text(
             message,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           actions: [
@@ -62,18 +67,22 @@ class AppDialog {
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
-        
+
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
           title: Text(
             title,
-            style: AppTextStyles.h2.copyWith(color: theme.colorScheme.onSurface),
+            style: AppTextStyles.h2.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
           ),
           content: Text(
             message,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           actions: [

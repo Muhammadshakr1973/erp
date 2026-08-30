@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
@@ -41,7 +42,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    final success = await ref.read(authProvider.notifier).login(phone, password);
+    final success = await ref
+        .read(authProvider.notifier)
+        .login(phone, password);
 
     if (success && mounted) {
       final user = ref.read(authProvider).user;
@@ -65,11 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else if (mounted) {
       final error = ref.read(authProvider).error;
       if (error != null) {
-        AppSnackbar.show(
-          context,
-          message: error,
-          type: SnackbarType.error,
-        );
+        AppSnackbar.show(context, message: error, type: SnackbarType.error);
       }
     }
   }
@@ -108,7 +107,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     'بۆ چوونەژوورەوە زانیارییەکانت پڕبکەرەوە',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -118,6 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: '0750 000 0000',
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
                     prefixIcon: Icons.phone,
                   ),
                   const SizedBox(height: 24),
@@ -126,12 +128,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'وشەی نهێنی بنووسە',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _handleLogin(),
                     prefixIcon: Icons.lock,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         size: 20,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                       onPressed: () {
                         setState(() {
@@ -155,9 +163,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     size: AppButtonSize.lg,
                     onPressed: () {
                       CameraBarcodeScanner.show(context, (barcode) async {
-                        final success = await ref.read(authProvider.notifier).loginByBarcode(barcode);
+                        final success = await ref
+                            .read(authProvider.notifier)
+                            .loginByBarcode(barcode);
                         if (!mounted) return;
-                        
+
                         if (success) {
                           final user = ref.read(authProvider).user;
                           if (user != null) {

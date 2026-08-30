@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -12,7 +14,8 @@ class LowStockReportScreen extends ConsumerStatefulWidget {
   const LowStockReportScreen({super.key});
 
   @override
-  ConsumerState<LowStockReportScreen> createState() => _LowStockReportScreenState();
+  ConsumerState<LowStockReportScreen> createState() =>
+      _LowStockReportScreenState();
 }
 
 class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
@@ -22,7 +25,8 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_selectedWarehouseId != null) 'warehouse_id': _selectedWarehouseId.toString(),
+        if (_selectedWarehouseId != null)
+          'warehouse_id': _selectedWarehouseId.toString(),
       };
     });
   }
@@ -35,7 +39,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   @override
@@ -45,7 +49,10 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('کاڵا کەمبووەکان (Low Stock)', style: AppTextStyles.h2),
+        title: const Text(
+          'کاڵا کەمبووەکان (Low Stock)',
+          style: AppTextStyles.h2,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
@@ -62,12 +69,25 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                       decoration: const InputDecoration(
                         labelText: 'کۆگا',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('گشت کۆگاکان')),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('گشت کۆگاکان'),
+                        ),
                         ...warehousesAsync.when(
-                          data: (list) => list.map<DropdownMenuItem<int?>>((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
+                          data: (list) => list
+                              .map<DropdownMenuItem<int?>>(
+                                (w) => DropdownMenuItem(
+                                  value: w.id,
+                                  child: Text(w.name),
+                                ),
+                              )
+                              .toList(),
                           loading: () => [],
                           error: (_, _) => [],
                         ),
@@ -82,7 +102,13 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                   AppButton(text: 'نوێکردنەوە', onPressed: _applyFilters),
                   if (_selectedWarehouseId != null) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    TextButton(onPressed: _clearFilters, child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger))),
+                    TextButton(
+                      onPressed: _clearFilters,
+                      child: const Text(
+                        'پاککردنەوە',
+                        style: TextStyle(color: AppColors.danger),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -100,7 +126,10 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Text('هەڵەیەک ڕوویدا: $err', style: const TextStyle(color: AppColors.danger)),
+                  child: Text(
+                    'هەڵەیەک ڕوویدا: $err',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
                 ),
               ),
               data: (data) => Column(
@@ -114,9 +143,18 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('ژمارەی کاڵا کەمبووەکان', style: AppTextStyles.bodySmall),
+                              const Text(
+                                'ژمارەی کاڵا کەمبووەکان',
+                                style: AppTextStyles.bodySmall,
+                              ),
                               const SizedBox(height: 4),
-                              Text('${data.totalLowStockItems} کاڵا', style: AppTextStyles.h3.copyWith(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                              Text(
+                                '${data.totalLowStockItems} کاڵا',
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -127,9 +165,19 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('تێچووی پێشبینیکراوی پڕکردنەوە', style: AppTextStyles.bodySmall),
+                              const Text(
+                                'تێچووی پێشبینیکراوی پڕکردنەوە',
+                                style: AppTextStyles.bodySmall,
+                              ),
                               const SizedBox(height: 4),
-                              Text(_formatCurrency(data.estimatedReorderCost), style: AppTextStyles.h3.copyWith(color: AppColors.warning, fontWeight: FontWeight.bold), textDirection: TextDirection.ltr),
+                              Text(
+                                _formatCurrency(data.estimatedReorderCost),
+                                style: AppTextStyles.h3.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
                             ],
                           ),
                         ),
@@ -139,7 +187,10 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                   const SizedBox(height: AppSpacing.md),
 
                   // Table
-                  const Text('لیستی هۆشداری کەمبوونەوەی کاڵا', style: AppTextStyles.h3),
+                  const Text(
+                    'لیستی هۆشداری کەمبوونەوەی کاڵا',
+                    style: AppTextStyles.h3,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   _buildTable(data.items),
                 ],
@@ -157,7 +208,10 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text('هیچ کاڵایەک کەم نەبووەتەوە! ستۆکی هەموو کاڵاکان باشە.', style: AppTextStyles.bodyMedium),
+            child: Text(
+              'هیچ کاڵایەک کەم نەبووەتەوە! ستۆکی هەموو کاڵاکان باشە.',
+              style: AppTextStyles.bodyMedium,
+            ),
           ),
         ),
       );
@@ -182,27 +236,53 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
             DataColumn(label: Text('تێچووی خەمڵێنراو')),
           ],
           rows: items.map((item) {
-            return DataRow(cells: [
-              DataCell(Text(item.warehouseName)),
-              DataCell(Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(item.sku)),
-              DataCell(Text(item.categoryName)),
-              DataCell(Text(item.supplierName)),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+            return DataRow(
+              cells: [
+                DataCell(Text(item.warehouseName)),
+                DataCell(
+                  Text(
+                    item.productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  child: Text('${item.availableQuantity} ${item.unit}', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
                 ),
-              ),
-              DataCell(Text('${item.reservedQuantity}')),
-              DataCell(Text('${item.minStockLevel}')),
-              DataCell(Text('${item.suggestedReorder} ${item.unit}', style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(_formatCurrency(item.estimatedCost), textDirection: TextDirection.ltr)),
-            ]);
+                DataCell(Text(item.sku)),
+                DataCell(Text(item.categoryName)),
+                DataCell(Text(item.supplierName)),
+                DataCell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${item.availableQuantity} ${item.unit}',
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                DataCell(Text('${item.reservedQuantity}')),
+                DataCell(Text('${item.minStockLevel}')),
+                DataCell(
+                  Text(
+                    '${item.suggestedReorder} ${item.unit}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(item.estimatedCost),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),

@@ -13,10 +13,14 @@ class DashboardModel {
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
     return DashboardModel(
-      monthlySales: double.tryParse(json['monthly_sales']?.toString() ?? '0') ?? 0.0,
-      monthlyProfit: double.tryParse(json['monthly_profit']?.toString() ?? '0') ?? 0.0,
-      totalReceivables: double.tryParse(json['total_receivables']?.toString() ?? '0') ?? 0.0,
-      monthlyCollected: double.tryParse(json['monthly_collected']?.toString() ?? '0') ?? 0.0,
+      monthlySales:
+          double.tryParse(json['monthly_sales']?.toString() ?? '0') ?? 0.0,
+      monthlyProfit:
+          double.tryParse(json['monthly_profit']?.toString() ?? '0') ?? 0.0,
+      totalReceivables:
+          double.tryParse(json['total_receivables']?.toString() ?? '0') ?? 0.0,
+      monthlyCollected:
+          double.tryParse(json['monthly_collected']?.toString() ?? '0') ?? 0.0,
     );
   }
 }

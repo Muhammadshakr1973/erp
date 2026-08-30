@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,7 +50,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     _nameController = TextEditingController(text: widget.supplier?.name);
     _phoneController = TextEditingController(text: widget.supplier?.phone);
     _addressController = TextEditingController(text: widget.supplier?.address);
-    _contactPersonController = TextEditingController(text: widget.supplier?.contactPerson);
+    _contactPersonController = TextEditingController(
+      text: widget.supplier?.contactPerson,
+    );
     _initialDebtController = TextEditingController();
 
     _paymentAmountController = TextEditingController();
@@ -69,7 +72,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _submit() async {
@@ -83,18 +86,30 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
         final initialDebt = int.tryParse(_initialDebtController.text.trim());
         await actions.addSupplier(
           _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          contactPerson: _contactPersonController.text.trim().isEmpty ? null : _contactPersonController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          contactPerson: _contactPersonController.text.trim().isEmpty
+              ? null
+              : _contactPersonController.text.trim(),
           initialDebt: initialDebt,
         );
       } else {
         await actions.updateSupplier(
           widget.supplier!.id,
           _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          contactPerson: _contactPersonController.text.trim().isEmpty ? null : _contactPersonController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          contactPerson: _contactPersonController.text.trim().isEmpty
+              ? null
+              : _contactPersonController.text.trim(),
         );
       }
 
@@ -123,9 +138,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     final amountText = _paymentAmountController.text.trim();
     final amount = int.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')));
       return;
     }
 
@@ -136,7 +151,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       await actions.paySupplier(
         widget.supplier!.id,
         amount,
-        notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
+        notes: _paymentNotesController.text.trim().isEmpty
+            ? null
+            : _paymentNotesController.text.trim(),
       );
 
       if (mounted) {
@@ -201,7 +218,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                     height: 400,
                     child: TabBarView(
                       children: [
-                        SingleChildScrollView(child: _buildProfileFormFields(context)),
+                        SingleChildScrollView(
+                          child: _buildProfileFormFields(context),
+                        ),
                         SingleChildScrollView(child: _buildDebtForm(context)),
                         _buildLedgerHistory(context),
                       ],
@@ -347,11 +366,16 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
             color: AppColors.danger.withValues(alpha: 0.08),
             child: Column(
               children: [
-                const Text('بڕی قەرزی ئێستای کۆمپانیا', style: AppTextStyles.caption),
+                const Text(
+                  'بڕی قەرزی ئێستای کۆمپانیا',
+                  style: AppTextStyles.caption,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   _formatCurrency(widget.supplier?.debt ?? 0),
-                  style: AppTextStyles.priceLarge.copyWith(color: AppColors.danger),
+                  style: AppTextStyles.priceLarge.copyWith(
+                    color: AppColors.danger,
+                  ),
                 ),
               ],
             ),
@@ -395,9 +419,12 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     setState(() {
       _ledgerFilters = {
         'supplier_id': widget.supplier!.id.toString(),
-        if (_ledgerEntryType != null && _ledgerEntryType != 'ALL') 'entry_type': _ledgerEntryType,
-        if (_ledgerStartDate != null) 'start_date': _ledgerStartDate!.toIso8601String().split('T').first,
-        if (_ledgerEndDate != null) 'end_date': _ledgerEndDate!.toIso8601String().split('T').first,
+        if (_ledgerEntryType != null && _ledgerEntryType != 'ALL')
+          'entry_type': _ledgerEntryType,
+        if (_ledgerStartDate != null)
+          'start_date': _ledgerStartDate!.toIso8601String().split('T').first,
+        if (_ledgerEndDate != null)
+          'end_date': _ledgerEndDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -431,9 +458,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
 
   Widget _buildLedgerHistory(BuildContext context) {
     if (widget.supplier == null) return const SizedBox.shrink();
-    
+
     final ledgerAsync = ref.watch(supplierDebtsReportProvider(_ledgerFilters));
-    
+
     return Column(
       children: [
         const SizedBox(height: AppSpacing.md),
@@ -441,7 +468,8 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
         Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -454,15 +482,28 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                       decoration: const InputDecoration(
                         labelText: 'جۆری جوڵە',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-                        DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
-                        DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین')),
-                        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
+                        DropdownMenuItem(
+                          value: 'PAYMENT',
+                          child: Text('پارەدان'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PURCHASE',
+                          child: Text('کڕین'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'ADJUSTMENT',
+                          child: Text('ڕاستکردنەوە'),
+                        ),
                       ],
-                      onChanged: (val) => setState(() => _ledgerEntryType = val),
+                      onChanged: (val) =>
+                          setState(() => _ledgerEntryType = val),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -473,9 +514,20 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                         decoration: const InputDecoration(
                           labelText: 'لە بەرواری',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        child: Text(_ledgerStartDate != null ? _ledgerStartDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                        child: Text(
+                          _ledgerStartDate != null
+                              ? _ledgerStartDate!
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first
+                              : 'دیارینەکراوە',
+                          style: AppTextStyles.caption,
+                        ),
                       ),
                     ),
                   ),
@@ -487,9 +539,20 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                         decoration: const InputDecoration(
                           labelText: 'تا بەرواری',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                         ),
-                        child: Text(_ledgerEndDate != null ? _ledgerEndDate!.toIso8601String().split('T').first : 'دیارینەکراوە', style: AppTextStyles.caption),
+                        child: Text(
+                          _ledgerEndDate != null
+                              ? _ledgerEndDate!
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first
+                              : 'دیارینەکراوە',
+                          style: AppTextStyles.caption,
+                        ),
                       ),
                     ),
                   ),
@@ -501,7 +564,10 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 children: [
                   TextButton(
                     onPressed: _clearLedgerFilters,
-                    child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                    child: const Text(
+                      'پاککردنەوە',
+                      style: TextStyle(color: AppColors.danger),
+                    ),
                   ),
                   SizedBox(
                     width: 120,
@@ -528,10 +594,15 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                 itemBuilder: (context, index) {
                   final entry = ledgerList[index];
                   final isCredit = entry.type == 'credit';
-                  final amountColor = isCredit ? AppColors.success : AppColors.danger;
-                  
+                  final amountColor = isCredit
+                      ? AppColors.success
+                      : AppColors.danger;
+
                   return ListTile(
-                    title: Text(entry.description ?? 'بێ تێبینی', style: AppTextStyles.bodyBold),
+                    title: Text(
+                      entry.description ?? 'بێ تێبینی',
+                      style: AppTextStyles.bodyBold,
+                    ),
                     subtitle: Text(
                       '${entry.createdAt?.split('T').first ?? ''} • ${entry.entryType}',
                       style: AppTextStyles.caption,
@@ -542,7 +613,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                       children: [
                         Text(
                           '${isCredit ? '+' : '-'}${_formatCurrency(entry.amount)}',
-                          style: AppTextStyles.bodyBold.copyWith(color: amountColor),
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: amountColor,
+                          ),
                           textDirection: TextDirection.ltr,
                         ),
                         Text(

@@ -45,15 +45,27 @@ class Customer {
       phone2: json['phone2'],
       address: json['address'],
       imageUrl: json['image_url'],
-      balance: double.tryParse(json['current_balance']?.toString() ?? json['balance']?.toString() ?? '0') ?? 0.0,
-      creditLimit: double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
+      balance:
+          double.tryParse(
+            json['current_balance']?.toString() ??
+                json['balance']?.toString() ??
+                '0',
+          ) ??
+          0.0,
+      creditLimit:
+          double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
       salesmanId: json['salesman_id'],
       routeId: json['route_id'],
       priceType: json['price_type'] ?? 'N2',
-      isActive: json['is_active'] == 1 || json['is_active'] == true || json['is_active'] == null,
+      isActive:
+          json['is_active'] == 1 ||
+          json['is_active'] == true ||
+          json['is_active'] == null,
       latitude: double.tryParse(json['latitude']?.toString() ?? ''),
       longitude: double.tryParse(json['longitude']?.toString() ?? ''),
-      visitOrder: json['visit_order'] != null ? int.tryParse(json['visit_order'].toString()) : null,
+      visitOrder: json['visit_order'] != null
+          ? int.tryParse(json['visit_order'].toString())
+          : null,
       route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
     );
   }

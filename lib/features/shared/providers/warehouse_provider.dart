@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 
 class WarehouseModel {
@@ -6,11 +7,7 @@ class WarehouseModel {
   final String name;
   final bool isMain;
 
-  WarehouseModel({
-    required this.id,
-    required this.name,
-    this.isMain = false,
-  });
+  WarehouseModel({required this.id, required this.name, this.isMain = false});
 
   factory WarehouseModel.fromJson(Map<String, dynamic> json) {
     return WarehouseModel(
@@ -31,8 +28,6 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
     }
     return [];
   } catch (e) {
-    return [
-      WarehouseModel(id: 1, name: 'کۆگای سەرەکی', isMain: true),
-    ];
+    return [WarehouseModel(id: 1, name: 'کۆگای سەرەکی', isMain: true)];
   }
 });

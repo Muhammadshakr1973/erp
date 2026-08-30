@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -155,7 +156,7 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'قەرز: ${customer.balance.toInt()} د.ع',
+                                'قەرز: ${Formatters.currency(customer.balance)}',
                                 style: AppTextStyles.caption.copyWith(
                                   color: customer.balance > 0
                                       ? AppColors.danger

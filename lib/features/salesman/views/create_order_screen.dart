@@ -1,6 +1,8 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
@@ -48,7 +50,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _loadPreselectedCustomer() async {
     final customers = await ref.read(customerListProvider.future);
-    final match = customers.where((c) => c.id == widget.preselectedCustomerId).firstOrNull;
+    final match = customers
+        .where((c) => c.id == widget.preselectedCustomerId)
+        .firstOrNull;
     if (match != null) {
       setState(() {
         _selectedCustomer = match;
@@ -114,7 +118,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _scanBarcode(List<ProductModel> products) {
     CameraBarcodeScanner.show(context, (scannedBarcode) {
-      final matched = products.where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode).firstOrNull;
+      final matched = products
+          .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
+          .firstOrNull;
       if (matched != null) {
         _addToCart(matched.id);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,36 +140,46 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     });
   }
 
-  Future<void> _submitOrder(List<ProductModel> products, List<WarehouseModel> warehouses) async {
+  Future<void> _submitOrder(
+    List<ProductModel> products,
+    List<WarehouseModel> warehouses,
+  ) async {
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'), backgroundColor: AppColors.danger),
+        const SnackBar(
+          content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'),
+          backgroundColor: AppColors.danger,
+        ),
       );
       return;
     }
 
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'), backgroundColor: AppColors.danger),
+        const SnackBar(
+          content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'),
+          backgroundColor: AppColors.danger,
+        ),
       );
       return;
     }
 
-    final warehouseId = _selectedWarehouseId ?? (warehouses.isNotEmpty ? warehouses.first.id : 1);
+    final warehouseId =
+        _selectedWarehouseId ??
+        (warehouses.isNotEmpty ? warehouses.first.id : 1);
 
     final List<Map<String, dynamic>> itemsList = [];
     _cart.forEach((productId, qty) {
-      itemsList.add({
-        'product_id': productId,
-        'quantity': qty,
-      });
+      itemsList.add({'product_id': productId, 'quantity': qty});
     });
 
     final payload = {
       'customer_id': _selectedCustomer!.id,
       'warehouse_id': warehouseId,
       'discount_percent': _discountPercent,
-      'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      'notes': _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
       'items': itemsList,
     };
 
@@ -173,14 +189,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       await ref.read(orderActionsProvider).createOrder(payload);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('پسوڵەکە بە سەرکەوتوویی دروستکرا'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('پسوڵەکە بە سەرکەوتوویی دروستکرا'),
+            backgroundColor: AppColors.success,
+          ),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } finally {
@@ -220,7 +242,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isDesktopOrTablet = constraints.maxWidth >= AppBreakpoints.tabletMin;
+          final isDesktopOrTablet =
+              constraints.maxWidth >= AppBreakpoints.tabletMin;
 
           return Column(
             children: [
@@ -235,7 +258,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         children: [
                           Expanded(
                             flex: 2,
-                            child: _buildProductSelectionSection(productsAsync, allProducts),
+                            child: _buildProductSelectionSection(
+                              productsAsync,
+                              allProducts,
+                            ),
                           ),
                           const VerticalDivider(width: 1, thickness: 1),
                           Expanded(
@@ -246,7 +272,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       )
                     : Column(
                         children: [
-                          Expanded(child: _buildProductSelectionSection(productsAsync, allProducts)),
+                          Expanded(
+                            child: _buildProductSelectionSection(
+                              productsAsync,
+                              allProducts,
+                            ),
+                          ),
                           _buildMobileCartBar(allProducts, allWarehouses),
                         ],
                       ),
@@ -258,7 +289,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
-  Widget _buildTopBar(AsyncValue<List<Customer>> customersAsync, List<WarehouseModel> warehouses) {
+  Widget _buildTopBar(
+    AsyncValue<List<Customer>> customersAsync,
+    List<WarehouseModel> warehouses,
+  ) {
     final theme = Theme.of(context);
 
     return Container(
@@ -279,17 +313,25 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         labelText: 'دیاریکردنی کڕیار',
                         prefixIcon: Icon(Icons.person_outline),
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: customers.map((c) {
                         return DropdownMenuItem<int>(
                           value: c.id,
-                          child: Text('${c.name} (${c.priceType ?? 'N2'})', overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            '${c.name} (${c.priceType ?? 'N2'})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {
                         setState(() {
-                          _selectedCustomer = customers.where((c) => c.id == val).firstOrNull;
+                          _selectedCustomer = customers
+                              .where((c) => c.id == val)
+                              .firstOrNull;
                         });
                       },
                     );
@@ -299,7 +341,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               if (_selectedCustomer != null) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -307,7 +352,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                   child: Text(
                     'نرخی ${_selectedCustomer!.priceType ?? 'N2'}',
-                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
@@ -318,7 +365,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
-  Widget _buildProductSelectionSection(AsyncValue<List<ProductModel>> productsAsync, List<ProductModel> allProducts) {
+  Widget _buildProductSelectionSection(
+    AsyncValue<List<ProductModel>> productsAsync,
+    List<ProductModel> allProducts,
+  ) {
     return Column(
       children: [
         Padding(
@@ -364,7 +414,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
-  Widget _buildProductCard(ProductModel product, double unitPrice, int qtyInCart) {
+  Widget _buildProductCard(
+    ProductModel product,
+    double unitPrice,
+    int qtyInCart,
+  ) {
     final theme = Theme.of(context);
 
     return AppCard(
@@ -382,7 +436,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Center(
-                    child: Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey),
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
                 if (qtyInCart > 0)
@@ -394,7 +452,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       backgroundColor: theme.colorScheme.primary,
                       child: Text(
                         '$qtyInCart',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -409,13 +471,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
-          Text('${unitPrice.toInt()} د.ع', style: AppTextStyles.price),
+          Text('${Formatters.currency(unitPrice)}', style: AppTextStyles.price),
         ],
       ),
     );
   }
 
-  Widget _buildCartPanel(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
+  Widget _buildCartPanel(
+    List<ProductModel> allProducts,
+    List<WarehouseModel> warehouses,
+  ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
     final discountAmount = (subtotal * _discountPercent) / 100;
@@ -435,7 +500,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 Chip(
                   label: Text('$cartItemCount کاڵا'),
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+                  labelStyle: TextStyle(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ],
             ),
@@ -443,16 +510,26 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           const Divider(height: 1),
           Expanded(
             child: _cart.isEmpty
-                ? const Center(child: Text('سەبەتە بەتاڵە', style: AppTextStyles.bodyMedium))
+                ? const Center(
+                    child: Text(
+                      'سەبەتە بەتاڵە',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  )
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     itemCount: _cart.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final productId = _cart.keys.elementAt(index);
                       final qty = _cart[productId]!;
-                      final product = allProducts.where((p) => p.id == productId).firstOrNull;
-                      final unitPrice = product != null ? _getProductUnitPrice(product) : 0.0;
+                      final product = allProducts
+                          .where((p) => p.id == productId)
+                          .firstOrNull;
+                      final unitPrice = product != null
+                          ? _getProductUnitPrice(product)
+                          : 0.0;
 
                       return Row(
                         children: [
@@ -460,20 +537,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(product?.name ?? 'کاڵا', style: AppTextStyles.bodyBold),
-                                Text('${unitPrice.toInt()} د.ع', style: AppTextStyles.caption),
+                                Text(
+                                  product?.name ?? 'کاڵا',
+                                  style: AppTextStyles.bodyBold,
+                                ),
+                                Text(
+                                  '${Formatters.currency(unitPrice)}',
+                                  style: AppTextStyles.caption,
+                                ),
                               ],
                             ),
                           ),
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger),
+                                icon: const Icon(
+                                  Icons.remove_circle_outline,
+                                  color: AppColors.danger,
+                                ),
                                 onPressed: () => _removeFromCart(productId),
                               ),
                               Text('$qty', style: AppTextStyles.bodyBold),
                               IconButton(
-                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.add_circle_outline,
+                                  color: AppColors.primary,
+                                ),
                                 onPressed: () => _addToCart(productId),
                               ),
                             ],
@@ -492,14 +581,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('کۆ کۆتایی:', style: AppTextStyles.bodyLarge),
-                    Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.priceLarge),
+                    Text(
+                      '${Formatters.currency(totalAmount)}',
+                      style: AppTextStyles.priceLarge,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppButton(
                   text: 'تەواوکردنی پسوڵە',
                   isLoading: _isSubmitting,
-                  onPressed: _cart.isNotEmpty ? () => _submitOrder(allProducts, warehouses) : null,
+                  onPressed: _cart.isNotEmpty
+                      ? () => _submitOrder(allProducts, warehouses)
+                      : null,
                   size: AppButtonSize.lg,
                 ),
               ],
@@ -510,7 +604,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
-  Widget _buildMobileCartBar(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
+  Widget _buildMobileCartBar(
+    List<ProductModel> allProducts,
+    List<WarehouseModel> warehouses,
+  ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
     final discountAmount = (subtotal * _discountPercent) / 100;
@@ -537,8 +634,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('$cartItemCount کاڵا لە سەبەتەدا', style: AppTextStyles.caption),
-                  Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.price),
+                  Text(
+                    '$cartItemCount کاڵا لە سەبەتەدا',
+                    style: AppTextStyles.caption,
+                  ),
+                  Text(
+                    '${Formatters.currency(totalAmount)}',
+                    style: AppTextStyles.price,
+                  ),
                 ],
               ),
             ),
@@ -556,7 +659,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
-  void _showMobileCartBottomSheet(List<ProductModel> allProducts, List<WarehouseModel> warehouses) {
+  void _showMobileCartBottomSheet(
+    List<ProductModel> allProducts,
+    List<WarehouseModel> warehouses,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -572,7 +678,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 top: AppSpacing.md,
                 left: AppSpacing.md,
                 right: AppSpacing.md,
-                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -598,17 +705,26 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       itemBuilder: (context, index) {
                         final productId = _cart.keys.elementAt(index);
                         final qty = _cart[productId]!;
-                        final product = allProducts.where((p) => p.id == productId).firstOrNull;
-                        final unitPrice = product != null ? _getProductUnitPrice(product) : 0.0;
+                        final product = allProducts
+                            .where((p) => p.id == productId)
+                            .firstOrNull;
+                        final unitPrice = product != null
+                            ? _getProductUnitPrice(product)
+                            : 0.0;
 
                         return ListTile(
                           title: Text(product?.name ?? 'کاڵا'),
-                          subtitle: Text('$qty x ${unitPrice.toInt()} = ${(qty * unitPrice).toInt()} د.ع'),
+                          subtitle: Text(
+                            '$qty x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: AppColors.danger),
+                                icon: const Icon(
+                                  Icons.remove_circle_outline,
+                                  color: AppColors.danger,
+                                ),
                                 onPressed: () {
                                   _removeFromCart(productId);
                                   setModalState(() {});
@@ -617,7 +733,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               ),
                               Text('$qty'),
                               IconButton(
-                                icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                icon: const Icon(
+                                  Icons.add_circle_outline,
+                                  color: AppColors.primary,
+                                ),
                                 onPressed: () {
                                   _addToCart(productId);
                                   setModalState(() {});
@@ -641,7 +760,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                           ),
                           onChanged: (val) {
                             final parsed = double.tryParse(val) ?? 0.0;
@@ -664,7 +786,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('کۆی گشتی:', style: AppTextStyles.bodyLarge),
-                      Text('${totalAmount.toInt()} د.ع', style: AppTextStyles.priceLarge),
+                      Text(
+                        '${Formatters.currency(totalAmount)}',
+                        style: AppTextStyles.priceLarge,
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),

@@ -21,7 +21,7 @@ class AppIcons {
   static const IconData customerDebt = Symbols.account_balance_wallet;
   static const IconData customerMap = Symbols.location_on;
   static const IconData customerPhone = Symbols.phone;
-  
+
   // App General
   static const IconData add = Symbols.add;
   static const IconData edit = Symbols.edit;

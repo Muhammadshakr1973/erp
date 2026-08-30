@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_button.dart';
 import '../../../../core/components/app_card.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -14,10 +16,12 @@ class SalesmanCommissionsReportScreen extends ConsumerStatefulWidget {
   const SalesmanCommissionsReportScreen({super.key});
 
   @override
-  ConsumerState<SalesmanCommissionsReportScreen> createState() => _SalesmanCommissionsReportScreenState();
+  ConsumerState<SalesmanCommissionsReportScreen> createState() =>
+      _SalesmanCommissionsReportScreenState();
 }
 
-class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommissionsReportScreen> {
+class _SalesmanCommissionsReportScreenState
+    extends ConsumerState<SalesmanCommissionsReportScreen> {
   int? _selectedSalesmanId;
   String? _selectedStatus;
   DateTime? _startDate;
@@ -34,10 +38,14 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_selectedSalesmanId != null) 'salesman_id': _selectedSalesmanId.toString(),
-        if (_selectedStatus != null && _selectedStatus != 'ALL') 'status': _selectedStatus,
-        if (_startDate != null) 'period_from': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'period_to': _endDate!.toIso8601String().split('T').first,
+        if (_selectedSalesmanId != null)
+          'salesman_id': _selectedSalesmanId.toString(),
+        if (_selectedStatus != null && _selectedStatus != 'ALL')
+          'status': _selectedStatus,
+        if (_startDate != null)
+          'period_from': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'period_to': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -53,7 +61,7 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -75,8 +83,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
   }
 
   void _openCalculateDialog(BuildContext context, List<UserModel> salesmen) {
-    int? dialogSalesmanId = _selectedSalesmanId ?? (salesmen.isNotEmpty ? salesmen.first.id : null);
-    DateTime dialogStart = _startDate ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
+    int? dialogSalesmanId =
+        _selectedSalesmanId ?? (salesmen.isNotEmpty ? salesmen.first.id : null);
+    DateTime dialogStart =
+        _startDate ?? DateTime(DateTime.now().year, DateTime.now().month, 1);
     DateTime dialogEnd = _endDate ?? DateTime.now();
     final notesController = TextEditingController();
 
@@ -206,7 +216,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                                 labelText: 'لە بەرواری',
                                 border: OutlineInputBorder(),
                               ),
-                              child: Text(dialogStart.toIso8601String().split('T').first),
+                              child: Text(
+                                dialogStart.toIso8601String().split('T').first,
+                              ),
                             ),
                           ),
                         ),
@@ -232,7 +244,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                                 labelText: 'تا بەرواری',
                                 border: OutlineInputBorder(),
                               ),
-                              child: Text(dialogEnd.toIso8601String().split('T').first),
+                              child: Text(
+                                dialogEnd.toIso8601String().split('T').first,
+                              ),
                             ),
                           ),
                         ),
@@ -252,7 +266,13 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.remove_red_eye),
                         label: isPreviewing
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Text('پێشبینینی پسوڵە شایستەکان'),
                         onPressed: isPreviewing ? null : runPreview,
                       ),
@@ -266,7 +286,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.danger),
                         ),
-                        child: Text(errorMessage!, style: const TextStyle(color: AppColors.danger)),
+                        child: Text(
+                          errorMessage!,
+                          style: const TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                     if (previewData != null) ...[
@@ -276,18 +299,26 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         decoration: BoxDecoration(
                           color: AppColors.backgroundLight,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('ئەنجامی پێشبینیکردن:', style: AppTextStyles.bodyBold),
+                            const Text(
+                              'ئەنجامی پێشبینیکردن:',
+                              style: AppTextStyles.bodyBold,
+                            ),
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('ژمارەی پسوڵە گەیندراوەکان:'),
-                                Text('${previewData!['eligible_orders_count'] ?? 0}', style: AppTextStyles.bodyBold),
+                                Text(
+                                  '${previewData!['eligible_orders_count'] ?? 0}',
+                                  style: AppTextStyles.bodyBold,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -295,7 +326,12 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('کۆی فرۆشتن:'),
-                                Text(_formatCurrency(previewData!['total_sales'] ?? 0), style: AppTextStyles.bodyMedium),
+                                Text(
+                                  _formatCurrency(
+                                    previewData!['total_sales'] ?? 0,
+                                  ),
+                                  style: AppTextStyles.bodyMedium,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -303,7 +339,15 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('کۆی قازانج:'),
-                                Text(_formatCurrency(previewData!['total_profit'] ?? 0), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                Text(
+                                  _formatCurrency(
+                                    previewData!['total_profit'] ?? 0,
+                                  ),
+                                  style: const TextStyle(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -311,17 +355,29 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('ڕێژەی کۆمسیۆن:'),
-                                Text('${previewData!['commission_rate'] ?? 0}%', style: AppTextStyles.bodyBold),
+                                Text(
+                                  '${previewData!['commission_rate'] ?? 0}%',
+                                  style: AppTextStyles.bodyBold,
+                                ),
                               ],
                             ),
                             const Divider(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('کۆمسیۆنی هەژمارکراو:', style: AppTextStyles.h3),
+                                const Text(
+                                  'کۆمسیۆنی هەژمارکراو:',
+                                  style: AppTextStyles.h3,
+                                ),
                                 Text(
-                                  _formatCurrency(previewData!['estimated_commission'] ?? 0),
-                                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18),
+                                  _formatCurrency(
+                                    previewData!['estimated_commission'] ?? 0,
+                                  ),
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
                                 ),
                               ],
                             ),
@@ -340,7 +396,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
               ),
               AppButton(
                 text: 'چەسپاندن و هەژمارکردن',
-                onPressed: (previewData != null && !isPreviewing && (previewData!['eligible_orders_count'] ?? 0) > 0)
+                onPressed:
+                    (previewData != null &&
+                        !isPreviewing &&
+                        (previewData!['eligible_orders_count'] ?? 0) > 0)
                     ? submitCalculation
                     : null,
               ),
@@ -358,7 +417,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('وردەکاری کۆمسیۆنی #${commission.id}', style: AppTextStyles.h3),
+            Text(
+              'وردەکاری کۆمسیۆنی #${commission.id}',
+              style: AppTextStyles.h3,
+            ),
             _buildStatusChip(commission.status),
           ],
         ),
@@ -374,16 +436,26 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('مەندوب: ${commission.salesmanName}', style: AppTextStyles.bodyBold),
-                          Text('ماوە: ${commission.periodFrom} تا ${commission.periodTo}'),
+                          Text(
+                            'مەندوب: ${commission.salesmanName}',
+                            style: AppTextStyles.bodyBold,
+                          ),
+                          Text(
+                            'ماوە: ${commission.periodFrom} تا ${commission.periodTo}',
+                          ),
                         ],
                       ),
                       const Divider(),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('کۆی فرۆشتن: ${_formatCurrency(commission.totalSales)}'),
-                          Text('کۆی قازانج: ${_formatCurrency(commission.totalProfit)}', style: const TextStyle(color: AppColors.success)),
+                          Text(
+                            'کۆی فرۆشتن: ${_formatCurrency(commission.totalSales)}',
+                          ),
+                          Text(
+                            'کۆی قازانج: ${_formatCurrency(commission.totalProfit)}',
+                            style: const TextStyle(color: AppColors.success),
+                          ),
                           Text('ڕێژە: ${commission.commissionRate}%'),
                         ],
                       ),
@@ -392,7 +464,14 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('بڕی کۆمسیۆن:', style: AppTextStyles.h3),
-                          Text(_formatCurrency(commission.commissionAmount), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text(
+                            _formatCurrency(commission.commissionAmount),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
                         ],
                       ),
                       if (commission.calculatedByName != null) ...[
@@ -400,33 +479,49 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('هەژمارکراوە لەلایەن: ${commission.calculatedByName}'),
+                            Text(
+                              'هەژمارکراوە لەلایەن: ${commission.calculatedByName}',
+                            ),
                             if (commission.approvedByName != null)
-                              Text('پەسەندکراوە لەلایەن: ${commission.approvedByName}'),
+                              Text(
+                                'پەسەندکراوە لەلایەن: ${commission.approvedByName}',
+                              ),
                             if (commission.paidByName != null)
-                              Text('دراوە لەلایەن: ${commission.paidByName} (${commission.paymentMethod ?? 'کاش'})'),
+                              Text(
+                                'دراوە لەلایەن: ${commission.paidByName} (${commission.paymentMethod ?? 'کاش'})',
+                              ),
                           ],
                         ),
                       ],
-                      if (commission.notes != null && commission.notes!.isNotEmpty) ...[
+                      if (commission.notes != null &&
+                          commission.notes!.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: Text('تێبینی: ${commission.notes!}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                          child: Text(
+                            'تێبینی: ${commission.notes!}',
+                            style: const TextStyle(fontStyle: FontStyle.italic),
+                          ),
                         ),
                       ],
                       if (commission.cancellationReason != null) ...[
                         const SizedBox(height: 6),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: Text('هۆکاری هەڵوەشاندنەوە: ${commission.cancellationReason!}', style: const TextStyle(color: AppColors.danger)),
+                          child: Text(
+                            'هۆکاری هەڵوەشاندنەوە: ${commission.cancellationReason!}',
+                            style: const TextStyle(color: AppColors.danger),
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                const Text('پسوڵەکانی ناو ئەم کۆمسیۆنە:', style: AppTextStyles.h3),
+                const Text(
+                  'پسوڵەکانی ناو ئەم کۆمسیۆنە:',
+                  style: AppTextStyles.h3,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 if (commission.details.isEmpty)
                   const Text('هیچ وردەکارییەکی پسوڵە نییە')
@@ -443,13 +538,39 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         DataColumn(label: Text('کۆمسیۆن')),
                       ],
                       rows: commission.details.map((d) {
-                        return DataRow(cells: [
-                          DataCell(Text(d.orderNumber ?? '#${d.salesOrderId}')),
-                          DataCell(Text(d.customerName ?? 'کڕیار')),
-                          DataCell(Text(_formatCurrency(d.salesAmount), textDirection: TextDirection.ltr)),
-                          DataCell(Text(_formatCurrency(d.profitAmount), style: const TextStyle(color: AppColors.success), textDirection: TextDirection.ltr)),
-                          DataCell(Text(_formatCurrency(d.commissionAmount), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold), textDirection: TextDirection.ltr)),
-                        ]);
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Text(d.orderNumber ?? '#${d.salesOrderId}'),
+                            ),
+                            DataCell(Text(d.customerName ?? 'کڕیار')),
+                            DataCell(
+                              Text(
+                                _formatCurrency(d.salesAmount),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                _formatCurrency(d.profitAmount),
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                _formatCurrency(d.commissionAmount),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                          ],
+                        );
                       }).toList(),
                     ),
                   ),
@@ -478,7 +599,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ئایا دڵنیایت لە پەسەندکردنی کۆمسیۆنی #${commission.id} بۆ مەندوب "${commission.salesmanName}" بە بڕی ${_formatCurrency(commission.commissionAmount)}؟'),
+            Text(
+              'ئایا دڵنیایت لە پەسەندکردنی کۆمسیۆنی #${commission.id} بۆ مەندوب "${commission.salesmanName}" بە بڕی ${_formatCurrency(commission.commissionAmount)}؟',
+            ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: notesController,
@@ -499,10 +622,12 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(commissionActionProvider.notifier).approveCommission(
-                  commissionId: commission.id,
-                  notes: notesController.text.trim(),
-                );
+                await ref
+                    .read(commissionActionProvider.notifier)
+                    .approveCommission(
+                      commissionId: commission.id,
+                      notes: notesController.text.trim(),
+                    );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -515,7 +640,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('هەڵە: ${e.toString().replaceAll("Exception: ", "")}'),
+                      content: Text(
+                        'هەڵە: ${e.toString().replaceAll("Exception: ", "")}',
+                      ),
                       backgroundColor: AppColors.danger,
                     ),
                   );
@@ -542,9 +669,19 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('مەندوب: ${commission.salesmanName}', style: AppTextStyles.bodyBold),
+              Text(
+                'مەندوب: ${commission.salesmanName}',
+                style: AppTextStyles.bodyBold,
+              ),
               const SizedBox(height: 4),
-              Text('بڕی کۆمسیۆن: ${_formatCurrency(commission.commissionAmount)}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                'بڕی کۆمسیۆن: ${_formatCurrency(commission.commissionAmount)}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<String>(
                 initialValue: paymentMethod,
@@ -581,12 +718,14 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
-                  await ref.read(commissionActionProvider.notifier).payCommission(
-                    commissionId: commission.id,
-                    paymentMethod: paymentMethod,
-                    paidAt: paidDate.toIso8601String(),
-                    notes: notesController.text.trim(),
-                  );
+                  await ref
+                      .read(commissionActionProvider.notifier)
+                      .payCommission(
+                        commissionId: commission.id,
+                        paymentMethod: paymentMethod,
+                        paidAt: paidDate.toIso8601String(),
+                        notes: notesController.text.trim(),
+                      );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -599,7 +738,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('هەڵە: ${e.toString().replaceAll("Exception: ", "")}'),
+                        content: Text(
+                          'هەڵە: ${e.toString().replaceAll("Exception: ", "")}',
+                        ),
                         backgroundColor: AppColors.danger,
                       ),
                     );
@@ -645,21 +786,28 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('هەڵوەشاندنەوە', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'هەڵوەشاندنەوە',
+              style: TextStyle(color: Colors.white),
+            ),
             onPressed: () async {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تکایە هۆکاری هەڵوەشاندنەوە بنووسە')),
+                  const SnackBar(
+                    content: Text('تکایە هۆکاری هەڵوەشاندنەوە بنووسە'),
+                  ),
                 );
                 return;
               }
               Navigator.pop(ctx);
               try {
-                await ref.read(commissionActionProvider.notifier).cancelCommission(
-                  commissionId: commission.id,
-                  reason: reason,
-                );
+                await ref
+                    .read(commissionActionProvider.notifier)
+                    .cancelCommission(
+                      commissionId: commission.id,
+                      reason: reason,
+                    );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -672,7 +820,9 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('هەڵە: ${e.toString().replaceAll("Exception: ", "")}'),
+                      content: Text(
+                        'هەڵە: ${e.toString().replaceAll("Exception: ", "")}',
+                      ),
                       backgroundColor: AppColors.danger,
                     ),
                   );
@@ -720,7 +870,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
         color: bg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 12)),
+      child: Text(
+        label,
+        style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 12),
+      ),
     );
   }
 
@@ -732,7 +885,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ڕاپۆرت و بەڕێوەبردنی کۆمسیۆنی مەندوبەکان', style: AppTextStyles.h2),
+        title: const Text(
+          'ڕاپۆرت و بەڕێوەبردنی کۆمسیۆنی مەندوبەکان',
+          style: AppTextStyles.h2,
+        ),
         actions: [
           salesmenAsync.when(
             data: (salesmen) => Padding(
@@ -755,8 +911,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
             // KPI Summary Cards
             summaryAsync.when(
               data: (summary) {
-                final calculated = summary['calculated'] as Map<String, dynamic>? ?? {};
-                final approved = summary['approved'] as Map<String, dynamic>? ?? {};
+                final calculated =
+                    summary['calculated'] as Map<String, dynamic>? ?? {};
+                final approved =
+                    summary['approved'] as Map<String, dynamic>? ?? {};
                 final paid = summary['paid'] as Map<String, dynamic>? ?? {};
 
                 return LayoutBuilder(
@@ -769,14 +927,24 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('هەژمارکراو (چاوەڕوانکراو)', style: AppTextStyles.caption),
+                              const Text(
+                                'هەژمارکراو (چاوەڕوانکراو)',
+                                style: AppTextStyles.caption,
+                              ),
                               const SizedBox(height: 4),
                               Text(
                                 _formatCurrency(calculated['amount'] ?? 0),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.warning),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.warning,
+                                ),
                                 textDirection: TextDirection.ltr,
                               ),
-                              Text('${calculated['count'] ?? 0} کۆمسیۆن', style: AppTextStyles.caption),
+                              Text(
+                                '${calculated['count'] ?? 0} کۆمسیۆن',
+                                style: AppTextStyles.caption,
+                              ),
                             ],
                           ),
                         ),
@@ -787,14 +955,24 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('پەسەندکراو (ئامادەی پارەدان)', style: AppTextStyles.caption),
+                              const Text(
+                                'پەسەندکراو (ئامادەی پارەدان)',
+                                style: AppTextStyles.caption,
+                              ),
                               const SizedBox(height: 4),
                               Text(
                                 _formatCurrency(approved['amount'] ?? 0),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.info),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.info,
+                                ),
                                 textDirection: TextDirection.ltr,
                               ),
-                              Text('${approved['count'] ?? 0} کۆمسیۆن', style: AppTextStyles.caption),
+                              Text(
+                                '${approved['count'] ?? 0} کۆمسیۆن',
+                                style: AppTextStyles.caption,
+                              ),
                             ],
                           ),
                         ),
@@ -805,14 +983,24 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('دراو (تەواوبوو)', style: AppTextStyles.caption),
+                              const Text(
+                                'دراو (تەواوبوو)',
+                                style: AppTextStyles.caption,
+                              ),
                               const SizedBox(height: 4),
                               Text(
                                 _formatCurrency(paid['amount'] ?? 0),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.success),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.success,
+                                ),
                                 textDirection: TextDirection.ltr,
                               ),
-                              Text('${paid['count'] ?? 0} کۆمسیۆن', style: AppTextStyles.caption),
+                              Text(
+                                '${paid['count'] ?? 0} کۆمسیۆن',
+                                style: AppTextStyles.caption,
+                              ),
                             ],
                           ),
                         ),
@@ -821,7 +1009,14 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
 
                     if (isMobile) {
                       return Column(
-                        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 8), child: c)).toList(),
+                        children: cards
+                            .map(
+                              (c) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: c,
+                              ),
+                            )
+                            .toList(),
                       );
                     }
 
@@ -845,7 +1040,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                       const Text('فلتەرکردن', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
@@ -860,13 +1058,25 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           decoration: const InputDecoration(
                             labelText: 'مەندوب',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
                           ),
                           items: [
-                            const DropdownMenuItem(value: null, child: Text('گشت مەندوبەکان')),
-                            ...salesmen.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('گشت مەندوبەکان'),
+                            ),
+                            ...salesmen.map(
+                              (s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(s.name),
+                              ),
+                            ),
                           ],
-                          onChanged: (val) => setState(() => _selectedSalesmanId = val),
+                          onChanged: (val) =>
+                              setState(() => _selectedSalesmanId = val),
                         ),
                         loading: () => const SizedBox.shrink(),
                         error: (_, _) => const SizedBox.shrink(),
@@ -877,16 +1087,32 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                         decoration: const InputDecoration(
                           labelText: 'دۆخی کۆمسیۆن',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'ALL', child: Text('گشت دۆخەکان')),
-                          DropdownMenuItem(value: 'calculated', child: Text('هەژمارکراو')),
-                          DropdownMenuItem(value: 'approved', child: Text('پەسەندکراو')),
+                          DropdownMenuItem(
+                            value: 'ALL',
+                            child: Text('گشت دۆخەکان'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'calculated',
+                            child: Text('هەژمارکراو'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'approved',
+                            child: Text('پەسەندکراو'),
+                          ),
                           DropdownMenuItem(value: 'paid', child: Text('دراوە')),
-                          DropdownMenuItem(value: 'cancelled', child: Text('هەڵوەشێنراوە')),
+                          DropdownMenuItem(
+                            value: 'cancelled',
+                            child: Text('هەڵوەشێنراوە'),
+                          ),
                         ],
-                        onChanged: (val) => setState(() => _selectedStatus = val),
+                        onChanged: (val) =>
+                            setState(() => _selectedStatus = val),
                       );
 
                       final startPicker = InkWell(
@@ -895,9 +1121,16 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           decoration: const InputDecoration(
                             labelText: 'لە بەرواری',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
                           ),
-                          child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+                          child: Text(
+                            _startDate != null
+                                ? _startDate!.toIso8601String().split('T').first
+                                : 'دیارینەکراوە',
+                          ),
                         ),
                       );
 
@@ -907,9 +1140,16 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                           decoration: const InputDecoration(
                             labelText: 'تا بەرواری',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
                           ),
-                          child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+                          child: Text(
+                            _endDate != null
+                                ? _endDate!.toIso8601String().split('T').first
+                                : 'دیارینەکراوە',
+                          ),
                         ),
                       );
 
@@ -930,7 +1170,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                             const SizedBox(height: AppSpacing.sm),
                             SizedBox(
                               width: double.infinity,
-                              child: AppButton(text: 'جێبەجێکردن', onPressed: _applyFilters),
+                              child: AppButton(
+                                text: 'جێبەجێکردن',
+                                onPressed: _applyFilters,
+                              ),
                             ),
                           ],
                         );
@@ -948,7 +1191,10 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(flex: 2, child: endPicker),
                               const SizedBox(width: AppSpacing.sm),
-                              AppButton(text: 'فلتەر', onPressed: _applyFilters),
+                              AppButton(
+                                text: 'فلتەر',
+                                onPressed: _applyFilters,
+                              ),
                             ],
                           ),
                         ],
@@ -964,11 +1210,17 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
             Expanded(
               child: AppCard(
                 child: commissionsAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
                   data: (commissions) {
                     if (commissions.isEmpty) {
-                      return const Center(child: Text('هیچ کۆمسیۆنێک نەدۆزرایەوە', style: AppTextStyles.h3));
+                      return const Center(
+                        child: Text(
+                          'هیچ کۆمسیۆنێک نەدۆزرایەوە',
+                          style: AppTextStyles.h3,
+                        ),
+                      );
                     }
 
                     return SingleChildScrollView(
@@ -993,43 +1245,92 @@ class _SalesmanCommissionsReportScreenState extends ConsumerState<SalesmanCommis
                               cells: [
                                 DataCell(Text('#${c.id}')),
                                 DataCell(Text(c.salesmanName)),
-                                DataCell(Text('${c.periodFrom} / ${c.periodTo}')),
-                                DataCell(Text(_formatCurrency(c.totalSales), textDirection: TextDirection.ltr)),
-                                DataCell(Text(_formatCurrency(c.totalProfit), style: const TextStyle(color: AppColors.success), textDirection: TextDirection.ltr)),
+                                DataCell(
+                                  Text('${c.periodFrom} / ${c.periodTo}'),
+                                ),
+                                DataCell(
+                                  Text(
+                                    _formatCurrency(c.totalSales),
+                                    textDirection: TextDirection.ltr,
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    _formatCurrency(c.totalProfit),
+                                    style: const TextStyle(
+                                      color: AppColors.success,
+                                    ),
+                                    textDirection: TextDirection.ltr,
+                                  ),
+                                ),
                                 DataCell(Text('${c.commissionRate}%')),
-                                DataCell(Text(_formatCurrency(c.commissionAmount), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold), textDirection: TextDirection.ltr)),
+                                DataCell(
+                                  Text(
+                                    _formatCurrency(c.commissionAmount),
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textDirection: TextDirection.ltr,
+                                  ),
+                                ),
                                 DataCell(_buildStatusChip(c.status)),
                                 DataCell(
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.visibility, size: 20, color: AppColors.primary),
+                                        icon: const Icon(
+                                          Icons.visibility,
+                                          size: 20,
+                                          color: AppColors.primary,
+                                        ),
                                         tooltip: 'بینینی وردەکاری پسوڵەکان',
-                                        onPressed: () => _showDetailsDialog(context, c),
+                                        onPressed: () =>
+                                            _showDetailsDialog(context, c),
                                       ),
                                       if (c.status == 'calculated') ...[
                                         IconButton(
-                                          icon: const Icon(Icons.check_circle_outline, size: 20, color: AppColors.info),
+                                          icon: const Icon(
+                                            Icons.check_circle_outline,
+                                            size: 20,
+                                            color: AppColors.info,
+                                          ),
                                           tooltip: 'پەسەندکردن',
-                                          onPressed: () => _openApproveDialog(context, c),
+                                          onPressed: () =>
+                                              _openApproveDialog(context, c),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.cancel_outlined, size: 20, color: AppColors.danger),
+                                          icon: const Icon(
+                                            Icons.cancel_outlined,
+                                            size: 20,
+                                            color: AppColors.danger,
+                                          ),
                                           tooltip: 'هەڵوەشاندنەوە',
-                                          onPressed: () => _openCancelDialog(context, c),
+                                          onPressed: () =>
+                                              _openCancelDialog(context, c),
                                         ),
                                       ],
                                       if (c.status == 'approved') ...[
                                         IconButton(
-                                          icon: const Icon(Icons.payment, size: 20, color: AppColors.success),
+                                          icon: const Icon(
+                                            Icons.payment,
+                                            size: 20,
+                                            color: AppColors.success,
+                                          ),
                                           tooltip: 'تۆمارکردنی پارەدان',
-                                          onPressed: () => _openPayDialog(context, c),
+                                          onPressed: () =>
+                                              _openPayDialog(context, c),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.cancel_outlined, size: 20, color: AppColors.danger),
+                                          icon: const Icon(
+                                            Icons.cancel_outlined,
+                                            size: 20,
+                                            color: AppColors.danger,
+                                          ),
                                           tooltip: 'هەڵوەشاندنەوە',
-                                          onPressed: () => _openCancelDialog(context, c),
+                                          onPressed: () =>
+                                              _openCancelDialog(context, c),
                                         ),
                                       ],
                                     ],

@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -145,7 +146,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   void _showQrCodeDialog(BuildContext context, Customer customer) {
@@ -372,7 +373,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          'ئاگاداربە: ئەم کڕیارە بڕی ${customer.balance.toInt()} د.ع قەرزی لەسەرە!',
+                                          'ئاگاداربە: ئەم کڕیارە بڕی ${Formatters.currency(customer.balance)} قەرزی لەسەرە!',
                                           style: AppTextStyles.caption.copyWith(
                                             color: AppColors.danger,
                                             fontWeight: FontWeight.bold,
@@ -938,7 +939,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${order.totalAmount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع',
+                            '${Formatters.currency(order.totalAmount)}',
                             style: AppTextStyles.price,
                           ),
                           const SizedBox(height: 4),

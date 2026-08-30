@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../models/category_model.dart';
 
@@ -29,7 +30,10 @@ class CategoryActions {
 
   Future<CategoryModel> addCategory(String name) async {
     try {
-      final response = await api.client.post('/categories', data: {'name': name});
+      final response = await api.client.post(
+        '/categories',
+        data: {'name': name},
+      );
       ref.invalidate(categoriesListProvider);
       return CategoryModel.fromJson(response.data['data']);
     } catch (e) {
@@ -39,7 +43,10 @@ class CategoryActions {
 
   Future<CategoryModel> updateCategory(int id, String name) async {
     try {
-      final response = await api.client.put('/categories/$id', data: {'name': name});
+      final response = await api.client.put(
+        '/categories/$id',
+        data: {'name': name},
+      );
       ref.invalidate(categoriesListProvider);
       return CategoryModel.fromJson(response.data['data']);
     } catch (e) {

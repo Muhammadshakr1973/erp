@@ -29,9 +29,13 @@ class PurchaseOrderModel {
       id: json['id'],
       orderNumber: json['order_number'] ?? '',
       supplierId: json['supplier_id'] ?? 0,
-      supplierName: json['supplier'] != null ? json['supplier']['name'] ?? '' : '',
+      supplierName: json['supplier'] != null
+          ? json['supplier']['name'] ?? ''
+          : '',
       warehouseId: json['warehouse_id'] ?? 0,
-      warehouseName: json['warehouse'] != null ? json['warehouse']['name'] ?? '' : '',
+      warehouseName: json['warehouse'] != null
+          ? json['warehouse']['name'] ?? ''
+          : '',
       status: json['status'] ?? 'DRAFT',
       totalAmount: json['total_amount'] ?? 0,
       notes: json['notes'],

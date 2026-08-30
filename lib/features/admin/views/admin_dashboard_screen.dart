@@ -1,6 +1,8 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -33,7 +35,9 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
             Text(
               'داشبۆردی سەرەکی',
-              style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+              style: AppTextStyles.caption.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
           ],
         ),
@@ -65,7 +69,8 @@ class AdminDashboardScreen extends ConsumerWidget {
               // Top Stats Grid
               dashboardAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا: $error')),
+                error: (error, stack) =>
+                    Center(child: Text('هەڵەیەک ڕوویدا: $error')),
                 data: (dashboard) => LayoutBuilder(
                   builder: (context, constraints) {
                     int crossAxisCount = 2;
@@ -120,119 +125,142 @@ class AdminDashboardScreen extends ConsumerWidget {
                   },
                 ),
               ),
-            const SizedBox(height: AppSpacing.sectionGap),
+              const SizedBox(height: AppSpacing.sectionGap),
 
-            // Dashboard Chart
-            dashboardAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (err, stack) => const SizedBox.shrink(),
-              data: (dashboard) => _buildDashboardChart(context, dashboard),
-            ),
-            const SizedBox(height: AppSpacing.sectionGap),
+              // Dashboard Chart
+              dashboardAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (err, stack) => const SizedBox.shrink(),
+                data: (dashboard) => _buildDashboardChart(context, dashboard),
+              ),
+              const SizedBox(height: AppSpacing.sectionGap),
 
-            // Recent Orders
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('دوایین پسوڵەکانی فرۆشتن', style: AppTextStyles.h2),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ref.watch(ordersListProvider).when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا لە هێنانی پسوڵەکان')),
-              data: (orders) {
-                if (orders.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.md),
-                      child: Text('هیچ پسوڵەیەک نییە'),
+              // Recent Orders
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('دوایین پسوڵەکانی فرۆشتن', style: AppTextStyles.h2),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ref
+                  .watch(ordersListProvider)
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) => Center(
+                      child: Text('هەڵەیەک ڕوویدا لە هێنانی پسوڵەکان'),
                     ),
-                  );
-                }
-                final recentOrders = orders.take(4).toList();
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentOrders.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final order = recentOrders[index];
-                    final customerName = order.customer != null ? (order.customer['name'] ?? 'کڕیار') : 'کڕیار';
-                    final salesmanName = order.salesman != null ? (order.salesman['name'] ?? 'مەندوب') : 'مەندوب';
-                    
-                    StatusBadgeType badgeType;
-                    String statusText;
-                    switch (order.status.toLowerCase()) {
-                      case 'delivered':
-                        badgeType = StatusBadgeType.success;
-                        statusText = 'گەیشتووە';
-                        break;
-                      case 'in_delivery':
-                        badgeType = StatusBadgeType.info;
-                        statusText = 'لە ڕێگایە';
-                        break;
-                      case 'ready':
-                      case 'packing':
-                        badgeType = StatusBadgeType.warning;
-                        statusText = 'ئامادەکردن';
-                        break;
-                      case 'cancelled':
-                        badgeType = StatusBadgeType.danger;
-                        statusText = 'گەڕاوە';
-                        break;
-                      default:
-                        badgeType = StatusBadgeType.purple;
-                        statusText = order.status;
-                    }
+                    data: (orders) {
+                      if (orders.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(AppSpacing.md),
+                            child: Text('هیچ پسوڵەیەک نییە'),
+                          ),
+                        );
+                      }
+                      final recentOrders = orders.take(4).toList();
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: recentOrders.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final order = recentOrders[index];
+                          final customerName = order.customer != null
+                              ? (order.customer['name'] ?? 'کڕیار')
+                              : 'کڕیار';
+                          final salesmanName = order.salesman != null
+                              ? (order.salesman['name'] ?? 'مەندوب')
+                              : 'مەندوب';
 
-                    return InkWell(
-                      onTap: () {
-                        context.push('/order/${order.id}');
-                      },
-                      child: AppCard(
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primaryContainer,
-                                borderRadius: AppRadius.radiusMd,
-                              ),
-                              child: Icon(AppIcons.order, color: theme.colorScheme.primary),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          StatusBadgeType badgeType;
+                          String statusText;
+                          switch (order.status.toLowerCase()) {
+                            case 'delivered':
+                              badgeType = StatusBadgeType.success;
+                              statusText = 'گەیشتووە';
+                              break;
+                            case 'in_delivery':
+                              badgeType = StatusBadgeType.info;
+                              statusText = 'لە ڕێگایە';
+                              break;
+                            case 'ready':
+                            case 'packing':
+                              badgeType = StatusBadgeType.warning;
+                              statusText = 'ئامادەکردن';
+                              break;
+                            case 'cancelled':
+                              badgeType = StatusBadgeType.danger;
+                              statusText = 'گەڕاوە';
+                              break;
+                            default:
+                              badgeType = StatusBadgeType.purple;
+                              statusText = order.status;
+                          }
+
+                          return InkWell(
+                            onTap: () {
+                              context.push('/order/${order.id}');
+                            },
+                            child: AppCard(
+                              child: Row(
                                 children: [
-                                  Text(customerName, style: AppTextStyles.bodyBold),
-                                  Text('مەندوب: $salesmanName • ${order.orderNumber}', style: AppTextStyles.caption),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primaryContainer,
+                                      borderRadius: AppRadius.radiusMd,
+                                    ),
+                                    child: Icon(
+                                      AppIcons.order,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          customerName,
+                                          style: AppTextStyles.bodyBold,
+                                        ),
+                                        Text(
+                                          'مەندوب: $salesmanName • ${order.orderNumber}',
+                                          style: AppTextStyles.caption,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${Formatters.currency(order.totalAmount)}',
+                                        style: AppTextStyles.price,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      StatusBadge(
+                                        label: statusText,
+                                        type: badgeType,
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${order.totalAmount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع', style: AppTextStyles.price),
-                                const SizedBox(height: 4),
-                                StatusBadge(
-                                  label: statusText,
-                                  type: badgeType,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -287,16 +315,23 @@ class AdminDashboardScreen extends ConsumerWidget {
   Widget _buildDashboardChart(BuildContext context, DashboardModel data) {
     final theme = Theme.of(context);
     final totalActivity = data.monthlySales + data.totalReceivables;
-    final salesRatio = totalActivity > 0 ? (data.monthlySales / totalActivity) : 0.0;
-    final debtRatio = totalActivity > 0 ? (data.totalReceivables / totalActivity) : 0.0;
-    
+    final salesRatio = totalActivity > 0
+        ? (data.monthlySales / totalActivity)
+        : 0.0;
+    final debtRatio = totalActivity > 0
+        ? (data.totalReceivables / totalActivity)
+        : 0.0;
+
     return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('شیکاری دارایی و ڕێژەی فرۆشتن بەرامبەر قەرز', style: AppTextStyles.bodyBold),
+            const Text(
+              'شیکاری دارایی و ڕێژەی فرۆشتن بەرامبەر قەرز',
+              style: AppTextStyles.bodyBold,
+            ),
             const SizedBox(height: AppSpacing.sm),
             const Text(
               'ئەم چارتە نیشاندەری ڕێژەی فرۆشتنی مانگانەیە لەگەڵ کۆی قەرزە دەرەکییەکان',
@@ -313,16 +348,12 @@ class AdminDashboardScreen extends ConsumerWidget {
                     if (salesRatio > 0)
                       Expanded(
                         flex: (salesRatio * 100).toInt(),
-                        child: Container(
-                          color: AppColors.primary,
-                        ),
+                        child: Container(color: AppColors.primary),
                       ),
                     if (debtRatio > 0)
                       Expanded(
                         flex: (debtRatio * 100).toInt(),
-                        child: Container(
-                          color: AppColors.danger,
-                        ),
+                        child: Container(color: AppColors.danger),
                       ),
                   ],
                 ),
@@ -335,16 +366,36 @@ class AdminDashboardScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Container(width: 12, height: 12, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                     const SizedBox(width: 6),
-                    Text('فرۆشتنی مانگ (${(salesRatio * 100).toStringAsFixed(1)}%)', style: AppTextStyles.caption),
+                    Text(
+                      'فرۆشتنی مانگ (${(salesRatio * 100).toStringAsFixed(1)}%)',
+                      style: AppTextStyles.caption,
+                    ),
                   ],
                 ),
                 Row(
                   children: [
-                    Container(width: 12, height: 12, decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(2))),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                     const SizedBox(width: 6),
-                    Text('قەرزی کڕیار (${(debtRatio * 100).toStringAsFixed(1)}%)', style: AppTextStyles.caption),
+                    Text(
+                      'قەرزی کڕیار (${(debtRatio * 100).toStringAsFixed(1)}%)',
+                      style: AppTextStyles.caption,
+                    ),
                   ],
                 ),
               ],
@@ -354,16 +405,23 @@ class AdminDashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('ڕێژەی قازانجی گشتی فرۆشتن:', style: AppTextStyles.caption),
+                const Text(
+                  'ڕێژەی قازانجی گشتی فرۆشتن:',
+                  style: AppTextStyles.caption,
+                ),
                 Text(
                   '${data.monthlySales > 0 ? ((data.monthlyProfit / data.monthlySales) * 100).toStringAsFixed(1) : "0"}%',
-                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.success),
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: AppColors.success,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: data.monthlySales > 0 ? (data.monthlyProfit / data.monthlySales) : 0.0,
+              value: data.monthlySales > 0
+                  ? (data.monthlyProfit / data.monthlySales)
+                  : 0.0,
               backgroundColor: theme.colorScheme.surfaceContainer,
               color: AppColors.success,
               borderRadius: BorderRadius.circular(4),

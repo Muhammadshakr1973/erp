@@ -17,7 +17,9 @@ class WarehouseOrderModel {
 
   factory WarehouseOrderModel.fromJson(Map<String, dynamic> json) {
     final customerObj = json['customer'];
-    final String cName = customerObj != null ? (customerObj['name'] ?? 'کڕیاری نەنوسراو') : 'کڕیاری نەنوسراو';
+    final String cName = customerObj != null
+        ? (customerObj['name'] ?? 'کڕیاری نەنوسراو')
+        : 'کڕیاری نەنوسراو';
 
     final List itemsList = json['items'] ?? [];
     final List<WarehouseOrderItemModel> parsedItems = itemsList
@@ -54,7 +56,9 @@ class WarehouseOrderItemModel {
 
   factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
     final productObj = json['product'];
-    final String pName = productObj != null ? (productObj['name'] ?? 'کاڵا') : 'کاڵا';
+    final String pName = productObj != null
+        ? (productObj['name'] ?? 'کاڵا')
+        : 'کاڵا';
 
     // Handle is_packed as bool, check if it is 1 or true
     final rawPacked = json['is_packed'];
@@ -70,10 +74,7 @@ class WarehouseOrderItemModel {
     );
   }
 
-  WarehouseOrderItemModel copyWith({
-    bool? isPacked,
-    String? packedAt,
-  }) {
+  WarehouseOrderItemModel copyWith({bool? isPacked, String? packedAt}) {
     return WarehouseOrderItemModel(
       id: id,
       productId: productId,

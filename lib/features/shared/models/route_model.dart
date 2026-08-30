@@ -10,9 +10,7 @@ bool _toBool(dynamic value) {
 
   final normalized = value?.toString().toLowerCase();
 
-  return normalized == '1' ||
-      normalized == 'true' ||
-      normalized == 'yes';
+  return normalized == '1' || normalized == 'true' || normalized == 'yes';
 }
 
 class AssignedSalesmanInfo {
@@ -78,5 +76,3 @@ class RouteModel {
     );
   }
 }
-
-

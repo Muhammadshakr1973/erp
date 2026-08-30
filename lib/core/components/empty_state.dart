@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_button.dart';
@@ -34,7 +35,9 @@ class EmptyState extends StatelessWidget {
           Icon(
             icon,
             size: 64,
-            color: isDark ? AppColors.textDisabledLight : AppColors.textDisabledLight,
+            color: isDark
+                ? AppColors.textDisabledLight
+                : AppColors.textDisabledLight,
           ),
           const SizedBox(height: 16),
           Text(
@@ -48,7 +51,9 @@ class EmptyState extends StatelessWidget {
           Text(
             message,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
             textAlign: TextAlign.center,
           ),
@@ -62,7 +67,7 @@ class EmptyState extends StatelessWidget {
                 type: AppButtonType.outline,
               ),
             ),
-          ]
+          ],
         ],
       ),
     );

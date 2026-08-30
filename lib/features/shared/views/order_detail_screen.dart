@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -16,7 +17,8 @@ class OrderDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // ignore: unused_local_variable
     final theme = Theme.of(context);
-    final isDesktop = MediaQuery.of(context).size.width >= AppBreakpoints.desktopMin;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= AppBreakpoints.desktopMin;
 
     return Scaffold(
       appBar: AppBar(
@@ -66,8 +68,14 @@ class OrderDetailScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('شامپۆی سەر، قەبارەی گەورە', style: AppTextStyles.bodyBold),
-                    subtitle: const Text('2 کارتۆن x 15,000 د.ع', style: AppTextStyles.caption),
+                    title: Text(
+                      'شامپۆی سەر، قەبارەی گەورە',
+                      style: AppTextStyles.bodyBold,
+                    ),
+                    subtitle: const Text(
+                      '2 کارتۆن x 15,000 د.ع',
+                      style: AppTextStyles.caption,
+                    ),
                     trailing: Text('30,000 د.ع', style: AppTextStyles.price),
                   );
                 },
@@ -107,7 +115,10 @@ class OrderDetailScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('دۆخ', style: AppTextStyles.bodyMedium),
-                  StatusBadge(label: 'CONFIRMED', type: StatusBadgeType.success),
+                  StatusBadge(
+                    label: 'CONFIRMED',
+                    type: StatusBadgeType.success,
+                  ),
                 ],
               ),
             ],
@@ -127,7 +138,12 @@ class OrderDetailScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('ماوە', style: AppTextStyles.bodyBold),
-                  Text('70,000 د.ع', style: AppTextStyles.price.copyWith(color: AppColors.danger)),
+                  Text(
+                    '70,000 د.ع',
+                    style: AppTextStyles.price.copyWith(
+                      color: AppColors.danger,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -143,7 +159,10 @@ class OrderDetailScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey)),
+          Text(
+            label,
+            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+          ),
           Text(value, style: AppTextStyles.bodyBold),
         ],
       ),

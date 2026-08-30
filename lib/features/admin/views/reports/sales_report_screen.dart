@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -42,13 +44,19 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_selectedCustomerId != null) 'customer_id': _selectedCustomerId.toString(),
-        if (_selectedSalesmanId != null) 'salesman_id': _selectedSalesmanId.toString(),
+        if (_selectedCustomerId != null)
+          'customer_id': _selectedCustomerId.toString(),
+        if (_selectedSalesmanId != null)
+          'salesman_id': _selectedSalesmanId.toString(),
         if (_selectedRouteId != null) 'route_id': _selectedRouteId.toString(),
-        if (_selectedWarehouseId != null) 'warehouse_id': _selectedWarehouseId.toString(),
-        if (_selectedStatus != null && _selectedStatus != 'ALL') 'status': _selectedStatus,
-        if (_startDate != null) 'start_date': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'end_date': _endDate!.toIso8601String().split('T').first,
+        if (_selectedWarehouseId != null)
+          'warehouse_id': _selectedWarehouseId.toString(),
+        if (_selectedStatus != null && _selectedStatus != 'ALL')
+          'status': _selectedStatus,
+        if (_startDate != null)
+          'start_date': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'end_date': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -71,13 +79,15 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
+      initialDate: isStart
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
@@ -120,7 +130,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                       const Text('فلتەرکردنی ڕاپۆرت', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
@@ -145,9 +158,15 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             Row(
                               children: [
-                                Expanded(child: _buildRouteDropdown(routesAsync)),
+                                Expanded(
+                                  child: _buildRouteDropdown(routesAsync),
+                                ),
                                 const SizedBox(width: AppSpacing.sm),
-                                Expanded(child: _buildWarehouseDropdown(warehousesAsync)),
+                                Expanded(
+                                  child: _buildWarehouseDropdown(
+                                    warehousesAsync,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.sm),
@@ -155,7 +174,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             const SizedBox(height: AppSpacing.md),
                             SizedBox(
                               width: double.infinity,
-                              child: AppButton(text: 'جێبەجێکردنی فلتەر', onPressed: _applyFilters),
+                              child: AppButton(
+                                text: 'جێبەجێکردنی فلتەر',
+                                onPressed: _applyFilters,
+                              ),
                             ),
                           ],
                         );
@@ -169,9 +191,13 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                               const SizedBox(width: AppSpacing.md),
                               Expanded(child: _buildEndDatePicker(context)),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(child: _buildSalesmanDropdown(salesmenAsync)),
+                              Expanded(
+                                child: _buildSalesmanDropdown(salesmenAsync),
+                              ),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(child: _buildCustomerDropdown(customersAsync)),
+                              Expanded(
+                                child: _buildCustomerDropdown(customersAsync),
+                              ),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -179,12 +205,17 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             children: [
                               Expanded(child: _buildRouteDropdown(routesAsync)),
                               const SizedBox(width: AppSpacing.md),
-                              Expanded(child: _buildWarehouseDropdown(warehousesAsync)),
+                              Expanded(
+                                child: _buildWarehouseDropdown(warehousesAsync),
+                              ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(child: _buildStatusDropdown()),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
-                                child: AppButton(text: 'جێبەجێکردن', onPressed: _applyFilters),
+                                child: AppButton(
+                                  text: 'جێبەجێکردن',
+                                  onPressed: _applyFilters,
+                                ),
                               ),
                             ],
                           ),
@@ -208,7 +239,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Text('هەڵەیەک ڕوویدا: $err', style: const TextStyle(color: AppColors.danger)),
+                  child: Text(
+                    'هەڵەیەک ڕوویدا: $err',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
                 ),
               ),
               data: (data) => Column(
@@ -243,16 +277,38 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final cardWidth = isMobile ? (constraints.maxWidth - AppSpacing.sm) / 2 : (constraints.maxWidth - 3 * AppSpacing.md) / 4;
+        final cardWidth = isMobile
+            ? (constraints.maxWidth - AppSpacing.sm) / 2
+            : (constraints.maxWidth - 3 * AppSpacing.md) / 4;
 
         return Wrap(
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.md,
           children: [
-            _buildKpiCard('کۆی فرۆشتنی پاکت', _formatCurrency(summary.totalNetSales), AppColors.primary, cardWidth),
-            _buildKpiCard('کۆی قازانج', _formatCurrency(summary.totalProfitAmount), AppColors.success, cardWidth),
-            _buildKpiCard('ژمارەی پسوڵەکان', '${summary.totalOrdersCount} پسوڵە', AppColors.purple, cardWidth),
-            _buildKpiCard('تێکڕای پسوڵە', _formatCurrency(summary.averageOrderValue), AppColors.info, cardWidth),
+            _buildKpiCard(
+              'کۆی فرۆشتنی پاکت',
+              _formatCurrency(summary.totalNetSales),
+              AppColors.primary,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'کۆی قازانج',
+              _formatCurrency(summary.totalProfitAmount),
+              AppColors.success,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'ژمارەی پسوڵەکان',
+              '${summary.totalOrdersCount} پسوڵە',
+              AppColors.purple,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'تێکڕای پسوڵە',
+              _formatCurrency(summary.averageOrderValue),
+              AppColors.info,
+              cardWidth,
+            ),
           ],
         );
       },
@@ -266,11 +322,19 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight)),
+            Text(
+              title,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               value,
-              style: AppTextStyles.h3.copyWith(color: color, fontWeight: FontWeight.bold),
+              style: AppTextStyles.h3.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
               textDirection: TextDirection.ltr,
             ),
           ],
@@ -293,12 +357,28 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
             DataColumn(label: Text('کۆی قازانج')),
           ],
           rows: breakdowns.map((b) {
-            return DataRow(cells: [
-              DataCell(Text(b.salesmanName)),
-              DataCell(Text('${b.ordersCount}')),
-              DataCell(Text(_formatCurrency(b.totalSales), textDirection: TextDirection.ltr)),
-              DataCell(Text(_formatCurrency(b.totalProfit), textDirection: TextDirection.ltr, style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold))),
-            ]);
+            return DataRow(
+              cells: [
+                DataCell(Text(b.salesmanName)),
+                DataCell(Text('${b.ordersCount}')),
+                DataCell(
+                  Text(
+                    _formatCurrency(b.totalSales),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(b.totalProfit),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -311,7 +391,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text('هیچ پسوڵەیەک نەدۆزرایەوە بەپێی ئەم فلتەرە', style: AppTextStyles.bodyMedium),
+            child: Text(
+              'هیچ پسوڵەیەک نەدۆزرایەوە بەپێی ئەم فلتەرە',
+              style: AppTextStyles.bodyMedium,
+            ),
           ),
         ),
       );
@@ -349,27 +432,69 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
               statusLabel = 'هەڵوەشاوە';
             }
 
-            return DataRow(cells: [
-              DataCell(Text(o.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(o.orderDate.split('T').first)),
-              DataCell(Text(o.customerName)),
-              DataCell(Text(o.routeName)),
-              DataCell(Text(o.salesmanName)),
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    o.orderNumber,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  child: Text(statusLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
-              ),
-              DataCell(Text(_formatCurrency(o.subtotal), textDirection: TextDirection.ltr)),
-              DataCell(Text(_formatCurrency(o.discountAmount), textDirection: TextDirection.ltr)),
-              DataCell(Text(_formatCurrency(o.totalAmount), textDirection: TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(_formatCurrency(o.totalProfit), textDirection: TextDirection.ltr, style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold))),
-            ]);
+                DataCell(Text(o.orderDate.split('T').first)),
+                DataCell(Text(o.customerName)),
+                DataCell(Text(o.routeName)),
+                DataCell(Text(o.salesmanName)),
+                DataCell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(o.subtotal),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(o.discountAmount),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(o.totalAmount),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(o.totalProfit),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -385,7 +510,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _startDate != null
+              ? _startDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -399,7 +528,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _endDate != null
+              ? _endDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -415,7 +548,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت مەندوبەکان')),
         ...salesmenAsync.when(
-          data: (list) => list.map<DropdownMenuItem<int?>>((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+          data: (list) => list
+              .map<DropdownMenuItem<int?>>(
+                (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
+              )
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),
@@ -435,7 +572,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت کڕیارەکان')),
         ...customersAsync.when(
-          data: (list) => list.map<DropdownMenuItem<int?>>((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+          data: (list) => list
+              .map<DropdownMenuItem<int?>>(
+                (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+              )
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),
@@ -455,7 +596,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت ڕێگاکان')),
         ...routesAsync.when(
-          data: (list) => list.map<DropdownMenuItem<int?>>((r) => DropdownMenuItem(value: r.id, child: Text(r.name))).toList(),
+          data: (list) => list
+              .map<DropdownMenuItem<int?>>(
+                (r) => DropdownMenuItem(value: r.id, child: Text(r.name)),
+              )
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),
@@ -475,7 +620,11 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       items: [
         const DropdownMenuItem(value: null, child: Text('گشت کۆگاکان')),
         ...warehousesAsync.when(
-          data: (list) => list.map<DropdownMenuItem<int?>>((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
+          data: (list) => list
+              .map<DropdownMenuItem<int?>>(
+                (w) => DropdownMenuItem(value: w.id, child: Text(w.name)),
+              )
+              .toList(),
           loading: () => [],
           error: (_, _) => [],
         ),

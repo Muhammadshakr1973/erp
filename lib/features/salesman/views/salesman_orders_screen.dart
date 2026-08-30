@@ -1,6 +1,8 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_icons.dart';
@@ -50,7 +52,11 @@ class SalesmanOrdersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOrdersList(BuildContext context, WidgetRef ref, {required bool isToday}) {
+  Widget _buildOrdersList(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isToday,
+  }) {
     final theme = Theme.of(context);
     final ordersAsync = ref.watch(ordersListProvider);
 
@@ -58,7 +64,8 @@ class SalesmanOrdersScreen extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(ordersListProvider),
       child: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('هەڵە لە بارکردنی پسوڵەکان: $err')),
+        error: (err, stack) =>
+            Center(child: Text('هەڵە لە بارکردنی پسوڵەکان: $err')),
         data: (orders) {
           final nowString = DateTime.now().toIso8601String().substring(0, 10);
           final filtered = orders.where((o) {
@@ -71,13 +78,16 @@ class SalesmanOrdersScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('هیچ پسوڵەیەک نییە', style: AppTextStyles.bodyMedium),
+                  const Text(
+                    'هیچ پسوڵەیەک نییە',
+                    style: AppTextStyles.bodyMedium,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   ElevatedButton.icon(
                     onPressed: () => context.push('/salesman/create-order'),
                     icon: const Icon(Icons.add),
                     label: const Text('دروستکردنی پسوڵە'),
-                  )
+                  ),
                 ],
               ),
             );
@@ -86,10 +96,13 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             itemCount: filtered.length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final order = filtered[index];
-              final customerName = order.customer != null ? order.customer['name'] : 'نەناسراو';
+              final customerName = order.customer != null
+                  ? order.customer['name']
+                  : 'نەناسراو';
 
               String statusLabel = 'داڕشتن (Draft)';
               StatusBadgeType statusType = StatusBadgeType.warning;
@@ -141,7 +154,10 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Center(
-                        child: Icon(AppIcons.order, color: theme.colorScheme.primary),
+                        child: Icon(
+                          AppIcons.order,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
@@ -161,12 +177,12 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('${order.totalAmount.toInt()} د.ع', style: AppTextStyles.price),
-                        const SizedBox(height: 4),
-                        StatusBadge(
-                          label: statusLabel,
-                          type: statusType,
+                        Text(
+                          '${Formatters.currency(order.totalAmount)}',
+                          style: AppTextStyles.price,
                         ),
+                        const SizedBox(height: 4),
+                        StatusBadge(label: statusLabel, type: statusType),
                       ],
                     ),
                   ],

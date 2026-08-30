@@ -25,8 +25,10 @@ class Product {
       name: json['name'] ?? '',
       barcode: json['barcode'],
       unit: json['unit'],
-      sellingPrice: double.tryParse(json['selling_price']?.toString() ?? '0') ?? 0.0,
-      purchasePrice: double.tryParse(json['purchase_price']?.toString() ?? '0') ?? 0.0,
+      sellingPrice:
+          double.tryParse(json['selling_price']?.toString() ?? '0') ?? 0.0,
+      purchasePrice:
+          double.tryParse(json['purchase_price']?.toString() ?? '0') ?? 0.0,
       categoryId: json['category_id'],
       image: json['image'],
     );

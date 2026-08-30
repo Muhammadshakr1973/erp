@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_icon_button.dart';
 import '../../../core/components/status_badge.dart';
@@ -25,13 +26,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'سڵاو، ${user?.name ?? 'مەندوب'}',
-              style: AppTextStyles.h2,
-            ),
+            Text('سڵاو، ${user?.name ?? 'مەندوب'}', style: AppTextStyles.h2),
             Text(
               'گەڕەکی ئەمڕۆ: بەختیاری',
-              style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+              style: AppTextStyles.caption.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
           ],
         ),
@@ -61,7 +61,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.success.withValues(alpha: 0.1),
                 borderRadius: AppRadius.radiusMd,
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
@@ -70,7 +72,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       'داتاکان بەسەرکەوتوویی سینک کراون (ئۆفلاین ئامادەیە)',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.success,
+                      ),
                     ),
                   ),
                 ],
@@ -131,12 +135,24 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 _buildActionCard(context, 'کۆمسیۆنەکانم', Icons.percent, () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SalesmanMyCommissionsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SalesmanMyCommissionsScreen(),
+                    ),
                   );
                 }),
-                _buildActionCard(context, 'وەرگرتنی پارە', AppIcons.customerDebt, () {}),
+                _buildActionCard(
+                  context,
+                  'وەرگرتنی پارە',
+                  AppIcons.customerDebt,
+                  () {},
+                ),
                 _buildActionCard(context, 'داواکاری کاڵا', AppIcons.add, () {}),
-                _buildActionCard(context, 'کڕیاری نوێ', AppIcons.customers, () {}),
+                _buildActionCard(
+                  context,
+                  'کڕیاری نوێ',
+                  AppIcons.customers,
+                  () {},
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.sectionGap),
@@ -146,10 +162,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('دوایین پسوڵەکان', style: AppTextStyles.h2),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('هەمووی'),
-                ),
+                TextButton(onPressed: () {}, child: const Text('هەمووی')),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -157,7 +170,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 3,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 return AppCard(
                   onTap: () {
@@ -174,8 +188,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('مارکێتی ئەحمەد', style: AppTextStyles.bodyBold),
-                            Text('پسوڵەی #100${index + 1}', style: AppTextStyles.caption),
+                            Text(
+                              'مارکێتی ئەحمەد',
+                              style: AppTextStyles.bodyBold,
+                            ),
+                            Text(
+                              'پسوڵەی #100${index + 1}',
+                              style: AppTextStyles.caption,
+                            ),
                           ],
                         ),
                       ),
@@ -186,7 +206,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                           const SizedBox(height: 4),
                           StatusBadge(
                             label: index == 0 ? 'DRAFT' : 'CONFIRMED',
-                            type: index == 0 ? StatusBadgeType.warning : StatusBadgeType.success,
+                            type: index == 0
+                                ? StatusBadgeType.warning
+                                : StatusBadgeType.success,
                           ),
                         ],
                       ),
@@ -201,7 +223,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, String title, IconData icon, VoidCallback onTap) {
+  Widget _buildActionCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,

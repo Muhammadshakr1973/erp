@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -36,7 +37,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(value ? 'کاڵاکە پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا'),
+            content: Text(
+              value ? 'کاڵاکە پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
+            ),
             backgroundColor: value ? AppColors.success : Colors.grey,
           ),
         );
@@ -155,7 +158,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە')),
+          const SnackBar(
+            content: Text('کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە'),
+          ),
         );
       }
     });
@@ -175,13 +180,17 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('پاکەتکردنی پسوڵەی #${widget.orderId}', style: AppTextStyles.h2),
+        title: Text(
+          'پاکەتکردنی پسوڵەی #${widget.orderId}',
+          style: AppTextStyles.h2,
+        ),
         actions: [
           ordersAsync.maybeWhen(
             data: (orders) {
               WarehouseOrderModel? foundOrder;
               for (final o in orders) {
-                if (o.id.toString() == widget.orderId || o.orderNumber == widget.orderId) {
+                if (o.id.toString() == widget.orderId ||
+                    o.orderNumber == widget.orderId) {
                   foundOrder = o;
                   break;
                 }
@@ -205,7 +214,11 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: AppSpacing.md),
               const Text('هەڵەیەک ڕوویدا لە بارکردنی پسوڵە'),
               const SizedBox(height: AppSpacing.lg),
@@ -219,7 +232,8 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         data: (orders) {
           WarehouseOrderModel? foundOrder;
           for (final o in orders) {
-            if (o.id.toString() == widget.orderId || o.orderNumber == widget.orderId) {
+            if (o.id.toString() == widget.orderId ||
+                o.orderNumber == widget.orderId) {
               foundOrder = o;
               break;
             }
@@ -232,11 +246,17 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_circle_outline, size: 80, color: AppColors.success),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 80,
+                      color: AppColors.success,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'پسوڵەکە نەدۆزرایەوە',
-                      style: AppTextStyles.bodyBold.copyWith(color: Colors.grey.shade700),
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: Colors.grey.shade700,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     const Text(
@@ -257,17 +277,25 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
           final WarehouseOrderModel currentOrder = foundOrder;
           final int totalItemsCount = currentOrder.items.length;
-          final int packedItemsCount = currentOrder.items.where((e) => e.isPacked).length;
+          final int packedItemsCount = currentOrder.items
+              .where((e) => e.isPacked)
+              .length;
           final bool isAnyPacked = packedItemsCount > 0;
 
           return Column(
             children: [
-              _buildOrderSummary(theme, currentOrder, packedItemsCount, totalItemsCount),
+              _buildOrderSummary(
+                theme,
+                currentOrder,
+                packedItemsCount,
+                totalItemsCount,
+              ),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
                   itemCount: currentOrder.items.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final item = currentOrder.items[index];
                     final isPacked = item.isPacked;
@@ -282,7 +310,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                               child: SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             )
                           else
@@ -304,7 +334,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                 Text(
                                   item.productName,
                                   style: AppTextStyles.bodyBold.copyWith(
-                                    decoration: isPacked ? TextDecoration.lineThrough : null,
+                                    decoration: isPacked
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                     color: isPacked ? Colors.grey : null,
                                   ),
                                 ),
@@ -312,7 +344,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                 Text(
                                   'بڕ: ${item.quantity} دانە',
                                   style: AppTextStyles.caption.copyWith(
-                                    color: isPacked ? Colors.grey : theme.colorScheme.primary,
+                                    color: isPacked
+                                        ? Colors.grey
+                                        : theme.colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -332,7 +366,12 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     );
   }
 
-  Widget _buildOrderSummary(ThemeData theme, WarehouseOrderModel order, int packedCount, int totalCount) {
+  Widget _buildOrderSummary(
+    ThemeData theme,
+    WarehouseOrderModel order,
+    int packedCount,
+    int totalCount,
+  ) {
     final bool isAllPacked = packedCount == totalCount;
 
     return Container(
@@ -344,14 +383,22 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('کڕیار: ${order.customerName}', style: AppTextStyles.bodyBold),
-              Text('بەروار: ${order.createdAt.split('T').first}', style: AppTextStyles.caption),
+              Text(
+                'کڕیار: ${order.customerName}',
+                style: AppTextStyles.bodyBold,
+              ),
+              Text(
+                'بەروار: ${order.createdAt.split('T').first}',
+                style: AppTextStyles.caption,
+              ),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isAllPacked ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
+              color: isAllPacked
+                  ? AppColors.success.withOpacity(0.1)
+                  : AppColors.warning.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
@@ -366,7 +413,11 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     );
   }
 
-  Widget _buildBottomAction(ThemeData theme, WarehouseOrderModel order, bool isAnyPacked) {
+  Widget _buildBottomAction(
+    ThemeData theme,
+    WarehouseOrderModel order,
+    bool isAnyPacked,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
       decoration: BoxDecoration(

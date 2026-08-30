@@ -6,7 +6,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   final Color danger;
   final Color info;
   final Color purple;
-  
+
   final Color n1;
   final Color n2;
   final Color n3;
@@ -46,7 +46,10 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   }
 
   @override
-  ThemeExtension<AppThemeExtension> lerp(ThemeExtension<AppThemeExtension>? other, double t) {
+  ThemeExtension<AppThemeExtension> lerp(
+    ThemeExtension<AppThemeExtension>? other,
+    double t,
+  ) {
     if (other is! AppThemeExtension) return this;
     return AppThemeExtension(
       success: Color.lerp(success, other.success, t)!,

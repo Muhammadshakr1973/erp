@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_button.dart';
@@ -28,7 +29,7 @@ class CameraBarcodeScanner extends StatefulWidget {
                 color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 16,
                 spreadRadius: 2,
-              )
+              ),
             ],
           ),
           child: CameraBarcodeScanner(onScan: onScan),
@@ -47,7 +48,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   final StringBuffer _barcodeBuffer = StringBuffer();
   DateTime? _lastKeyEventTime;
   bool _isProcessing = false;
-  
+
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
     facing: CameraFacing.back,
@@ -73,7 +74,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
     if (_isProcessing) return;
     final cleanBarcode = barcode.trim();
     if (cleanBarcode.isEmpty) return;
-    
+
     setState(() {
       _isProcessing = true;
     });
@@ -101,13 +102,13 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
       if (_lastKeyEventTime != null) {
         final difference = now.difference(_lastKeyEventTime!).inMilliseconds;
         if (difference > 150) {
-           // delay
+          // delay
         }
       }
       _lastKeyEventTime = now;
 
       final logicalKey = event.logicalKey;
-      
+
       if (logicalKey == LogicalKeyboardKey.enter) {
         if (_barcodeBuffer.isNotEmpty) {
           final scannedCode = _barcodeBuffer.toString();
@@ -146,11 +147,17 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.qr_code_scanner, color: theme.colorScheme.primary, size: 24),
+                      Icon(
+                        Icons.qr_code_scanner,
+                        color: theme.colorScheme.primary,
+                        size: 24,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'خوێندنەوەی بارکۆد',
-                        style: AppTextStyles.h2.copyWith(color: theme.colorScheme.onSurface),
+                        style: AppTextStyles.h2.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                     ],
                   ),
@@ -192,7 +199,9 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                             const SizedBox(height: 16),
                             Text(
                               'کامێرا کارناکات، تکایە ئامێری سکانەر بەکاربهێنە یان بە دەست بینوسە.',
-                              style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -206,7 +215,10 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                       width: 250,
                       height: 250,
                       decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.primary, width: 3),
+                        border: Border.all(
+                          color: theme.colorScheme.primary,
+                          width: 3,
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
@@ -220,7 +232,13 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
+                ),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -230,12 +248,17 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                       Expanded(
                         child: TextField(
                           controller: _controller,
-                          focusNode: FocusNode(), 
+                          focusNode: FocusNode(),
                           style: AppTextStyles.bodyMedium,
                           decoration: InputDecoration(
                             hintText: 'کۆدی بارکۆدەکە بە دەست بنووسە...',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                           onSubmitted: (value) {
                             if (value.trim().isNotEmpty) {

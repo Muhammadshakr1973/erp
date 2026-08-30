@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_sizes.dart';
@@ -35,13 +36,15 @@ class AppStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final bool canDecrement = value > min;
     final bool canIncrement = max == null || value < max!;
 
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
     final iconColor = theme.colorScheme.primary;
-    final disabledIconColor = isDark ? AppColors.textDisabledLight : AppColors.textDisabledLight;
+    final disabledIconColor = isDark
+        ? AppColors.textDisabledLight
+        : AppColors.textDisabledLight;
 
     return Container(
       width: AppSizes.stepperWidth,
@@ -57,7 +60,9 @@ class AppStepper extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: canDecrement ? _decrement : null,
-                borderRadius: BorderRadius.horizontal(left: Radius.circular(AppRadius.md)),
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(AppRadius.md),
+                ),
                 child: Center(
                   child: Icon(
                     Symbols.remove,
@@ -68,28 +73,19 @@ class AppStepper extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            width: 1,
-            color: borderColor,
-          ),
+          Container(width: 1, color: borderColor),
           Expanded(
-            child: Center(
-              child: Text(
-                '$value',
-                style: AppTextStyles.bodyBold,
-              ),
-            ),
+            child: Center(child: Text('$value', style: AppTextStyles.bodyBold)),
           ),
-          Container(
-            width: 1,
-            color: borderColor,
-          ),
+          Container(width: 1, color: borderColor),
           Expanded(
             child: Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: canIncrement ? _increment : null,
-                borderRadius: BorderRadius.horizontal(right: Radius.circular(AppRadius.md)),
+                borderRadius: BorderRadius.horizontal(
+                  right: Radius.circular(AppRadius.md),
+                ),
                 child: Center(
                   child: Icon(
                     Symbols.add,

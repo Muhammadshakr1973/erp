@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
 import 'warehouse_dashboard_screen.dart';
@@ -11,7 +12,8 @@ class WarehouseMainScreen extends ConsumerStatefulWidget {
   const WarehouseMainScreen({super.key});
 
   @override
-  ConsumerState<WarehouseMainScreen> createState() => _WarehouseMainScreenState();
+  ConsumerState<WarehouseMainScreen> createState() =>
+      _WarehouseMainScreenState();
 }
 
 class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
@@ -42,18 +44,21 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
             maintainState: true,
             child: FocusScope(
               canRequestFocus: isSelected,
-              child: TickerMode(
-                enabled: isSelected,
-                child: _screens[index],
-              ),
+              child: TickerMode(enabled: isSelected, child: _screens[index]),
             ),
           );
         }),
       ),
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
-        NavigationDestination(icon: Icon(AppIcons.orderStatus), label: 'پاکەتکردن'),
-        NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'ستۆک'),
+        NavigationDestination(
+          icon: Icon(AppIcons.orderStatus),
+          label: 'پاکەتکردن',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.inventory_2_outlined),
+          label: 'ستۆک',
+        ),
         NavigationDestination(icon: Icon(AppIcons.profile), label: 'پڕۆفایل'),
       ],
     );

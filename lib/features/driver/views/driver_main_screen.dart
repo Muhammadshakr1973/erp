@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
 import 'driver_dashboard_screen.dart';
@@ -40,17 +41,17 @@ class _DriverMainScreenState extends ConsumerState<DriverMainScreen> {
             maintainState: true,
             child: FocusScope(
               canRequestFocus: isSelected,
-              child: TickerMode(
-                enabled: isSelected,
-                child: _screens[index],
-              ),
+              child: TickerMode(enabled: isSelected, child: _screens[index]),
             ),
           );
         }),
       ),
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
-        NavigationDestination(icon: Icon(AppIcons.orderDelivered), label: 'گەشتەکان'),
+        NavigationDestination(
+          icon: Icon(AppIcons.orderDelivered),
+          label: 'گەشتەکان',
+        ),
         NavigationDestination(icon: Icon(AppIcons.profile), label: 'پڕۆفایل'),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 import '../models/route_model.dart';
 import 'customer_provider.dart';
@@ -56,11 +57,14 @@ class RouteActions {
     bool isActive = true,
   }) async {
     try {
-      final response = await api.client.post('/routes', data: {
-        'name': name,
-        if (color != null) 'color': color,
-        'is_active': isActive,
-      });
+      final response = await api.client.post(
+        '/routes',
+        data: {
+          'name': name,
+          if (color != null) 'color': color,
+          'is_active': isActive,
+        },
+      );
       ref.invalidate(routeListProvider);
       return RouteModel.fromJson(response.data['data']);
     } catch (e) {
@@ -75,11 +79,14 @@ class RouteActions {
     bool? isActive,
   }) async {
     try {
-      final response = await api.client.put('/routes/$id', data: {
-        'name': name,
-        if (color != null) 'color': color,
-        if (isActive != null) 'is_active': isActive,
-      });
+      final response = await api.client.put(
+        '/routes/$id',
+        data: {
+          'name': name,
+          if (color != null) 'color': color,
+          if (isActive != null) 'is_active': isActive,
+        },
+      );
       ref.invalidate(routeListProvider);
       return RouteModel.fromJson(response.data['data']);
     } catch (e) {
@@ -96,12 +103,19 @@ class RouteActions {
     }
   }
 
-  Future<void> assignSalesman(int routeId, int salesmanId, {String? workDate}) async {
+  Future<void> assignSalesman(
+    int routeId,
+    int salesmanId, {
+    String? workDate,
+  }) async {
     try {
-      await api.client.post('/routes/$routeId/assign-salesman', data: {
-        'salesman_id': salesmanId,
-        if (workDate != null) 'work_date': workDate,
-      });
+      await api.client.post(
+        '/routes/$routeId/assign-salesman',
+        data: {
+          'salesman_id': salesmanId,
+          if (workDate != null) 'work_date': workDate,
+        },
+      );
       ref.invalidate(routeListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -143,9 +157,10 @@ class RouteActions {
 
   Future<void> reorderCustomers(int routeId, List<int> customerIds) async {
     try {
-      await api.client.post('/routes/$routeId/reorder-customers', data: {
-        'customer_ids': customerIds,
-      });
+      await api.client.post(
+        '/routes/$routeId/reorder-customers',
+        data: {'customer_ids': customerIds},
+      );
       ref.invalidate(routeListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -154,9 +169,10 @@ class RouteActions {
 
   Future<void> assignCustomers(int routeId, List<int> customerIds) async {
     try {
-      await api.client.post('/routes/$routeId/assign-customers', data: {
-        'customer_ids': customerIds,
-      });
+      await api.client.post(
+        '/routes/$routeId/assign-customers',
+        data: {'customer_ids': customerIds},
+      );
       ref.invalidate(routeListProvider);
       ref.invalidate(customerListProvider);
     } catch (e) {

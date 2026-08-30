@@ -23,7 +23,7 @@ class AppColors {
   static const Color backgroundLight = Color(0xFFF7F9FD);
   static const Color surfaceLight = Color(0xFFEFF4FB);
   static const Color borderLight = Color(0xFFD1DCE8);
-  
+
   static const Color textPrimaryLight = Color(0xFF0D1B2E);
   static const Color textSecondaryLight = Color(0xFF5B6B84);
   static const Color textDisabledLight = Color(0xFF9AABBB);
@@ -35,7 +35,7 @@ class AppColors {
   static const Color successDark = Color(0xFF34D399);
   static const Color warningDark = Color(0xFFFBBF24);
   static const Color dangerDark = Color(0xFFF87171);
-  
+
   static const Color textPrimaryDark = Color(0xFFF0F4FA);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
   static const Color borderDark = Color(0xFF2A3548);

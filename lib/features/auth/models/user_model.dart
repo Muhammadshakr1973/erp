@@ -42,7 +42,9 @@ class UserModel {
       roleId: json['role_id'] ?? roleIdVal,
       commissionRate: commRate,
       barcode: json['barcode'],
-      isActive: json['is_active'] is bool ? json['is_active'] : (json['is_active'] == 1),
+      isActive: json['is_active'] is bool
+          ? json['is_active']
+          : (json['is_active'] == 1),
     );
   }
 
@@ -61,7 +63,7 @@ class UserModel {
 
   bool hasPermission(String permission) {
     final lowerRole = role.toLowerCase();
-    
+
     // Admin and Owner have all permissions
     if (lowerRole == 'admin' || lowerRole == 'owner') {
       return true;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_breakpoints.dart';
 
 class ResponsiveShell extends StatelessWidget {

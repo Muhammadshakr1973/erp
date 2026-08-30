@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
@@ -75,7 +76,9 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
           children: [
             Text(
               'بەڕێوەبردنی گەڕەکەکان، دیاریکردنی مەندوبەکان و بینینی کڕیارەکانی هەر ڕاوتێک.',
-              style: AppTextStyles.bodyMedium.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -86,18 +89,52 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
               data: (routes) {
                 final totalRoutes = routes.length;
                 final activeRoutes = routes.where((r) => r.isActive).length;
-                final totalCustomers = routes.fold<int>(0, (sum, r) => sum + r.customersCount);
-                final totalSalesmenAssigned = routes.fold<int>(0, (sum, r) => sum + r.salesmen.length);
+                final totalCustomers = routes.fold<int>(
+                  0,
+                  (sum, r) => sum + r.customersCount,
+                );
+                final totalSalesmenAssigned = routes.fold<int>(
+                  0,
+                  (sum, r) => sum + r.salesmen.length,
+                );
 
                 return Row(
                   children: [
-                    Expanded(child: _buildStatCard('کۆی ڕاوتەکان', '$totalRoutes', Icons.alt_route, theme.colorScheme.primary)),
+                    Expanded(
+                      child: _buildStatCard(
+                        'کۆی ڕاوتەکان',
+                        '$totalRoutes',
+                        Icons.alt_route,
+                        theme.colorScheme.primary,
+                      ),
+                    ),
                     const SizedBox(width: AppSpacing.md),
-                    Expanded(child: _buildStatCard('ڕاوتی چالاک', '$activeRoutes', Icons.check_circle_outline, AppColors.success)),
+                    Expanded(
+                      child: _buildStatCard(
+                        'ڕاوتی چالاک',
+                        '$activeRoutes',
+                        Icons.check_circle_outline,
+                        AppColors.success,
+                      ),
+                    ),
                     const SizedBox(width: AppSpacing.md),
-                    Expanded(child: _buildStatCard('کۆی کڕیارەکان', '$totalCustomers', Icons.storefront, AppColors.info)),
+                    Expanded(
+                      child: _buildStatCard(
+                        'کۆی کڕیارەکان',
+                        '$totalCustomers',
+                        Icons.storefront,
+                        AppColors.info,
+                      ),
+                    ),
                     const SizedBox(width: AppSpacing.md),
-                    Expanded(child: _buildStatCard('مەندوبە دابەشکراوەکان', '$totalSalesmenAssigned', Icons.badge_outlined, AppColors.warning)),
+                    Expanded(
+                      child: _buildStatCard(
+                        'مەندوبە دابەشکراوەکان',
+                        '$totalSalesmenAssigned',
+                        Icons.badge_outlined,
+                        AppColors.warning,
+                      ),
+                    ),
                   ],
                 );
               },
@@ -132,7 +169,9 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
               child: routesAsync.when(
                 data: (routes) {
                   final filteredRoutes = routes.where((r) {
-                    final nameMatch = r.name.toLowerCase().contains(_searchQuery);
+                    final nameMatch = r.name.toLowerCase().contains(
+                      _searchQuery,
+                    );
                     return nameMatch;
                   }).toList();
 
@@ -170,7 +209,8 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     itemCount: filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = filteredRoutes[index];
-                      final routeColor = _parseColor(route.color) ?? theme.colorScheme.primary;
+                      final routeColor =
+                          _parseColor(route.color) ?? theme.colorScheme.primary;
 
                       return AppCard(
                         padding: const EdgeInsets.all(AppSpacing.md),
@@ -188,34 +228,53 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                     color: routeColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Icon(Icons.alt_route, color: routeColor, size: 24),
+                                  child: Icon(
+                                    Icons.alt_route,
+                                    color: routeColor,
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: AppSpacing.sm),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         route.name,
-                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                                        maxLines: 1,
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          fontSize: 15,
+                                        ),
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 2),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: route.isActive
-                                              ? AppColors.success.withValues(alpha: 0.1)
-                                              : AppColors.danger.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                              ? AppColors.success.withValues(
+                                                  alpha: 0.1,
+                                                )
+                                              : AppColors.danger.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           route.isActive ? 'چالاک' : 'ناچالاک',
-                                          style: AppTextStyles.bodyBold.copyWith(
-                                            color: route.isActive ? AppColors.success : AppColors.danger,
-                                            fontSize: 10,
-                                          ),
+                                          style: AppTextStyles.bodyBold
+                                              .copyWith(
+                                                color: route.isActive
+                                                    ? AppColors.success
+                                                    : AppColors.danger,
+                                                fontSize: 10,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -233,14 +292,23 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                   onTap: () => _showRouteCustomers(route),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.1),
+                                      color: Colors.green.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.storefront, size: 14, color: Colors.green),
+                                        const Icon(
+                                          Icons.storefront,
+                                          size: 14,
+                                          color: Colors.green,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
                                           '${route.customersCount} کڕیار',
@@ -259,21 +327,28 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                   onTap: () => _showManageSalesmen(route),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.blue.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.person_outline, size: 14, color: Colors.blue),
+                                        const Icon(
+                                          Icons.person_outline,
+                                          size: 14,
+                                          color: Colors.blue,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
                                           route.salesmen.isEmpty
                                               ? 'مەندوب دیاری بکە'
                                               : route.salesmen.length == 1
-                                                  ? route.salesmen.first.name
-                                                  : '${route.salesmen.length} مەندوب',
+                                              ? route.salesmen.first.name
+                                              : '${route.salesmen.length} مەندوب',
                                           style: const TextStyle(
                                             fontSize: 11,
                                             color: Colors.blue,
@@ -298,18 +373,28 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'بارکردنی ڕاوتەکان سەرکەوتوو نەبوو:\n${err.toString().replaceFirst('Exception: ', '')}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Rudaw', color: Colors.red),
+                        style: const TextStyle(
+                          fontFamily: 'Rudaw',
+                          color: Colors.red,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ElevatedButton.icon(
                         onPressed: () => ref.invalidate(routeListProvider),
                         icon: const Icon(Icons.refresh),
-                        label: const Text('دووبارە بارکردنەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                        label: const Text(
+                          'دووبارە بارکردنەوە',
+                          style: TextStyle(fontFamily: 'Rudaw'),
+                        ),
                       ),
                     ],
                   ),
@@ -322,7 +407,12 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return AppCard(
       child: Row(
         children: [
@@ -338,8 +428,22 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'Rudaw')),
-              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontFamily: 'Rudaw',
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Rudaw',
+                ),
+              ),
             ],
           ),
         ],
@@ -363,12 +467,21 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('دڵنیایی لە سڕینەوە', style: TextStyle(fontFamily: 'Rudaw')),
-        content: Text('ئایا دڵنیای لە سڕینەوەی ڕاوتی "${route.name}"؟', style: const TextStyle(fontFamily: 'Rudaw')),
+        title: const Text(
+          'دڵنیایی لە سڕینەوە',
+          style: TextStyle(fontFamily: 'Rudaw'),
+        ),
+        content: Text(
+          'ئایا دڵنیای لە سڕینەوەی ڕاوتی "${route.name}"؟',
+          style: const TextStyle(fontFamily: 'Rudaw'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+            child: const Text(
+              'پاشگەزبوونەوە',
+              style: TextStyle(fontFamily: 'Rudaw'),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -378,19 +491,32 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                 if (mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ڕاوت بە سەرکەوتوویی سڕایەوە', style: TextStyle(fontFamily: 'Rudaw'))),
+                    const SnackBar(
+                      content: Text(
+                        'ڕاوت بە سەرکەوتوویی سڕایەوە',
+                        style: TextStyle(fontFamily: 'Rudaw'),
+                      ),
+                    ),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('شکستی هێنا لە سڕینەوە: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+                    SnackBar(
+                      content: Text(
+                        'شکستی هێنا لە سڕینەوە: $e',
+                        style: const TextStyle(fontFamily: 'Rudaw'),
+                      ),
+                    ),
                   );
                 }
               }
             },
-            child: const Text('سڕینەوە', style: TextStyle(color: Colors.white, fontFamily: 'Rudaw')),
+            child: const Text(
+              'سڕینەوە',
+              style: TextStyle(color: Colors.white, fontFamily: 'Rudaw'),
+            ),
           ),
         ],
       ),
@@ -464,7 +590,9 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.route == null ? 'ڕاوت زیادکرا' : 'گۆڕانکارییەکان پاشەکەوت کران',
+              widget.route == null
+                  ? 'ڕاوت زیادکرا'
+                  : 'گۆڕانکارییەکان پاشەکەوت کران',
               style: const TextStyle(fontFamily: 'Rudaw'),
             ),
             backgroundColor: AppColors.success,
@@ -474,7 +602,12 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('کێشە لە پاشەکەوتکردن: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+          SnackBar(
+            content: Text(
+              'کێشە لە پاشەکەوتکردن: $e',
+              style: const TextStyle(fontFamily: 'Rudaw'),
+            ),
+          ),
         );
       }
     } finally {
@@ -509,7 +642,9 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
                 labelText: 'ناوی ڕاوت / گەڕەک',
                 hintText: 'بۆ نموونە: گەڕەکی ڕزگاری',
                 prefixIcon: Icons.alt_route,
-                validator: (val) => val == null || val.isEmpty ? 'تکایە ناوی ڕاوت بنووسە' : null,
+                validator: (val) => val == null || val.isEmpty
+                    ? 'تکایە ناوی ڕاوت بنووسە'
+                    : null,
               ),
 
               const SizedBox(height: AppSpacing.md),
@@ -545,7 +680,10 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
               SwitchListTile(
                 value: _isActive,
                 title: const Text('دۆخی ڕاوت', style: AppTextStyles.bodyBold),
-                subtitle: const Text('ڕێگەدان بە مەندوب بۆ کارکردن لەسەر ئەم ڕاوتە', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                subtitle: const Text(
+                  'ڕێگەدان بە مەندوب بۆ کارکردن لەسەر ئەم ڕاوتە',
+                  style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                ),
                 activeColor: theme.colorScheme.primary,
                 onChanged: (val) => setState(() => _isActive = val),
               ),
@@ -555,7 +693,10 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                    child: const Text(
+                      'پاشگەزبوونەوە',
+                      style: TextStyle(fontFamily: 'Rudaw'),
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   SizedBox(
@@ -594,7 +735,8 @@ class _ManageSalesmenDialog extends ConsumerStatefulWidget {
   const _ManageSalesmenDialog({required this.route});
 
   @override
-  ConsumerState<_ManageSalesmenDialog> createState() => _ManageSalesmenDialogState();
+  ConsumerState<_ManageSalesmenDialog> createState() =>
+      _ManageSalesmenDialogState();
 }
 
 class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
@@ -633,27 +775,41 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
     if (_selectedSalesmanId == null) return;
     if (widget.route.salesmen.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ڕاوت ناتوانێت لە ١ مەندوب زیاتری هەبێت. تکایە سەرەتا مەندوبە کۆنەکە بسڕەوە.', style: TextStyle(fontFamily: 'Rudaw'))),
+        const SnackBar(
+          content: Text(
+            'ڕاوت ناتوانێت لە ١ مەندوب زیاتری هەبێت. تکایە سەرەتا مەندوبە کۆنەکە بسڕەوە.',
+            style: TextStyle(fontFamily: 'Rudaw'),
+          ),
+        ),
       );
       return;
     }
     setState(() => _isAssigning = true);
 
     try {
-      await ref.read(routeActionsProvider).assignSalesman(
-        widget.route.id,
-        _selectedSalesmanId!,
-      );
+      await ref
+          .read(routeActionsProvider)
+          .assignSalesman(widget.route.id, _selectedSalesmanId!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('مەندوب بەسەرکەوتوویی بۆ ڕاوتەکە دیاریکرا', style: TextStyle(fontFamily: 'Rudaw'))),
+          const SnackBar(
+            content: Text(
+              'مەندوب بەسەرکەوتوویی بۆ ڕاوتەکە دیاریکرا',
+              style: TextStyle(fontFamily: 'Rudaw'),
+            ),
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('کێشە: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+          SnackBar(
+            content: Text(
+              'کێشە: $e',
+              style: const TextStyle(fontFamily: 'Rudaw'),
+            ),
+          ),
         );
       }
     } finally {
@@ -663,20 +819,29 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
 
   Future<void> _remove(int salesmanId) async {
     try {
-      await ref.read(routeActionsProvider).removeSalesman(
-        widget.route.id,
-        salesmanId,
-      );
+      await ref
+          .read(routeActionsProvider)
+          .removeSalesman(widget.route.id, salesmanId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('دیاریکردنی مەندوب سڕایەوە', style: TextStyle(fontFamily: 'Rudaw'))),
+          const SnackBar(
+            content: Text(
+              'دیاریکردنی مەندوب سڕایەوە',
+              style: TextStyle(fontFamily: 'Rudaw'),
+            ),
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('کێشە: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+          SnackBar(
+            content: Text(
+              'کێشە: $e',
+              style: const TextStyle(fontFamily: 'Rudaw'),
+            ),
+          ),
         );
       }
     }
@@ -697,19 +862,28 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
               children: [
                 const Icon(Icons.badge, color: AppColors.info),
                 const SizedBox(width: 8),
-                Text('دیاریکردنی مەندوب بۆ ڕاوتی ${widget.route.name}', style: AppTextStyles.h2),
+                Text(
+                  'دیاریکردنی مەندوب بۆ ڕاوتی ${widget.route.name}',
+                  style: AppTextStyles.h2,
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
 
             // Currently Assigned Salesmen
-            const Text('مەندوبە چالاکەکانی ئەم ڕاوتە:', style: AppTextStyles.bodyBold),
+            const Text(
+              'مەندوبە چالاکەکانی ئەم ڕاوتە:',
+              style: AppTextStyles.bodyBold,
+            ),
             const SizedBox(height: AppSpacing.xs),
 
             if (widget.route.salesmen.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text('هیچ مەندوبێک بۆ ئەم ڕاوتە دیاری نەکراوە.', style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw')),
+                child: Text(
+                  'هیچ مەندوبێک بۆ ئەم ڕاوتە دیاری نەکراوە.',
+                  style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
+                ),
               )
             else
               Column(
@@ -717,11 +891,25 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person, size: 20)),
-                      title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
-                      subtitle: Text(s.phone ?? '', style: const TextStyle(fontFamily: 'Rudaw')),
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.person, size: 20),
+                      ),
+                      title: Text(
+                        s.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Rudaw',
+                        ),
+                      ),
+                      subtitle: Text(
+                        s.phone ?? '',
+                        style: const TextStyle(fontFamily: 'Rudaw'),
+                      ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _remove(s.salesmanId),
                       ),
                     ),
@@ -731,7 +919,10 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
 
             const Divider(height: 24),
 
-            const Text('دیاریکردنی مەندوبی نوێ:', style: AppTextStyles.bodyBold),
+            const Text(
+              'دیاریکردنی مەندوبی نوێ:',
+              style: AppTextStyles.bodyBold,
+            ),
             const SizedBox(height: AppSpacing.xs),
 
             if (_isLoadingSalesmen)
@@ -739,30 +930,47 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
             else if (_errorMessage != null)
               Column(
                 children: [
-                  Text('شکست لە هێنانی مەندوبەکان:\n$_errorMessage', style: const TextStyle(color: Colors.red, fontFamily: 'Rudaw')),
+                  Text(
+                    'شکست لە هێنانی مەندوبەکان:\n$_errorMessage',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontFamily: 'Rudaw',
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: _loadSalesmen,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('دووبارە هەوڵبدەرەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                    label: const Text(
+                      'دووبارە هەوڵبدەرەوە',
+                      style: TextStyle(fontFamily: 'Rudaw'),
+                    ),
                   ),
                 ],
               )
             else if (_salesmenList.isEmpty)
-              const Text('هیچ مەندوبێک لە سیستەمەکەدا بەردەست نییە.', style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'))
+              const Text(
+                'هیچ مەندوبێک لە سیستەمەکەدا بەردەست نییە.',
+                style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
+              )
             else ...[
               DropdownButtonFormField<int>(
                 value: _selectedSalesmanId,
                 decoration: InputDecoration(
                   labelText: 'مەندوب هەڵبژێرە',
                   prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   enabled: widget.route.salesmen.isEmpty,
                 ),
                 items: _salesmenList.map((s) {
                   return DropdownMenuItem<int>(
                     value: s['id'],
-                    child: Text('${s['name']} (${s['phone'] ?? ''})', style: const TextStyle(fontFamily: 'Rudaw')),
+                    child: Text(
+                      '${s['name']} (${s['phone'] ?? ''})',
+                      style: const TextStyle(fontFamily: 'Rudaw'),
+                    ),
                   );
                 }).toList(),
                 onChanged: widget.route.salesmen.isEmpty
@@ -773,7 +981,11 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                 const SizedBox(height: 8),
                 const Text(
                   '⚠️ ئەم ڕاوتە پێشتر مەندوبێکی بۆ دیاریکراوە. تکایە سەرەتا مەندوبەکەی پێشوو بسڕەوە.',
-                  style: TextStyle(color: Colors.red, fontSize: 11, fontFamily: 'Rudaw'),
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 11,
+                    fontFamily: 'Rudaw',
+                  ),
                 ),
               ],
             ],
@@ -785,7 +997,10 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('داخستن', style: TextStyle(fontFamily: 'Rudaw')),
+                  child: const Text(
+                    'داخستن',
+                    style: TextStyle(fontFamily: 'Rudaw'),
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 SizedBox(
@@ -793,7 +1008,11 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                   child: AppButton(
                     text: 'دیاریکردن',
                     isLoading: _isAssigning,
-                    onPressed: _selectedSalesmanId == null || widget.route.salesmen.isNotEmpty ? null : _assign,
+                    onPressed:
+                        _selectedSalesmanId == null ||
+                            widget.route.salesmen.isNotEmpty
+                        ? null
+                        : _assign,
                   ),
                 ),
               ],
@@ -811,7 +1030,8 @@ class _RouteCustomersDialog extends ConsumerStatefulWidget {
   const _RouteCustomersDialog({required this.route});
 
   @override
-  ConsumerState<_RouteCustomersDialog> createState() => _RouteCustomersDialogState();
+  ConsumerState<_RouteCustomersDialog> createState() =>
+      _RouteCustomersDialogState();
 }
 
 class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
@@ -831,7 +1051,9 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
       _errorMessage = null;
     });
     try {
-      final list = await ref.read(routeActionsProvider).fetchRouteCustomers(widget.route.id);
+      final list = await ref
+          .read(routeActionsProvider)
+          .fetchRouteCustomers(widget.route.id);
       setState(() {
         _customers = list;
         _isLoading = false;
@@ -853,19 +1075,28 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: const Text('دیاریکردنی کڕیار بۆ ئەم ڕاوتە', style: AppTextStyles.h3),
+            title: const Text(
+              'دیاریکردنی کڕیار بۆ ئەم ڕاوتە',
+              style: AppTextStyles.h3,
+            ),
             content: SizedBox(
               width: 400,
               height: 350,
               child: customersAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('کێشە لە هێنانی کڕیارەکان: $err')),
+                error: (err, stack) =>
+                    Center(child: Text('کێشە لە هێنانی کڕیارەکان: $err')),
                 data: (allCustomers) {
-                  final assignable = allCustomers.where((c) => c.routeId != widget.route.id).toList();
+                  final assignable = allCustomers
+                      .where((c) => c.routeId != widget.route.id)
+                      .toList();
 
                   if (assignable.isEmpty) {
                     return const Center(
-                      child: Text('هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.', style: TextStyle(fontFamily: 'Rudaw')),
+                      child: Text(
+                        'هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.',
+                        style: TextStyle(fontFamily: 'Rudaw'),
+                      ),
                     );
                   }
 
@@ -877,8 +1108,20 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
 
                       return CheckboxListTile(
                         value: isSelected,
-                        title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
-                        subtitle: Text(c.phone ?? '', style: const TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                        title: Text(
+                          c.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        subtitle: Text(
+                          c.phone ?? '',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
                         onChanged: (val) {
                           setStateDialog(() {
                             if (val == true) {
@@ -897,23 +1140,36 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                child: const Text(
+                  'پاشگەزبوونەوە',
+                  style: TextStyle(fontFamily: 'Rudaw'),
+                ),
               ),
               ElevatedButton(
                 onPressed: selectedIds.isEmpty
                     ? null
                     : () async {
                         try {
-                          await ref.read(routeActionsProvider).assignCustomers(widget.route.id, selectedIds);
+                          await ref
+                              .read(routeActionsProvider)
+                              .assignCustomers(widget.route.id, selectedIds);
                           Navigator.pop(context);
                           _loadCustomers();
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('کێشە: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+                            SnackBar(
+                              content: Text(
+                                'کێشە: $e',
+                                style: const TextStyle(fontFamily: 'Rudaw'),
+                              ),
+                            ),
                           );
                         }
                       },
-                child: const Text('دیاریکردن', style: TextStyle(fontFamily: 'Rudaw')),
+                child: const Text(
+                  'دیاریکردن',
+                  style: TextStyle(fontFamily: 'Rudaw'),
+                ),
               ),
             ],
           );
@@ -938,7 +1194,10 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                 const Icon(Icons.storefront, color: AppColors.success),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('کڕیارەکانی ڕاوتی ${widget.route.name}', style: AppTextStyles.h2),
+                  child: Text(
+                    'کڕیارەکانی ڕاوتی ${widget.route.name}',
+                    style: AppTextStyles.h2,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_link, color: AppColors.info),
@@ -950,7 +1209,11 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
             const SizedBox(height: AppSpacing.sm),
             const Text(
               'دەتوانیت کڕیارەکان ڕابکێشیت (Drag) بۆ دەستکاریکردنی ڕیزبەندی سەردانیان.',
-              style: TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'Rudaw'),
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey,
+                fontFamily: 'Rudaw',
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
 
@@ -962,12 +1225,21 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('شکست لە هێنانی کڕیارەکان:\n$_errorMessage', style: const TextStyle(color: Colors.red, fontFamily: 'Rudaw')),
+                      Text(
+                        'شکست لە هێنانی کڕیارەکان:\n$_errorMessage',
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontFamily: 'Rudaw',
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       ElevatedButton.icon(
                         onPressed: _loadCustomers,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('دووبارە هەوڵبدەرەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                        label: const Text(
+                          'دووبارە هەوڵبدەرەوە',
+                          style: TextStyle(fontFamily: 'Rudaw'),
+                        ),
                       ),
                     ],
                   ),
@@ -976,7 +1248,10 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
             else if (_customers.isEmpty)
               const Expanded(
                 child: Center(
-                  child: Text('هیچ کڕیارێک لەم ڕاوتەدا تۆمار نەکراوە.', style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw')),
+                  child: Text(
+                    'هیچ کڕیارێک لەم ڕاوتەدا تۆمار نەکراوە.',
+                    style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
+                  ),
                 ),
               )
             else
@@ -993,17 +1268,29 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                     });
 
                     try {
-                      final ids = _customers.map<int>((c) => c['id'] as int).toList();
-                      await ref.read(routeActionsProvider).reorderCustomers(widget.route.id, ids);
+                      final ids = _customers
+                          .map<int>((c) => c['id'] as int)
+                          .toList();
+                      await ref
+                          .read(routeActionsProvider)
+                          .reorderCustomers(widget.route.id, ids);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('ڕیزبەندی نوێی سەردانەکان پاشەکەوت کرا', style: TextStyle(fontFamily: 'Rudaw')),
+                          content: Text(
+                            'ڕیزبەندی نوێی سەردانەکان پاشەکەوت کرا',
+                            style: TextStyle(fontFamily: 'Rudaw'),
+                          ),
                           duration: Duration(seconds: 1),
                         ),
                       );
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('سەرکەوتوو نەبوو لە نوێکردنەوەی ڕیزبەندی: $e', style: const TextStyle(fontFamily: 'Rudaw'))),
+                        SnackBar(
+                          content: Text(
+                            'سەرکەوتوو نەبوو لە نوێکردنەوەی ڕیزبەندی: $e',
+                            style: const TextStyle(fontFamily: 'Rudaw'),
+                          ),
+                        ),
                       );
                       _loadCustomers();
                     }
@@ -1017,11 +1304,28 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.success.withValues(alpha: 0.1),
-                          child: Text('${index + 1}', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                          backgroundColor: AppColors.success.withValues(
+                            alpha: 0.1,
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        title: Text(c['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Rudaw')),
-                        subtitle: Text('${c['phone'] ?? ''} - ${c['address'] ?? 'بێ ناونیشان'}', style: const TextStyle(fontFamily: 'Rudaw')),
+                        title: Text(
+                          c['name'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${c['phone'] ?? ''} - ${c['address'] ?? 'بێ ناونیشان'}',
+                          style: const TextStyle(fontFamily: 'Rudaw'),
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1029,13 +1333,22 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                const Text('قەرز:', style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Rudaw')),
+                                const Text(
+                                  'قەرز:',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
                                 Text(
                                   '$balance دینار',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: balance > 0 ? Colors.red : Colors.green,
+                                    color: balance > 0
+                                        ? Colors.red
+                                        : Colors.green,
                                     fontFamily: 'Rudaw',
                                   ),
                                 ),
@@ -1056,7 +1369,10 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
               alignment: Alignment.centerLeft,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('داخستن', style: TextStyle(fontFamily: 'Rudaw')),
+                child: const Text(
+                  'داخستن',
+                  style: TextStyle(fontFamily: 'Rudaw'),
+                ),
               ),
             ),
           ],

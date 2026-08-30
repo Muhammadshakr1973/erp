@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'dart:math';
 
+import 'dart:math';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
@@ -78,7 +78,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     }
   }
 
-  void _showUserFormDialog(BuildContext context, [UserModel? user, List<dynamic>? roles]) {
+  void _showUserFormDialog(
+    BuildContext context, [
+    UserModel? user,
+    List<dynamic>? roles,
+  ]) {
     showDialog(
       context: context,
       builder: (context) => UserFormDialog(user: user, roles: roles),
@@ -102,7 +106,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+            child: const Text(
+              'پاشگەزبوونەوە',
+              style: TextStyle(fontFamily: 'Rudaw'),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -115,14 +122,15 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('بەکارهێنەر بە سەرکەوتوویی سڕایەوە')),
+                    const SnackBar(
+                      content: Text('بەکارهێنەر بە سەرکەوتوویی سڕایەوە'),
+                    ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('کێشە: $e')),
-                  );
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('کێشە: $e')));
                 }
               }
             },
@@ -156,7 +164,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           ),
         ],
       ),
-      
+
       body: Column(
         children: [
           // Search Bar
@@ -167,7 +175,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 Expanded(
                   child: AppTextField(
                     controller: _searchController,
-                    hintText: 'گەڕان بەدوای بەکارهێنەر (ناو، مۆبایل، ئیمەیڵ)...',
+                    hintText:
+                        'گەڕان بەدوای بەکارهێنەر (ناو، مۆبایل، ئیمەیڵ)...',
                     prefixIcon: Icons.search,
                   ),
                 ),
@@ -183,9 +192,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 16),
-                    Text('هەڵەیەک ڕوویدا: $err', style: AppTextStyles.bodyMedium),
+                    Text(
+                      'هەڵەیەک ڕوویدا: $err',
+                      style: AppTextStyles.bodyMedium,
+                    ),
                   ],
                 ),
               ),
@@ -195,7 +211,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
                 final filteredUsers = users.where((u) {
                   final nameMatch = u.name.toLowerCase().contains(_searchQuery);
-                  final phoneMatch = u.phone.toLowerCase().contains(_searchQuery);
+                  final phoneMatch = u.phone.toLowerCase().contains(
+                    _searchQuery,
+                  );
                   return nameMatch || phoneMatch;
                 }).toList();
 
@@ -204,9 +222,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.people_outline,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: AppSpacing.sm),
-                        Text('هیچ بەکارهێنەرێک نەدۆزرایەوە', style: AppTextStyles.bodyBold),
+                        Text(
+                          'هیچ بەکارهێنەرێک نەدۆزرایەوە',
+                          style: AppTextStyles.bodyBold,
+                        ),
                       ],
                     ),
                   );
@@ -240,7 +265,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       onTap: () => _showUserFormDialog(context, user, roles),
                       onLongPress: () => _showDeleteUserDialog(context, user),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4.0,
+                          vertical: 4.0,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -253,9 +281,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               child: Icon(
                                 user.role.toLowerCase() == 'salesman'
                                     ? Icons.badge_outlined
-                                    : user.role.toLowerCase() == 'admin' || user.role.toLowerCase() == 'owner'
-                                        ? Icons.admin_panel_settings_outlined
-                                        : Icons.person_outline,
+                                    : user.role.toLowerCase() == 'admin' ||
+                                          user.role.toLowerCase() == 'owner'
+                                    ? Icons.admin_panel_settings_outlined
+                                    : Icons.person_outline,
                                 color: roleColor,
                                 size: 28,
                               ),
@@ -268,18 +297,26 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 children: [
                                   Text(
                                     user.name,
-                                    style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                    style: AppTextStyles.bodyBold.copyWith(
+                                      fontSize: 15,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'تەلەفۆن: ${user.phone}',
-                                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
-                                  if (user.role.toLowerCase() == 'salesman' && user.commissionRate != null) ...[
+                                  if (user.role.toLowerCase() == 'salesman' &&
+                                      user.commissionRate != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       'کۆمسیۆن: ${user.commissionRate}%',
-                                      style: AppTextStyles.caption.copyWith(color: Colors.orange, fontWeight: FontWeight.bold),
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ],
@@ -291,11 +328,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: roleColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+                                    border: Border.all(
+                                      color: roleColor.withValues(alpha: 0.3),
+                                    ),
                                   ),
                                   child: Text(
                                     _getRoleDisplayName(user.role),
@@ -309,7 +351,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: (user.isActive ?? true)
                                         ? Colors.green.withValues(alpha: 0.1)
@@ -317,9 +362,13 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    (user.isActive ?? true) ? 'چالاک' : 'ناچالاک',
+                                    (user.isActive ?? true)
+                                        ? 'چالاک'
+                                        : 'ناچالاک',
                                     style: TextStyle(
-                                      color: (user.isActive ?? true) ? Colors.green : Colors.red,
+                                      color: (user.isActive ?? true)
+                                          ? Colors.green
+                                          : Colors.red,
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Rudaw',
@@ -369,8 +418,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   String _generateRandomString(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     final rnd = Random();
-    return String.fromCharCodes(Iterable.generate(
-        length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+    return String.fromCharCodes(
+      Iterable.generate(
+        length,
+        (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
+      ),
+    );
   }
 
   @override
@@ -380,16 +433,22 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     _phoneController = TextEditingController(text: widget.user?.phone);
     _passwordController = TextEditingController();
     _commissionRateController = TextEditingController(
-      text: widget.user?.commissionRate != null ? widget.user!.commissionRate!.toString() : '0.0',
+      text: widget.user?.commissionRate != null
+          ? widget.user!.commissionRate!.toString()
+          : '0.0',
     );
     _barcodeController = TextEditingController(text: widget.user?.barcode);
 
     _selectedRoleId = widget.user?.roleId;
-    if (_selectedRoleId == null && widget.roles != null && widget.roles!.isNotEmpty) {
+    if (_selectedRoleId == null &&
+        widget.roles != null &&
+        widget.roles!.isNotEmpty) {
       // Find matching role by name if roleId is null
       if (widget.user != null) {
         final matched = widget.roles!.firstWhere(
-          (r) => r['name'].toString().toLowerCase() == widget.user!.role.toLowerCase(),
+          (r) =>
+              r['name'].toString().toLowerCase() ==
+              widget.user!.role.toLowerCase(),
           orElse: () => null,
         );
         if (matched != null) {
@@ -444,12 +503,15 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       final name = _nameController.text.trim();
       final phone = _phoneController.text.trim();
       final password = _passwordController.text;
-      final commissionRate = double.tryParse(_commissionRateController.text) ?? 0.0;
+      final commissionRate =
+          double.tryParse(_commissionRateController.text) ?? 0.0;
       final barcode = _barcodeController.text.trim();
 
       if (widget.user == null) {
         // Add
-        await ref.read(userActionsProvider).addUser(
+        await ref
+            .read(userActionsProvider)
+            .addUser(
               name: name,
               phone: phone,
               password: password,
@@ -465,7 +527,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         }
       } else {
         // Update
-        await ref.read(userActionsProvider).updateUser(
+        await ref
+            .read(userActionsProvider)
+            .updateUser(
               widget.user!.id,
               name: name,
               phone: phone,
@@ -477,16 +541,17 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('زانیاری بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە')),
+            const SnackBar(
+              content: Text('زانیاری بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە'),
+            ),
           );
         }
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('هەڵە: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('هەڵە: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -505,7 +570,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         (r) => r['id'] == _selectedRoleId,
         orElse: () => null,
       );
-      if (matched != null && matched['name'].toString().toLowerCase() == 'salesman') {
+      if (matched != null &&
+          matched['name'].toString().toLowerCase() == 'salesman') {
         isSalesmanSelected = true;
       }
     }
@@ -525,13 +591,17 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 Row(
                   children: [
                     Icon(
-                      isEditing ? Icons.edit_outlined : Icons.person_add_alt_1_outlined,
+                      isEditing
+                          ? Icons.edit_outlined
+                          : Icons.person_add_alt_1_outlined,
                       color: AppColors.primary,
                       size: 28,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      isEditing ? 'نوێکردنەوەی بەکارهێنەر' : 'تۆمارکردنی بەکارهێنەری نوێ',
+                      isEditing
+                          ? 'نوێکردنەوەی بەکارهێنەر'
+                          : 'تۆمارکردنی بەکارهێنەری نوێ',
                       style: AppTextStyles.h2,
                     ),
                   ],
@@ -542,7 +612,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   controller: _nameController,
                   labelText: 'ناوی تەواو',
                   prefixIcon: Icons.person_outline,
-                  validator: (val) => val == null || val.isEmpty ? 'تکایە ناو بنووسە' : null,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'تکایە ناو بنووسە' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -550,17 +621,26 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   controller: _phoneController,
                   labelText: 'ژمارەی مۆبایل',
                   prefixIcon: Icons.phone_outlined,
-                  validator: (val) => val == null || val.isEmpty ? 'تکایە ژمارەی مۆبایل بنووسە' : null,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'تکایە ژمارەی مۆبایل بنووسە'
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(
                   controller: _passwordController,
-                  labelText: isEditing ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)' : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
+                  labelText: isEditing
+                      ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)'
+                      : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
                   obscureText: _obscurePassword,
                   prefixIcon: Icons.lock_outline,
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: AppColors.primary),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: AppColors.primary,
+                    ),
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -584,12 +664,17 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   decoration: InputDecoration(
                     labelText: 'ڕۆڵی بەکارهێنەر',
                     prefixIcon: const Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   items: rolesList.map((r) {
                     return DropdownMenuItem<int>(
                       value: r['id'],
-                      child: Text(_getRoleDisplayName(r['name']), style: const TextStyle(fontFamily: 'Rudaw')),
+                      child: Text(
+                        _getRoleDisplayName(r['name']),
+                        style: const TextStyle(fontFamily: 'Rudaw'),
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -605,9 +690,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     controller: _commissionRateController,
                     labelText: 'ڕێژەی کۆمسیۆن (%)',
                     prefixIcon: Icons.percent_outlined,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     validator: (val) {
-                      if (val == null || val.isEmpty) return 'تکایە ڕێژەی کۆمسیۆن دیاری بکە';
+                      if (val == null || val.isEmpty)
+                        return 'تکایە ڕێژەی کۆمسیۆن دیاری بکە';
                       final parsed = double.tryParse(val);
                       if (parsed == null || parsed < 0 || parsed > 100) {
                         return 'ڕێژەیەکی دروست بنووسە لەنێوان 0 بۆ 100';
@@ -644,7 +732,11 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                             showDialog(
                               context: context,
                               builder: (_) => AlertDialog(
-                                title: const Text('کۆدی چوونەژوورەوە', style: AppTextStyles.h3, textAlign: TextAlign.center),
+                                title: const Text(
+                                  'کۆدی چوونەژوورەوە',
+                                  style: AppTextStyles.h3,
+                                  textAlign: TextAlign.center,
+                                ),
                                 content: SizedBox(
                                   width: 200,
                                   height: 200,
@@ -657,14 +749,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('داخستن', style: TextStyle(fontFamily: 'Rudaw')),
+                                    child: const Text(
+                                      'داخستن',
+                                      style: TextStyle(fontFamily: 'Rudaw'),
+                                    ),
                                   ),
                                 ],
                               ),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('تکایە سەرەتا کۆدێک بنووسە یان دروست بکە')),
+                              const SnackBar(
+                                content: Text(
+                                  'تکایە سەرەتا کۆدێک بنووسە یان دروست بکە',
+                                ),
+                              ),
                             );
                           }
                         },
@@ -690,7 +789,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 SwitchListTile(
-                  title: const Text('باری بەکارهێنەر (چالاک بێت؟)', style: TextStyle(fontFamily: 'Rudaw')),
+                  title: const Text(
+                    'باری بەکارهێنەر (چالاک بێت؟)',
+                    style: TextStyle(fontFamily: 'Rudaw'),
+                  ),
                   value: _isActive,
                   onChanged: (val) => setState(() => _isActive = val),
                   activeColor: AppColors.primary,
@@ -702,7 +804,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('پاشگەزبوونەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                      child: const Text(
+                        'پاشگەزبوونەوە',
+                        style: TextStyle(fontFamily: 'Rudaw'),
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     SizedBox(

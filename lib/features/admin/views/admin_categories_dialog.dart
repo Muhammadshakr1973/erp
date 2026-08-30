@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -14,7 +15,7 @@ class AdminCategoriesDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesListProvider);
-    
+
     return Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
@@ -57,17 +58,25 @@ class AdminCategoriesDialog extends ConsumerWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(AppIcons.edit, color: AppColors.primary),
+                                    icon: const Icon(
+                                      AppIcons.edit,
+                                      color: AppColors.primary,
+                                    ),
                                     onPressed: () {
                                       showDialog(
                                         context: context,
-                                        builder: (context) => CategoryFormDialog(category: cat),
+                                        builder: (context) =>
+                                            CategoryFormDialog(category: cat),
                                       );
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(AppIcons.delete, color: AppColors.danger),
-                                    onPressed: () => _deleteCategory(context, ref, cat),
+                                    icon: const Icon(
+                                      AppIcons.delete,
+                                      color: AppColors.danger,
+                                    ),
+                                    onPressed: () =>
+                                        _deleteCategory(context, ref, cat),
                                   ),
                                 ],
                               ),
@@ -77,8 +86,14 @@ class AdminCategoriesDialog extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, s) => Center(child: Text(e.toString(), style: const TextStyle(color: AppColors.danger))),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Center(
+                    child: Text(
+                      e.toString(),
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -96,7 +111,11 @@ class AdminCategoriesDialog extends ConsumerWidget {
     );
   }
 
-  void _deleteCategory(BuildContext context, WidgetRef ref, CategoryModel category) {
+  void _deleteCategory(
+    BuildContext context,
+    WidgetRef ref,
+    CategoryModel category,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -111,17 +130,24 @@ class AdminCategoriesDialog extends ConsumerWidget {
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                await ref.read(categoryActionsProvider).deleteCategory(category.id);
+                await ref
+                    .read(categoryActionsProvider)
+                    .deleteCategory(category.id);
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(e.toString()),
-                    backgroundColor: AppColors.danger,
-                  ));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
                 }
               }
             },
-            child: const Text('سڕینەوە', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'سڕینەوە',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),

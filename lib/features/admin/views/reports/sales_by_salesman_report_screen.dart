@@ -1,5 +1,7 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -11,10 +13,12 @@ class SalesBySalesmanReportScreen extends ConsumerStatefulWidget {
   const SalesBySalesmanReportScreen({super.key});
 
   @override
-  ConsumerState<SalesBySalesmanReportScreen> createState() => _SalesBySalesmanReportScreenState();
+  ConsumerState<SalesBySalesmanReportScreen> createState() =>
+      _SalesBySalesmanReportScreenState();
 }
 
-class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanReportScreen> {
+class _SalesBySalesmanReportScreenState
+    extends ConsumerState<SalesBySalesmanReportScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -32,8 +36,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
   void _applyFilters() {
     setState(() {
       _filters = {
-        if (_startDate != null) 'start_date': _startDate!.toIso8601String().split('T').first,
-        if (_endDate != null) 'end_date': _endDate!.toIso8601String().split('T').first,
+        if (_startDate != null)
+          'start_date': _startDate!.toIso8601String().split('T').first,
+        if (_endDate != null)
+          'end_date': _endDate!.toIso8601String().split('T').first,
       };
     });
   }
@@ -51,13 +57,15 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
   }
 
   String _formatCurrency(num amount) {
-    return '${amount.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")} د.ع';
+    return '${Formatters.currency(amount)}';
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
+      initialDate: isStart
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
@@ -96,7 +104,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
                       const Text('دیاریکردنی ماوە', style: AppTextStyles.h3),
                       TextButton(
                         onPressed: _clearFilters,
-                        child: const Text('پاککردنەوە', style: TextStyle(color: AppColors.danger)),
+                        child: const Text(
+                          'پاککردنەوە',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),
@@ -108,7 +119,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
                       Expanded(child: _buildEndDatePicker(context)),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
-                        child: AppButton(text: 'جێبەجێکردن', onPressed: _applyFilters),
+                        child: AppButton(
+                          text: 'جێبەجێکردن',
+                          onPressed: _applyFilters,
+                        ),
                       ),
                     ],
                   ),
@@ -128,7 +142,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
               error: (err, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Text('هەڵەیەک ڕوویدا: $err', style: const TextStyle(color: AppColors.danger)),
+                  child: Text(
+                    'هەڵەیەک ڕوویدا: $err',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
                 ),
               ),
               data: (data) => Column(
@@ -139,7 +156,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
                   const SizedBox(height: AppSpacing.md),
 
                   // Salesmen Performance Table
-                  const Text('ئەدای کار و فرۆشتنی مەندوبەکان', style: AppTextStyles.h3),
+                  const Text(
+                    'ئەدای کار و فرۆشتنی مەندوبەکان',
+                    style: AppTextStyles.h3,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   _buildSalesmenTable(data.salesmen),
                 ],
@@ -155,16 +175,38 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final cardWidth = isMobile ? (constraints.maxWidth - AppSpacing.sm) / 2 : (constraints.maxWidth - 3 * AppSpacing.md) / 4;
+        final cardWidth = isMobile
+            ? (constraints.maxWidth - AppSpacing.sm) / 2
+            : (constraints.maxWidth - 3 * AppSpacing.md) / 4;
 
         return Wrap(
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.md,
           children: [
-            _buildKpiCard('کۆی فرۆشتن', _formatCurrency(data.totalSalesAmount), AppColors.primary, cardWidth),
-            _buildKpiCard('کۆی قازانج', _formatCurrency(data.totalProfitAmount), AppColors.success, cardWidth),
-            _buildKpiCard('کۆی کۆمسیۆن', _formatCurrency(data.totalCommission), AppColors.purple, cardWidth),
-            _buildKpiCard('کۆی پارەی کۆکراوە', _formatCurrency(data.totalCollectedCash), AppColors.info, cardWidth),
+            _buildKpiCard(
+              'کۆی فرۆشتن',
+              _formatCurrency(data.totalSalesAmount),
+              AppColors.primary,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'کۆی قازانج',
+              _formatCurrency(data.totalProfitAmount),
+              AppColors.success,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'کۆی کۆمسیۆن',
+              _formatCurrency(data.totalCommission),
+              AppColors.purple,
+              cardWidth,
+            ),
+            _buildKpiCard(
+              'کۆی پارەی کۆکراوە',
+              _formatCurrency(data.totalCollectedCash),
+              AppColors.info,
+              cardWidth,
+            ),
           ],
         );
       },
@@ -178,11 +220,19 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight)),
+            Text(
+              title,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               value,
-              style: AppTextStyles.h3.copyWith(color: color, fontWeight: FontWeight.bold),
+              style: AppTextStyles.h3.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
               textDirection: TextDirection.ltr,
             ),
           ],
@@ -197,7 +247,10 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(24.0),
-            child: Text('هیچ داتایەک نەدۆزرایەوە', style: AppTextStyles.bodyMedium),
+            child: Text(
+              'هیچ داتایەک نەدۆزرایەوە',
+              style: AppTextStyles.bodyMedium,
+            ),
           ),
         ),
       );
@@ -221,17 +274,53 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
             DataColumn(label: Text('پارەی وەرگیراو')),
           ],
           rows: salesmen.map((s) {
-            return DataRow(cells: [
-              DataCell(Text(s.salesmanName, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(s.phone ?? '-')),
-              DataCell(Text('${s.commissionRate.toStringAsFixed(1)}%')),
-              DataCell(Text('${s.totalOrders}')),
-              DataCell(Text('${s.deliveredOrders}')),
-              DataCell(Text(_formatCurrency(s.totalSales), textDirection: TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold))),
-              DataCell(Text(_formatCurrency(s.totalProfit), textDirection: TextDirection.ltr, style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold))),
-              DataCell(Text(_formatCurrency(s.estimatedCommission), textDirection: TextDirection.ltr, style: const TextStyle(color: AppColors.purple, fontWeight: FontWeight.bold))),
-              DataCell(Text(_formatCurrency(s.paymentsCollected), textDirection: TextDirection.ltr)),
-            ]);
+            return DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    s.salesmanName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(Text(s.phone ?? '-')),
+                DataCell(Text('${s.commissionRate.toStringAsFixed(1)}%')),
+                DataCell(Text('${s.totalOrders}')),
+                DataCell(Text('${s.deliveredOrders}')),
+                DataCell(
+                  Text(
+                    _formatCurrency(s.totalSales),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(s.totalProfit),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(s.estimatedCommission),
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(
+                      color: AppColors.purple,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Text(
+                    _formatCurrency(s.paymentsCollected),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -247,7 +336,11 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_startDate != null ? _startDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _startDate != null
+              ? _startDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }
@@ -261,7 +354,11 @@ class _SalesBySalesmanReportScreenState extends ConsumerState<SalesBySalesmanRep
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
-        child: Text(_endDate != null ? _endDate!.toIso8601String().split('T').first : 'دیارینەکراوە'),
+        child: Text(
+          _endDate != null
+              ? _endDate!.toIso8601String().split('T').first
+              : 'دیارینەکراوە',
+        ),
       ),
     );
   }

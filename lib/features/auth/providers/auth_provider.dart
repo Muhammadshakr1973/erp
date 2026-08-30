@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: unused_import
 import 'package:dio/dio.dart';
+
 import '../../../core/api_client.dart';
 import '../models/user_model.dart';
+
 import 'dart:convert';
 
 // State for Auth
@@ -43,18 +45,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.client.post('/auth/login', data: {
-        'phone': phone,
-        'password': password,
-      });
-
+      final response = await api.client.post(
+        '/auth/login',
+        data: {'phone': phone, 'password': password},
+      );
 
       if (response.statusCode == 200) {
         final token = response.data['data']['token'];
         final userData = response.data['data']['user'];
 
         final user = UserModel.fromJson(userData);
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         await prefs.setString('current_user', jsonEncode(user.toJson()));
@@ -67,7 +68,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: errorMsg);
       return false;
     }
-    
+
     state = state.copyWith(isLoading: false, error: 'هەڵەیەکی نەزانراو ڕوویدا');
     return false;
   }
@@ -77,16 +78,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.client.post('/auth/login', data: {
-        'barcode': barcode,
-      });
+      final response = await api.client.post(
+        '/auth/login',
+        data: {'barcode': barcode},
+      );
 
       if (response.statusCode == 200) {
         final token = response.data['data']['token'];
         final userData = response.data['data']['user'];
 
         final user = UserModel.fromJson(userData);
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         await prefs.setString('current_user', jsonEncode(user.toJson()));
@@ -99,7 +101,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: errorMsg);
       return false;
     }
-    
+
     state = state.copyWith(isLoading: false, error: 'هەڵەیەکی نەزانراو ڕوویدا');
     return false;
   }
@@ -117,11 +119,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final api = ref.read(apiClientProvider);
       await api.client.post('/auth/logout');
     } catch (_) {}
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('current_user');
-    
+
     state = AuthState(); // Reset state
   }
 }

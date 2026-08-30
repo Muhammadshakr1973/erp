@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/api_client.dart';
 import '../../../auth/models/user_model.dart';
 
@@ -23,7 +24,8 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
 final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
   final userData = await ref.watch(userAdminProvider.future);
-  final List<UserModel> allUsers = (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
+  final List<UserModel> allUsers =
+      (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
   return allUsers.where((u) => u.role.toLowerCase() == 'salesman').toList();
 });
 
@@ -48,15 +50,18 @@ class UserActions {
     bool? isActive,
   }) async {
     try {
-      await api.client.post('/users', data: {
-        'name': name,
-        'phone': phone,
-        'password': password,
-        'role_id': roleId,
-        if (commissionRate != null) 'commission_rate': commissionRate,
-        if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
-        if (isActive != null) 'is_active': isActive,
-      });
+      await api.client.post(
+        '/users',
+        data: {
+          'name': name,
+          'phone': phone,
+          'password': password,
+          'role_id': roleId,
+          if (commissionRate != null) 'commission_rate': commissionRate,
+          if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
+          if (isActive != null) 'is_active': isActive,
+        },
+      );
       ref.invalidate(userAdminProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -74,15 +79,18 @@ class UserActions {
     bool? isActive,
   }) async {
     try {
-      await api.client.put('/users/$id', data: {
-        'name': name,
-        'phone': phone,
-        if (password != null && password.isNotEmpty) 'password': password,
-        'role_id': roleId,
-        if (commissionRate != null) 'commission_rate': commissionRate,
-        if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
-        if (isActive != null) 'is_active': isActive,
-      });
+      await api.client.put(
+        '/users/$id',
+        data: {
+          'name': name,
+          'phone': phone,
+          if (password != null && password.isNotEmpty) 'password': password,
+          'role_id': roleId,
+          if (commissionRate != null) 'commission_rate': commissionRate,
+          if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
+          if (isActive != null) 'is_active': isActive,
+        },
+      );
       ref.invalidate(userAdminProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
