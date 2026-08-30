@@ -296,4 +296,97 @@ class InventoryStockEngineTest extends TestCase
         $stock = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)->where('product_id', $this->product->id)->first();
         $this->assertEquals(25, $stock->quantity);
     }
+
+    /** @test */
+    public function test_sales_order_stock_reservation_uses_deterministic_lock_ordering()
+    {
+        // 1. Create multiple products with descending IDs or unsorted order to enforce deterministic locking
+        $product2 = Product::create([
+            'name' => 'Product 2',
+            'sku' => 'SKU-2',
+            'cost_price' => 1000,
+            'price_n1' => 1500,
+            'is_active' => true,
+        ]);
+
+        $product1 = Product::create([
+            'name' => 'Product 1',
+            'sku' => 'SKU-1',
+            'cost_price' => 1000,
+            'price_n1' => 1500,
+            'is_active' => true,
+        ]);
+
+        // Setup stock
+        WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $product2->id,
+            'quantity' => 100,
+            'reserved_quantity' => 0,
+        ]);
+
+        WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $product1->id,
+            'quantity' => 100,
+            'reserved_quantity' => 0,
+        ]);
+
+        // Create a customer & route
+        $route = \App\Models\Route::create(['name' => 'Route Z', 'is_active' => true]);
+        DB::table('route_salesmen')->insert([
+            'route_id' => $route->id,
+            'salesman_id' => $this->admin->id,
+            'work_date' => now()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $customer = \App\Models\Customer::create([
+            'name' => 'Test Customer Z',
+            'phone' => '07700000003',
+            'route_id' => $route->id,
+            'price_type' => 'N1',
+            'current_balance' => 0,
+            'is_active' => true
+        ]);
+
+        // Create Sales Order with items in unsorted/reversed order: [product2, product1]
+        $order = SalesOrder::create([
+            'order_number' => 'SO-CONCUR-1',
+            'customer_id' => $customer->id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $order->items()->create([
+            'product_id' => $product2->id,
+            'quantity' => 5,
+            'unit_price' => 1500,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 7500,
+            'profit' => 2500,
+            'is_packed' => false,
+        ]);
+
+        $order->items()->create([
+            'product_id' => $product1->id,
+            'quantity' => 5,
+            'unit_price' => 1500,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 7500,
+            'profit' => 2500,
+            'is_packed' => false,
+        ]);
+
+        // Run reserveStock under SalesOrderService
+        $service = app(SalesOrderService::class);
+        $service->transitionTo($order, SalesOrder::STATUS_CONFIRMED, $this->admin);
+
+        // Verify reservations are correct
+        $this->assertEquals(5, WarehouseStock::where('product_id', $product1->id)->first()->reserved_quantity);
+        $this->assertEquals(5, WarehouseStock::where('product_id', $product2->id)->first()->reserved_quantity);
+    }
 }

@@ -67,7 +67,9 @@ class StockTransferService
 
         return DB::transaction(function () use ($transfer, $user) {
 
-            foreach ($transfer->items as $item) {
+            // Sort items deterministically by product_id ASC to eliminate deadlock risks
+            $sortedItems = $transfer->items->sortBy('product_id');
+            foreach ($sortedItems as $item) {
 
                 // ١. هێنانی ستۆک لە کۆگای یەکەم (From Warehouse)
                 $sourceStock = WarehouseStock::lockForUpdate()->firstOrCreate(

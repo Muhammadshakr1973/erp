@@ -81,7 +81,9 @@ class PurchaseOrderService
 
             $supplier = Supplier::lockForUpdate()->findOrFail($order->supplier_id);
 
-            foreach ($order->items as $item) {
+            // Sort items deterministically by product_id ASC to eliminate deadlock risks
+            $sortedItems = $order->items->sortBy('product_id');
+            foreach ($sortedItems as $item) {
                 // ١. زیادکردنی ستۆک لە کۆگا
                 $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
                     ['warehouse_id' => $order->warehouse_id, 'product_id' => $item->product_id],

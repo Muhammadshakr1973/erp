@@ -256,8 +256,8 @@ class SalesOrderService
                         throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵە بە ئامادەکراو دابنرێت ئەگەر هیچ کاڵایەکی پاکەت نەکراوە.']);
                     }
 
-                    // Handle unpacked items (partial packing)
-                    $unpackedItems = $lockedOrder->items()->where('is_packed', false)->get();
+                    // Handle unpacked items (partial packing) in deterministic order of product_id ASC to prevent deadlocks
+                    $unpackedItems = $lockedOrder->items()->where('is_packed', false)->orderBy('product_id', 'asc')->get();
                     foreach ($unpackedItems as $item) {
                         $warehouseStock = WarehouseStock::lockForUpdate()->where([
                             'warehouse_id' => $lockedOrder->warehouse_id,
@@ -345,7 +345,9 @@ class SalesOrderService
      */
     private function reserveStock(SalesOrder $order, $user): void
     {
-        foreach ($order->items as $item) {
+        // Sort items deterministically by product_id ASC to eliminate deadlock risks
+        $sortedItems = $order->items->sortBy('product_id');
+        foreach ($sortedItems as $item) {
             // قفڵکردنی ڕیزی ستۆک بۆ ڕێگری لە کێبڕکێی هاوکات
             $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
                 ['warehouse_id' => $order->warehouse_id, 'product_id' => $item->product_id],
@@ -398,7 +400,9 @@ class SalesOrderService
      */
     private function finalizeStockSale(SalesOrder $order, $user): void
     {
-        foreach ($order->items as $item) {
+        // Sort items deterministically by product_id ASC to eliminate deadlock risks
+        $sortedItems = $order->items->sortBy('product_id');
+        foreach ($sortedItems as $item) {
             $warehouseStock = WarehouseStock::lockForUpdate()->where([
                 'warehouse_id' => $order->warehouse_id,
                 'product_id' => $item->product_id
@@ -421,7 +425,9 @@ class SalesOrderService
      */
     private function releaseStock(SalesOrder $order, $user): void
     {
-        foreach ($order->items as $item) {
+        // Sort items deterministically by product_id ASC to eliminate deadlock risks
+        $sortedItems = $order->items->sortBy('product_id');
+        foreach ($sortedItems as $item) {
             $warehouseStock = WarehouseStock::lockForUpdate()->where([
                 'warehouse_id' => $order->warehouse_id,
                 'product_id' => $item->product_id
