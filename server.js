@@ -52,7 +52,7 @@ const server = http.createServer((req, res) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="refresh" content="3">
-        <title>Gardi POS</title>
+        <title>GARDI ERP</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
