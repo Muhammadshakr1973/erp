@@ -178,7 +178,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         height: 36,
                         decoration: BoxDecoration(
                           color: item.isPacked
-                              ? AppColors.success.withOpacity(0.1)
+                              ? AppColors.success.withValues(alpha: 0.1)
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -360,8 +360,7 @@ class OrderDetailScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           AppButton(
             text: 'هەڵوەشاندنەوەی پسوڵە (Cancel)',
-            variant: AppButtonVariant.outline,
-            textColor: AppColors.danger,
+            type: AppButtonType.danger,
             onPressed: () => _handleCancelOrder(context, ref),
           ),
         ],
