@@ -460,4 +460,160 @@ class InventoryStockEngineTest extends TestCase
         // Assert that the second transaction rolled back and quantity remained 5
         $this->assertEquals(5, $stock->fresh()->quantity);
     }
+
+    /** @test */
+    public function test_adjustment_bounds_prevents_reducing_below_reserved_quantity()
+    {
+        $stock = WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 20,
+            'reserved_quantity' => 15,
+        ]);
+
+        // Attempting to adjust down by 10 (resulting in physical qty 10, which is < reserved 15) must fail
+        try {
+            $stock->adjustStock(-10, 'ADJUSTMENT', $this->admin->id, 'manual', null, 'Testing reservation bounds');
+            $this->fail('Should have thrown ValidationException when adjusting below reserved quantity');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('stock', $e->errors());
+            $this->assertStringContainsString('ناتوانرێت ستۆک کەمبکرێتەوە بۆ خوار بڕی حجزکراو', $e->errors()['stock'][0]);
+        }
+
+        // Adjusting down by 5 (resulting in physical qty 15 == reserved 15) must succeed
+        $stock->adjustStock(-5, 'ADJUSTMENT', $this->admin->id, 'manual', null, 'Testing valid boundary');
+        $this->assertEquals(15, $stock->fresh()->quantity);
+        $this->assertEquals(15, $stock->fresh()->reserved_quantity);
+    }
+
+    /** @test */
+    public function test_sales_return_movement_flow_updates_stock_and_creates_transaction()
+    {
+        $stock = WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'reserved_quantity' => 0,
+        ]);
+
+        $tx = $stock->adjustStock(
+            5,
+            StockTransaction::TYPE_RETURN,
+            $this->admin->id,
+            'sales_return',
+            123,
+            'Customer returned undamaged goods'
+        );
+
+        $this->assertEquals(15, $stock->fresh()->quantity);
+        $this->assertEquals(15, $stock->fresh()->available);
+        $this->assertEquals('RETURN', $tx->type);
+        $this->assertEquals(5, $tx->quantity_change);
+        $this->assertEquals(15, $tx->quantity_after);
+        $this->assertEquals('sales_return', $tx->reference_type);
+        $this->assertEquals(123, $tx->reference_id);
+    }
+
+    /** @test */
+    public function test_partial_packing_preserves_historical_records_via_soft_deletes()
+    {
+        $customer = \App\Models\Customer::create([
+            'name' => 'Partial Pack Customer',
+            'phone' => '07700000004',
+            'route_id' => \App\Models\Route::create(['name' => 'Route P', 'is_active' => true])->id,
+            'price_type' => 'N1',
+            'current_balance' => 0,
+            'is_active' => true
+        ]);
+
+        $productPacked = Product::create([
+            'name' => 'Packed Product',
+            'sku' => 'SKU-PACKED',
+            'cost_price' => 1000,
+            'price_n1' => 1500,
+            'is_active' => true,
+        ]);
+
+        $productUnpacked = Product::create([
+            'name' => 'Unpacked Product',
+            'sku' => 'SKU-UNPACKED',
+            'cost_price' => 2000,
+            'price_n1' => 3000,
+            'is_active' => true,
+        ]);
+
+        WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $productPacked->id,
+            'quantity' => 50,
+            'reserved_quantity' => 0,
+        ]);
+
+        WarehouseStock::create([
+            'warehouse_id' => $this->mainWarehouse->id,
+            'product_id' => $productUnpacked->id,
+            'quantity' => 50,
+            'reserved_quantity' => 0,
+        ]);
+
+        $order = SalesOrder::create([
+            'order_number' => 'SO-PARTIAL-1',
+            'customer_id' => $customer->id,
+            'salesman_id' => $this->admin->id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_CONFIRMED,
+            'subtotal' => 7500,
+            'total_amount' => 7500,
+            'total_profit' => 2500,
+            'created_by' => $this->admin->id,
+        ]);
+
+        $item1 = $order->items()->create([
+            'product_id' => $productPacked->id,
+            'quantity' => 3,
+            'unit_price' => 1500,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 4500,
+            'profit' => 1500,
+            'is_packed' => true,
+        ]);
+
+        $item2 = $order->items()->create([
+            'product_id' => $productUnpacked->id,
+            'quantity' => 1,
+            'unit_price' => 3000,
+            'cost_price' => 2000,
+            'price_type' => 'N1',
+            'line_total' => 3000,
+            'profit' => 1000,
+            'is_packed' => false,
+        ]);
+
+        WarehouseStock::where('product_id', $productPacked->id)->update(['reserved_quantity' => 3]);
+        WarehouseStock::where('product_id', $productUnpacked->id)->update(['reserved_quantity' => 1]);
+
+        $service = app(SalesOrderService::class);
+        $service->transitionTo($order, SalesOrder::STATUS_READY, $this->admin);
+
+        // 1. Order status is READY
+        $order->refresh();
+        $this->assertEquals(SalesOrder::STATUS_READY, $order->status);
+
+        // 2. Unpacked item reservation was released
+        $this->assertEquals(0, WarehouseStock::where('product_id', $productUnpacked->id)->first()->reserved_quantity);
+        $this->assertEquals(3, WarehouseStock::where('product_id', $productPacked->id)->first()->reserved_quantity);
+
+        // 3. Active order items only count the packed item
+        $this->assertEquals(1, $order->items()->count());
+        $this->assertEquals(4500, $order->subtotal);
+        $this->assertEquals(4500, $order->total_amount);
+
+        // 4. Historical record is PRESERVED via soft delete
+        $this->assertEquals(2, $order->items()->withTrashed()->count());
+        $deletedItem = \App\Models\SalesOrderItem::withTrashed()->find($item2->id);
+        $this->assertNotNull($deletedItem);
+        $this->assertNotNull($deletedItem->deleted_at);
+    }
 }

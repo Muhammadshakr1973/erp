@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SalesOrderItem extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = ['sales_order_id', 'product_id', 'quantity', 'unit_price', 'cost_price', 'price_type', 'discount_percent', 'discount_amount', 'line_total', 'total_price', 'profit', 'is_packed', 'packed_at', 'packed_by'];
     protected $casts = ['is_packed' => 'boolean', 'discount_percent' => 'decimal:2', 'packed_at' => 'datetime'];
     public function order()

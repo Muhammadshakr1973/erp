@@ -66,9 +66,23 @@ class WarehouseStock extends Model
             }
 
             // ٧. گۆڕینی ستۆک و پاشەکەوتکردن (Step 7: Only then modify stock)
+            $upperType = strtoupper($type);
             $newReserved = $reservedQty;
-            if ($quantityChange < 0 && in_array(strtoupper($type), ['DELIVERY', 'SALE'])) {
+            if ($quantityChange < 0 && in_array($upperType, ['DELIVERY', 'SALE'])) {
                 $newReserved = max(0, $reservedQty - abs($quantityChange));
+            } elseif ($quantityChange < 0 && $upperType === 'ADJUSTMENT') {
+                if ($newQty < $reservedQty) {
+                    throw ValidationException::withMessages([
+                        'stock' => "ناتوانرێت ستۆک کەمبکرێتەوە بۆ خوار بڕی حجزکراو ({$reservedQty} یەکە حجزکراوە). بڕی فیزیکی پێشوو: {$currentQty}، بڕی داواکراو دوای کەمکردنەوە: {$newQty}"
+                    ]);
+                }
+            } elseif ($quantityChange < 0 && $upperType === 'TRANSFER_OUT') {
+                $available = $currentQty - $reservedQty;
+                if ($available < abs($quantityChange)) {
+                    throw ValidationException::withMessages([
+                        'stock' => "ستۆکی بەردەست بەس نییە بۆ گواستنەوە. بەردەست: {$available}، بڕی گواستنەوە: " . abs($quantityChange)
+                    ]);
+                }
             }
 
             $locked->quantity = $newQty;
@@ -78,7 +92,7 @@ class WarehouseStock extends Model
             $transaction = StockTransaction::create([
                 'warehouse_id' => $locked->warehouse_id,
                 'product_id' => $locked->product_id,
-                'type' => strtoupper($type),
+                'type' => $upperType,
                 'quantity_change' => $quantityChange,
                 'quantity_after' => $newQty,
                 'reference_type' => $referenceType,
@@ -88,7 +102,7 @@ class WarehouseStock extends Model
             ]);
 
             app(\App\Services\AuditService::class)->logStockMovement(
-                strtoupper($type),
+                $upperType,
                 $locked->warehouse_id,
                 $locked->product_id,
                 $quantityChange,
@@ -219,14 +233,15 @@ class WarehouseStock extends Model
         $discrepancies = [];
 
         foreach ($transactions as $tx) {
-            if ($tx->type === 'RESERVE') {
-                $calculatedReserved += $tx->quantity_change;
-            } elseif ($tx->type === 'RELEASE') {
-                $calculatedReserved -= abs($tx->quantity_change);
+            $type = strtoupper($tx->type);
+            if ($type === 'RESERVE' || $type === 'RESERVED') {
+                $calculatedReserved += abs($tx->quantity_change);
+            } elseif ($type === 'RELEASE' || $type === 'UNRESERVED') {
+                $calculatedReserved = max(0, $calculatedReserved - abs($tx->quantity_change));
             } else {
                 $calculatedQty += $tx->quantity_change;
 
-                if (in_array(strtoupper($tx->type), ['DELIVERY', 'SALE'])) {
+                if (in_array($type, ['DELIVERY', 'SALE'])) {
                     $calculatedReserved = max(0, $calculatedReserved - abs($tx->quantity_change));
                 }
             }

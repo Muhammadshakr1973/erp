@@ -284,9 +284,11 @@ class WarehousePackingTest extends TestCase
         $this->assertEquals(15000, $order->total_amount);
         $this->assertEquals(5000, $order->total_profit);
 
-        // Assert item2 was deleted/removed from order
+        // Assert item2 was soft-deleted/removed from active order items but preserved historically
         $this->assertEquals(1, $order->items()->count());
         $this->assertNull(SalesOrderItem::find($item2->id));
+        $this->assertNotNull(SalesOrderItem::withTrashed()->find($item2->id));
+        $this->assertEquals(2, $order->items()->withTrashed()->count());
 
         // Assert reservation was released for item2
         $stock2 = WarehouseStock::where('product_id', $this->product2->id)->first();
