@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,8 +62,11 @@ class SyncService {
       entry.retryCount = 0;
       await entry.save();
     } else {
+      final randomHex = _generateRandomHex(8);
+      final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${entityId ?? "none"}_$randomHex';
+      
       final entry = SyncQueueEntry(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: uniqueId,
         entityId: entityId,
         operationType: operationType,
         payloadJson: '',
@@ -134,27 +138,45 @@ class SyncService {
   }
 
   Future<Map<String, dynamic>> _performOperation(SyncQueueEntry entry) async {
+    final options = Options(
+      headers: {
+        'X-Idempotency-Key': entry.id,
+      },
+    );
+
     // Map operationType to actual API calls
     switch (entry.operationType) {
       case 'CREATE_ORDER':
-        final response = await api.client.post('/orders', data: entry.payload);
+        final response = await api.client.post(
+          '/orders',
+          data: entry.payload,
+          options: options,
+        );
         return response.data;
       case 'UPDATE_ORDER':
         final response2 = await api.client.put(
           '/orders/${entry.entityId}',
           data: entry.payload,
+          options: options,
         );
         return response2.data;
       case 'UPDATE_CUSTOMER':
         final response = await api.client.put(
           '/customers/${entry.entityId}',
           data: entry.payload,
+          options: options,
         );
         return response.data;
       // Add other operations as needed
       default:
         throw Exception('Unknown operation type: ${entry.operationType}');
     }
+  }
+
+  String _generateRandomHex(int length) {
+    final random = Random();
+    final values = List<int>.generate(length, (i) => random.nextInt(256));
+    return values.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
   }
 
   bool _isNetworkError(DioException e) {

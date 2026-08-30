@@ -19,7 +19,7 @@ class Idempotency
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $idempotencyKey = $request->header('X-Idempotency-Key');
+        $idempotencyKey = $request->header('X-Idempotency-Key') ?: $request->header('Idempotency-Key');
 
         if (!$idempotencyKey) {
             return $next($request);
@@ -27,11 +27,13 @@ class Idempotency
 
         // Limit length/format for safety
         $idempotencyKey = substr(trim($idempotencyKey), 0, 255);
+        $userId = $request->user()?->id;
 
         try {
             // Try to register the key as processing
             DB::table('idempotency_keys')->insert([
                 'idempotency_key' => $idempotencyKey,
+                'user_id' => $userId,
                 'request_path' => $request->path(),
                 'request_params' => json_encode($request->all()),
                 'status' => 'processing',
@@ -43,6 +45,14 @@ class Idempotency
             $existing = DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->first();
 
             if ($existing) {
+                // Security check: ensure requesting user owns this idempotency key
+                if ($existing->user_id !== null && $existing->user_id !== $userId) {
+                    return response()->json([
+                        'message' => 'تۆ ڕێگەپێدراو نیت بۆ بەکارهێنانی ئەم کردارە.',
+                        'error' => 'Forbidden. This idempotency key belongs to another user.'
+                    ], 403);
+                }
+
                 if ($existing->status === 'processing') {
                     return response()->json([
                         'message' => 'ئەم کردارە لە پرۆسەدایە، تکایە چاوەڕێ بکە.',

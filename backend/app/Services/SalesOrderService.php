@@ -30,9 +30,13 @@ class SalesOrderService
     public function createOrder(array $data, $user): SalesOrder
     {
         // ١. پاراستنی لایەنی یەکسانی (Idempotency) بۆ ڕێگری لە دروستکردنی پسوڵەی دووبارە بەهۆی دووجار کلیککردن
-        $existingOrder = $this->checkIdempotency($data['customer_id'], $data['warehouse_id'], $data['items']);
-        if ($existingOrder) {
-            return $existingOrder;
+        // Bypass time-based heuristic if request has a true Idempotency-Key, as the middleware guarantees uniqueness
+        $hasTrueIdempotency = request()->hasHeader('X-Idempotency-Key') || request()->hasHeader('Idempotency-Key');
+        if (!$hasTrueIdempotency) {
+            $existingOrder = $this->checkIdempotency($data['customer_id'], $data['warehouse_id'], $data['items']);
+            if ($existingOrder) {
+                return $existingOrder;
+            }
         }
 
         $order = DB::transaction(function () use ($data, $user) {
