@@ -167,6 +167,27 @@ class SyncService {
           options: options,
         );
         return response.data;
+      case 'CREATE_PAYMENT':
+        final response = await api.client.post(
+          '/payments',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'STORE_DELIVERY':
+        final response = await api.client.post(
+          '/delivery-trips',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'DELIVER_ORDER':
+        final response = await api.client.post(
+          '/delivery-trips/orders/${entry.entityId}/deliver',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
       // Add other operations as needed
       default:
         throw Exception('Unknown operation type: ${entry.operationType}');
