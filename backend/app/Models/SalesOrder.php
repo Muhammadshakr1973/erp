@@ -18,6 +18,19 @@ class SalesOrder extends Model
     const STATUS_IN_DELIVERY = 'IN_DELIVERY';
     const STATUS_DELIVERED = 'DELIVERED';
     const STATUS_CANCELLED = 'CANCELLED';
+
+    public static function allStatuses(): array
+    {
+        return [
+            self::STATUS_DRAFT,
+            self::STATUS_CONFIRMED,
+            self::STATUS_PACKING,
+            self::STATUS_READY,
+            self::STATUS_IN_DELIVERY,
+            self::STATUS_DELIVERED,
+            self::STATUS_CANCELLED,
+        ];
+    }
     public function customer()
     {
         return $this->belongsTo(Customer::class);

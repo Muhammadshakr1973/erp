@@ -532,4 +532,82 @@ class SalesOrderTest extends TestCase
         $this->assertEquals('FAILED', $tripOrder->status);
         $this->assertEquals('Cancelled via Sales Order', $tripOrder->failed_reason);
     }
+
+    /** @test */
+    public function it_treats_same_status_transitions_as_idempotent_no_ops()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack']]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 1,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first(); // CONFIRMED
+
+        // Request transition to CONFIRMED again (already CONFIRMED)
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_CONFIRMED
+        ]);
+
+        $response->assertStatus(200);
+        $order->refresh();
+        $this->assertEquals(SalesOrder::STATUS_CONFIRMED, $order->status);
+    }
+
+    /** @test */
+    public function it_blocks_transitions_from_terminal_states()
+    {
+        $this->salesman->role->update(['permissions' => ['orders.create', 'stock.pack', 'delivery.update']]);
+
+        // Scenario 1: DELIVERED order cannot be cancelled or moved to any other state
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [[
+                'product_id' => $this->product->id,
+                'quantity' => 1,
+            ]]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $order = SalesOrder::first();
+
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_PACKING]);
+        $order->items()->first()->update(['is_packed' => true]);
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_READY]);
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_IN_DELIVERY]);
+        $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_DELIVERED]);
+
+        $order->refresh();
+        $this->assertEquals(SalesOrder::STATUS_DELIVERED, $order->status);
+
+        // Attempt CANCELLED from DELIVERED -> Must fail 422
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_CANCELLED
+        ]);
+        $response->assertStatus(422);
+
+        // Scenario 2: CANCELLED order cannot be moved to CONFIRMED or any other state
+        $orderCancelled = SalesOrder::create([
+            'order_number' => 'ORD-CANC-1',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_CANCELLED,
+            'subtotal' => 5000,
+            'total_amount' => 5000,
+            'total_profit' => 1000,
+            'created_by' => $this->salesman->id,
+        ]);
+
+        $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$orderCancelled->id}/status", [
+            'status' => SalesOrder::STATUS_CONFIRMED
+        ]);
+        $response->assertStatus(422);
+    }
 }

@@ -33,6 +33,22 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   }
 });
 
+final singleOrderProvider =
+    FutureProvider.family<OrderModel?, String>((ref, orderId) async {
+  final api = ref.watch(apiClientProvider);
+
+  try {
+    final response = await api.client.get('/orders/$orderId');
+    if (response.statusCode == 200) {
+      final data = response.data['data'] ?? response.data;
+      return OrderModel.fromJson(data);
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+});
+
 final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((
   ref,
   customerId,
@@ -43,14 +59,16 @@ final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((
 
 final orderActionsProvider = Provider<OrderActions>((ref) {
   final syncService = ref.watch(syncServiceProvider);
-  return OrderActions(syncService, ref);
+  final api = ref.watch(apiClientProvider);
+  return OrderActions(syncService, api, ref);
 });
 
 class OrderActions {
   final SyncService syncService;
+  final ApiClient api;
   final Ref ref;
 
-  OrderActions(this.syncService, this.ref);
+  OrderActions(this.syncService, this.api, this.ref);
 
   Future<void> createOrder(Map<String, dynamic> data) async {
     // Local UUID for entity tracking
@@ -65,5 +83,21 @@ class OrderActions {
 
     // Optimistically update the UI by invalidating or updating local list
     ref.invalidate(ordersListProvider);
+  }
+
+  Future<void> updateOrderStatus(String orderId, String newStatus) async {
+    final response = await api.client.post(
+      '/orders/$orderId/status',
+      data: {'status': newStatus},
+    );
+
+    if (response.statusCode == 200) {
+      ref.invalidate(singleOrderProvider(orderId));
+      ref.invalidate(ordersListProvider);
+    } else {
+      throw Exception(
+        response.data['message'] ?? 'شکستی هێنا لە گۆڕینی دۆخی پسوڵە',
+      );
+    }
   }
 }

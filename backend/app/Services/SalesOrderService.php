@@ -219,7 +219,7 @@ class SalesOrderService
             }
 
             // ٢. سەپاندنی دەسەڵاتەکان و مۆڵەتەکان بەپێی دۆخی نوێ لەناو خودی سێرڤسەکەدا بۆ پاراستنی هێمنیی سیستەمەکە
-            if (in_array($newStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED])) {
+            if (in_array($newStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])) {
                 if (!$user->hasPermission('orders.create')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
@@ -235,6 +235,18 @@ class SalesOrderService
                 if (!$user->hasPermission('delivery.update')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
+                    ]);
+                }
+            } elseif ($newStatus === SalesOrder::STATUS_CANCELLED) {
+                $canCancel = $user->hasPermission('orders.create')
+                    || ($user->hasPermission('stock.pack') && in_array($currentStatus, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY]))
+                    || ($user->hasPermission('delivery.update') && $currentStatus === SalesOrder::STATUS_IN_DELIVERY)
+                    || $user->isAdmin()
+                    || $user->isOwner();
+
+                if (!$canCancel) {
+                    throw ValidationException::withMessages([
+                        'status' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم پسوڵەیە.'
                     ]);
                 }
             }

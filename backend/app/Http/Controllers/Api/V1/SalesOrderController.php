@@ -137,7 +137,7 @@ class SalesOrderController extends Controller
         $user = $request->user();
 
         // Enforce status-based authorization
-        if (in_array($status, ['DRAFT', 'CONFIRMED', 'CANCELLED'])) {
+        if (in_array($status, ['DRAFT', 'CONFIRMED'])) {
             if (!$user->hasPermission('orders.create')) {
                 return response()->json([
                     'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
@@ -156,6 +156,19 @@ class SalesOrderController extends Controller
                 return response()->json([
                     'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
                     'error' => 'Forbidden. Missing permission: delivery.update'
+                ], 403);
+            }
+        } elseif ($status === 'CANCELLED') {
+            $canCancel = $user->hasPermission('orders.create')
+                || $user->hasPermission('stock.pack')
+                || $user->hasPermission('delivery.update')
+                || $user->isAdmin()
+                || $user->isOwner();
+
+            if (!$canCancel) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم پسوڵەیە.',
+                    'error' => 'Forbidden. Missing cancellation permission.'
                 ], 403);
             }
         }
