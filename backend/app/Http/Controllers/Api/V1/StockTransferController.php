@@ -18,10 +18,60 @@ class StockTransferController extends Controller
         $this->transferService = $transferService;
     }
 
+    // لیستی گواستنەوەکان
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $query = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])->orderBy('id', 'desc');
+
+        if ($user && $user->warehouse_id) {
+            $query->where(function ($q) use ($user) {
+                $q->where('from_warehouse_id', $user->warehouse_id)
+                  ->orWhere('to_warehouse_id', $user->warehouse_id);
+            });
+        }
+
+        $transfers = $query->get();
+
+        return response()->json([
+            'message' => 'لیستی گواستنەوەکان',
+            'data'    => $transfers
+        ], 200);
+    }
+
+    // پیشاندانی وردەکاری گواستنەوە
+    public function show(Request $request, $id): JsonResponse
+    {
+        $transfer = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])->findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && $transfer->from_warehouse_id !== $user->warehouse_id && $transfer->to_warehouse_id !== $user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم گواستنەوەیە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        return response()->json([
+            'message' => 'وردەکاری گواستنەوە',
+            'data'    => $transfer
+        ], 200);
+    }
+
     // دروستکردنی گواستنەوە
     public function store(StoreStockTransferRequest $request): JsonResponse
     {
-        $transfer = $this->transferService->createTransfer($request->validated(), $request->user());
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if ($user && $user->warehouse_id && (int)$validated['from_warehouse_id'] !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ناتوانیت داواکاری گواستنەوە لە کۆگایەکی ترەوە تۆمار بکەیت.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $transfer = $this->transferService->createTransfer($validated, $user);
 
         return response()->json([
             'message' => 'داواکاری گواستنەوە بەسەرکەوتوویی دروستکرا',
@@ -33,8 +83,16 @@ class StockTransferController extends Controller
     public function complete(Request $request, $id): JsonResponse
     {
         $transfer = StockTransfer::with('items')->findOrFail($id);
+        $user = $request->user();
 
-        $completedTransfer = $this->transferService->completeTransfer($transfer, $request->user());
+        if ($user && $user->warehouse_id && (int)$transfer->to_warehouse_id !== (int)$user->warehouse_id && (int)$transfer->from_warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ پەسەندکردنی ئەم گواستنەوەیە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $completedTransfer = $this->transferService->completeTransfer($transfer, $user);
 
         return response()->json([
             'message' => 'کاڵاکان بەسەرکەوتوویی گوازرانەوە بۆ کۆگای وەرگر',

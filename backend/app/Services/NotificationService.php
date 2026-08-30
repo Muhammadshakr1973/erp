@@ -79,7 +79,7 @@ class NotificationService
     ): array {
         $roles = is_array($roles) ? $roles : [$roles];
         
-        $users = User::whereIn('role', $roles)
+        $users = User::whereHas('role', fn($q) => $q->whereIn('name', $roles))
             ->where('is_active', true)
             ->get();
 

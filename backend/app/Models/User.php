@@ -88,6 +88,18 @@ class User extends Authenticatable
     {
         return in_array($this->role?->name, [Role::OWNER, Role::ADMIN]);
     }
+    public function isSalesman(): bool
+    {
+        return $this->role?->name === Role::SALESMAN;
+    }
+    public function isWarehouse(): bool
+    {
+        return $this->role?->name === Role::WAREHOUSE;
+    }
+    public function isDriver(): bool
+    {
+        return $this->role?->name === Role::DRIVER;
+    }
 
     public function getAssignedRouteIds(): array
     {

@@ -18,7 +18,17 @@ class PaymentController extends Controller
 
     public function store(StorePaymentRequest $request): JsonResponse
     {
-        $payment = $this->paymentService->collectPayment($request->validated(), $request->user());
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if ($user && $user->isSalesman() && !$user->hasCustomerAccess($validated['customer_id'])) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ وەرگرتنی پارەی ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $payment = $this->paymentService->collectPayment($validated, $user);
 
         return response()->json([
             'message' => 'پارەدانەکە بەسەرکەوتوویی تۆمارکرا',

@@ -256,4 +256,123 @@ class SecurityAuthorizationTest extends TestCase
             ])
             ->assertStatus(403);
     }
+
+    /**
+     * Test that warehouse staff and drivers cannot view suppliers list (403 Forbidden).
+     */
+    public function test_warehouse_and_driver_cannot_view_suppliers(): void
+    {
+        $warehouseRole = Role::create([
+            'name' => 'warehouse',
+            'permissions' => ['stock.view', 'stock.pack']
+        ]);
+
+        $driverRole = Role::create([
+            'name' => 'driver',
+            'permissions' => ['delivery.view', 'delivery.update']
+        ]);
+
+        $warehouseUser = User::create([
+            'name' => 'Warehouse Staff',
+            'phone' => '07700000008',
+            'password' => bcrypt('password'),
+            'role_id' => $warehouseRole->id,
+            'is_active' => true
+        ]);
+
+        $driverUser = User::create([
+            'name' => 'Driver Staff',
+            'phone' => '07700000009',
+            'password' => bcrypt('password'),
+            'role_id' => $driverRole->id,
+            'is_active' => true
+        ]);
+
+        $this->actingAs($warehouseUser)
+            ->getJson('/api/v1/suppliers')
+            ->assertStatus(403);
+
+        $this->actingAs($driverUser)
+            ->getJson('/api/v1/suppliers')
+            ->assertStatus(403);
+    }
+
+    /**
+     * Test that a salesman cannot collect payments for an unassigned customer (IDOR prevention).
+     */
+    public function test_salesman_cannot_collect_payment_for_unassigned_customer(): void
+    {
+        $role = Role::create([
+            'name' => 'salesman',
+            'permissions' => ['orders.create', 'customers.view']
+        ]);
+
+        $salesman = User::create([
+            'name' => 'Salesman Collect',
+            'phone' => '07700000010',
+            'password' => bcrypt('password'),
+            'role_id' => $role->id,
+            'is_active' => true
+        ]);
+
+        $route1 = RouteModel::create(['name' => 'Route 1']);
+        $route2 = RouteModel::create(['name' => 'Route 2']);
+
+        $salesman->routeSalesmen()->create([
+            'route_id' => $route1->id,
+            'is_active' => true
+        ]);
+
+        $unassignedCustomer = Customer::create([
+            'name' => 'Unassigned Cust',
+            'phone' => '07702222223',
+            'route_id' => $route2->id,
+            'current_balance' => 50000
+        ]);
+
+        $this->actingAs($salesman)
+            ->postJson('/api/v1/payments', [
+                'customer_id' => $unassignedCustomer->id,
+                'amount' => 10000,
+                'payment_method' => 'CASH'
+            ])
+            ->assertStatus(403);
+    }
+
+    /**
+     * Test that a salesman cannot view route customer lists for unassigned routes.
+     */
+    public function test_salesman_cannot_view_customers_of_unassigned_route(): void
+    {
+        $role = Role::create([
+            'name' => 'salesman',
+            'permissions' => ['customers.view']
+        ]);
+
+        $salesman = User::create([
+            'name' => 'Salesman Route',
+            'phone' => '07700000011',
+            'password' => bcrypt('password'),
+            'role_id' => $role->id,
+            'is_active' => true
+        ]);
+
+        $route1 = RouteModel::create(['name' => 'Route 1']);
+        $route2 = RouteModel::create(['name' => 'Route 2']);
+
+        $salesman->routeSalesmen()->create([
+            'route_id' => $route1->id,
+            'is_active' => true
+        ]);
+
+        // Allowed for assigned route
+        $this->actingAs($salesman)
+            ->getJson("/api/v1/routes/{$route1->id}/customers")
+            ->assertStatus(200);
+
+        // Forbidden for unassigned route
+        $this->actingAs($salesman)
+            ->getJson("/api/v1/routes/{$route2->id}/customers")
+            ->assertStatus(403);
+    }
 }

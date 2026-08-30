@@ -135,8 +135,16 @@ class RouteController extends Controller
         ], 200);
     }
 
-    public function customers(Route $route): JsonResponse
+    public function customers(Request $request, Route $route): JsonResponse
     {
+        $user = $request->user();
+        if ($user && $user->isSalesman() && !in_array($route->id, $user->getAssignedRouteIds())) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی کڕیارانی ئەم ڕاوتە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $customers = $route->customers()
             ->select('id', 'route_id', 'name', 'phone', 'address', 'current_balance', 'is_active', 'visit_order')
             ->orderBy('visit_order')

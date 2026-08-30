@@ -17,6 +17,43 @@ class DeliveryTripController extends Controller
         $this->deliveryTripService = $deliveryTripService;
     }
 
+    // لیستی گەشتەکان
+    public function index(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $query = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer'])->orderBy('id', 'desc');
+
+        if ($user && $user->isDriver()) {
+            $query->where('driver_id', $user->id);
+        }
+
+        $trips = $query->get();
+
+        return response()->json([
+            'message' => 'لیستی گەشتەکانی گەیاندن',
+            'data'    => $trips
+        ], 200);
+    }
+
+    // پیشاندانی وردەکاری گەشت
+    public function show(\Illuminate\Http\Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $trip = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer', 'orders.order.items.product'])->findOrFail($id);
+
+        if ($user && $user->isDriver() && (int)$trip->driver_id !== (int)$user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم گەشتە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        return response()->json([
+            'message' => 'وردەکاری گەشت',
+            'data'    => $trip
+        ], 200);
+    }
+
     // دروستکردنی گەشت
     public function store(StoreDeliveryTripRequest $request): JsonResponse
     {

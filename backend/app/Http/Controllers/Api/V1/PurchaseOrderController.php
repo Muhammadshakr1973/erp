@@ -17,19 +17,54 @@ class PurchaseOrderController extends Controller
         $this->purchaseService = $purchaseService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $orders = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->orderBy('id', 'desc')->get();
+        $user = $request->user();
+        $query = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->orderBy('id', 'desc');
+
+        if ($user && $user->warehouse_id) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        }
+
+        $orders = $query->get();
         return response()->json([
             'message' => 'لیستی پسوڵەکانی کڕین',
             'data'    => $orders
         ]);
     }
 
+    public function show(Request $request, $id): JsonResponse
+    {
+        $order = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم پسوڵەی کڕینە لەم کۆگایەدا.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        return response()->json([
+            'message' => 'وردەکاری پسوڵەی کڕین',
+            'data'    => $order
+        ]);
+    }
+
     // دروستکردنی پسوڵەی کڕین
     public function store(StorePurchaseOrderRequest $request): JsonResponse
     {
-        $order = $this->purchaseService->createOrder($request->validated(), $request->user());
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if ($user && $user->warehouse_id && (int)$validated['warehouse_id'] !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ناتوانیت داواکاری کڕین بۆ کۆگایەکی تر تۆمار بکەیت.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $order = $this->purchaseService->createOrder($validated, $user);
 
         return response()->json([
             'message' => 'پسوڵەی کڕین بەسەرکەوتوویی دروستکرا',
@@ -38,11 +73,19 @@ class PurchaseOrderController extends Controller
     }
 
     // وەرگرتنی کاڵاکان لە کۆگا و داخستنی پسوڵەکە
-    public function receive($id): JsonResponse
+    public function receive(Request $request, $id): JsonResponse
     {
         $order = PurchaseOrder::with('items')->findOrFail($id);
+        $user = $request->user();
 
-        $completedOrder = $this->purchaseService->receiveOrder($order, request()->user());
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ وەرگرتنی ئەم پسوڵەی کڕینە لەم کۆگایەدا.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $completedOrder = $this->purchaseService->receiveOrder($order, $user);
 
         return response()->json([
             'message' => 'کاڵاکان بەسەرکەوتوویی وەرگیران و ستۆک زیاد کرا',
