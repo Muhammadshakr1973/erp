@@ -208,4 +208,55 @@ class DeliveryTripService
 
         return $result['trip_order'];
     }
+
+    /**
+     * تۆمارکردنی شکست لە گەیاندنی پسوڵە لەلایەن شۆفێرەوە
+     */
+    public function failOrder(int $tripOrderId, array $data, $user): \App\Models\DeliveryTripOrder
+    {
+        $tripOrder = DB::transaction(function () use ($tripOrderId, $data, $user) {
+            $tripOrder = \App\Models\DeliveryTripOrder::with(['order', 'trip'])->findOrFail($tripOrderId);
+            $salesOrder = $tripOrder->order;
+
+            if ($tripOrder->status !== 'PENDING') {
+                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر چارەسەر کراوە.']);
+            }
+
+            // ١. نوێکردنەوەی گەشتەکە
+            $tripOrder->update([
+                'status'        => 'FAILED',
+                'failed_reason' => $data['failed_reason'] ?? 'Customer not available',
+                'notes'         => $data['notes'] ?? null,
+            ]);
+
+            // ٢. گۆڕینی دۆخی پسوڵە سەرەکییەکە بۆ READY بۆ ئەوەی دووبارە لە گەشتێکی تردا بەکاربێتەوە
+            $this->salesOrderService->transitionTo($salesOrder, SalesOrder::STATUS_READY, $user);
+
+            // ٣. مێژووی کار چالاکییەکان (Audit Logging)
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'DELIVERY_FAIL',
+                'entity_type' => 'DeliveryTripOrder',
+                'entity_id'   => $tripOrder->id,
+                'table_name'  => 'delivery_trip_orders',
+                'old_values'  => [
+                    'status' => 'PENDING',
+                ],
+                'new_values'  => [
+                    'status'        => 'FAILED',
+                    'failed_reason' => $tripOrder->failed_reason,
+                    'order_number'  => $salesOrder->order_number,
+                    'driver_id'     => $user->id,
+                ],
+                'description' => "گەیاندنی پسوڵەی {$salesOrder->order_number} سەرکەوتوو نەبوو: {$tripOrder->failed_reason}",
+                'user'        => $user,
+            ]);
+
+            return $tripOrder;
+        });
+
+        // Notifications AFTER commit
+        app(NotificationService::class)->notifyOrderDeliveryFailed($tripOrder->order, $tripOrder->failed_reason, $user);
+
+        return $tripOrder;
+    }
 }

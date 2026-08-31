@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\SalesReturnController;
 
 Route::prefix('v1')->group(function () {
 
@@ -97,6 +98,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/warehouse/transactions', [WarehouseController::class, 'transactions'])->middleware('permission:stock.view');
         Route::post('/payments', [PaymentController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
         
+        // Sales Returns (Requires orders permissions)
+        Route::get('/sales-returns', [SalesReturnController::class, 'index'])->middleware('permission:orders.view');
+        Route::get('/sales-returns/{id}', [SalesReturnController::class, 'show'])->middleware('permission:orders.view');
+        Route::post('/sales-returns', [SalesReturnController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
+        
         // Stock Transfers (Requires stock permissions)
         Route::get('/stock-transfers', [StockTransferController::class, 'index'])->middleware('permission:stock.view');
         Route::get('/stock-transfers/{id}', [StockTransferController::class, 'show'])->middleware('permission:stock.view');
@@ -108,6 +114,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/delivery-trips/{id}', [DeliveryTripController::class, 'show'])->middleware('permission:delivery.view');
         Route::post('/delivery-trips', [DeliveryTripController::class, 'store'])->middleware('permission:delivery.update');
         Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware(['permission:delivery.update', 'idempotent']);
+        Route::post('/delivery-trips/orders/{tripOrderId}/fail', [DeliveryTripController::class, 'failOrder'])->middleware(['permission:delivery.update', 'idempotent']);
         
         // Commissions Lifecycle & Reports (Admin / Owner privileges + Salesman self-view)
         Route::get('/commissions', [CommissionController::class, 'index'])->middleware('permission:users.manage');

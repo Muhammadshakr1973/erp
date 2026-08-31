@@ -322,6 +322,52 @@ class NotificationService
         }
     }
 
+    /**
+     * Notify about a failed delivery -> notify Salesman, Admins, Owner
+     */
+    public function notifyOrderDeliveryFailed(SalesOrder $order, string $reason, $actor = null): void
+    {
+        $customerName = $order->customer?->name ?? 'کڕیار';
+        $title = 'کێشە لە گەیاندنی پسوڵە';
+        $body = "گەیاندنی پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' سەرکەوتوو نەبوو بەهۆی: {$reason}";
+
+        $data = [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $order->customer_id,
+            'failed_reason' => $reason,
+            'action' => 'open_order',
+        ];
+
+        if ($order->salesman_id) {
+            $this->notifyUser($order->salesman_id, Notification::TYPE_ORDER, $title, $body, $data);
+        }
+        $this->notifyAdmins(Notification::TYPE_ORDER, $title, $body, $data);
+    }
+
+    /**
+     * Notify about returned order -> notify Salesman, Admins, Owner
+     */
+    public function notifyOrderReturned(SalesOrder $order, int $amount, $actor = null): void
+    {
+        $customerName = $order->customer?->name ?? 'کڕیار';
+        $title = 'کاڵای پسوڵە گەڕێندرایەوە';
+        $body = "کاڵاکانی پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' بەشێکی یان تەواوی گەڕێندرایەوە بە بڕی " . number_format($amount, 0) . " د.ع";
+
+        $data = [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $order->customer_id,
+            'return_amount' => $amount,
+            'action' => 'open_order',
+        ];
+
+        if ($order->salesman_id) {
+            $this->notifyUser($order->salesman_id, Notification::TYPE_ORDER, $title, $body, $data);
+        }
+        $this->notifyAdmins(Notification::TYPE_ORDER, $title, $body, $data);
+    }
+
     // =========================================================================
     // IN-APP NOTIFICATION QUERY & MANAGEMENT
     // =========================================================================

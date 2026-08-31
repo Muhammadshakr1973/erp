@@ -195,6 +195,68 @@ class WhatsAppService
     }
 
     /**
+     * BR-F05/BR-F06 Fallback: Customer Sales Return WhatsApp Notification
+     * Triggered AFTER sales return is successfully committed to keep ledger and customer in sync
+     */
+    public function sendReturnDebtNotification(
+        SalesOrder $order,
+        int $previousBalance,
+        int $returnAmount,
+        int $newBalance,
+        ?User $actor = null
+    ): WhatsAppNotificationLog {
+        $customer = $order->customer ?? Customer::find($order->customer_id);
+        $phone = $this->formatPhoneNumber($customer?->phone);
+        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('sales_order', $order->id, 'SALES_RETURN');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        $returnAmountStr = $this->formatMoney($returnAmount);
+        $oldDebtStr = $this->formatMoney($previousBalance);
+        $newDebtStr = $this->formatMoney($newBalance);
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "🔄 *ئاگاداری گەڕاندنەوەی کاڵا*\n"
+            . "👤 بەڕێز: {$recipientName}\n"
+            . "🔢 پسوڵەی پەیوەندیدار: {$order->order_number}\n"
+            . "💰 کۆی پارەی گەڕێندراو: *{$returnAmountStr}*\n"
+            . "📊 قەرزی پێشوو: {$oldDebtStr}\n"
+            . "📉 قەرزی نوێی ماوە: *{$newDebtStr}*\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "سوپاس بۆ متمانەتان.";
+
+        $payload = [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $customer?->id,
+            'return_amount' => $returnAmount,
+            'previous_balance' => $previousBalance,
+            'new_balance' => $newBalance,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $customer?->phone ?? 'UNKNOWN',
+            recipientName: $recipientName,
+            notificationType: 'SALES_RETURN',
+            referenceType: 'sales_order',
+            referenceId: $order->id,
+            message: $message,
+            customerId: $customer?->id,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
      * BR-F07: Supplier Payment / Purchase WhatsApp Notification
      */
     public function sendSupplierPaymentNotification(
