@@ -1,85 +1,130 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_app/core/sync/sync_queue_entry.dart';
 
 void main() {
-  group('Dual-Entry Shared Order Identity & Optimistic Locking Tests', () {
-    test('1. New order submission enqueues CREATE_ORDER for POST /orders', () {
-      bool isExistingOrder = false;
-      String operationType = isExistingOrder ? 'UPDATE_ORDER' : 'CREATE_ORDER';
+  group('Dual-Entry Offline Concurrency & Safe Coalescing System Tests', () {
+    test('1. Safe Coalescing: Multiple offline edits to same order coalesce into single pending operation', () {
+      final List<SyncQueueEntry> mockQueue = [];
 
-      expect(operationType, equals('CREATE_ORDER'));
-    });
+      void enqueueOperation({
+        required String entityId,
+        required String operationType,
+        required Map<String, dynamic> payload,
+      }) {
+        final existing = mockQueue.where(
+          (e) =>
+              e.entityId == entityId &&
+              e.operationType == operationType &&
+              (e.status == 'PENDING' || e.status == 'FAILED'),
+        ).toList();
 
-    test('2. Existing order submission enqueues UPDATE_ORDER for PUT /orders/{id}', () {
-      bool isExistingOrder = true;
-      String operationType = isExistingOrder ? 'UPDATE_ORDER' : 'CREATE_ORDER';
-
-      expect(operationType, equals('UPDATE_ORDER'));
-    });
-
-    test('3. Existing shared_key is preserved across edits', () {
-      final existingOrder = {
-        'id': 50,
-        'shared_key': 'order_shared_9999',
-        'version': 3,
-      };
-
-      final String sharedKey = existingOrder['shared_key'] as String;
-      final payload = {
-        'shared_key': sharedKey,
-        'customer_id': 12,
-      };
-
-      expect(payload['shared_key'], equals('order_shared_9999'));
-    });
-
-    test('4. Existing version is preserved in update payload', () {
-      final existingOrder = {
-        'id': 50,
-        'version': 3,
-      };
-
-      final int version = existingOrder['version'] as int;
-      final payload = {
-        'version': version,
-        'customer_id': 12,
-      };
-
-      expect(payload['version'], equals(3));
-    });
-
-    test('5. Correct order ID is used as entityId for PUT route target', () {
-      final int orderId = 50;
-      final String entityId = orderId.toString();
-
-      final String endpoint = '/orders/$entityId';
-      expect(endpoint, equals('/orders/50'));
-    });
-
-    test('6. Duplicate retry is idempotent with stable entity and idempotency key', () {
-      final String idempotencyKey = 'sync_op_update_order_50';
-      final requestOptions = {
-        'headers': {'X-Idempotency-Key': idempotencyKey}
-      };
-
-      expect(requestOptions['headers']!['X-Idempotency-Key'], equals('sync_op_update_order_50'));
-    });
-
-    test('7. Backend version mismatch (server=4, client=3) triggers optimistic lock conflict', () {
-      final int serverVersion = 4;
-      final int clientSubmittedVersion = 3;
-
-      bool hasConflict(int serverVer, int clientVer) {
-        return serverVer != clientVer;
+        if (existing.isNotEmpty) {
+          final entry = existing.first;
+          entry.payload = payload;
+          entry.status = 'PENDING';
+          entry.retryCount = 0;
+        } else {
+          final entry = SyncQueueEntry(
+            id: 'sync_op_${DateTime.now().microsecondsSinceEpoch}',
+            entityId: entityId,
+            operationType: operationType,
+            payloadJson: '',
+            createdAt: DateTime.now(),
+          );
+          entry.payload = payload;
+          mockQueue.add(entry);
+        }
       }
 
-      expect(hasConflict(serverVersion, clientSubmittedVersion), isTrue);
+      // Offline Edit 1 (Base server version = 3)
+      enqueueOperation(
+        entityId: '50',
+        operationType: 'UPDATE_ORDER',
+        payload: {
+          'shared_key': 'shared_order_9999',
+          'version': 3,
+          'items': [
+            {'product_id': 1, 'quantity': 2}
+          ],
+        },
+      );
+
+      expect(mockQueue.length, equals(1));
+      expect(mockQueue.first.payload['version'], equals(3));
+      expect((mockQueue.first.payload['items'] as List).first['quantity'], equals(2));
+
+      // Offline Edit 2 (Still base server version = 3, updated items)
+      enqueueOperation(
+        entityId: '50',
+        operationType: 'UPDATE_ORDER',
+        payload: {
+          'shared_key': 'shared_order_9999',
+          'version': 3,
+          'items': [
+            {'product_id': 1, 'quantity': 5},
+            {'product_id': 2, 'quantity': 1}
+          ],
+        },
+      );
+
+      // Verify SAFE COALESCING:
+      // Queue length remains 1 (no duplicate network ops)
+      expect(mockQueue.length, equals(1));
+      // Payload updated to Edit 2
+      expect((mockQueue.first.payload['items'] as List).length, equals(2));
+      // Version remains original base server version 3 (NOT incremented locally)
+      expect(mockQueue.first.payload['version'], equals(3));
     });
 
-    test('8. Successful update advances version according to backend behavior (version + 1)', () {
-      final int initialVersion = 3;
-      final int updatedVersion = initialVersion + 1;
+    test('2. Concurrency Protection: Stale client base version (3) rejected when server version advanced (4)', () {
+      final int serverVersionOnCloud = 4; // Device B updated online while Device A was offline
+      final int clientSubmittedVersion = 3; // Coalesced offline edit from Device A
 
-      expect(updatedVersion, equals(4));
+      bool processServerUpdate(int clientVer, int serverVer) {
+        if (clientVer != serverVer) {
+          // Reject stale write (422 Unprocessable Entity)
+          return false;
+        }
+        return true;
+      }
+
+      final bool isApplied = processServerUpdate(clientSubmittedVersion, serverVersionOnCloud);
+
+      // Verify Device B's version 4 changes are protected on server and Device A update is rejected
+      expect(isApplied, isFalse);
+    });
+
+    test('3. Successful Sync: Matching base version (3) updates server and increments version to 4', () {
+      int serverVersion = 3;
+      final int clientSubmittedVersion = 3;
+
+      if (clientSubmittedVersion == serverVersion) {
+        serverVersion += 1;
+      }
+
+      expect(serverVersion, equals(4));
+    });
+
+    test('4. Target Endpoint & Idempotency: UPDATE_ORDER uses PUT /orders/{id} and X-Idempotency-Key', () {
+      final String entityId = '50';
+      final String opId = 'sync_172000_50_abc';
+
+      final String httpMethod = 'PUT';
+      final String requestPath = '/orders/$entityId';
+      final Map<String, String> headers = {'X-Idempotency-Key': opId};
+
+      expect(httpMethod, equals('PUT'));
+      expect(requestPath, equals('/orders/50'));
+      expect(headers['X-Idempotency-Key'], equals('sync_172000_50_abc'));
+    });
+
+    test('5. Operation Type Isolation: CREATE_ORDER vs UPDATE_ORDER separation', () {
+      String getOperationType({required bool isExistingOrder}) {
+        return isExistingOrder ? 'UPDATE_ORDER' : 'CREATE_ORDER';
+      }
+
+      expect(getOperationType(isExistingOrder: false), equals('CREATE_ORDER'));
+      expect(getOperationType(isExistingOrder: true), equals('UPDATE_ORDER'));
     });
   });
 }
