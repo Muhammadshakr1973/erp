@@ -413,7 +413,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${stock.warehouseName} • حجزکراو: ${stock.reservedQuantity}',
+                                    '${stock.warehouseName} • حجز: ${stock.reservedQuantity} • بەردەست: ${stock.availableQuantity}',
                                     style: AppTextStyles.caption,
                                   ),
                                 ],

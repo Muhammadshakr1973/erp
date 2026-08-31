@@ -19,6 +19,10 @@ class WarehouseStockModel {
     required this.reservedQuantity,
   });
 
+  /// Authoritative available stock calculation per GARDI stock equation:
+  /// Available = Physical Quantity - Reserved Quantity
+  int get availableQuantity => quantity - reservedQuantity;
+
   factory WarehouseStockModel.fromJson(Map<String, dynamic> json) {
     final warehouseObj = json['warehouse'];
     final String wName = warehouseObj != null

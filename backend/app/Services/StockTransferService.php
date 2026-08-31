@@ -76,31 +76,40 @@ class StockTransferService
             // Sort items deterministically by product_id ASC to eliminate deadlock risks
             $sortedItems = $lockedTransfer->items->sortBy('product_id');
             foreach ($sortedItems as $item) {
+                // Lock warehouse stock rows in deterministic order of warehouse_id (smaller ID first) to prevent deadlocks
+                $firstWId = min($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
+                $secondWId = max($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
 
-                // ١. قفڵکردنی ڕیزی ستۆکی کۆگای نێرەر (Step 1: Lock the source stock row)
-                $sourceStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $lockedTransfer->from_warehouse_id, 'product_id' => $item->product_id],
+                $firstStock = WarehouseStock::lockForUpdate()->firstOrCreate(
+                    ['warehouse_id' => $firstWId, 'product_id' => $item->product_id],
+                    ['quantity' => 0, 'reserved_quantity' => 0]
+                );
+                $secondStock = WarehouseStock::lockForUpdate()->firstOrCreate(
+                    ['warehouse_id' => $secondWId, 'product_id' => $item->product_id],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                // ٢. خوێندنەوەی بڕی فیزیکی پێشوو (Step 2: Re-read authoritative current quantity)
+                $sourceStock = ($lockedTransfer->from_warehouse_id === $firstWId) ? $firstStock : $secondStock;
+                $destinationStock = ($lockedTransfer->to_warehouse_id === $firstWId) ? $firstStock : $secondStock;
+
+                // ١. خوێندنەوەی بڕی فیزیکی پێشوو (Step 1: Re-read authoritative current quantity)
                 $currentQty = $sourceStock->quantity;
 
-                // ٣. خوێندنەوەی بڕی حجزکراوی پێشوو (Step 3: Re-read authoritative reserved quantity)
+                // ٢. خوێندنەوەی بڕی حجزکراوی پێشوو (Step 2: Re-read authoritative reserved quantity)
                 $reservedQty = $sourceStock->reserved_quantity;
 
-                // ٤. هەژمارکردنی بڕی بەردەستی باوەڕپێکراو (Step 4: Calculate authoritative available quantity)
+                // ٣. هەژمارکردنی بڕی بەردەستی باوەڕپێکراو (Step 3: Calculate authoritative available quantity)
                 $availableStock = $currentQty - $reservedQty;
 
-                // ٥. پشکنینی گونجاویی بڕی داواکراوی گواستنەوە (Step 5: Validate requested deduction)
+                // ٤. پشکنینی گونجاویی بڕی داواکراوی گواستنەوە (Step 4: Validate requested deduction)
                 if ($availableStock < $item->quantity) {
-                    // ٦. هەڵدانی هەڵەی گونجاو لە کاتی نەبوونی ستۆکی بەردەست (Step 6: Throw business validation exception if insufficient)
+                    // ٥. هەڵدانی هەڵەی گونجاو لە کاتی نەبوونی ستۆکی بەردەست (Step 5: Throw business validation exception if insufficient)
                     throw ValidationException::withMessages([
                         'stock' => "کاڵای ژمارە {$item->product_id} بڕی پێویست بەردەست نییە لە کۆگای نێرەر. بەردەست بۆ ناردن: {$availableStock}، بڕی داواکراو: {$item->quantity}",
                     ]);
                 }
 
-                // ٧. کەمکردنەوەی ستۆک لە کۆگای نێرەر پاش پەسەندکردنی مەرجەکان (Step 7: Only then modify stock)
+                // ٦. کەمکردنەوەی ستۆک لە کۆگای نێرەر پاش پەسەندکردنی مەرجەکان (Step 6: Only then modify stock)
                 $sourceStock->adjustStock(
                     -$item->quantity,
                     'TRANSFER_OUT',
@@ -109,12 +118,7 @@ class StockTransferService
                     $lockedTransfer->id
                 );
 
-                // ٢. زیادکردنی ستۆک بۆ کۆگای دووەم (To Warehouse)
-                $destinationStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $lockedTransfer->to_warehouse_id, 'product_id' => $item->product_id],
-                    ['quantity' => 0, 'reserved_quantity' => 0]
-                );
-
+                // ٧. زیادکردنی ستۆک بۆ کۆگای دووەم (To Warehouse)
                 $destinationStock->adjustStock(
                     $item->quantity,
                     'TRANSFER_IN',
