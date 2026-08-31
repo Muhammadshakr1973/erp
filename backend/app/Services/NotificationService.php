@@ -68,6 +68,19 @@ class NotificationService
     }
 
     /**
+     * Alias for notifyUser to support older test assertions
+     */
+    public function sendNotification(
+        User|int $user,
+        string $type,
+        string $title,
+        string $body,
+        array $data = []
+    ): Notification {
+        return $this->notifyUser($user, $type, $title, $body, $data);
+    }
+
+    /**
      * Notify all active users with specific role(s)
      */
     public function notifyRole(

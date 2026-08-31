@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/sync_service.dart';
 import '../models/customer.dart';
 
 class CustomerFilters {
@@ -90,16 +91,18 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
 
 final customerActionsProvider = Provider<CustomerActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  return CustomerActions(api, ref);
+  final syncService = ref.watch(syncServiceProvider);
+  return CustomerActions(api, syncService, ref);
 });
 
 class CustomerActions {
   final ApiClient api;
+  final SyncService syncService;
   final Ref ref;
 
-  CustomerActions(this.api, this.ref);
+  CustomerActions(this.api, this.syncService, this.ref);
 
-  Future<Customer> addCustomer({
+  Future<void> addCustomer({
     required String name,
     String? phone,
     String? phone2,
@@ -111,31 +114,30 @@ class CustomerActions {
     double? latitude,
     double? longitude,
   }) async {
-    try {
-      final response = await api.client.post(
-        '/customers',
-        data: {
-          'name': name,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
-          if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-          if (address != null && address.isNotEmpty) 'address': address,
-          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-          if (routeId != null) 'route_id': routeId,
-          if (priceType != null) 'price_type': priceType,
-          if (initialDebt != null && initialDebt > 0)
-            'initial_debt': initialDebt,
-          if (latitude != null) 'latitude': latitude,
-          if (longitude != null) 'longitude': longitude,
-        },
-      );
-      ref.invalidate(customerListProvider);
-      return Customer.fromJson(response.data['data']);
-    } catch (e) {
-      throw Exception(api.parseError(e));
-    }
+    final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+
+    await syncService.enqueueOperation(
+      entityId: localId,
+      operationType: 'CREATE_CUSTOMER',
+      payload: {
+        'name': name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+        if (address != null && address.isNotEmpty) 'address': address,
+        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+        if (routeId != null) 'route_id': routeId,
+        if (priceType != null) 'price_type': priceType,
+        if (initialDebt != null && initialDebt > 0)
+          'initial_debt': initialDebt,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+
+    ref.invalidate(customerListProvider);
   }
 
-  Future<Customer> updateCustomer(
+  Future<void> updateCustomer(
     int id, {
     required String name,
     String? phone,
@@ -148,28 +150,25 @@ class CustomerActions {
     double? latitude,
     double? longitude,
   }) async {
-    try {
-      final response = await api.client.put(
-        '/customers/$id',
-        data: {
-          'name': name,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
-          if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-          if (address != null && address.isNotEmpty) 'address': address,
-          if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-          if (routeId != null) 'route_id': routeId,
-          if (priceType != null) 'price_type': priceType,
-          if (isActive != null) 'is_active': isActive,
-          if (latitude != null) 'latitude': latitude,
-          if (longitude != null) 'longitude': longitude,
-        },
-      );
-      ref.invalidate(customerListProvider);
-      ref.invalidate(singleCustomerProvider(id));
-      return Customer.fromJson(response.data['data']);
-    } catch (e) {
-      throw Exception(api.parseError(e));
-    }
+    await syncService.enqueueOperation(
+      entityId: id.toString(),
+      operationType: 'UPDATE_CUSTOMER',
+      payload: {
+        'name': name,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+        if (address != null && address.isNotEmpty) 'address': address,
+        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+        if (routeId != null) 'route_id': routeId,
+        if (priceType != null) 'price_type': priceType,
+        if (isActive != null) 'is_active': isActive,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
+
+    ref.invalidate(customerListProvider);
+    ref.invalidate(singleCustomerProvider(id));
   }
 
   Future<void> deleteCustomer(int id) async {

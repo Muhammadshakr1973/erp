@@ -10,6 +10,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'salesman_my_commissions_screen.dart';
 
@@ -20,6 +21,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
+    final syncStatus = ref.watch(syncStatusProvider);
+    final syncService = ref.read(syncServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -43,9 +46,15 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.sync), // Sync icon
+            icon: Icon(
+              Icons.sync,
+              color: syncStatus == SyncStatus.syncing ? theme.colorScheme.primary : null,
+            ),
             onPressed: () {
-              // Trigger Offline Sync
+              ref.read(syncServiceProvider).syncPendingOperations();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('دەستکرا بە سینککردنی داتاکان...')),
+              );
             },
           ),
         ],
@@ -56,30 +65,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Offline Status Banner
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                borderRadius: AppRadius.radiusMd,
-                border: Border.all(
-                  color: AppColors.success.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.cloud_done, color: AppColors.success),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'داتاکان بەسەرکەوتوویی سینک کراون (ئۆفلاین ئامادەیە)',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildSyncStatusBanner(context, syncStatus, syncService),
             const SizedBox(height: AppSpacing.sectionGap),
 
             // Quick Stats
@@ -217,6 +203,66 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSyncStatusBanner(BuildContext context, SyncStatus status, SyncService syncService) {
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+    IconData icon;
+    String message;
+
+    switch (status) {
+      case SyncStatus.synced:
+        bgColor = AppColors.success.withValues(alpha: 0.1);
+        borderColor = AppColors.success.withValues(alpha: 0.3);
+        textColor = AppColors.success;
+        icon = Icons.cloud_done;
+        message = 'داتاکان بەسەرکەوتوویی سینک کراون (ئۆفلاین ئامادەیە)';
+        break;
+      case SyncStatus.syncing:
+        bgColor = AppColors.info.withValues(alpha: 0.1);
+        borderColor = AppColors.info.withValues(alpha: 0.3);
+        textColor = AppColors.info;
+        icon = Icons.sync;
+        message = 'داتاکان لە پڕۆسەی سینککردندان، تکایە چاوەڕێ بکە...';
+        break;
+      case SyncStatus.error:
+        bgColor = AppColors.danger.withValues(alpha: 0.1);
+        borderColor = AppColors.danger.withValues(alpha: 0.3);
+        textColor = AppColors.danger;
+        icon = Icons.error_outline;
+        message = 'هەڵەیەک لە سینککردندا هەیە. بۆ هەوڵدانەوە کلیک بکە.';
+        break;
+    }
+
+    return InkWell(
+      onTap: () {
+        syncService.syncPendingOperations();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: AppRadius.radiusMd,
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: textColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: AppTextStyles.bodyMedium.copyWith(color: textColor),
+              ),
+            ),
+            if (status == SyncStatus.error)
+              Icon(Icons.refresh, color: textColor, size: 20),
           ],
         ),
       ),

@@ -281,4 +281,57 @@ class AuditTrailTest extends TestCase
         $response->assertJsonFragment(['entity_type' => 'Customer']);
         $response->assertJsonMissing(['entity_type' => 'Product']);
     }
+
+    /**
+     * Test that failed/rolled back transactions do not persist any audit logs.
+     */
+    public function test_failed_transactions_do_not_persist_audit_logs(): void
+    {
+        $adminRole = Role::create([
+            'name' => Role::ADMIN,
+            'display_name' => 'Admin',
+            'permissions' => ['*'],
+            'is_system' => true,
+        ]);
+
+        $admin = User::create([
+            'name' => 'Admin User',
+            'phone' => '07501234567',
+            'password' => bcrypt('password123'),
+            'role_id' => $adminRole->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($admin) {
+                // This triggers an automatic CREATE audit log
+                Customer::create([
+                    'name' => 'Should Not Exist',
+                    'phone' => '07505555555',
+                    'address' => 'Erbil Center',
+                    'price_tier' => 'RETAIL',
+                    'credit_limit' => 1000000,
+                    'current_balance' => 0,
+                    'is_active' => true,
+                ]);
+
+                throw new \Exception('Simulated database/transaction failure');
+            });
+        } catch (\Exception $e) {
+            $this->assertEquals('Simulated database/transaction failure', $e->getMessage());
+        }
+
+        // Verify the customer is not in the database
+        $this->assertDatabaseMissing('customers', [
+            'name' => 'Should Not Exist',
+        ]);
+
+        // Verify that no CREATE audit log for Customer has been persisted
+        $this->assertDatabaseMissing('audit_logs', [
+            'entity_type' => 'Customer',
+            'action' => 'CREATE',
+        ]);
+    }
 }

@@ -16,6 +16,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/api_client.dart';
+import '../../../core/sync/sync_service.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../models/customer.dart';
@@ -246,10 +247,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   if (_paymentFormKey.currentState!.validate()) {
                     setStateDialog(() => _isPaying = true);
                     try {
-                      final api = ref.read(apiClientProvider);
-                      final response = await api.client.post(
-                        '/payments',
-                        data: {
+                      final syncService = ref.read(syncServiceProvider);
+                      await syncService.enqueueOperation(
+                        entityId: 'local_payment_${DateTime.now().microsecondsSinceEpoch}',
+                        operationType: 'CREATE_PAYMENT',
+                        payload: {
                           'customer_id': customer.id,
                           'amount': int.parse(_paymentAmountController.text),
                           'notes': _paymentNotesController.text,
@@ -257,22 +259,21 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         },
                       );
 
-                      if (response.statusCode == 201) {
-                        ref.invalidate(singleCustomerProvider(customer.id));
-                        ref.invalidate(
-                          customerDebtsReportProvider(_ledgerFilters),
-                        );
-                        ref.invalidate(customerListProvider);
-                        if (mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'پارەدانەکە بەسەرکەوتوویی تۆمارکرا',
-                              ),
+                      ref.invalidate(singleCustomerProvider(customer.id));
+                      ref.invalidate(
+                        customerDebtsReportProvider(_ledgerFilters),
+                      );
+                      ref.invalidate(customerListProvider);
+                      
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'داواکاری پارەدانەکە بە سەرکەوتوویی خرایە ڕیزی سینکەوە',
                             ),
-                          );
-                        }
+                          ),
+                        );
                       }
                     } catch (e) {
                       if (mounted) {

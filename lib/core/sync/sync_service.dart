@@ -43,7 +43,8 @@ class SyncService {
     required String operationType,
     required Map<String, dynamic> payload,
   }) async {
-    // Duplicate prevention: check if a pending operation for the same entity and type exists
+    // Duplicate prevention: check if a pending operation for the exact same entity and type exists
+    // to avoid redundant submissions, while preserving ordering integrity
     final existingPending = box.values
         .where(
           (e) =>
@@ -54,7 +55,7 @@ class SyncService {
         .toList();
 
     if (existingPending.isNotEmpty) {
-      // Overwrite the payload of the existing one to avoid duplicates
+      // Overwrite the payload of the existing one to avoid duplicates of the exact same operation
       final entry = existingPending.first;
       entry.payload = payload;
       entry.status = 'PENDING';
@@ -63,7 +64,7 @@ class SyncService {
       await entry.save();
     } else {
       final randomHex = _generateRandomHex(8);
-      final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${entityId ?? "none"}_$randomHex';
+      final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${entityId}_$randomHex';
       
       final entry = SyncQueueEntry(
         id: uniqueId,
@@ -84,6 +85,8 @@ class SyncService {
     if (_isSyncing) return;
     _isSyncing = true;
 
+    final Map<String, dynamic> idMap = {};
+
     try {
       final pendingEntries =
           box.values
@@ -98,6 +101,9 @@ class SyncService {
             ); // Oldest first
 
       for (var entry in pendingEntries) {
+        // Resolve ordering dependencies / replace temporary IDs with actual server IDs
+        _resolvePendingEntryWithMap(entry, idMap);
+
         entry.status = 'SYNCING';
         await entry.save();
 
@@ -106,21 +112,52 @@ class SyncService {
           entry.status = 'COMPLETED';
           entry.syncResult = result;
           await entry.save();
-          // Optionally delete completed entries to save space:
-          // await entry.delete();
+
+          // If the entry created an entity (e.g. customer/order) and had a temporary ID, map it to server ID
+          if (entry.entityId != null && entry.entityId!.startsWith('local_')) {
+            dynamic serverId;
+            if (result is Map) {
+              if (result['data'] != null && result['data']['id'] != null) {
+                serverId = result['data']['id'];
+              } else if (result['id'] != null) {
+                serverId = result['id'];
+              }
+            }
+            if (serverId != null) {
+              idMap[entry.entityId!] = serverId;
+            }
+          }
         } on DioException catch (e) {
-          if (_isNetworkError(e)) {
+          final statusCode = e.response?.statusCode;
+
+          if (statusCode == 401 || statusCode == 403) {
+            // Authentication issue: stop synchronization immediately, keep entry pending/failed
+            entry.status = 'PENDING';
+            entry.errorInformation = 'متمانەکردن بەسەرچووە، تکایە دووبارە بچۆ ژوورەوە';
+            await entry.save();
+            break; // Pause syncing loop
+          } else if (statusCode == 409) {
+            // Idempotency Conflict / already processing
+            entry.status = 'PENDING';
+            entry.errorInformation = 'ئەم کردەوەیە ئێستا لە سێرڤەردا لە پرۆسەدایە...';
+            await entry.save();
+            break; // Pause syncing loop
+          } else if (statusCode == 422 || statusCode == 400) {
+            // Validation/Client errors: inherently invalid request
+            // Mark as FAILED and set retry count to max to prevent infinite retry loops
+            entry.status = 'FAILED';
+            entry.retryCount = 999; 
+            entry.errorInformation = 'داتاکانی نێردراو ڕەتکرانەوە: ${api.parseError(e)}';
+            await entry.save();
+          } else if (_isNetworkError(e)) {
             entry.status = 'PENDING'; // Keep pending for network recovery
-            entry.errorInformation = 'Network error';
+            entry.errorInformation = 'کێشەی هێڵ: ${api.parseError(e)}';
             await entry.save();
             break; // Stop syncing other items if network is down
           } else {
             entry.status = 'FAILED';
             entry.retryCount += 1;
             entry.errorInformation = api.parseError(e);
-
-            // Conflict handling: if it's a 409 conflict, we might need specific logic or let the user resolve it.
-            // Server authority: the server's response dictates failure.
             await entry.save();
           }
         } catch (e) {
@@ -135,6 +172,35 @@ class SyncService {
       // Notify listeners of sync status change
       ref.invalidate(syncStatusProvider);
     }
+  }
+
+  void _resolvePendingEntryWithMap(SyncQueueEntry entry, Map<String, dynamic> idMap) {
+    if (idMap.isEmpty) return;
+
+    // 1. Resolve entityId itself if it was mapped from a temporary local ID
+    if (entry.entityId != null && idMap.containsKey(entry.entityId)) {
+      entry.entityId = idMap[entry.entityId].toString();
+    }
+
+    // 2. Resolve recursive occurrences of local IDs inside the payload
+    try {
+      final decoded = entry.payload;
+      final resolved = _resolveValue(decoded, idMap);
+      entry.payload = resolved as Map<String, dynamic>;
+    } catch (_) {}
+  }
+
+  dynamic _resolveValue(dynamic value, Map<String, dynamic> idMap) {
+    if (value is String && idMap.containsKey(value)) {
+      return idMap[value];
+    }
+    if (value is Map) {
+      return value.map((k, v) => MapEntry(k, _resolveValue(v, idMap)));
+    }
+    if (value is List) {
+      return value.map((v) => _resolveValue(v, idMap)).toList();
+    }
+    return value;
   }
 
   Future<Map<String, dynamic>> _performOperation(SyncQueueEntry entry) async {
@@ -154,12 +220,26 @@ class SyncService {
         );
         return response.data;
       case 'UPDATE_ORDER':
-        final response2 = await api.client.put(
+        final response = await api.client.put(
           '/orders/${entry.entityId}',
           data: entry.payload,
           options: options,
         );
-        return response2.data;
+        return response.data;
+      case 'UPDATE_ORDER_STATUS':
+        final response = await api.client.post(
+          '/orders/${entry.entityId}/status',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'CREATE_CUSTOMER':
+        final response = await api.client.post(
+          '/customers',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
       case 'UPDATE_CUSTOMER':
         final response = await api.client.put(
           '/customers/${entry.entityId}',
@@ -188,7 +268,13 @@ class SyncService {
           options: options,
         );
         return response.data;
-      // Add other operations as needed
+      case 'FAIL_ORDER':
+        final response = await api.client.post(
+          '/delivery-trips/orders/${entry.entityId}/fail',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
       default:
         throw Exception('Unknown operation type: ${entry.operationType}');
     }

@@ -201,4 +201,150 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertEquals($log->id, $secondLog->id);
         $this->assertEquals(1, WhatsAppNotificationLog::where('reference_id', $payment->id)->count());
     }
+
+    /**
+     * Test that notifications are never dispatched if the parent transaction fails and rolls back.
+     */
+    public function test_failed_transactions_do_not_dispatch_notifications(): void
+    {
+        $paymentService = app(PaymentService::class);
+
+        $paymentData = [
+            'customer_id' => $this->customer->id,
+            'amount' => 150000,
+            'payment_method' => 'cash',
+            'notes' => 'This transaction will fail',
+        ];
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($paymentService, $paymentData) {
+                // Simulate payment collection but throw exception to force rollback
+                $payment = $paymentService->collectPayment($paymentData, $this->owner);
+                throw new \Exception('Forced Rollback');
+            });
+        } catch (\Exception $e) {
+            $this->assertEquals('Forced Rollback', $e->getMessage());
+        }
+
+        // Verify payment is NOT in database
+        $this->assertDatabaseMissing('customer_payments', [
+            'amount' => 150000,
+            'notes' => 'This transaction will fail',
+        ]);
+
+        // Verify NO in-app notification was dispatched/persisted
+        $this->assertDatabaseMissing('notifications', [
+            'type' => 'payment',
+            'body' => 'بڕی 150,000 دینار لە کڕیار وەرگیرا.',
+        ]);
+
+        // Verify NO WhatsApp log was created/persisted
+        $this->assertDatabaseMissing('whatsapp_notification_logs', [
+            'customer_id' => $this->customer->id,
+            'notification_type' => 'PAYMENT_RECEIVED',
+        ]);
+    }
+
+    /**
+     * Test that a provider-level WhatsApp failure does NOT rollback the parent transaction.
+     */
+    public function test_whatsapp_failure_does_not_rollback_parent_transaction(): void
+    {
+        // Fake the WhatsApp HTTP provider API to return a 500 server error
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.whatsapp-provider.com/*' => \Illuminate\Support\Facades\Http::response(['error' => 'Internal Server Error'], 500),
+        ]);
+
+        // Configure settings/config to force the service to hit the faked endpoint instead of simulated fallback
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_provider'], ['value' => 'api_provider']);
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_api_url'], ['value' => 'https://api.whatsapp-provider.com/send']);
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_api_token'], ['value' => 'secret_token_123']);
+
+        $paymentService = app(PaymentService::class);
+
+        $paymentData = [
+            'customer_id' => $this->customer->id,
+            'amount' => 300000,
+            'payment_method' => 'cash',
+            'notes' => 'Payment with failing WhatsApp provider',
+        ];
+
+        // Execute payment - this should NOT throw an exception despite WhatsApp failing
+        $payment = $paymentService->collectPayment($paymentData, $this->owner);
+
+        $this->assertNotNull($payment);
+
+        // Verify the parent payment transaction successfully committed
+        $this->assertDatabaseHas('customer_payments', [
+            'id' => $payment->id,
+            'amount' => 300000,
+        ]);
+
+        // Verify the customer's financial balance is updated (committed)
+        $this->customer->refresh();
+        $this->assertEquals(700000, $this->customer->current_balance);
+
+        // Verify the WhatsApp notification log is marked as FAILED with error message
+        $this->assertDatabaseHas('whatsapp_notification_logs', [
+            'reference_id' => $payment->id,
+            'status' => 'FAILED',
+        ]);
+
+        $log = WhatsAppNotificationLog::where('reference_id', $payment->id)->first();
+        $this->assertNotNull($log);
+        $this->assertContains('FAILED', [$log->status]);
+        $this->assertStringContainsString('Provider HTTP 500', $log->error_message);
+    }
+
+    /**
+     * Test WhatsApp retry logic transitions status and increments retry count.
+     */
+    public function test_whatsapp_retry_logic(): void
+    {
+        // Create an initially failed WhatsApp notification log
+        $log = WhatsAppNotificationLog::create([
+            'customer_id' => $this->customer->id,
+            'recipient_phone' => '+9647501234567',
+            'recipient_name' => 'Kawa Store',
+            'notification_type' => 'PAYMENT_RECEIVED',
+            'reference_type' => 'customer_payment',
+            'reference_id' => 9999,
+            'idempotency_key' => 'WA-unique-retry-test-key-123',
+            'message' => 'Test message',
+            'status' => 'FAILED',
+            'provider' => 'api_provider',
+            'retry_count' => 0,
+        ]);
+
+        // Fake the WhatsApp HTTP provider API to now succeed
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.whatsapp-provider.com/*' => \Illuminate\Support\Facades\Http::response(['id' => 'msg_id_9999', 'success' => true], 200),
+        ]);
+
+        // Configure credentials
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_provider'], ['value' => 'api_provider']);
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_api_url'], ['value' => 'https://api.whatsapp-provider.com/send']);
+        \App\Models\Setting::updateOrCreate(['key' => 'whatsapp_api_token'], ['value' => 'secret_token_123']);
+
+        $whatsAppService = app(WhatsAppService::class);
+
+        // Invoke the retry logic
+        $updatedLog = $whatsAppService->retryNotification($log->id, $this->owner);
+
+        // Assert that the retry count has incremented to 1
+        $this->assertEquals(1, $updatedLog->retry_count);
+
+        // Assert that the status successfully transitioned to SENT
+        $this->assertEquals('SENT', $updatedLog->status);
+        $this->assertEquals('msg_id_9999', $updatedLog->provider_message_id);
+        $this->assertNull($updatedLog->error_message);
+
+        // Also verify the database is in sync
+        $this->assertDatabaseHas('whatsapp_notification_logs', [
+            'id' => $log->id,
+            'retry_count' => 1,
+            'status' => 'SENT',
+            'provider_message_id' => 'msg_id_9999',
+        ]);
+    }
 }
