@@ -34,8 +34,8 @@ class DeliveryTripService
                 'trip_number' => $tripNumber,
                 'driver_id'   => $data['driver_id'],
                 'trip_date'   => $data['trip_date'],
-                'status'      => 'IN_PROGRESS',
-                'started_at'  => now(),
+                'status'      => DeliveryTrip::STATUS_PLANNED,
+                'started_at'  => null,
                 'total_orders' => count($data['order_ids']),
                 'notes'       => $data['notes'] ?? null,
                 'created_by'  => $user->id,
@@ -123,6 +123,21 @@ class DeliveryTripService
                 'delivered_at'    => now(),
                 'notes'           => $data['notes'] ?? null,
             ]);
+
+            // نوێکردنەوەی دۆخی گەشتەکە ئەگەر نەدەستپێکرابوو یان ئەگەر تەواو بوو
+            $trip = $tripOrder->trip;
+            if (in_array(strtoupper($trip->status), ['PLANNED', 'PREPARING'])) {
+                $trip->update([
+                    'status'     => DeliveryTrip::STATUS_IN_PROGRESS,
+                    'started_at' => $trip->started_at ?? now(),
+                ]);
+            }
+            if ($trip->orders()->where('status', 'PENDING')->count() === 0) {
+                $trip->update([
+                    'status'       => DeliveryTrip::STATUS_COMPLETED,
+                    'completed_at' => now(),
+                ]);
+            }
 
             // گۆڕینی دۆخی پسوڵەکە بۆ گەیندراو بە شێوەیەکی دەوڵەتی (State Machine) و سەلامەت
             $this->salesOrderService->transitionTo($salesOrder, SalesOrder::STATUS_DELIVERED, $user);
@@ -239,6 +254,21 @@ class DeliveryTripService
                 'failed_reason' => $data['failed_reason'] ?? 'Customer not available',
                 'notes'         => $data['notes'] ?? null,
             ]);
+
+            // نوێکردنەوەی دۆخی گەشتەکە ئەگەر نەدەستپێکرابوو یان ئەگەر تەواو بوو
+            $trip = $tripOrder->trip;
+            if (in_array(strtoupper($trip->status), ['PLANNED', 'PREPARING'])) {
+                $trip->update([
+                    'status'     => DeliveryTrip::STATUS_IN_PROGRESS,
+                    'started_at' => $trip->started_at ?? now(),
+                ]);
+            }
+            if ($trip->orders()->where('status', 'PENDING')->count() === 0) {
+                $trip->update([
+                    'status'       => DeliveryTrip::STATUS_COMPLETED,
+                    'completed_at' => now(),
+                ]);
+            }
 
             // ٢. گۆڕینی دۆخی پسوڵە سەرەکییەکە بۆ READY بۆ ئەوەی دووبارە لە گەشتێکی تردا بەکاربێتەوە
             $this->salesOrderService->transitionTo($salesOrder, SalesOrder::STATUS_READY, $user);
