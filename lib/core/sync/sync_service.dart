@@ -275,6 +275,13 @@ class SyncService {
           options: options,
         );
         return response.data;
+      case 'CREATE_SALES_RETURN':
+        final response = await api.client.post(
+          '/sales-returns',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
       default:
         throw Exception('Unknown operation type: ${entry.operationType}');
     }

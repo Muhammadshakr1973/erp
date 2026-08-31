@@ -291,6 +291,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   Widget _buildRequirementsTab(BuildContext context) {
     final reqsAsync = ref.watch(purchaseRequirementsProvider);
+    final groupedAsync = ref.watch(purchaseRequirementsGroupProvider);
     final theme = Theme.of(context);
 
     return reqsAsync.when(
@@ -317,7 +318,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               ),
               const SizedBox(height: AppSpacing.lg),
               ElevatedButton.icon(
-                onPressed: () => ref.invalidate(purchaseRequirementsProvider),
+                onPressed: () {
+                  ref.invalidate(purchaseRequirementsProvider);
+                  ref.invalidate(purchaseRequirementsGroupProvider);
+                },
                 icon: const Icon(Icons.refresh),
                 label: const Text('دووبارە هەوڵبدەرەوە'),
               ),
@@ -328,7 +332,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       data: (requirements) {
         if (requirements.isEmpty) {
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(purchaseRequirementsProvider),
+            onRefresh: () async {
+              ref.invalidate(purchaseRequirementsProvider);
+              ref.invalidate(purchaseRequirementsGroupProvider);
+            },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Container(
@@ -364,9 +371,55 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(purchaseRequirementsProvider),
+          onRefresh: () async {
+            ref.invalidate(purchaseRequirementsProvider);
+            ref.invalidate(purchaseRequirementsGroupProvider);
+          },
           child: Column(
             children: [
+              groupedAsync.maybeWhen(
+                data: (groups) {
+                  if (groups.isEmpty) return const SizedBox.shrink();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Text('گرووپی کۆمپانیاکان: ', style: AppTextStyles.caption),
+                          const SizedBox(width: AppSpacing.xs),
+                          ...groups.map((group) {
+                            final String name = group['supplier_name'] ?? 'بێ دابینکەر';
+                            final int count = group['items_count'] ?? 0;
+                            final List reqList = group['requirements'] ?? [];
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: AppSpacing.xs),
+                              child: ActionChip(
+                                label: Text('$name ($count)', style: AppTextStyles.caption),
+                                onPressed: () {
+                                  setState(() {
+                                    for (var item in reqList) {
+                                      final id = item['id'];
+                                      if (id is int) {
+                                        _selectedRequirementIds.add(id);
+                                      }
+                                    }
+                                  });
+                                },
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
               if (_selectedRequirementIds.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),

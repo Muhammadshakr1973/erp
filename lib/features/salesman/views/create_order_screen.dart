@@ -18,12 +18,18 @@ import '../../products/providers/products_provider.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
+import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 
 class CreateOrderScreen extends ConsumerStatefulWidget {
   final int? preselectedCustomerId;
+  final OrderModel? existingOrder;
 
-  const CreateOrderScreen({super.key, this.preselectedCustomerId});
+  const CreateOrderScreen({
+    super.key,
+    this.preselectedCustomerId,
+    this.existingOrder,
+  });
 
   @override
   ConsumerState<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -43,10 +49,39 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.preselectedCustomerId != null) {
+      if (widget.existingOrder != null) {
+        _populateFromExistingOrder(widget.existingOrder!);
+      } else if (widget.preselectedCustomerId != null) {
         _loadPreselectedCustomer();
       }
     });
+  }
+
+  void _populateFromExistingOrder(OrderModel order) {
+    setState(() {
+      _selectedWarehouseId = order.warehouseId;
+      _discountType = order.discountType;
+      _discountValue = order.discountType == 'PERCENT'
+          ? order.discountPercent
+          : order.discountAmount;
+      if (order.notes != null) {
+        _notesController.text = order.notes!;
+      }
+      for (var item in order.items) {
+        _cart[item.productId] = item.quantity.toInt();
+      }
+    });
+    _loadCustomerById(order.customerId);
+  }
+
+  void _loadCustomerById(int customerId) async {
+    final customers = await ref.read(customerListProvider.future);
+    final match = customers.where((c) => c.id == customerId).firstOrNull;
+    if (match != null && mounted) {
+      setState(() {
+        _selectedCustomer = match;
+      });
+    }
   }
 
   void _loadPreselectedCustomer() async {
@@ -174,7 +209,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       itemsList.add({'product_id': productId, 'quantity': qty});
     });
 
-    final String sharedKey = 'order_${DateTime.now().microsecondsSinceEpoch}';
+    final String sharedKey = widget.existingOrder?.sharedKey ??
+        'order_${DateTime.now().microsecondsSinceEpoch}';
+    final int version = widget.existingOrder?.version ?? 1;
 
     final payload = {
       'customer_id': _selectedCustomer!.id,
@@ -183,7 +220,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
       'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
       'shared_key': sharedKey,
-      'version': 1,
+      'version': version,
       'notes': _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),

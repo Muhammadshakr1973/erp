@@ -43,6 +43,13 @@ class AdminDashboardScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history_toggle_off),
+            tooltip: 'تۆماری کردارەکان (Audit Logs)',
+            onPressed: () {
+              context.push('/admin-audit-logs');
+            },
+          ),
+          IconButton(
             icon: const Icon(AppIcons.notifications),
             onPressed: () {
               context.push('/notifications');

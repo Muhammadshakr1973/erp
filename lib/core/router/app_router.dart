@@ -15,6 +15,7 @@ import '../../features/driver/views/trip_orders_screen.dart';
 import '../../features/shared/views/profile_screen.dart';
 import '../../features/shared/views/notifications_screen.dart';
 import '../../features/admin/views/admin_purchases_screen.dart';
+import '../../features/admin/views/admin_audit_logs_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
@@ -90,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return _getDashboardForRole(role);
       }
       if (location.startsWith('/admin-purchases') &&
+          !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/admin-audit-logs') &&
           !(role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
@@ -172,6 +177,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin-purchases',
         name: 'adminPurchases',
         builder: (context, state) => const AdminPurchasesScreen(),
+      ),
+      GoRoute(
+        path: '/admin-audit-logs',
+        name: 'adminAuditLogs',
+        builder: (context, state) => const AdminAuditLogsScreen(),
       ),
       GoRoute(
         path: '/trip/:id',

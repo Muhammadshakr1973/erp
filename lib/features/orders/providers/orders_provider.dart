@@ -129,22 +129,32 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((ref, i
 });
 
 class SalesReturnActions {
+  final SyncService syncService;
   final ApiClient api;
   final Ref ref;
 
-  SalesReturnActions(this.api, this.ref);
+  SalesReturnActions(this.syncService, this.api, this.ref);
 
   Future<void> createSalesReturn(Map<String, dynamic> data) async {
-    final response = await api.client.post('/sales-returns', data: data);
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      ref.invalidate(salesReturnsListProvider);
-    } else {
-      throw Exception(response.data['message'] ?? 'شکستی هێنا لە دروستکردنی گەڕانەوەی فرۆشتن');
-    }
+    final String returnEntityId = data['idempotency_key'] ??
+        data['local_id'] ??
+        'return_${DateTime.now().microsecondsSinceEpoch}';
+
+    final payload = Map<String, dynamic>.from(data)
+      ..['idempotency_key'] = returnEntityId;
+
+    await syncService.enqueueOperation(
+      entityId: returnEntityId,
+      operationType: 'CREATE_SALES_RETURN',
+      payload: payload,
+    );
+
+    ref.invalidate(salesReturnsListProvider);
   }
 }
 
 final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
+  final syncService = ref.watch(syncServiceProvider);
   final api = ref.watch(apiClientProvider);
-  return SalesReturnActions(api, ref);
+  return SalesReturnActions(syncService, api, ref);
 });
