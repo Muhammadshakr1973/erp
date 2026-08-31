@@ -206,11 +206,14 @@ class ReportServiceTest extends TestCase
         // Customer Ledger entry
         CustomerLedger::create([
             'customer_id' => $this->customer->id,
-            'entry_type' => CustomerLedger::TYPE_SALE,
+            'entry_type' => 'SALE',
+            'type' => CustomerLedger::TYPE_DEBIT,
             'debit' => 150000,
             'credit' => 0,
+            'amount' => 150000,
+            'balance_before' => 0,
             'balance_after' => 150000,
-            'notes' => 'Sales invoice debit',
+            'description' => 'Sales invoice debit',
         ]);
 
         $custResponse = $this->actingAs($this->admin)->getJson('/api/v1/reports/customer-debts');
@@ -220,11 +223,14 @@ class ReportServiceTest extends TestCase
         // Supplier Ledger entry
         SupplierLedger::create([
             'supplier_id' => $this->supplier->id,
-            'entry_type' => SupplierLedger::TYPE_PURCHASE,
+            'entry_type' => 'PURCHASE',
+            'type' => SupplierLedger::TYPE_CREDIT,
             'debit' => 0,
             'credit' => 500000,
+            'amount' => 500000,
+            'balance_before' => 0,
             'balance_after' => 500000,
-            'notes' => 'Goods received credit',
+            'description' => 'Goods received credit',
         ]);
 
         $supResponse = $this->actingAs($this->admin)->getJson('/api/v1/reports/supplier-debts');
@@ -248,5 +254,62 @@ class ReportServiceTest extends TestCase
         $this->assertEquals(1, $response->json('data.summary.total_low_stock_items'));
         $this->assertEquals(3, $response->json('data.items.0.available_quantity'));
         $this->assertEquals(17, $response->json('data.items.0.suggested_reorder')); // 20 - 3
+    }
+
+    public function test_reports_mathematical_formula_reconciliation(): void
+    {
+        // 1. Sales Order to test reconciliation
+        $order = SalesOrder::create([
+            'order_number' => 'SO-RECONCILE',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'subtotal' => 100000,
+            'discount_amount' => 10000,
+            'total_amount' => 90000,
+            'total_cost' => 60000,
+            'total_profit' => 30000,
+            'order_date' => now()->toDateString(),
+        ]);
+
+        $orderItem = SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'unit_price' => 10000,
+            'cost_price' => 6000,
+            'subtotal' => 100000,
+            'discount_amount' => 10000,
+            'line_total' => 90000,
+            'profit' => 30000,
+        ]);
+
+        // Verify sales report totals matches formulas perfectly
+        $salesResponse = $this->actingAs($this->admin)->getJson('/api/v1/reports/sales');
+        $salesResponse->assertStatus(200);
+        
+        $gross = $salesResponse->json('data.summary.total_gross_amount');
+        $discount = $salesResponse->json('data.summary.total_discount_amount');
+        $net = $salesResponse->json('data.summary.total_net_sales');
+        $cost = $salesResponse->json('data.summary.total_cost_amount');
+        $profit = $salesResponse->json('data.summary.total_profit_amount');
+
+        // Net Sales = Gross - Discount
+        $this->assertEquals($net, $gross - $discount);
+        // Profit = Net - Cost
+        $this->assertEquals($profit, $net - $cost);
+
+        // Verify profit report details and margins
+        $profitResponse = $this->actingAs($this->admin)->getJson('/api/v1/reports/profit');
+        $profitResponse->assertStatus(200);
+
+        $profRevenue = $profitResponse->json('data.summary.total_revenue');
+        $profCost = $profitResponse->json('data.summary.total_cost');
+        $profProfit = $profitResponse->json('data.summary.total_profit');
+        $profMargin = $profitResponse->json('data.summary.profit_margin_percent');
+
+        $this->assertEquals($profProfit, $profRevenue - $profCost);
+        $this->assertEquals(round(($profProfit / $profRevenue) * 100, 2), round($profMargin, 2));
     }
 }

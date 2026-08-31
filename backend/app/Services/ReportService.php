@@ -394,11 +394,12 @@ class ReportService
 
         return [
             'summary' => [
-                'total_customers'         => $totalCustomersCount,
-                'customers_with_debt'     => $customersWithDebtCount,
-                'total_outstanding_debt'  => $totalOutstandingDebt,
-                'total_sales_on_credit'   => $totalDebitInPeriod,
-                'total_payments_received' => $totalCreditInPeriod,
+                'total_customers'               => $totalCustomersCount,
+                'customers_with_debt'           => $customersWithDebtCount,
+                'total_outstanding_debt'        => $totalOutstandingDebt,
+                'total_outstanding_receivables' => $totalOutstandingDebt, // compatibility alias
+                'total_sales_on_credit'         => $totalDebitInPeriod,
+                'total_payments_received'       => $totalCreditInPeriod,
             ],
             'ledgers' => $paginatedLedgers,
         ];
@@ -453,11 +454,12 @@ class ReportService
 
         return [
             'summary' => [
-                'total_suppliers'           => $totalSuppliers,
-                'suppliers_with_debt'       => $suppliersWithDebtCount,
-                'total_outstanding_payable' => $totalOutstandingPayables,
-                'total_purchases_on_credit' => $totalDebitInPeriod,
-                'total_payments_made'       => $totalCreditInPeriod,
+                'total_suppliers'            => $totalSuppliers,
+                'suppliers_with_debt'        => $suppliersWithDebtCount,
+                'total_outstanding_payable'  => $totalOutstandingPayables,
+                'total_outstanding_payables' => $totalOutstandingPayables, // compatibility alias
+                'total_purchases_on_credit'  => $totalDebitInPeriod,
+                'total_payments_made'        => $totalCreditInPeriod,
             ],
             'ledgers' => $paginatedLedgers,
         ];
