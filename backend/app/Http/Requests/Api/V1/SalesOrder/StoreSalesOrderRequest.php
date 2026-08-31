@@ -20,6 +20,8 @@ class StoreSalesOrderRequest extends FormRequest
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_type' => ['nullable', 'string', 'in:PERCENT,FIXED,percent,fixed'],
             'notes' => ['nullable', 'string'],
+            'shared_key' => ['nullable', 'string', 'max:100'],
+            'version' => ['nullable', 'integer', 'min:1'],
 
             // داواکردنی ئایتمەکانی پسوڵەکە (لانی کەم دەبێت ١ کاڵای تێدابێت)
             'items' => ['required', 'array', 'min:1'],

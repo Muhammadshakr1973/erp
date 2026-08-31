@@ -11,6 +11,8 @@ class SalesOrder extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = [
         'order_number',
+        'shared_key',
+        'version',
         'customer_id',
         'salesman_id',
         'warehouse_id',
@@ -35,6 +37,7 @@ class SalesOrder extends Model
         'confirmed_at' => 'datetime',
         'ready_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'version' => 'integer',
     ];
     const STATUS_DRAFT = 'DRAFT';
     const STATUS_CONFIRMED = 'CONFIRMED';

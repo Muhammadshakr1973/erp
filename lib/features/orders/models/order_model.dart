@@ -46,6 +46,8 @@ class OrderModel {
 
   final int id;
   final String orderNumber;
+  final String? sharedKey;
+  final int version;
   final int customerId;
   final int salesmanId;
   final int? warehouseId;
@@ -68,6 +70,8 @@ class OrderModel {
   OrderModel({
     required this.id,
     required this.orderNumber,
+    this.sharedKey,
+    this.version = 1,
     required this.customerId,
     required this.salesmanId,
     this.warehouseId,
@@ -99,6 +103,8 @@ class OrderModel {
     return OrderModel(
       id: json['id'] ?? 0,
       orderNumber: json['order_number'] ?? '',
+      sharedKey: json['shared_key']?.toString(),
+      version: json['version'] is int ? json['version'] : (int.tryParse(json['version']?.toString() ?? '1') ?? 1),
       customerId: json['customer_id'] ?? 0,
       salesmanId: json['salesman_id'] ?? 0,
       warehouseId: json['warehouse_id'],

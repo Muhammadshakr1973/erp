@@ -731,5 +731,157 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(12825, $order->total_amount);
         $this->assertEquals(5000, $order->total_profit); // Profit on items: (7500 - 5000) * 2
     }
+
+    /**
+     * Test dual-entry shared-order creation with unique shared_key.
+     */
+    public function test_dual_entry_shared_order_creation_and_reconciliation(): void
+    {
+        $sharedKey = 'shared_key_123';
+
+        $payload1 = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        // First device creates the order
+        $response1 = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload1);
+        $response1->assertStatus(201);
+        $orderId = $response1->json('data.id');
+
+        // Check it has version 1 and shared_key in database
+        $order = SalesOrder::findOrFail($orderId);
+        $this->assertEquals($sharedKey, $order->shared_key);
+        $this->assertEquals(1, $order->version);
+
+        // Second device edits/reconciles the same order (increasing quantity to 5)
+        $payload2 = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1, // Correct matching version
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 5,
+                ]
+            ]
+        ];
+
+        $response2 = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload2);
+        $response2->assertStatus(200); // 200 OK because it updated the existing shared order
+        $this->assertEquals($orderId, $response2->json('data.id'));
+
+        // Verify version incremented to 2 and quantity recalculated on server
+        $updatedOrder = SalesOrder::findOrFail($orderId);
+        $this->assertEquals(2, $updatedOrder->version);
+        $this->assertCount(1, $updatedOrder->items);
+        $this->assertEquals(5, $updatedOrder->items->first()->quantity);
+    }
+
+    /**
+     * Test optimistic locking and stale client data rejection.
+     */
+    public function test_dual_entry_stale_client_data_causes_conflict(): void
+    {
+        $sharedKey = 'shared_key_456';
+
+        // 1. Initial creation
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload)->assertStatus(201);
+
+        // 2. First edit by device A (advances version to 2)
+        $payloadDeviceA = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 3,
+                ]
+            ]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payloadDeviceA)->assertStatus(200);
+
+        // 3. Stale edit by device B sending version 1 (but database is already version 2)
+        $payloadDeviceB = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1, // Stale!
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 4,
+                ]
+            ]
+        ];
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payloadDeviceB);
+        $response->assertStatus(422); // Rejects stale client request with ValidationException error code
+        $response->assertJsonValidationErrors('version');
+    }
+
+    /**
+     * Test status consistency of shared orders. Editing processed order is forbidden.
+     */
+    public function test_editing_locked_shared_order_fails(): void
+    {
+        $sharedKey = 'shared_key_789';
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1,
+            'status' => 'CONFIRMED', // Immediately confirmed
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload)->assertStatus(201);
+
+        // Try to edit the confirmed order cooperatively
+        $payloadEdit = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => $sharedKey,
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 10,
+                ]
+            ]
+        ];
+
+        // Should fail because status is CONFIRMED and not DRAFT
+        $this->expectException(\RuntimeException::class);
+        $service = resolve(\App\Services\SalesOrderService::class);
+        $service->createOrder($payloadEdit, $this->salesman);
+    }
 }
 

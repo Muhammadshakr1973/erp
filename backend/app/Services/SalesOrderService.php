@@ -29,6 +29,15 @@ class SalesOrderService
      */
     public function createOrder(array $data, $user): SalesOrder
     {
+        // Check if there is a shared key indicating cooperative dual entry
+        $sharedKey = $data['shared_key'] ?? null;
+        if ($sharedKey) {
+            $existingSharedOrder = SalesOrder::where('shared_key', $sharedKey)->first();
+            if ($existingSharedOrder) {
+                return $this->updateSharedOrder($existingSharedOrder, $data, $user);
+            }
+        }
+
         // ١. پاراستنی لایەنی یەکسانی (Idempotency) بۆ ڕێگری لە دروستکردنی پسوڵەی دووبارە بەهۆی دووجار کلیککردن
         // Bypass time-based heuristic if request has a true Idempotency-Key, as the middleware guarantees uniqueness
         $hasTrueIdempotency = request()->hasHeader('X-Idempotency-Key') || request()->hasHeader('Idempotency-Key');
@@ -52,6 +61,8 @@ class SalesOrderService
             // دروستکردنی پسوڵە لە سەرەتادا بە شێوەی DRAFT
             $order = SalesOrder::create([
                 'order_number' => $orderNumber,
+                'shared_key' => $data['shared_key'] ?? null,
+                'version' => 1,
                 'customer_id' => $customer->id,
                 'salesman_id' => $user->id,
                 'warehouse_id' => $data['warehouse_id'],
@@ -722,5 +733,126 @@ class SalesOrderService
                 'status' => 'FAILED',
                 'failed_reason' => 'Cancelled via Sales Order',
             ]);
+    }
+
+    /**
+     * Cooperative dual-entry update of a shared order identity.
+     * Integrates optimistic locking (versioning) and robust validation.
+     */
+    public function updateSharedOrder(SalesOrder $order, array $data, $user): SalesOrder
+    {
+        return DB::transaction(function () use ($order, $data, $user) {
+            // Lock order for update to prevent concurrent race conditions
+            $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Status consistency check: Shared order can only be edited while it is in DRAFT status
+            if ($order->status !== SalesOrder::STATUS_DRAFT) {
+                throw new \RuntimeException('ناتوانرێت دەستکاری پسوڵەی هاوبەش بکرێت چونکە پێشتر پەسەندکراوە یان لە پرۆسەدایە.');
+            }
+
+            // Concurrent edit validation (optimistic locking / stale client check)
+            $clientVersion = isset($data['version']) ? (int) $data['version'] : null;
+            if ($clientVersion !== null && $order->version !== $clientVersion) {
+                throw ValidationException::withMessages([
+                    'version' => 'هەڵەی هاوکاتی: داتاکانی ئەم پسوڵەیە پێشتر لەلایەن ئامێرێکی ترەوە دەستکاری کراون. تکایە پسوڵەکە نوێ بکەرەوە.',
+                    'conflict_data' => [
+                        'current_version' => $order->version,
+                        'order_id' => $order->id,
+                        'total_amount' => $order->total_amount,
+                    ]
+                ]);
+            }
+
+            // Lock customer row
+            $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
+            $this->checkCustomerAssignment($customer, $user);
+
+            // Clear old items
+            $order->items()->delete();
+
+            $subtotal = 0;
+            $totalProfit = 0;
+
+            foreach ($data['items'] as $item) {
+                $quantity = (int) $item['quantity'];
+                if ($quantity <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                    ]);
+                }
+
+                $product = Product::findOrFail($item['product_id']);
+
+                $priceDetails = $customer->getPriceDetailsForProduct($product);
+                $unitPrice = (int) $priceDetails['price'];
+                $priceType = $priceDetails['price_type'];
+                $costPrice = (int) $product->cost_price;
+
+                $lineTotal = $unitPrice * $quantity;
+                $profit = ($unitPrice - $costPrice) * $quantity;
+
+                $order->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'cost_price' => $costPrice,
+                    'price_type' => $priceType,
+                    'discount_percent' => 0,
+                    'discount_amount' => 0,
+                    'line_total' => $lineTotal,
+                    'total_price' => $lineTotal,
+                    'profit' => $profit,
+                    'is_packed' => false,
+                ]);
+
+                $subtotal += $lineTotal;
+                $totalProfit += $profit;
+            }
+
+            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountAmount = 0;
+            if ($permDiscountPercent > 0) {
+                $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
+            }
+            $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
+
+            $discountType = strtoupper($data['discount_type'] ?? 'PERCENT');
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : 0.0;
+            $invoiceDiscountAmount = 0;
+
+            if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
+                $discountType = 'FIXED';
+                $fixedAmount = (int) ($data['discount_amount'] ?? 0);
+                $invoiceDiscountAmount = min($amountAfterPermDiscount, max(0, $fixedAmount));
+            } elseif ($invoiceDiscountPercent > 0) {
+                $discountType = 'PERCENT';
+                $invoiceDiscountAmount = (int) round(($amountAfterPermDiscount * $invoiceDiscountPercent) / 100);
+            }
+
+            $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
+
+            // Increment version and save order
+            $order->update([
+                'customer_id' => $customer->id,
+                'warehouse_id' => $data['warehouse_id'],
+                'notes' => $data['notes'] ?? $order->notes,
+                'subtotal' => $subtotal,
+                'permanent_discount_percent' => $permDiscountPercent,
+                'permanent_discount_amount' => $permDiscountAmount,
+                'discount_percent' => $invoiceDiscountPercent,
+                'discount_amount' => $invoiceDiscountAmount,
+                'discount_type' => $discountType,
+                'total_amount' => $totalAmount,
+                'total_profit' => $totalProfit,
+                'version' => $order->version + 1,
+            ]);
+
+            $requestedStatus = $data['status'] ?? $order->status;
+            if ($requestedStatus !== $order->status) {
+                $order = $this->transitionTo($order, $requestedStatus, $user);
+            }
+
+            return $order;
+        });
     }
 }
