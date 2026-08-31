@@ -185,4 +185,47 @@ class StateMachineConsistencyTest extends TestCase
         $this->expectException(ValidationException::class);
         $commissionService->cancelCommission($commission->id, $this->admin);
     }
+
+    /** @test */
+    public function sales_return_creates_completed_status_and_atomic_side_effects()
+    {
+        $customer = Customer::create(['name' => 'Cust Return Test', 'current_balance' => 1000]);
+        $order = SalesOrder::create([
+            'order_number' => 'SO-RET-1',
+            'customer_id' => $customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'created_by' => $this->admin->id,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'total_amount' => 1000,
+            'total_cost' => 500,
+            'total_profit' => 500,
+        ]);
+
+        $orderItem = \App\Models\SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 2,
+            'unit_price' => 500,
+            'cost_price' => 250,
+            'total' => 1000,
+        ]);
+
+        $returnService = app(\App\Services\SalesReturnService::class);
+        $return = $returnService->createReturn([
+            'sales_order_id' => $order->id,
+            'reason' => 'Defective',
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 1,
+                ]
+            ]
+        ], $this->admin);
+
+        $this->assertEquals(\App\Models\SalesReturn::STATUS_COMPLETED, $return->status);
+        $this->assertEquals(500, $return->total_return_amount);
+
+        $customer->refresh();
+        $this->assertEquals(500, $customer->current_balance);
+    }
 }

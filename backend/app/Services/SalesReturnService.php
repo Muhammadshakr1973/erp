@@ -85,7 +85,7 @@ class SalesReturnService
                 // پشکنینی بڕی گەڕێندراوەی پێشوو بۆ ئەم ئایتمە
                 $alreadyReturned = SalesReturnItem::whereHas('salesReturn', function ($q) use ($order) {
                     $q->where('sales_order_id', $order->id)
-                      ->where('status', SalesReturn::STATUS_COMPLETED);
+                      ->whereIn('status', [SalesReturn::STATUS_COMPLETED, SalesReturn::STATUS_COMPLETED_LOWER]);
                 })->where('sales_order_item_id', $orderItemId)->sum('quantity');
 
                 $availableToReturn = $orderItem->quantity - $alreadyReturned;

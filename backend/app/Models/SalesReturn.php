@@ -10,8 +10,11 @@ class SalesReturn extends Model
 {
     use HasFactory, SoftDeletes;
     protected $fillable = ['return_number', 'sales_order_id', 'customer_id', 'reason', 'status', 'total_return_amount', 'created_by'];
-    const STATUS_PENDING = 'pending';
-    const STATUS_COMPLETED = 'completed';
+    const STATUS_PENDING = 'PENDING';
+    const STATUS_COMPLETED = 'COMPLETED';
+
+    const STATUS_PENDING_LOWER = 'pending';
+    const STATUS_COMPLETED_LOWER = 'completed';
     public function order()
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
