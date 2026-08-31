@@ -108,6 +108,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/stock-transfers/{id}', [StockTransferController::class, 'show'])->middleware('permission:stock.view');
         Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::post('/stock-transfers/{id}/complete', [StockTransferController::class, 'complete'])->middleware(['permission:stock.pack', 'idempotent']);
+        Route::post('/stock-transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->middleware(['permission:stock.pack', 'idempotent']);
         
         // Delivery Trips (Requires delivery permissions)
         Route::get('/delivery-trips', [DeliveryTripController::class, 'index'])->middleware('permission:delivery.view');

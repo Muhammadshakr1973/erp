@@ -175,7 +175,7 @@ class OrderModel {
       case statusReady:
         return [statusInDelivery, statusCancelled];
       case statusInDelivery:
-        return [statusDelivered, statusCancelled];
+        return [statusDelivered, statusReady, statusCancelled];
       case statusDelivered:
       case statusCancelled:
       default:

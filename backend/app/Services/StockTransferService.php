@@ -61,19 +61,25 @@ class StockTransferService
      */
     public function completeTransfer(StockTransfer $transfer, $user): StockTransfer
     {
-        if ($transfer->status === 'COMPLETED') {
-            throw ValidationException::withMessages(['status' => 'ئەم گواستنەوەیە پێشتر جێبەجێ کراوە.']);
-        }
-
         return DB::transaction(function () use ($transfer, $user) {
+            $lockedTransfer = StockTransfer::lockForUpdate()->findOrFail($transfer->id);
+
+            $currentStatus = strtolower($lockedTransfer->status);
+            if ($currentStatus === 'completed' || $currentStatus === StockTransfer::STATUS_COMPLETED) {
+                return $lockedTransfer;
+            }
+
+            if ($currentStatus === 'cancelled' || $currentStatus === StockTransfer::STATUS_CANCELLED) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت گواستنەوەی هەڵوەشاوە جێبەجێ بكرێت.']);
+            }
 
             // Sort items deterministically by product_id ASC to eliminate deadlock risks
-            $sortedItems = $transfer->items->sortBy('product_id');
+            $sortedItems = $lockedTransfer->items->sortBy('product_id');
             foreach ($sortedItems as $item) {
 
                 // ١. قفڵکردنی ڕیزی ستۆکی کۆگای نێرەر (Step 1: Lock the source stock row)
                 $sourceStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $transfer->from_warehouse_id, 'product_id' => $item->product_id],
+                    ['warehouse_id' => $lockedTransfer->from_warehouse_id, 'product_id' => $item->product_id],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
@@ -100,12 +106,12 @@ class StockTransferService
                     'TRANSFER_OUT',
                     $user->id,
                     'stock_transfer',
-                    $transfer->id
+                    $lockedTransfer->id
                 );
 
                 // ٢. زیادکردنی ستۆک بۆ کۆگای دووەم (To Warehouse)
                 $destinationStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $transfer->to_warehouse_id, 'product_id' => $item->product_id],
+                    ['warehouse_id' => $lockedTransfer->to_warehouse_id, 'product_id' => $item->product_id],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
@@ -114,12 +120,12 @@ class StockTransferService
                     'TRANSFER_IN',
                     $user->id,
                     'stock_transfer',
-                    $transfer->id
+                    $lockedTransfer->id
                 );
             }
 
             // ٣. گۆڕینی دۆخی گواستنەوەکە بۆ تەواوبوو
-            $transfer->update([
+            $lockedTransfer->update([
                 'status'       => 'COMPLETED',
                 'completed_at' => now(),
                 'approved_by'  => $user->id,
@@ -128,20 +134,55 @@ class StockTransferService
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'STOCK_TRANSFER_COMPLETE',
                 'entity_type' => 'StockTransfer',
-                'entity_id'   => $transfer->id,
+                'entity_id'   => $lockedTransfer->id,
                 'table_name'  => 'stock_transfers',
-                'old_values'  => ['status' => 'DRAFT'],
+                'old_values'  => ['status' => $currentStatus],
                 'new_values'  => [
                     'status'            => 'COMPLETED',
-                    'transfer_number'   => $transfer->transfer_number,
-                    'from_warehouse_id' => $transfer->from_warehouse_id,
-                    'to_warehouse_id'   => $transfer->to_warehouse_id,
+                    'transfer_number'   => $lockedTransfer->transfer_number,
+                    'from_warehouse_id' => $lockedTransfer->from_warehouse_id,
+                    'to_warehouse_id'   => $lockedTransfer->to_warehouse_id,
                 ],
-                'description' => "گواستنەوەی ستۆک تەواوکرا: {$transfer->transfer_number} لە کۆگای #{$transfer->from_warehouse_id} بۆ #{$transfer->to_warehouse_id}",
+                'description' => "گواستنەوەی ستۆک تەواوکرا: {$lockedTransfer->transfer_number} لە کۆگای #{$lockedTransfer->from_warehouse_id} بۆ #{$lockedTransfer->to_warehouse_id}",
                 'user'        => $user,
             ]);
 
-            return $transfer;
+            return $lockedTransfer;
+        });
+    }
+
+    /**
+     * هەڵوەشاندنەوەی گواستنەوەی ستۆک
+     */
+    public function cancelTransfer(StockTransfer $transfer, $user): StockTransfer
+    {
+        return DB::transaction(function () use ($transfer, $user) {
+            $lockedTransfer = StockTransfer::lockForUpdate()->findOrFail($transfer->id);
+
+            $currentStatus = strtolower($lockedTransfer->status);
+            if ($currentStatus === 'cancelled' || $currentStatus === StockTransfer::STATUS_CANCELLED) {
+                return $lockedTransfer;
+            }
+
+            if ($currentStatus === 'completed' || $currentStatus === StockTransfer::STATUS_COMPLETED) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت گواستنەوەی جێبەجێکراو هەڵبوەشێنرێتەوە.']);
+            }
+
+            $oldStatus = $lockedTransfer->status;
+            $lockedTransfer->update(['status' => 'CANCELLED']);
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'STOCK_TRANSFER_CANCEL',
+                'entity_type' => 'StockTransfer',
+                'entity_id'   => $lockedTransfer->id,
+                'table_name'  => 'stock_transfers',
+                'old_values'  => ['status' => $oldStatus],
+                'new_values'  => ['status' => 'CANCELLED'],
+                'description' => "داواکاری گواستنەوەی ستۆک هەڵوەشێنرایەوە: {$lockedTransfer->transfer_number}",
+                'user'        => $user,
+            ]);
+
+            return $lockedTransfer;
         });
     }
 }

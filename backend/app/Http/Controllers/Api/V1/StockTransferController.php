@@ -99,4 +99,25 @@ class StockTransferController extends Controller
             'data'    => $completedTransfer
         ], 200);
     }
+
+    // هەڵوەشاندنەوەی داواکاری گواستنەوە
+    public function cancel(Request $request, $id): JsonResponse
+    {
+        $transfer = StockTransfer::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$transfer->from_warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم گواستنەوەیە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $cancelledTransfer = $this->transferService->cancelTransfer($transfer, $user);
+
+        return response()->json([
+            'message' => 'داواکاری گواستنەوە بەسەرکەوتوویی هەڵوەشێنرایەوە',
+            'data'    => $cancelledTransfer
+        ], 200);
+    }
 }
