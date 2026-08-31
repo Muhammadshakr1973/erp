@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/views/login_screen.dart';
 import '../../features/salesman/views/salesman_main_screen.dart';
 import '../../features/salesman/views/create_order_screen.dart';
+import '../../features/orders/models/order_model.dart';
 import '../../features/admin/views/admin_main_screen.dart';
 import '../../features/warehouse/views/warehouse_main_screen.dart';
 import '../../features/driver/views/driver_main_screen.dart';
@@ -24,7 +25,7 @@ class RouterTransitionNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterTransitionNotifier(this._ref) {
-    _ref.listen(authProvider, (_, __) {
+    _ref.listen(authProvider, (_, _) {
       notifyListeners();
     });
   }
