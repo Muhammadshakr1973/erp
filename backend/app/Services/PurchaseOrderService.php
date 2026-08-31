@@ -78,7 +78,7 @@ class PurchaseOrderService
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
-                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر وەرگیراوە.']);
+                return $lockedOrder;
             }
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
@@ -168,20 +168,22 @@ class PurchaseOrderService
      */
     public function cancelOrder(PurchaseOrder $order, $user): PurchaseOrder
     {
-        if ($order->status === PurchaseOrder::STATUS_RECEIVED || $order->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
-            throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی کڕین هەڵبوەشێنرێتەوە چونکە پێشتر وەرگیراوە.']);
-        }
-
-        if ($order->status === PurchaseOrder::STATUS_CANCELLED) {
-            throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر هەڵوەشاوەتەوە.']);
-        }
-
         return DB::transaction(function () use ($order, $user) {
-            $oldStatus = $order->status;
-            $order->update(['status' => PurchaseOrder::STATUS_CANCELLED]);
+            $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
+                return $lockedOrder;
+            }
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی کڕین هەڵبوەشێنرێتەوە چونکە پێشتر وەرگیراوە.']);
+            }
+
+            $oldStatus = $lockedOrder->status;
+            $lockedOrder->update(['status' => PurchaseOrder::STATUS_CANCELLED]);
 
             // داواکارییەکانی کڕین دەکرێنەوە بۆ ئەوەی دووبارە بکرێن بە پسوڵە ئەگەر پێویست بکات
-            $order->requirements()->update([
+            $lockedOrder->requirements()->update([
                 'status' => 'OPEN',
                 'purchase_order_id' => null
             ]);
@@ -189,15 +191,15 @@ class PurchaseOrderService
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'CANCEL',
                 'entity_type' => 'PurchaseOrder',
-                'entity_id'   => $order->id,
+                'entity_id'   => $lockedOrder->id,
                 'table_name'  => 'purchase_orders',
                 'old_values'  => ['status' => $oldStatus],
                 'new_values'  => ['status' => PurchaseOrder::STATUS_CANCELLED],
-                'description' => "پسوڵەی کڕینی {$order->order_number} هەڵوەشێنرایەوە",
+                'description' => "پسوڵەی کڕینی {$lockedOrder->order_number} هەڵوەشێنرایەوە",
                 'user'        => $user,
             ]);
 
-            return $order;
+            return $lockedOrder;
         });
     }
 }

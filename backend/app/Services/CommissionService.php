@@ -283,9 +283,7 @@ class CommissionService
 
             if ($commission->status !== SalesmanCommission::STATUS_CALCULATED) {
                 if ($commission->status === SalesmanCommission::STATUS_APPROVED) {
-                    throw ValidationException::withMessages([
-                        'status' => 'ئەم کۆمسیۆنە پێشتر پەسەند کراوە.',
-                    ]);
+                    return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver']);
                 }
                 if ($commission->status === SalesmanCommission::STATUS_PAID) {
                     throw ValidationException::withMessages([
@@ -353,9 +351,7 @@ class CommissionService
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_PAID) {
-                throw ValidationException::withMessages([
-                    'status' => 'پارەی ئەم کۆمسیۆنە پێشتر دراوە و ناتوانرێت دووبارە بدرێتەوە.',
-                ]);
+                return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver', 'payer']);
             }
 
             if ($commission->status === SalesmanCommission::STATUS_CALCULATED) {
@@ -436,9 +432,7 @@ class CommissionService
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_CANCELLED) {
-                throw ValidationException::withMessages([
-                    'status' => 'ئەم کۆمسیۆنە پێشتر هەڵوەشێنراوەتەوە.',
-                ]);
+                return $commission;
             }
 
             if ($commission->status === SalesmanCommission::STATUS_PAID) {

@@ -96,12 +96,19 @@ class DeliveryTripService
         $result = DB::transaction(function () use ($tripOrderId, $data, $user) {
 
             // هێنانی ئۆردەری ناو گەشتەکە لەگەڵ پسوڵە سەرەکییەکە و کڕیارەکە
-            $tripOrder = \App\Models\DeliveryTripOrder::with(['order.customer', 'trip'])->findOrFail($tripOrderId);
+            $tripOrder = \App\Models\DeliveryTripOrder::lockForUpdate()->with(['order.customer', 'trip'])->findOrFail($tripOrderId);
             $salesOrder = $tripOrder->order;
             $customer = $salesOrder->customer;
 
             if ($tripOrder->status === 'DELIVERED') {
-                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر گەیندراوە.']);
+                return [
+                    'trip_order' => $tripOrder,
+                    'order' => $salesOrder,
+                    'payment' => null,
+                    'received_amount' => $tripOrder->received_amount ?? 0,
+                    'previous_balance' => $customer->current_balance,
+                    'new_balance' => $customer->current_balance,
+                ];
             }
 
             $receivedAmount = $data['received_amount'];
@@ -215,8 +222,12 @@ class DeliveryTripService
     public function failOrder(int $tripOrderId, array $data, $user): \App\Models\DeliveryTripOrder
     {
         $tripOrder = DB::transaction(function () use ($tripOrderId, $data, $user) {
-            $tripOrder = \App\Models\DeliveryTripOrder::with(['order', 'trip'])->findOrFail($tripOrderId);
+            $tripOrder = \App\Models\DeliveryTripOrder::lockForUpdate()->with(['order', 'trip'])->findOrFail($tripOrderId);
             $salesOrder = $tripOrder->order;
+
+            if ($tripOrder->status === 'FAILED') {
+                return $tripOrder;
+            }
 
             if ($tripOrder->status !== 'PENDING') {
                 throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر چارەسەر کراوە.']);
