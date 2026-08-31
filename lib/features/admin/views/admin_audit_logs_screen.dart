@@ -34,14 +34,14 @@ class AdminAuditLogsScreen extends ConsumerWidget {
           data: (logs) {
             if (logs.isEmpty) {
               return const Center(
-                child: Text('هیچ تۆمارێک نەدۆزرایەوە', style: AppTextStyles.body),
+                child: Text('هیچ تۆمارێک نەدۆزرایەوە', style: AppTextStyles.bodyMedium),
               );
             }
 
             return ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: logs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final log = logs[index];
                 final String action = log['action'] ?? 'N/A';
@@ -62,11 +62,11 @@ class AdminAuditLogsScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'بەکارهێنەر: ${log['user']?['name'] ?? 'سیستەم'}',
-                        style: AppTextStyles.body,
+                        style: AppTextStyles.bodyMedium,
                       ),
                       if (log['payload'] != null)
                         Padding(
-                          padding: const EdgeInsets.top(AppSpacing.xs),
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
                           child: Text(
                             log['payload'].toString(),
                             style: AppTextStyles.caption,
