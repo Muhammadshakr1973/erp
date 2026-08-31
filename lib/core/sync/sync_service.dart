@@ -104,6 +104,22 @@ class SyncService {
         // Resolve ordering dependencies / replace temporary IDs with actual server IDs
         _resolvePendingEntryWithMap(entry, idMap);
 
+        // Dependency Guard: If entityId is still a temporary local ID ('local_...') for a non-creation operation,
+        // it means its parent creation operation has not resolved a server ID yet.
+        final isCreationOp = entry.operationType == 'CREATE_ORDER' ||
+            entry.operationType == 'CREATE_CUSTOMER' ||
+            entry.operationType == 'STORE_DELIVERY' ||
+            entry.operationType == 'STOCK_TRANSFER_CREATE' ||
+            entry.operationType == 'CREATE_SALES_RETURN';
+
+        if (!isCreationOp && entry.entityId != null && entry.entityId!.startsWith('local_')) {
+          // Parent creation has not finished or failed; keep this operation PENDING and wait for parent resolution
+          entry.status = 'PENDING';
+          entry.errorInformation = 'چاوەڕوانی ته‌واوبوونی داواکاری سەرەکی؛ شوێنکەوتوو PENDING دەمێنێتەوە';
+          await entry.save();
+          break;
+        }
+
         entry.status = 'SYNCING';
         await entry.save();
 
@@ -278,6 +294,43 @@ class SyncService {
       case 'CREATE_SALES_RETURN':
         final response = await api.client.post(
           '/sales-returns',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'PURCHASE_RECEIVE':
+        final response = await api.client.post(
+          '/purchase-orders/${entry.entityId}/receive',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'STOCK_TRANSFER_CREATE':
+        final response = await api.client.post(
+          '/stock-transfers',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'STOCK_TRANSFER_COMPLETE':
+        final response = await api.client.post(
+          '/stock-transfers/${entry.entityId}/complete',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'STOCK_TRANSFER_CANCEL':
+        final response = await api.client.post(
+          '/stock-transfers/${entry.entityId}/cancel',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
+      case 'STOCK_ADJUSTMENT':
+        final warehouseId = entry.payload['warehouse_id'] ?? entry.entityId;
+        final productId = entry.payload['product_id'];
+        final response = await api.client.post(
+          '/warehouses/$warehouseId/stock/$productId/adjust',
           data: entry.payload,
           options: options,
         );

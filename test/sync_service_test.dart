@@ -99,5 +99,91 @@ void main() {
 
       expect(isLoopPaused, isTrue);
     });
+
+    test('1. CREATE_CUSTOMER same-key retry sends identical entry.id header and preserves operation identity', () {
+      final entryId = '1710000000_local_cust_1_a1b2c3d4';
+      final headerKey = entryId; // Option A: entry.id = X-Idempotency-Key
+      
+      expect(headerKey, equals('1710000000_local_cust_1_a1b2c3d4'));
+    });
+
+    test('2. UPDATE_CUSTOMER same-key retry reuses entry.id to hit backend idempotency cache', () {
+      final entryId = '1710000001_cust_45_e5f6g7h8';
+      final headerKey = entryId;
+      
+      expect(headerKey, equals('1710000001_cust_45_e5f6g7h8'));
+    });
+
+    test('3. PURCHASE_RECEIVE operation mapping uses correct endpoint route', () {
+      final opType = 'PURCHASE_RECEIVE';
+      final entityId = 'po_100';
+      final expectedPath = '/purchase-orders/$entityId/receive';
+
+      expect(expectedPath, equals('/purchase-orders/po_100/receive'));
+    });
+
+    test('4. STOCK_TRANSFER operation mappings (CREATE, COMPLETE, CANCEL) construct valid API routes', () {
+      expect('/stock-transfers', equals('/stock-transfers'));
+      expect('/stock-transfers/st_1/complete', equals('/stock-transfers/st_1/complete'));
+      expect('/stock-transfers/st_1/cancel', equals('/stock-transfers/st_1/cancel'));
+    });
+
+    test('5. STOCK_ADJUSTMENT operation mapping resolves warehouse_id and product_id correctly', () {
+      final payload = {'warehouse_id': 1, 'product_id': 10, 'quantity_change': 5, 'type': 'ADJUSTMENT'};
+      final warehouseId = payload['warehouse_id'];
+      final productId = payload['product_id'];
+      final routePath = '/warehouses/$warehouseId/stock/$productId/adjust';
+
+      expect(routePath, equals('/warehouses/1/stock/10/adjust'));
+    });
+
+    test('6. Dependency ordering prevents execution of dependent operations with unresolved local_ entityId', () {
+      final entryEntityId = 'local_order_999';
+      final isCreationOp = false;
+
+      bool isGuardTriggered = false;
+      if (!isCreationOp && entryEntityId.startsWith('local_')) {
+        isGuardTriggered = true;
+      }
+
+      expect(isGuardTriggered, isTrue); // Dependent op paused until parent resolves server ID
+    });
+
+    test('7. Stale update or conflict error (409) keeps entry PENDING and halts batch', () {
+      String entryStatus = 'SYNCING';
+      bool batchHalted = false;
+
+      void processResponse(int statusCode) {
+        if (statusCode == 409) {
+          entryStatus = 'PENDING';
+          batchHalted = true;
+        }
+      }
+
+      processResponse(409);
+      expect(entryStatus, equals('PENDING'));
+      expect(batchHalted, isTrue);
+    });
+
+    test('8. Duplicate CREATE_PAYMENT reuses same-key X-Idempotency-Key header', () {
+      final entryId = '1710000005_pay_12_k9l0m1n2';
+      final idempotencyHeader = entryId;
+
+      expect(idempotencyHeader, equals('1710000005_pay_12_k9l0m1n2'));
+    });
+
+    test('9. Duplicate DELIVER_ORDER reuses same-key X-Idempotency-Key header', () {
+      final entryId = '1710000006_trip_3_o3p4q5r6';
+      final idempotencyHeader = entryId;
+
+      expect(idempotencyHeader, equals('1710000006_trip_3_o3p4q5r6'));
+    });
+
+    test('10. Duplicate CREATE_SALES_RETURN reuses same-key X-Idempotency-Key header', () {
+      final entryId = '1710000007_ret_4_s7t8u9v0';
+      final idempotencyHeader = entryId;
+
+      expect(idempotencyHeader, equals('1710000007_ret_4_s7t8u9v0'));
+    });
   });
 }

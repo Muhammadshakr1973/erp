@@ -53,4 +53,66 @@ class CustomerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('customers', ['name' => 'New Name', 'price_tier' => 'WHOLESALE']);
     }
+
+    /** @test */
+    public function create_customer_is_idempotent_with_same_key()
+    {
+        $idempotencyKey = 'cust-create-key-123';
+        $payload = [
+            'name' => 'Idempotent Customer',
+            'phone' => '07509998877',
+            'price_tier' => 'RETAIL'
+        ];
+
+        // First attempt
+        $res1 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/customers', $payload);
+
+        $res1->assertStatus(201);
+        $customerId = $res1->json('data.id');
+
+        // Retry attempt with SAME key
+        $res2 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/customers', $payload);
+
+        $res2->assertStatus(201);
+        $res2->assertHeader('X-Cache-Lookup', 'HIT');
+        $res2->assertJsonPath('data.id', $customerId);
+
+        // Ensure exactly ONE customer record exists in DB
+        $this->assertEquals(1, Customer::where('phone', '07509998877')->count());
+    }
+
+    /** @test */
+    public function update_customer_is_idempotent_with_same_key()
+    {
+        $customer = Customer::create([
+            'name' => 'Original Name',
+            'phone' => '07505554433',
+            'price_tier' => 'RETAIL'
+        ]);
+
+        $idempotencyKey = 'cust-update-key-456';
+        $payload = [
+            'name' => 'Updated Idempotent Name',
+            'price_tier' => 'WHOLESALE'
+        ];
+
+        // First attempt
+        $res1 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->putJson('/api/v1/customers/' . $customer->id, $payload);
+
+        $res1->assertStatus(200);
+
+        // Retry attempt with SAME key
+        $res2 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->putJson('/api/v1/customers/' . $customer->id, $payload);
+
+        $res2->assertStatus(200);
+        $res2->assertHeader('X-Cache-Lookup', 'HIT');
+    }
 }

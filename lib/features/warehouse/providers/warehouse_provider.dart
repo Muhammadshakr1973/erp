@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/sync/sync_service.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
@@ -33,14 +34,16 @@ final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) 
 
 final warehouseActionsProvider = Provider<WarehouseActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  return WarehouseActions(api, ref);
+  final syncService = ref.watch(syncServiceProvider);
+  return WarehouseActions(api, syncService, ref);
 });
 
 class WarehouseActions {
   final ApiClient api;
+  final SyncService syncService;
   final Ref ref;
 
-  WarehouseActions(this.api, this.ref);
+  WarehouseActions(this.api, this.syncService, this.ref);
 
   Future<void> packItem(int itemId, bool packed) async {
     try {
@@ -76,10 +79,18 @@ class WarehouseActions {
     String? notes,
   }) async {
     try {
-      await api.client.post(
-        '/warehouses/$warehouseId/stock/$productId/adjust',
-        data: {'quantity_change': quantityChange, 'type': type, 'notes': notes},
+      await syncService.enqueueOperation(
+        entityId: warehouseId.toString(),
+        operationType: 'STOCK_ADJUSTMENT',
+        payload: {
+          'warehouse_id': warehouseId,
+          'product_id': productId,
+          'quantity_change': quantityChange,
+          'type': type,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        },
       );
+      await syncService.syncPendingOperations();
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
       throw Exception(api.parseError(e));

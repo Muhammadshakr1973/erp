@@ -71,8 +71,8 @@ Route::prefix('v1')->group(function () {
         // Customers (Fine-grained: view vs manage)
         Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:customers.view');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:customers.view');
-        Route::post('/customers', [CustomerController::class, 'store'])->middleware('permission:customers.manage');
-        Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware('permission:customers.manage');
+        Route::post('/customers', [CustomerController::class, 'store'])->middleware(['permission:customers.manage', 'idempotent']);
+        Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware(['permission:customers.manage', 'idempotent']);
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('permission:customers.manage');
         Route::get('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
         
@@ -136,7 +136,7 @@ Route::prefix('v1')->group(function () {
         
         Route::get('/purchase-requirements', [PurchaseRequirementController::class, 'index'])->middleware('permission:suppliers.manage');
         Route::get('/purchase-requirements/group', [PurchaseRequirementController::class, 'group'])->middleware('permission:suppliers.manage');
-        Route::post('/purchase-requirements/convert', [PurchaseRequirementController::class, 'convert'])->middleware('permission:suppliers.manage');
+        Route::post('/purchase-requirements/convert', [PurchaseRequirementController::class, 'convert'])->middleware(['permission:suppliers.manage', 'idempotent']);
         
         Route::get('/reports/dashboard', [ReportController::class, 'dashboard'])->middleware('permission:users.manage');
         Route::get('/reports/sales', [ReportController::class, 'sales'])->middleware('permission:users.manage');
