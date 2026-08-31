@@ -122,7 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'create-order',
             name: 'createOrder',
-            builder: (context, state) => const CreateOrderScreen(),
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is OrderModel) {
+                return CreateOrderScreen(existingOrder: extra);
+              }
+              return const CreateOrderScreen();
+            },
           ),
         ],
       ),

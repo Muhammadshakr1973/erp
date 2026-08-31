@@ -85,6 +85,19 @@ class OrderActions {
     ref.invalidate(ordersListProvider);
   }
 
+  Future<void> updateOrder(int orderId, Map<String, dynamic> data) async {
+    final entityId = orderId.toString();
+
+    await syncService.enqueueOperation(
+      entityId: entityId,
+      operationType: 'UPDATE_ORDER',
+      payload: data,
+    );
+
+    ref.invalidate(singleOrderProvider(entityId));
+    ref.invalidate(ordersListProvider);
+  }
+
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
     final response = await api.client.post(
       '/orders/$orderId/status',

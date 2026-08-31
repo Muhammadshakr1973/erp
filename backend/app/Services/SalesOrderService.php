@@ -176,6 +176,10 @@ class SalesOrderService
 
     public function updateOrder(SalesOrder $order, array $data, $user): SalesOrder
     {
+        if ($order->shared_key || isset($data['shared_key']) || isset($data['version'])) {
+            return $this->updateSharedOrder($order, $data, $user);
+        }
+
         if ($order->status !== SalesOrder::STATUS_DRAFT) {
             throw ValidationException::withMessages([
                 'status' => 'تەنها پسوڵەی DRAFT دەتوانرێت دەستکاری بکرێت.'

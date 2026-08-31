@@ -230,11 +230,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(orderActionsProvider).createOrder(payload);
+      if (widget.existingOrder != null) {
+        await ref
+            .read(orderActionsProvider)
+            .updateOrder(widget.existingOrder!.id, payload);
+      } else {
+        await ref.read(orderActionsProvider).createOrder(payload);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('پسوڵەکە بە سەرکەوتوویی دروستکرا'),
+          SnackBar(
+            content: Text(
+              widget.existingOrder != null
+                  ? 'پسوڵەکە بە سەرکەوتوویی نوێکرایەوە'
+                  : 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
+            ),
             backgroundColor: AppColors.success,
           ),
         );

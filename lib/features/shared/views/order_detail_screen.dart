@@ -379,6 +379,16 @@ class OrderDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
+        if (order.status == OrderModel.statusDraft) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            text: 'دستکاریی پسوڵە (Edit Order)',
+            type: AppButtonType.outline,
+            onPressed: () {
+              context.push('/salesman/create-order', extra: order);
+            },
+          ),
+        ],
         if (order.canCancel) ...[
           const SizedBox(height: AppSpacing.md),
           AppButton(
