@@ -73,24 +73,27 @@ class PurchaseOrderService
      */
     public function receiveOrder(PurchaseOrder $order, $user): PurchaseOrder
     {
-        if ($order->status === PurchaseOrder::STATUS_RECEIVED || $order->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
-            throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر وەرگیراوە.']);
-        }
-
-        if ($order->status === PurchaseOrder::STATUS_CANCELLED) {
-            throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی هەڵوەشاوە وەربگیرێت.']);
-        }
-
         return DB::transaction(function () use ($order, $user) {
+            // Lock the purchase order to prevent concurrent receiving race conditions
+            $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
-            $supplier = Supplier::lockForUpdate()->findOrFail($order->supplier_id);
+            if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
+                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەیە پێشتر وەرگیراوە.']);
+            }
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی هەڵوەشاوە وەربگیرێت.']);
+            }
+
+            $supplier = Supplier::lockForUpdate()->findOrFail($lockedOrder->supplier_id);
 
             // Sort items deterministically by product_id ASC to eliminate deadlock risks
-            $sortedItems = $order->items->sortBy('product_id');
+            $sortedItems = $lockedOrder->items->sortBy('product_id');
+
             foreach ($sortedItems as $item) {
                 // ١. زیادکردنی ستۆک لە کۆگا
                 $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $order->warehouse_id, 'product_id' => $item->product_id],
+                    ['warehouse_id' => $lockedOrder->warehouse_id, 'product_id' => $item->product_id],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
@@ -99,7 +102,7 @@ class PurchaseOrderService
                     'PURCHASE',
                     $user->id,
                     'purchase_order',
-                    $order->id
+                    $lockedOrder->id
                 );
 
                 // نوێکردنەوەی بڕی وەرگیراو لەناو ئایتمەکە
@@ -108,20 +111,20 @@ class PurchaseOrderService
 
             // ٣. هەژمارکردنی قەرزی کۆمپانیا (ئێمە قەرزدار دەبین)
             $previousBalance = (int) $supplier->current_balance;
-            $newBalance = $previousBalance + $order->total_amount; // قەرزەکەمان زیاد دەکات
+            $newBalance = $previousBalance + $lockedOrder->total_amount; // قەرزەکەمان زیاد دەکات
 
             SupplierLedger::create([
                 'supplier_id'    => $supplier->id,
                 'entry_type'     => 'PURCHASE',
                 'type'           => 'credit',
                 'debit'          => 0,
-                'credit'         => $order->total_amount,
-                'amount'         => $order->total_amount,
+                'credit'         => $lockedOrder->total_amount,
+                'amount'         => $lockedOrder->total_amount,
                 'balance_before' => $previousBalance,
                 'balance_after'  => $newBalance,
                 'reference_type' => 'purchase_order',
-                'reference_id'   => $order->id,
-                'description'    => "کڕینی کاڵا بە پسوڵەی {$order->order_number}",
+                'reference_id'   => $lockedOrder->id,
+                'description'    => "کڕینی کاڵا بە پسوڵەی {$lockedOrder->order_number}",
                 'created_by'     => $user->id,
             ]);
 
@@ -129,34 +132,34 @@ class PurchaseOrderService
             $supplier->update(['current_balance' => $newBalance]);
 
             // ٤. گۆڕینی دۆخی پسوڵەکە بۆ RECEIVED
-            $order->update([
+            $lockedOrder->update([
                 'status'      => 'RECEIVED',
                 'received_at' => now(),
             ]);
 
             // دۆخی داواکارییەکانی کڕینی پەیوەستکراو دادەخرێت
-            $order->requirements()->update(['status' => 'CLOSED']);
+            $lockedOrder->requirements()->update(['status' => 'CLOSED']);
 
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'RECEIVE',
                 'entity_type' => 'PurchaseOrder',
-                'entity_id'   => $order->id,
+                'entity_id'   => $lockedOrder->id,
                 'table_name'  => 'purchase_orders',
                 'old_values'  => [
                     'status' => 'DRAFT',
                 ],
                 'new_values'  => [
                     'status'           => 'RECEIVED',
-                    'order_number'     => $order->order_number,
+                    'order_number'     => $lockedOrder->order_number,
                     'supplier_id'      => $supplier->id,
                     'supplier_balance' => $newBalance,
-                    'total_amount'     => $order->total_amount,
+                    'total_amount'     => $lockedOrder->total_amount,
                 ],
-                'description' => "کاڵاکانی پسوڵەی کڕین {$order->order_number} بە سەرکەوتوویی وەرگیران لە کۆگا و ستۆک زیادکرا",
+                'description' => "کاڵاکانی پسوڵەی کڕین {$lockedOrder->order_number} بە سەرکەوتوویی وەرگیران لە کۆگا و ستۆک زیادکرا",
                 'user'        => $user,
             ]);
 
-            return $order;
+            return $lockedOrder;
         });
     }
 
