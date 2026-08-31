@@ -228,7 +228,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    final theme = Theme.of(context);
     final productsAsync = ref.watch(filteredProductsProvider);
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
@@ -899,18 +898,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               if (_discountType == 'PERCENT' && _discountValue > 100) {
                                 _discountValue = 100;
                               }
-                            });
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                          ),
-                          onChanged: (val) {
-                            final parsed = double.tryParse(val) ?? 0.0;
-                            setModalState(() {
-                              _discountPercent = parsed;
                             });
                             setState(() {});
                           },
