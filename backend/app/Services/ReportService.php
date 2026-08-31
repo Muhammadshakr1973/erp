@@ -278,13 +278,21 @@ class ReportService
                 $ordersQuery->where('warehouse_id', $filters['warehouse_id']);
             }
 
-            $totalOrders = (clone $ordersQuery)->count();
-            $deliveredOrders = (clone $ordersQuery)->where('status', SalesOrder::STATUS_DELIVERED)->count();
-            $totalSales = (int) (clone $ordersQuery)->sum('total_amount');
-            $totalProfit = (int) (clone $ordersQuery)->sum('total_profit');
+            $ordersForComp = (clone $ordersQuery)->with('commissionDetail')->get();
+            $totalOrders = $ordersForComp->count();
+            $deliveredOrders = $ordersForComp->where('status', SalesOrder::STATUS_DELIVERED)->count();
+            $totalSales = (int) $ordersForComp->sum('total_amount');
+            $totalProfit = (int) $ordersForComp->sum('total_profit');
 
             $rate = (float) ($salesman->commission_rate ?? 0);
-            $estimatedCommission = (int) round(($totalProfit * $rate) / 100);
+            $estimatedCommission = 0;
+            foreach ($ordersForComp as $order) {
+                if ($order->commissionDetail) {
+                    $estimatedCommission += (int) $order->commissionDetail->commission_amount;
+                } else {
+                    $estimatedCommission += (int) round(($order->total_profit * $rate) / 100);
+                }
+            }
 
             // Payments collected by this salesman in period
             $paymentsCollected = (int) CustomerPayment::where('collected_by', $salesman->id)

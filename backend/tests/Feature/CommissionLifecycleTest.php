@@ -479,4 +479,148 @@ class CommissionLifecycleTest extends TestCase
         $myCommissionsRes = $this->getJson('/api/v1/commissions/my-commissions');
         $myCommissionsRes->assertStatus(200);
     }
+
+    /**
+     * Test returns deduction: commission must be calculated on net values if returns are completed.
+     */
+    public function test_returns_deduction_calculates_commission_on_net_profit(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Create delivered order: Sales 200,000, Cost 120,000, Profit 80,000
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-20260828-999',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 200000,
+            'total_cost'      => 120000,
+            'total_profit'    => 80000,
+            'delivered_at'    => '2026-08-28 10:00:00',
+        ]);
+
+        $orderItem = \App\Models\SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id'     => 1, // Let's assume product_id 1
+            'quantity'       => 10,
+            'unit_price'     => 20000,
+            'cost_price'     => 12000,
+            'total'          => 200000,
+        ]);
+
+        // Create completed return on this order
+        $return = \App\Models\SalesReturn::create([
+            'return_number'       => 'RET-20260828-001',
+            'sales_order_id'      => $order->id,
+            'customer_id'         => $this->customer->id,
+            'status'              => 'completed',
+            'total_return_amount' => 40000, // Returned 2 items
+            'created_by'          => $this->admin->id,
+        ]);
+
+        $returnItem = \App\Models\SalesReturnItem::create([
+            'sales_return_id'     => $return->id,
+            'sales_order_item_id' => $orderItem->id,
+            'product_id'          => 1,
+            'quantity'            => 2,
+            'unit_price'          => 20000,
+            'total'               => 40000,
+        ]);
+
+        // Net sales: 200,000 - 40,000 = 160,000
+        // Net profit: 80,000 - (2 * (20,000 - 12,000)) = 80,000 - 16,000 = 64,000
+        // Commission at 5%: 64,000 * 5% = 3,200
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::with('details')->findOrFail($commissionId);
+
+        $this->assertEquals(160000, $commission->total_sales);
+        $this->assertEquals(64000, $commission->total_profit);
+        $this->assertEquals(3200, $commission->commission_amount);
+    }
+
+    /**
+     * Test preventing cancellation of an order that is associated with an active commission.
+     */
+    public function test_cannot_cancel_order_with_active_commission(): void
+    {
+        $this->actingAs($this->admin);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-20260829-888',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 100000,
+            'total_cost'      => 80000,
+            'total_profit'    => 20000,
+            'delivered_at'    => '2026-08-29 10:00:00',
+        ]);
+
+        // Calculate commission
+        $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ])->assertStatus(201);
+
+        // Attempting to cancel the order via SalesOrderService should throw exception
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(\App\Services\SalesOrderService::class)->transitionTo($order, SalesOrder::STATUS_CANCELLED, $this->admin);
+    }
+
+    /**
+     * Test preventing cancellation of an already PAID commission.
+     */
+    public function test_cannot_cancel_paid_commission(): void
+    {
+        $this->actingAs($this->admin);
+
+        SalesOrder::create([
+            'order_number'    => 'SO-20260830-777',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 100000,
+            'total_cost'      => 80000,
+            'total_profit'    => 20000,
+            'delivered_at'    => '2026-08-30 10:00:00',
+        ]);
+
+        // Calculate
+        $calcRes = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+        $commissionId = $calcRes->json('data.id');
+
+        // Approve
+        $this->postJson("/api/v1/commissions/{$commissionId}/approve")->assertStatus(200);
+
+        // Pay
+        $this->postJson("/api/v1/commissions/{$commissionId}/pay", [
+            'payment_method' => 'cash',
+        ])->assertStatus(200);
+
+        // Attempting to cancel the PAID commission should fail
+        $cancelRes = $this->postJson("/api/v1/commissions/{$commissionId}/cancel", [
+            'reason' => 'Should fail',
+        ]);
+        $cancelRes->assertStatus(422);
+    }
 }

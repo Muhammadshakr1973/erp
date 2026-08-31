@@ -6,12 +6,49 @@ use App\Models\SalesmanCommission;
 use App\Models\SalesmanCommissionDetail;
 use App\Models\SalesOrder;
 use App\Models\User;
+use App\Models\SalesReturn;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CommissionService
 {
+    /**
+     * هەژمارکردنی بەهاکانی نێتی پسوڵە لەگەڵ گەڕانەوەکان
+     */
+    public function getOrderNetValues(SalesOrder $order): array
+    {
+        $returnedAmount = 0;
+        $returnedProfit = 0;
+
+        // وەرگرتنی گەڕانەوە سەرکەوتووەکانی ئەم پسوڵەیە
+        $returns = SalesReturn::where('sales_order_id', $order->id)
+            ->where('status', 'completed')
+            ->with('items.orderItem')
+            ->get();
+
+        foreach ($returns as $return) {
+            $returnedAmount += (int) $return->total_return_amount;
+            foreach ($return->items as $item) {
+                $orderItem = $item->orderItem;
+                if ($orderItem) {
+                    $unitPrice = (int) $orderItem->unit_price;
+                    $costPrice = (int) ($orderItem->cost_price ?? 0);
+                    $itemProfit = $unitPrice - $costPrice;
+                    $returnedProfit += (int) ($item->quantity * $itemProfit);
+                }
+            }
+        }
+
+        $netSales = max(0, (int) $order->total_amount - $returnedAmount);
+        $netProfit = max(0, (int) $order->total_profit - $returnedProfit);
+
+        return [
+            'net_sales'  => $netSales,
+            'net_profit' => $netProfit,
+        ];
+    }
+
     /**
      * پیشاندانی سەرەتایی (Preview) پسوڵە شایستەکان بۆ هەژمارکردنی کۆمسیۆن پێش پاشەکەوتکردن
      */
@@ -27,7 +64,7 @@ class CommissionService
 
         $rate = (float) ($salesman->commission_rate ?? 0);
 
-        $orders = SalesOrder::with('customer:id,name,phone')
+        $orders = SalesOrder::with(['customer:id,name,phone', 'items'])
             ->where('salesman_id', $salesman->id)
             ->where('status', SalesOrder::STATUS_DELIVERED)
             ->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
@@ -41,27 +78,35 @@ class CommissionService
             ->orderBy('delivered_at')
             ->get();
 
-        $totalSales = (int) $orders->sum('total_amount');
-        $totalProfit = (int) $orders->sum('total_profit');
-        $estimatedCommission = (int) round(($totalProfit * $rate) / 100);
+        $totalSales = 0;
+        $totalProfit = 0;
+        $orderItems = [];
 
-        $orderItems = $orders->map(function ($order) use ($rate) {
-            $orderProfit = (int) $order->total_profit;
-            $orderCommission = (int) round(($orderProfit * $rate) / 100);
+        foreach ($orders as $order) {
+            $netValues = $this->getOrderNetValues($order);
+            $orderNetSales = $netValues['net_sales'];
+            $orderNetProfit = $netValues['net_profit'];
 
-            return [
+            $totalSales += $orderNetSales;
+            $totalProfit += $orderNetProfit;
+
+            $orderCommission = (int) round(($orderNetProfit * $rate) / 100);
+
+            $orderItems[] = [
                 'id'                 => $order->id,
                 'order_number'       => $order->order_number,
                 'customer_id'        => $order->customer_id,
                 'customer_name'      => $order->customer?->name ?? 'N/A',
                 'customer_phone'     => $order->customer?->phone ?? 'N/A',
                 'delivered_at'       => $order->delivered_at?->toIso8601String(),
-                'total_amount'       => (int) $order->total_amount,
-                'total_profit'       => $orderProfit,
+                'total_amount'       => $orderNetSales,
+                'total_profit'       => $orderNetProfit,
                 'commission_rate'    => $rate,
                 'commission_amount'  => $orderCommission,
             ];
-        });
+        }
+
+        $estimatedCommission = (int) round(($totalProfit * $rate) / 100);
 
         return [
             'salesman' => [
@@ -86,6 +131,13 @@ class CommissionService
      */
     public function calculateCommission(array $data, User $user): SalesmanCommission
     {
+        // دڵنیابوونەوە لە دەسەڵاتی بەکارهێنەر
+        if (!$user->isAdmin() && !$user->isOwner() && !$user->hasPermission('users.manage')) {
+            throw ValidationException::withMessages([
+                'authorization' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە.',
+            ]);
+        }
+
         $result = DB::transaction(function () use ($data, $user) {
             $salesman = User::lockForUpdate()->findOrFail($data['salesman_id']);
 
@@ -135,13 +187,30 @@ class CommissionService
                 ]);
             }
 
-            $totalSales = (int) $orders->sum('total_amount');
-            $totalProfit = (int) $orders->sum('total_profit');
-
-            // وەرگرتنی ڕێژەی کۆمسیۆنی مەندوب لەم ساتەدا (Historical Snapshot)
+            $totalSales = 0;
+            $totalProfit = 0;
             $rate = (float) ($salesman->commission_rate ?? 0);
 
-            // هەژمارکردنی پارەی کۆمسیۆن بەپێی قازانج (DEC-005)
+            $orderDetailsToCreate = [];
+
+            foreach ($orders as $order) {
+                $netValues = $this->getOrderNetValues($order);
+                $orderNetSales = $netValues['net_sales'];
+                $orderNetProfit = $netValues['net_profit'];
+
+                $totalSales += $orderNetSales;
+                $totalProfit += $orderNetProfit;
+
+                $orderCommission = (int) round(($orderNetProfit * $rate) / 100);
+
+                $orderDetailsToCreate[] = [
+                    'sales_order_id'    => $order->id,
+                    'sales_amount'      => $orderNetSales,
+                    'profit_amount'     => $orderNetProfit,
+                    'commission_amount' => $orderCommission,
+                ];
+            }
+
             $commissionAmount = (int) round(($totalProfit * $rate) / 100);
 
             // ١. تۆمارکردنی خشتەی سەرەکی کۆمسیۆن
@@ -159,18 +228,11 @@ class CommissionService
                 'notes'             => $data['notes'] ?? null,
             ]);
 
-            // ٢. تۆمارکردنی وردەکارییەکان بۆ هەر پسوڵەیەک لەگەڵ چەسپاندنی مێژوویی قازانج و کۆمسیۆن
-            foreach ($orders as $order) {
-                $orderProfit = (int) $order->total_profit;
-                $orderCommission = (int) round(($orderProfit * $rate) / 100);
-
-                SalesmanCommissionDetail::create([
+            // ٢. تۆمارکردنی وردەکارییەکان
+            foreach ($orderDetailsToCreate as $detail) {
+                SalesmanCommissionDetail::create(array_merge($detail, [
                     'salesman_commission_id' => $commission->id,
-                    'sales_order_id'         => $order->id,
-                    'sales_amount'           => (int) $order->total_amount,
-                    'profit_amount'          => $orderProfit,
-                    'commission_amount'      => $orderCommission,
-                ]);
+                ]));
             }
 
             // تۆمارکردنی لۆگی چاودێری
@@ -209,6 +271,13 @@ class CommissionService
      */
     public function approveCommission(int $commissionId, User $user, ?string $notes = null): SalesmanCommission
     {
+        // دڵنیابوونەوە لە دەسەڵاتی بەکارهێنەر
+        if (!$user->isAdmin() && !$user->isOwner() && !$user->hasPermission('users.manage')) {
+            throw ValidationException::withMessages([
+                'authorization' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە.',
+            ]);
+        }
+
         return DB::transaction(function () use ($commissionId, $user, $notes) {
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
@@ -273,6 +342,13 @@ class CommissionService
      */
     public function payCommission(int $commissionId, User $user, array $paymentData): SalesmanCommission
     {
+        // دڵنیابوونەوە لە دەسەڵاتی بەکارهێنەر
+        if (!$user->isAdmin() && !$user->isOwner() && !$user->hasPermission('users.manage')) {
+            throw ValidationException::withMessages([
+                'authorization' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە.',
+            ]);
+        }
+
         $result = DB::transaction(function () use ($commissionId, $user, $paymentData) {
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
@@ -349,12 +425,25 @@ class CommissionService
      */
     public function cancelCommission(int $commissionId, User $user, string $reason): SalesmanCommission
     {
+        // دڵنیابوونەوە لە دەسەڵاتی بەکارهێنەر
+        if (!$user->isAdmin() && !$user->isOwner() && !$user->hasPermission('users.manage')) {
+            throw ValidationException::withMessages([
+                'authorization' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە.',
+            ]);
+        }
+
         return DB::transaction(function () use ($commissionId, $user, $reason) {
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_CANCELLED) {
                 throw ValidationException::withMessages([
                     'status' => 'ئەم کۆمسیۆنە پێشتر هەڵوەشێنراوەتەوە.',
+                ]);
+            }
+
+            if ($commission->status === SalesmanCommission::STATUS_PAID) {
+                throw ValidationException::withMessages([
+                    'status' => 'ناتوانرێت کۆمسیۆنی دراو (PAID) هەڵبوەشێنرێتەوە.',
                 ]);
             }
 

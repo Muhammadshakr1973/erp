@@ -321,6 +321,23 @@ class SalesOrderService
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم پسوڵەیە.'
                     ]);
                 }
+
+                // ڕێگری لە هەڵوەشاندنەوەی پسوڵەیەک کە کۆمسیۆنی چالاکی بۆ هەژمارکراوە
+                $hasActiveCommission = \App\Models\SalesmanCommissionDetail::where('sales_order_id', $lockedOrder->id)
+                    ->whereHas('commission', function ($q) {
+                        $q->whereIn('status', [
+                            \App\Models\SalesmanCommission::STATUS_CALCULATED,
+                            \App\Models\SalesmanCommission::STATUS_APPROVED,
+                            \App\Models\SalesmanCommission::STATUS_PAID,
+                        ]);
+                    })
+                    ->exists();
+
+                if ($hasActiveCommission) {
+                    throw ValidationException::withMessages([
+                        'status' => 'ناتوانرێت پسوڵە هەڵبوەشێنرێتەوە چونکە لە کۆمسیۆنێکی چالاکدا بەکارهاتووە. تکایە سەرەتا کۆمسیۆنەکە هەڵوەشێنەرەوە.',
+                    ]);
+                }
             }
 
             // ٣. ئەنجامدانی کردارە لۆجیکییە پەیوەندیدارەکان بە هەر دۆخێکەوە
