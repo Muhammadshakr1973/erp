@@ -5,7 +5,6 @@ import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/driver_providers.dart';
@@ -47,7 +46,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
               children: [
                 Text(
                   'کێشەیەک لە بارکردنی گەشتەکە ڕوویدا',
-                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.error),
+                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(err.toString(), style: AppTextStyles.caption),
@@ -134,14 +133,14 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                     AppButton(
                                       text: 'گەیشت',
                                       size: AppButtonSize.sm,
-                                      type: AppButtonType.success,
+                                      type: AppButtonType.primary,
                                       onPressed: () => _showDeliverDialog(tripOrder),
                                     ),
                                     const SizedBox(width: AppSpacing.sm),
                                     AppButton(
                                       text: 'شکست',
                                       size: AppButtonSize.sm,
-                                      type: AppButtonType.error,
+                                      type: AppButtonType.danger,
                                       onPressed: () => _showFailDialog(tripOrder),
                                     ),
                                   ],
@@ -183,7 +182,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
       case 'delivered':
         return StatusBadgeType.success;
       case 'failed':
-        return StatusBadgeType.error;
+        return StatusBadgeType.danger;
       default:
         return StatusBadgeType.warning;
     }
@@ -199,7 +198,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
           _buildSummaryItem('هەموو', '$total'),
           _buildSummaryItem('گەیشتوو', '$delivered', AppColors.success),
           _buildSummaryItem('ماوە', '$pending', AppColors.warning),
-          _buildSummaryItem('شکست', '$failed', AppColors.error),
+          _buildSummaryItem('شکست', '$failed', AppColors.danger),
         ],
       ),
     );
@@ -301,7 +300,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('شکست لێتۆمارکردن: ${e.toString()}'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -328,7 +327,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: selectedReason,
+                        initialValue: selectedReason,
                         onChanged: (val) {
                           if (val != null) {
                             setDialogState(() => selectedReason = val);
@@ -372,7 +371,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                     child: const Text('پاشگەزبوونەوە'),
                   ),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
                     onPressed: () {
                       Navigator.of(context).pop();
                       _submitFail(tripOrder.id, selectedReason, notesController.text);
@@ -410,7 +409,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('شکست لە تۆمارکردن: ${e.toString()}'),
-            backgroundColor: AppColors.error,
+            backgroundColor: AppColors.danger,
           ),
         );
       }

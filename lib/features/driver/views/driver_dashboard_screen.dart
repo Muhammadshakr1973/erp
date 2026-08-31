@@ -38,7 +38,7 @@ class DriverDashboardScreen extends ConsumerWidget {
               children: [
                 Text(
                   'کێشەیەک ڕوویدا لە بارکردنی زانیارییەکان',
-                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.error),
+                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(err.toString(), style: AppTextStyles.caption),
@@ -124,7 +124,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(AppSpacing.xl),
                         child: Text(
                           'هیچ گەشتێک نییە بۆ ئەمڕۆ',
-                          style: AppTextStyles.body.copyWith(color: Colors.grey),
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
                         ),
                       ),
                     )
@@ -162,7 +162,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(trip.status).withOpacity(0.1),
+                                color: _getStatusColor(trip.status).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(

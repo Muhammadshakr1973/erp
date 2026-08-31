@@ -30,7 +30,7 @@ class TodayTripsScreen extends ConsumerWidget {
             children: [
               Text(
                 'هەڵەیەک ڕوویدا لە بارکردنی گەشتەکان',
-                style: AppTextStyles.bodyBold.copyWith(color: AppColors.error),
+                style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
               ),
               const SizedBox(height: AppSpacing.sm),
               ElevatedButton(
@@ -45,7 +45,7 @@ class TodayTripsScreen extends ConsumerWidget {
             return Center(
               child: Text(
                 'هیچ گەشتێکی چالاک بۆ تۆ بەردەست نییە.',
-                style: AppTextStyles.body.copyWith(color: Colors.grey),
+                style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
               ),
             );
           }
