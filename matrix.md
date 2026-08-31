@@ -1,0 +1,104 @@
+| HTTP | Route | Controller@Method | STATUS |
+|---|---|---|---|
+| POST | /auth/login | AuthController@login | MISMATCH (Frontend omits device_name) |
+| POST | /auth/logout | AuthController@logout | UNVERIFIED |
+| GET | /auth/me | AuthController@me | UNVERIFIED |
+| GET | /products | ProductController@index | UNVERIFIED |
+| GET | /products/{product} | ProductController@show | UNVERIFIED |
+| POST | /products | ProductController@store | UNVERIFIED |
+| PUT | /products/{product} | ProductController@update | UNVERIFIED |
+| DELETE | /products/{product} | ProductController@destroy | UNVERIFIED |
+| GET | /categories | CategoryController@index | UNVERIFIED |
+| POST | /categories | CategoryController@store | UNVERIFIED |
+| GET | /categories/{category} | CategoryController@show | UNVERIFIED |
+| PUT | /categories/{category} | CategoryController@update | UNVERIFIED |
+| DELETE | /categories/{category} | CategoryController@destroy | UNVERIFIED |
+| GET | /salesmen | RouteController@getSalesmen | UNVERIFIED |
+| GET | /routes | RouteController@index | UNVERIFIED |
+| GET | /routes/{route} | RouteController@show | UNVERIFIED |
+| POST | /routes | RouteController@store | UNVERIFIED |
+| PUT | /routes/{route} | RouteController@update | UNVERIFIED |
+| DELETE | /routes/{route} | RouteController@destroy | UNVERIFIED |
+| POST | /routes/{route}/assign-salesman | RouteController@assignSalesman | UNVERIFIED |
+| DELETE | /routes/{route}/remove-salesman/{salesmanId} | RouteController@removeSalesman | UNVERIFIED |
+| GET | /routes/{route}/customers | RouteController@customers | UNVERIFIED |
+| POST | /routes/{route}/reorder-customers | RouteController@reorderCustomers | UNVERIFIED |
+| POST | /routes/{route}/assign-customers | RouteController@assignCustomers | UNVERIFIED |
+| GET | /suppliers | SupplierController@index | UNVERIFIED |
+| GET | /suppliers/{id} | SupplierController@show | UNVERIFIED |
+| POST | /suppliers | SupplierController@store | UNVERIFIED |
+| PUT | /suppliers/{id} | SupplierController@update | UNVERIFIED |
+| DELETE | /suppliers/{id} | SupplierController@destroy | UNVERIFIED |
+| POST | /suppliers/{id}/pay | SupplierController@pay | UNVERIFIED |
+| GET | /suppliers/{id}/ledger | SupplierController@ledger | UNVERIFIED |
+| GET | /suppliers/{id}/reconcile | SupplierController@reconcile | UNVERIFIED |
+| GET | /customers | CustomerController@index | UNVERIFIED |
+| GET | /customers/{customer} | CustomerController@show | UNVERIFIED |
+| POST | /customers | CustomerController@store | UNVERIFIED |
+| PUT | /customers/{customer} | CustomerController@update | UNVERIFIED |
+| DELETE | /customers/{customer} | CustomerController@destroy | UNVERIFIED |
+| GET | /customers/{customer}/reconcile | CustomerController@reconcile | UNVERIFIED |
+| GET | /orders | SalesOrderController@index | UNVERIFIED |
+| POST | /orders | SalesOrderController@store | MISMATCH (Frontend omits discount_type/amount, shared_key, version) |
+| PUT | /orders/{id} | SalesOrderController@update | UNVERIFIED |
+| GET | /orders/{id} | SalesOrderController@show | UNVERIFIED |
+| POST | /orders/{id}/status | SalesOrderController@updateStatus | MISMATCH (Frontend does not call this endpoint, logic bypassing) |
+| GET | /warehouses | WarehouseController@index | UNVERIFIED |
+| POST | /warehouses/{warehouseId}/stock/{productId}/adjust | WarehouseController@adjustStock | UNVERIFIED |
+| GET | /warehouses/{warehouseId}/stock/{productId}/reconcile | WarehouseController@reconcileStock | UNVERIFIED |
+| GET | /warehouse/orders-to-pack | WarehouseController@ordersToPack | UNVERIFIED |
+| POST | /warehouse/pack-item | WarehouseController@packItem | UNVERIFIED |
+| POST | /warehouse/mark-ready | WarehouseController@markReady | UNVERIFIED |
+| GET | /warehouse/stock | WarehouseController@stockList | UNVERIFIED |
+| GET | /warehouse/transactions | WarehouseController@transactions | MISMATCH (Missing Frontend) |
+| POST | /payments | PaymentController@store | UNVERIFIED |
+| GET | /sales-returns | SalesReturnController@index | MISMATCH (Missing Frontend) |
+| GET | /sales-returns/{id} | SalesReturnController@show | MISMATCH (Missing Frontend) |
+| POST | /sales-returns | SalesReturnController@store | MISMATCH (Missing Frontend) |
+| GET | /stock-transfers | StockTransferController@index | UNVERIFIED |
+| GET | /stock-transfers/{id} | StockTransferController@show | UNVERIFIED |
+| POST | /stock-transfers | StockTransferController@store | UNVERIFIED |
+| POST | /stock-transfers/{id}/complete | StockTransferController@complete | UNVERIFIED |
+| GET | /delivery-trips | DeliveryTripController@index | UNVERIFIED |
+| GET | /delivery-trips/{id} | DeliveryTripController@show | UNVERIFIED |
+| POST | /delivery-trips | DeliveryTripController@store | UNVERIFIED |
+| POST | /delivery-trips/orders/{tripOrderId}/deliver | DeliveryTripController@deliverOrder | UNVERIFIED |
+| POST | /delivery-trips/orders/{tripOrderId}/fail | DeliveryTripController@failOrder | UNVERIFIED |
+| GET | /commissions | CommissionController@index | UNVERIFIED |
+| GET | /commissions/summary | CommissionController@summary | UNVERIFIED |
+| GET | /commissions/preview | CommissionController@preview | UNVERIFIED |
+| GET | /commissions/my-commissions | CommissionController@myCommissions | UNVERIFIED |
+| GET | /commissions/{id} | CommissionController@show | UNVERIFIED |
+| POST | /commissions/calculate | CommissionController@calculate | UNVERIFIED |
+| POST | /commissions/{id}/approve | CommissionController@approve | UNVERIFIED |
+| POST | /commissions/{id}/pay | CommissionController@pay | UNVERIFIED |
+| POST | /commissions/{id}/cancel | CommissionController@cancel | UNVERIFIED |
+| GET | /purchase-orders | PurchaseOrderController@index | UNVERIFIED |
+| GET | /purchase-orders/{id} | PurchaseOrderController@show | UNVERIFIED |
+| POST | /purchase-orders | PurchaseOrderController@store | UNVERIFIED |
+| POST | /purchase-orders/{id}/receive | PurchaseOrderController@receive | UNVERIFIED |
+| POST | /purchase-orders/{id}/cancel | PurchaseOrderController@cancel | UNVERIFIED |
+| GET | /purchase-requirements | PurchaseRequirementController@index | UNVERIFIED |
+| GET | /purchase-requirements/group | PurchaseRequirementController@group | MISMATCH (Missing Frontend) |
+| POST | /purchase-requirements/convert | PurchaseRequirementController@convert | UNVERIFIED |
+| GET | /reports/dashboard | ReportController@dashboard | UNVERIFIED |
+| GET | /reports/sales | ReportController@sales | UNVERIFIED |
+| GET | /reports/profit | ReportController@profit | UNVERIFIED |
+| GET | /reports/sales-by-salesman | ReportController@salesBySalesman | UNVERIFIED |
+| GET | /reports/customer-debts | ReportController@customerDebts | UNVERIFIED |
+| GET | /reports/supplier-debts | ReportController@supplierDebts | UNVERIFIED |
+| GET | /reports/payments-history | ReportController@paymentsHistory | UNVERIFIED |
+| GET | /reports/low-stock | ReportController@lowStock | UNVERIFIED |
+| GET | /reports/stock-movements | ReportController@stockMovements | UNVERIFIED |
+| GET | /reports/stock-transfers | ReportController@stockTransfers | UNVERIFIED |
+| GET | /audit-logs | AuditLogController@index | MISMATCH (Missing Frontend) |
+| GET | /audit-logs/{id} | AuditLogController@show | MISMATCH (Missing Frontend) |
+| GET | /audit-logs/entity/{entityType}/{entityId} | AuditLogController@entityHistory | MISMATCH (Missing Frontend) |
+| GET | /notifications | NotificationController@index | UNVERIFIED |
+| GET | /notifications/unread-count | NotificationController@unreadCount | UNVERIFIED |
+| POST | /notifications/read | NotificationController@markAllRead | UNVERIFIED |
+| POST | /notifications/{id}/read | NotificationController@markRead | UNVERIFIED |
+| POST | /device-token | NotificationController@registerDeviceToken | UNVERIFIED |
+| DELETE | /device-token | NotificationController@removeDeviceToken | UNVERIFIED |
+| GET | /notifications/whatsapp-logs | NotificationController@whatsAppLogs | UNVERIFIED |
+| POST | /notifications/whatsapp/{id}/retry | NotificationController@retryWhatsApp | UNVERIFIED |

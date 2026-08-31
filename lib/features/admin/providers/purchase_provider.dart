@@ -19,6 +19,17 @@ final purchaseRequirementsProvider =
       }
     });
 
+
+final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  try {
+    final response = await apiClient.client.get('/purchase-requirements/group');
+    return response.data['data'] ?? [];
+  } catch (e) {
+    throw Exception(apiClient.parseError(e));
+  }
+});
+
 final purchaseOrdersProvider = FutureProvider<List<PurchaseOrderModel>>((
   ref,
 ) async {

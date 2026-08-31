@@ -101,3 +101,50 @@ class OrderActions {
     }
   }
 }
+
+final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/sales-returns');
+    if (response.statusCode == 200) {
+      return response.data['data'] ?? [];
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+});
+
+final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((ref, id) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/sales-returns/$id');
+    if (response.statusCode == 200) {
+      return response.data['data'] ?? response.data;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+});
+
+class SalesReturnActions {
+  final ApiClient api;
+  final Ref ref;
+
+  SalesReturnActions(this.api, this.ref);
+
+  Future<void> createSalesReturn(Map<String, dynamic> data) async {
+    final response = await api.client.post('/sales-returns', data: data);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      ref.invalidate(salesReturnsListProvider);
+    } else {
+      throw Exception(response.data['message'] ?? 'شکستی هێنا لە دروستکردنی گەڕانەوەی فرۆشتن');
+    }
+  }
+}
+
+final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return SalesReturnActions(api, ref);
+});

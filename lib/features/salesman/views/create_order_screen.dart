@@ -33,7 +33,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Customer? _selectedCustomer;
   int? _selectedWarehouseId;
   final Map<int, int> _cart = {}; // product_id -> quantity
-  double _discountPercent = 0.0;
+  String _discountType = 'PERCENT';
+  double _discountValue = 0.0;
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   bool _isSubmitting = false;
@@ -173,10 +174,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       itemsList.add({'product_id': productId, 'quantity': qty});
     });
 
+    final String sharedKey = 'order_${DateTime.now().microsecondsSinceEpoch}';
+
     final payload = {
       'customer_id': _selectedCustomer!.id,
       'warehouse_id': warehouseId,
-      'discount_percent': _discountPercent,
+      'discount_type': _discountType,
+      'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
+      'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
+      'shared_key': sharedKey,
+      'version': 1,
       'notes': _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
@@ -486,7 +493,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
     final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
     final amountAfterPerm = subtotal - permDiscountAmount;
-    final invoiceDiscountAmount = (amountAfterPerm * _discountPercent) / 100;
+    final invoiceDiscountAmount = _discountType == 'PERCENT' 
+        ? (amountAfterPerm * _discountValue) / 100 
+        : _discountValue;
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
     final cartItemCount = _getCartTotalCount();
 
@@ -597,6 +606,59 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   const SizedBox(height: AppSpacing.xs),
                 ],
                 Row(
+                  children: [
+                    const Text('داشکاندن: '),
+                    const SizedBox(width: AppSpacing.sm),
+                    DropdownButton<String>(
+                      value: _discountType,
+                      items: const [
+                        DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)')),
+                        DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _discountType = val;
+                            if (_discountType == 'PERCENT' && _discountValue > 100) {
+                              _discountValue = 100;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: _discountValue.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          final parsed = double.tryParse(val) ?? 0.0;
+                          setState(() {
+                            _discountValue = parsed;
+                            if (_discountType == 'PERCENT' && _discountValue > 100) {
+                              _discountValue = 100;
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                AppTextField(
+                  controller: _notesController,
+                  hintText: 'تێبینی (ئارەزوومەندانە)...',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('کۆ کۆتایی:', style: AppTextStyles.bodyLarge),
@@ -632,7 +694,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
     final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
     final amountAfterPerm = subtotal - permDiscountAmount;
-    final invoiceDiscountAmount = (amountAfterPerm * _discountPercent) / 100;
+    final invoiceDiscountAmount = _discountType == 'PERCENT' 
+        ? (amountAfterPerm * _discountValue) / 100 
+        : _discountValue;
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
     final cartItemCount = _getCartTotalCount();
 
@@ -696,8 +760,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 _selectedCustomer?.permanentDiscount ?? 0.0;
             final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
             final amountAfterPerm = subtotal - permDiscountAmount;
-            final invoiceDiscountAmount =
-                (amountAfterPerm * _discountPercent) / 100;
+            final invoiceDiscountAmount = _discountType == 'PERCENT' 
+        ? (amountAfterPerm * _discountValue) / 100 
+        : _discountValue;
             final totalAmount = amountAfterPerm - invoiceDiscountAmount;
 
             return Padding(
@@ -795,11 +860,30 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ],
                   Row(
                     children: [
-                      const Text('داشکاندن (%): '),
+                      const Text('داشکاندن: '),
+                      const SizedBox(width: AppSpacing.sm),
+                      DropdownButton<String>(
+                        value: _discountType,
+                        items: const [
+                          DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)')),
+                          DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() {
+                              _discountType = val;
+                              if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                _discountValue = 100;
+                              }
+                            });
+                            setState(() {});
+                          }
+                        },
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: TextFormField(
-                          initialValue: _discountPercent.toString(),
+                          initialValue: _discountValue.toString(),
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
@@ -807,6 +891,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               horizontal: 10,
                               vertical: 8,
                             ),
+                          ),
+                          onChanged: (val) {
+                            final parsed = double.tryParse(val) ?? 0.0;
+                            setModalState(() {
+                              _discountValue = parsed;
+                              if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                _discountValue = 100;
+                              }
+                            });
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                           ),
                           onChanged: (val) {
                             final parsed = double.tryParse(val) ?? 0.0;

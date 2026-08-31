@@ -100,7 +100,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
-            'discount_percent' => 10, // 10% discount
+            'discount_type' => 'PERCENT',
+            'discount_percent' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'notes' => 'Please deliver fast',
             'items' => [
                 [
@@ -140,6 +143,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -173,6 +180,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -204,6 +215,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -246,6 +261,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -300,6 +319,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -347,6 +370,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 1,
@@ -409,6 +436,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 3,
@@ -440,6 +471,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 1,
@@ -477,6 +512,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 2,
@@ -541,6 +580,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 1,
@@ -568,6 +611,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [[
                 'product_id' => $this->product->id,
                 'quantity' => 1,
@@ -620,6 +667,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,
@@ -671,6 +722,10 @@ class SalesOrderTest extends TestCase
         $payload = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 10,
+            'shared_key' => 'test-order-key-1',
+            'version' => 1,
             'items' => [
                 [
                     'product_id' => $this->product->id,

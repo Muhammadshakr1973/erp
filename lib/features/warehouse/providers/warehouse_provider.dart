@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/api_client.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
-final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((
-  ref,
-) async {
+final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/warehouse/orders-to-pack');
@@ -20,9 +17,7 @@ final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((
   }
 });
 
-final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((
-  ref,
-) async {
+final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/warehouse/stock');
@@ -100,6 +95,23 @@ class WarehouseActions {
         '/warehouses/$warehouseId/stock/$productId/reconcile',
       );
       ref.invalidate(warehouseStocksProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<List<dynamic>> getTransactions({int? warehouseId, int? productId, String? dateFrom}) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (warehouseId != null) queryParams['warehouse_id'] = warehouseId;
+      if (productId != null) queryParams['product_id'] = productId;
+      if (dateFrom != null) queryParams['date_from'] = dateFrom;
+      
+      final response = await api.client.get('/warehouse/transactions', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? [];
+      }
+      return [];
     } catch (e) {
       throw Exception(api.parseError(e));
     }

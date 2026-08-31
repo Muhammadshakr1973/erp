@@ -1,0 +1,58 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/api_client.dart';
+
+final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/audit-logs');
+    if (response.statusCode == 200) {
+      return response.data['data'] ?? [];
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+});
+
+final singleAuditLogProvider = FutureProvider.family<dynamic, int>((ref, id) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/audit-logs/$id');
+    if (response.statusCode == 200) {
+      return response.data['data'] ?? response.data;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+});
+
+class EntityAuditParam {
+  final String entityType;
+  final int entityId;
+  EntityAuditParam(this.entityType, this.entityId);
+  
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EntityAuditParam &&
+          runtimeType == other.runtimeType &&
+          entityType == other.entityType &&
+          entityId == other.entityId;
+
+  @override
+  int get hashCode => entityType.hashCode ^ entityId.hashCode;
+}
+
+final entityAuditLogsProvider = FutureProvider.family<List<dynamic>, EntityAuditParam>((ref, param) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/audit-logs/entity/${param.entityType}/${param.entityId}');
+    if (response.statusCode == 200) {
+      return response.data['data'] ?? [];
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+});

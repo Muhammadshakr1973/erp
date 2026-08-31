@@ -17,7 +17,7 @@ class SalesOrderService
 {
     protected array $validTransitions = [
         SalesOrder::STATUS_DRAFT => [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED],
-        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
@@ -308,7 +308,7 @@ class SalesOrderService
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
                     ]);
                 }
-            } elseif (in_array($newStatus, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY])) {
+            } elseif ($newStatus === SalesOrder::STATUS_PACKING || $newStatus === SalesOrder::STATUS_READY) {
                 if (!$user->hasPermission('stock.pack')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
@@ -322,7 +322,7 @@ class SalesOrderService
                 }
             } elseif ($newStatus === SalesOrder::STATUS_CANCELLED) {
                 $canCancel = $user->hasPermission('orders.create')
-                    || ($user->hasPermission('stock.pack') && in_array($currentStatus, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY]))
+                    || ($user->hasPermission('stock.pack') && ($currentStatus === SalesOrder::STATUS_CONFIRMED || $currentStatus === SalesOrder::STATUS_PACKING || $currentStatus === SalesOrder::STATUS_READY))
                     || ($user->hasPermission('delivery.update') && $currentStatus === SalesOrder::STATUS_IN_DELIVERY)
                     || $user->isAdmin()
                     || $user->isOwner();

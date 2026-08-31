@@ -179,7 +179,7 @@ class WarehouseController extends Controller
         }
 
         // Check if status is CONFIRMED or PACKING
-        if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+        if ($order->status !== SalesOrder::STATUS_PACKING) {
             return response()->json([
                 'message' => 'تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەتوانرێت دەستکاری بکرێت.'
             ], 400);
@@ -279,9 +279,9 @@ class WarehouseController extends Controller
             ], 403);
         }
 
-        if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+        if ($order->status !== SalesOrder::STATUS_PACKING) {
             return response()->json([
-                'message' => 'تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەکرێت بە ئامادەکراو بنرێت.'
+                'message' => 'تەنها پسوڵەی لە حاڵەتی پاکەتکردن دەکرێت بە ئامادەکراو بنرێت.'
             ], 400);
         }
 

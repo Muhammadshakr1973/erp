@@ -7,6 +7,19 @@ import '../../../core/api_client.dart';
 import '../models/user_model.dart';
 
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+String _getDeviceName() {
+  if (kIsWeb) return 'Web';
+  if (Platform.isAndroid) return 'Android Device';
+  if (Platform.isIOS) return 'iOS Device';
+  if (Platform.isWindows) return 'Windows Device';
+  if (Platform.isMacOS) return 'macOS Device';
+  if (Platform.isLinux) return 'Linux Device';
+  return 'Unknown Device';
+}
+
 
 // State for Auth
 class AuthState {
@@ -47,7 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final api = ref.read(apiClientProvider);
       final response = await api.client.post(
         '/auth/login',
-        data: {'phone': phone, 'password': password},
+        data: {'phone': phone, 'password': password, 'device_name': _getDeviceName()},
       );
 
       if (response.statusCode == 200) {
@@ -80,7 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final api = ref.read(apiClientProvider);
       final response = await api.client.post(
         '/auth/login',
-        data: {'barcode': barcode},
+        data: {'barcode': barcode, 'device_name': _getDeviceName()},
       );
 
       if (response.statusCode == 200) {

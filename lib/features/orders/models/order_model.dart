@@ -169,7 +169,7 @@ class OrderModel {
       case statusDraft:
         return [statusConfirmed, statusCancelled];
       case statusConfirmed:
-        return [statusPacking, statusReady, statusCancelled];
+        return [statusPacking, statusCancelled];
       case statusPacking:
         return [statusReady, statusCancelled];
       case statusReady:
