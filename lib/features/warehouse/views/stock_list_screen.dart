@@ -67,14 +67,6 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           value: 'ADJUSTMENT',
                           child: Text('جیاوازی کۆگا (ADJUSTMENT)'),
                         ),
-                        DropdownMenuItem(
-                          value: 'RETURN',
-                          child: Text('گەڕانەوەی کاڵا (RETURN)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'PURCHASE',
-                          child: Text('کڕین (PURCHASE)'),
-                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {

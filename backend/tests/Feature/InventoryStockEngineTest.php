@@ -616,4 +616,102 @@ class InventoryStockEngineTest extends TestCase
         $this->assertNotNull($deletedItem);
         $this->assertNotNull($deletedItem->deleted_at);
     }
+
+    /** @test */
+    public function test_manual_adjustment_accepts_adjustment_only_and_rejects_disallowed_types()
+    {
+        // 1. ADJUSTMENT is accepted
+        $response = $this->actingAs($this->admin)->postJson(
+            "/api/v1/warehouses/{$this->mainWarehouse->id}/stock/{$this->product->id}/adjust",
+            ['quantity_change' => 10, 'type' => 'ADJUSTMENT', 'notes' => 'Manual adj test']
+        );
+        $response->assertStatus(200);
+
+        // Disallowed movement types must be rejected with 422
+        $disallowedTypes = [
+            'RETURN',
+            'PURCHASE',
+            'DELIVERY',
+            'SALE',
+            'TRANSFER_IN',
+            'TRANSFER_OUT',
+            'RESERVE',
+            'RELEASE',
+        ];
+
+        foreach ($disallowedTypes as $disallowedType) {
+            $errResponse = $this->actingAs($this->admin)->postJson(
+                "/api/v1/warehouses/{$this->mainWarehouse->id}/stock/{$this->product->id}/adjust",
+                ['quantity_change' => 5, 'type' => $disallowedType, 'notes' => 'Unauthorized attempt']
+            );
+            $errResponse->assertStatus(422);
+            $errResponse->assertJsonValidationErrors(['type']);
+        }
+
+        // Verify stock transaction history records ADJUSTMENT only
+        $transactions = StockTransaction::where('warehouse_id', $this->mainWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->where('reference_type', 'manual_adjustment')
+            ->get();
+
+        $this->assertNotEmpty($transactions);
+        foreach ($transactions as $tx) {
+            $this->assertEquals('ADJUSTMENT', $tx->type);
+        }
+    }
+
+    /** @test */
+    public function test_manual_adjustment_durable_idempotency_and_different_key_behavior()
+    {
+        $payload = [
+            'quantity_change' => 15,
+            'type' => 'ADJUSTMENT',
+            'notes' => 'Durable Idempotency Test',
+        ];
+
+        $key = 'IDEM-KEY-UNIQUE-1001';
+
+        // First request with idempotency key
+        $res1 = $this->actingAs($this->admin)->postJson(
+            "/api/v1/warehouses/{$this->mainWarehouse->id}/stock/{$this->product->id}/adjust",
+            $payload,
+            ['X-Idempotency-Key' => $key]
+        );
+        $res1->assertStatus(200);
+
+        $stockAfterFirst = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->first()->quantity;
+
+        // Repeat request with exact same idempotency key
+        $res2 = $this->actingAs($this->admin)->postJson(
+            "/api/v1/warehouses/{$this->mainWarehouse->id}/stock/{$this->product->id}/adjust",
+            $payload,
+            ['X-Idempotency-Key' => $key]
+        );
+        $res2->assertStatus(200);
+
+        $stockAfterRepeat = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->first()->quantity;
+
+        // Repeated same key must produce ONLY ONE stock effect
+        $this->assertEquals($stockAfterFirst, $stockAfterRepeat);
+
+        // Same payload with a DIFFERENT idempotency key remains a DIFFERENT legitimate operation
+        $differentKey = 'IDEM-KEY-UNIQUE-1002';
+        $res3 = $this->actingAs($this->admin)->postJson(
+            "/api/v1/warehouses/{$this->mainWarehouse->id}/stock/{$this->product->id}/adjust",
+            $payload,
+            ['X-Idempotency-Key' => $differentKey]
+        );
+        $res3->assertStatus(200);
+
+        $stockAfterDifferentKey = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->first()->quantity;
+
+        // Different key must execute a second legitimate adjustment (+15)
+        $this->assertEquals($stockAfterRepeat + 15, $stockAfterDifferentKey);
+    }
 }

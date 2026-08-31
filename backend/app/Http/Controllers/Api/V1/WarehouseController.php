@@ -60,24 +60,30 @@ class WarehouseController extends Controller
 
         $validated = $request->validate([
             'quantity_change' => 'required|integer',
-            'type' => 'required|string|in:ADJUSTMENT,RETURN,PURCHASE,DELIVERY',
+            'type' => 'nullable|string|in:ADJUSTMENT,adjustment',
             'notes' => 'nullable|string|max:255',
         ]);
 
-        // Idempotency check: 15-second submission window for identical manual adjustments
-        $existing = StockTransaction::where('warehouse_id', $warehouseId)
-            ->where('product_id', $productId)
-            ->where('type', strtoupper($validated['type']))
-            ->where('quantity_change', $validated['quantity_change'])
-            ->where('notes', $validated['notes'] ?? null)
-            ->where('created_at', '>=', now()->subSeconds(15))
-            ->first();
+        $type = 'ADJUSTMENT';
 
-        if ($existing) {
-            return response()->json([
-                'message' => 'ئەم گۆڕانکارییە پێشتر تۆمارکراوە (Idempotency Hit)',
-                'data' => $existing
-            ], 200);
+        $hasTrueIdempotency = $request->hasHeader('X-Idempotency-Key') || $request->hasHeader('Idempotency-Key');
+
+        if (!$hasTrueIdempotency) {
+            // Idempotency check: 15-second submission window for identical unkeyed manual adjustments
+            $existing = StockTransaction::where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->where('type', $type)
+                ->where('quantity_change', $validated['quantity_change'])
+                ->where('notes', $validated['notes'] ?? null)
+                ->where('created_at', '>=', now()->subSeconds(15))
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'message' => 'ئەم گۆڕانکارییە پێشتر تۆمارکراوە (Idempotency Hit)',
+                    'data' => $existing
+                ], 200);
+            }
         }
 
         $stock = WarehouseStock::where('warehouse_id', $warehouseId)
@@ -96,7 +102,7 @@ class WarehouseController extends Controller
         try {
             $transaction = $stock->adjustStock(
                 $validated['quantity_change'],
-                $validated['type'],
+                $type,
                 $user->id,
                 'manual_adjustment',
                 null,

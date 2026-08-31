@@ -72,7 +72,7 @@ class WarehouseActions {
     required int warehouseId,
     required int productId,
     required int quantityChange,
-    required String type,
+    String type = 'ADJUSTMENT',
     String? notes,
   }) async {
     try {
