@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/sync/sync_service.dart';
 import '../models/delivery_trip_model.dart';
 
 final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async {
@@ -33,14 +34,16 @@ final tripDetailProvider =
 
 final driverActionsProvider = Provider<DriverActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  return DriverActions(api, ref);
+  final syncService = ref.watch(syncServiceProvider);
+  return DriverActions(api, syncService, ref);
 });
 
 class DriverActions {
   final ApiClient api;
+  final SyncService syncService;
   final Ref ref;
 
-  DriverActions(this.api, this.ref);
+  DriverActions(this.api, this.syncService, this.ref);
 
   Future<void> deliverOrder({
     required int tripOrderId,
@@ -48,9 +51,10 @@ class DriverActions {
     String? notes,
   }) async {
     try {
-      await api.client.post(
-        '/delivery-trips/orders/$tripOrderId/deliver',
-        data: {
+      await syncService.enqueueOperation(
+        entityId: tripOrderId.toString(),
+        operationType: 'DELIVER_ORDER',
+        payload: {
           'received_amount': receivedAmount,
           'notes': notes,
         },
@@ -67,9 +71,10 @@ class DriverActions {
     String? notes,
   }) async {
     try {
-      await api.client.post(
-        '/delivery-trips/orders/$tripOrderId/fail',
-        data: {
+      await syncService.enqueueOperation(
+        entityId: tripOrderId.toString(),
+        operationType: 'FAIL_ORDER',
+        payload: {
           'failed_reason': failedReason,
           'notes': notes,
         },

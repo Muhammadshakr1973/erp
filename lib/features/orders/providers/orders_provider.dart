@@ -99,19 +99,14 @@ class OrderActions {
   }
 
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
-    final response = await api.client.post(
-      '/orders/$orderId/status',
-      data: {'status': newStatus},
+    await syncService.enqueueOperation(
+      entityId: orderId,
+      operationType: 'UPDATE_ORDER_STATUS',
+      payload: {'status': newStatus},
     );
 
-    if (response.statusCode == 200) {
-      ref.invalidate(singleOrderProvider(orderId));
-      ref.invalidate(ordersListProvider);
-    } else {
-      throw Exception(
-        response.data['message'] ?? 'شکستی هێنا لە گۆڕینی دۆخی پسوڵە',
-      );
-    }
+    ref.invalidate(singleOrderProvider(orderId));
+    ref.invalidate(ordersListProvider);
   }
 }
 
