@@ -6,6 +6,9 @@ class ApiConstants {
   // If running on Android emulator, localhost is 10.0.2.2
   // For iOS simulator or desktop/web, it's 127.0.0.1
   static String get baseUrl {
+    const String envUrl = String.fromEnvironment('API_URL', defaultValue: '');
+    if (envUrl.isNotEmpty) return envUrl;
+    
     if (kIsWeb) return 'http://127.0.0.1:8000/api/v1';
     if (Platform.isAndroid) return 'http://10.0.2.2:8000/api/v1';
     return 'http://127.0.0.1:8000/api/v1';

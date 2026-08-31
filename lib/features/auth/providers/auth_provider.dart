@@ -106,13 +106,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return false;
   }
 
-  Future<void> _saveMockUser(UserModel user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', 'mock_token_123');
-    await prefs.setString('current_user', jsonEncode(user.toJson()));
-    state = state.copyWith(isLoading: false, user: user);
-  }
-
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
     try {
