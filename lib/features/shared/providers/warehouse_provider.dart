@@ -20,10 +20,15 @@ class WarehouseModel {
 
 final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  final response = await api.client.get('/warehouses');
-  if (response.statusCode == 200) {
-    final List data = response.data['data'] ?? [];
-    return data.map((json) => WarehouseModel.fromJson(json)).toList();
+  try {
+    final response = await api.client.get('/warehouses');
+    if (response.statusCode == 200) {
+      final List data = response.data['data'] ?? [];
+      return data.map((json) => WarehouseModel.fromJson(json)).toList();
+    }
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە: ${response.statusCode}');
+  } catch (e) {
+    // Explicitly rethrow to ensure API failure is observable as an error state
+    throw Exception(api.parseError(e));
   }
-  throw Exception('Failed to load warehouses');
 });

@@ -44,39 +44,52 @@ class SyncService {
     required String operationType,
     required Map<String, dynamic> payload,
   }) async {
-    // Duplicate prevention: check if a pending operation for the exact same entity and type exists
-    // to avoid redundant submissions, while preserving ordering integrity
-    final existingPending = box.values
-        .where(
-          (e) =>
-              e.entityId == entityId &&
-              e.operationType == operationType &&
-              (e.status == 'PENDING' || e.status == 'FAILED'),
-        )
-        .toList();
+    // Only coalesce operations that represent a complete state replacement.
+    // Operations like STOCK_ADJUSTMENT, UPDATE_ORDER_STATUS, PURCHASE_RECEIVE,
+    // CREATE_PAYMENT, and PAY_SUPPLIER must preserve their sequence and distinct payloads.
+    final safeToCoalesce = [
+      'UPDATE_ORDER',
+      'UPDATE_CUSTOMER',
+    ];
 
-    if (existingPending.isNotEmpty) {
-      // Overwrite the payload of the existing one to avoid duplicates of the exact same operation
-      final entry = existingPending.first;
-      entry.payload = payload;
-      entry.status = 'PENDING';
-      entry.errorInformation = null;
-      entry.retryCount = 0;
-      await entry.save();
-    } else {
-      final randomHex = _generateRandomHex(8);
-      final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${entityId}_$randomHex';
-      
-      final entry = SyncQueueEntry(
-        id: uniqueId,
-        entityId: entityId,
-        operationType: operationType,
-        payloadJson: '',
-        createdAt: DateTime.now(),
-      );
-      entry.payload = payload;
-      await box.put(entry.id, entry);
+    if (safeToCoalesce.contains(operationType)) {
+      // Duplicate prevention: check if a pending operation for the exact same entity and type exists
+      final existingPending = box.values
+          .where(
+            (e) =>
+                e.entityId == entityId &&
+                e.operationType == operationType &&
+                (e.status == 'PENDING' || e.status == 'FAILED'),
+          )
+          .toList();
+
+      if (existingPending.isNotEmpty) {
+        // Overwrite the payload of the existing one to avoid duplicates of the exact same operation
+        final entry = existingPending.first;
+        entry.payload = payload;
+        entry.status = 'PENDING';
+        entry.errorInformation = null;
+        entry.retryCount = 0;
+        await entry.save();
+        
+        // Attempt sync immediately
+        syncPendingOperations();
+        return;
+      }
     }
+
+    final randomHex = _generateRandomHex(8);
+    final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_${entityId}_$randomHex';
+    
+    final entry = SyncQueueEntry(
+      id: uniqueId,
+      entityId: entityId,
+      operationType: operationType,
+      payloadJson: '',
+      createdAt: DateTime.now(),
+    );
+    entry.payload = payload;
+    await box.put(entry.id, entry);
 
     // Attempt sync immediately
     syncPendingOperations();
