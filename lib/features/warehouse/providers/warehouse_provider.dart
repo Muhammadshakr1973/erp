@@ -135,7 +135,9 @@ class WarehouseActions {
     String? notes,
   }) async {
     try {
+      final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
       await syncService.enqueueOperation(
+        entityId: localId,
         operationType: 'STOCK_TRANSFER_CREATE',
         payload: {
           'from_warehouse_id': fromWarehouseId,

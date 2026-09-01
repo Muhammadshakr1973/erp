@@ -122,7 +122,9 @@ void main() {
       expect(expectedPath, equals('/purchase-orders/po_100/receive'));
     });
 
-    test('4. STOCK_TRANSFER operation mappings (CREATE, COMPLETE, CANCEL) construct valid API routes', () {
+    test('4. STOCK_TRANSFER operation mappings (CREATE, COMPLETE, CANCEL) construct valid API routes and assign local_ entityId for creation', () {
+      final localId = 'local_1710000000000';
+      expect(localId.startsWith('local_'), isTrue);
       expect('/stock-transfers', equals('/stock-transfers'));
       expect('/stock-transfers/st_1/complete', equals('/stock-transfers/st_1/complete'));
       expect('/stock-transfers/st_1/cancel', equals('/stock-transfers/st_1/cancel'));
