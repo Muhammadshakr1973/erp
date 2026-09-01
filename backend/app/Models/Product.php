@@ -30,7 +30,7 @@ class Product extends Model
     }
     public function getPriceForType(string $type): int
     {
-        return match ($type) {
+        return (int) match ($type) {
             'N1' => $this->price_n1,
             'N2' => $this->price_n2,
             'N3' => $this->price_n3,

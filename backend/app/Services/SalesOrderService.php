@@ -122,7 +122,7 @@ class SalesOrderService
             }
 
             // ١. داشکاندنی بەردەوامی کڕیار (Permanent Customer Discount)
-            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountPercent = max(0, min(100, (float) ($customer->permanent_discount ?? 0)));
             $permDiscountAmount = 0;
             if ($permDiscountPercent > 0) {
                 $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
@@ -131,7 +131,7 @@ class SalesOrderService
 
             // ٢. داشکاندنی تایبەت بەم پسوڵەیە (Invoice / Order Discount)
             $discountType = strtoupper($data['discount_type'] ?? 'PERCENT');
-            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : 0.0;
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? max(0, min(100, (float) $data['discount_percent'])) : 0.0;
             $invoiceDiscountAmount = 0;
 
             if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
@@ -237,7 +237,7 @@ class SalesOrderService
             }
 
             // ١. داشکاندنی بەردەوامی کڕیار (Permanent Customer Discount)
-            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountPercent = max(0, min(100, (float) ($customer->permanent_discount ?? 0)));
             $permDiscountAmount = 0;
             if ($permDiscountPercent > 0) {
                 $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
@@ -246,7 +246,7 @@ class SalesOrderService
 
             // ٢. داشکاندنی تایبەت بەم پسوڵەیە (Invoice / Order Discount)
             $discountType = strtoupper($data['discount_type'] ?? ($order->discount_type ?? 'PERCENT'));
-            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : (float) $order->discount_percent;
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? max(0, min(100, (float) $data['discount_percent'])) : max(0, min(100, (float) $order->discount_percent));
             $invoiceDiscountAmount = 0;
 
             if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
@@ -830,7 +830,7 @@ class SalesOrderService
                 $totalProfit += $profit;
             }
 
-            $permDiscountPercent = (float) ($customer->permanent_discount ?? 0);
+            $permDiscountPercent = max(0, min(100, (float) ($customer->permanent_discount ?? 0)));
             $permDiscountAmount = 0;
             if ($permDiscountPercent > 0) {
                 $permDiscountAmount = (int) round(($subtotal * $permDiscountPercent) / 100);
@@ -838,7 +838,7 @@ class SalesOrderService
             $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
 
             $discountType = strtoupper($data['discount_type'] ?? 'PERCENT');
-            $invoiceDiscountPercent = isset($data['discount_percent']) ? (float) $data['discount_percent'] : 0.0;
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? max(0, min(100, (float) $data['discount_percent'])) : 0.0;
             $invoiceDiscountAmount = 0;
 
             if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
