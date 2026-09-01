@@ -24,7 +24,7 @@
 | **CUSTOMER DEBT** | `LedgerAndPaymentTest`, `ReportServiceTest` | Debt limit enforcement during sales. | **(FIXED)** Rollback failure leaving orphaned ledger entries. |
 | **PAYMENTS** | `LedgerAndPaymentTest` (Collect, Idempotency, Negative amounts) | Overpayments (paying more than owed). | Payment race condition on identical timestamps. |
 | **DELIVERY** | `DeliveryTripTest`, `FulfillmentAndDeliveryLifecycleTest` | Re-dispatching to different drivers. | Driver marking delivered while salesman cancels the order. |
-| **RETURNS** | `InventoryStockEngineTest` | Partial returns, Ledger credit processing. | Refunding a payment for a returned order before ledger sync. |
+| **RETURNS** | `SalesReturnTest` (Happy paths, Partial returns, Validation checks, Concurrency, Rollbacks, Idempotency), `InventoryStockEngineTest` | - | Refunding a payment for a returned order before ledger sync (guarded by state machine). |
 | **COMMISSIONS** | `CommissionLifecycleTest` (Calculate, Snapshots, Returns) | Modifying historic commission rates. | Regenerating commissions for a period already paid. |
 | **NOTIFICATIONS** | `NotificationAndWhatsAppTest` (Dispatch, Unread count) | Notification queuing bottlenecks. | - |
 | **AUDIT LOGS** | `AuditTrailTest` (Creation, Immutability, Redaction) | Auditing large batch operations. | - |
