@@ -19,18 +19,6 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   final localBox = ref.watch(localOrdersBoxProvider);
   final syncBox = ref.watch(syncQueueBoxProvider);
 
-  // Self-healing sweep: remove synced/stale local orders that have no pending CREATE_ORDER ops
-  final localKeys = localBox.keys.where((k) => k.toString().startsWith('local_')).toList();
-  for (final key in localKeys) {
-    final hasPendingOp = syncBox.values.any((entry) =>
-        entry.entityId == key &&
-        entry.operationType == 'CREATE_ORDER' &&
-        (entry.status == 'PENDING' || entry.status == 'FAILED' || entry.status == 'SYNCING'));
-    if (!hasPendingOp) {
-      await localBox.delete(key);
-    }
-  }
-
   try {
     final response = await api.client.get('/orders');
     if (response.statusCode == 200) {
@@ -70,9 +58,29 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
                 o.sharedKey == localOrder.sharedKey);
             
             if (alreadySynced) {
-              await localBox.delete(key); // Synced order found, clean up local key
+              await localBox.delete(key); // Safe sweep: Synced order found, clean up local key
             } else {
-              remainingLocalOrders.add(localOrder);
+              // Check if it still has a pending create operation
+              final hasPendingOp = syncBox.values.any((entry) =>
+                  entry.entityId == key &&
+                  entry.operationType == 'CREATE_ORDER' &&
+                  (entry.status == 'PENDING' || entry.status == 'FAILED' || entry.status == 'SYNCING'));
+              
+              if (hasPendingOp) {
+                remainingLocalOrders.add(localOrder);
+              } else {
+                final isCompleted = syncBox.values.any((entry) =>
+                    entry.entityId == key &&
+                    entry.operationType == 'CREATE_ORDER' &&
+                    entry.status == 'COMPLETED');
+                if (isCompleted) {
+                  // Keep it to prevent a flash of disappearing order before next synchronization loop syncs up fully
+                  remainingLocalOrders.add(localOrder);
+                } else {
+                  // Truly orphaned local record (no corresponding sync queue entry), clean it up
+                  await localBox.delete(key);
+                }
+              }
             }
           } catch (_) {}
         }
@@ -175,20 +183,35 @@ class OrderActions {
   }) {
     final customers = ref.read(customerListProvider).value ?? [];
     final customerId = data['customer_id'] ?? 0;
-    final customer = customers.firstWhere((c) => c.id == customerId, orElse: () => null);
+    
+    Customer? customer;
+    for (final c in customers) {
+      if (c.id == customerId) {
+        customer = c;
+        break;
+      }
+    }
 
     final products = ref.read(productsListProvider).value ?? [];
     final itemsData = data['items'] ?? [];
     
     double totalCost = 0.0;
     double subtotal = 0.0;
+    double totalProfit = 0.0;
     final List<Map<String, dynamic>> resolvedItems = [];
 
     for (final item in itemsData) {
       final int prodId = item['product_id'] ?? 0;
       final double qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
       
-      final prod = products.firstWhere((p) => p.id == prodId, orElse: () => null);
+      ProductModel? prod;
+      for (final p in products) {
+        if (p.id == prodId) {
+          prod = p;
+          break;
+        }
+      }
+
       String productName = 'کاڵا';
       double unitPrice = 0.0;
       double costPrice = 0.0;
@@ -196,7 +219,7 @@ class OrderActions {
       if (prod != null) {
         productName = prod.name;
         costPrice = prod.costPrice;
-        final priceType = customer?.priceType;
+        final priceType = customer?.priceType ?? 'N2';
         if (priceType == 'N1') {
           unitPrice = prod.priceN1;
         } else if (priceType == 'N3') {
@@ -206,9 +229,12 @@ class OrderActions {
         }
       }
 
-      final itemSubtotal = qty * unitPrice;
+      final double itemSubtotal = qty * unitPrice;
       subtotal += itemSubtotal;
       totalCost += qty * costPrice;
+      
+      final double profit = (unitPrice - costPrice) * qty;
+      totalProfit += profit;
 
       resolvedItems.add({
         'id': 0,
@@ -223,20 +249,28 @@ class OrderActions {
       });
     }
 
-    final discountType = data['discount_type'] ?? 'PERCENT';
-    double discountPercent = 0.0;
-    double discountAmount = 0.0;
+    // 1. Permanent Customer Discount
+    final double permDiscountPercent = customer?.permanentDiscount ?? 0.0;
+    double permDiscountAmount = 0.0;
+    if (permDiscountPercent > 0.0) {
+      permDiscountAmount = (subtotal * permDiscountPercent / 100.0).roundToDouble();
+    }
+    final double amountAfterPermDiscount = max(0.0, subtotal - permDiscountAmount);
 
-    if (discountType == 'PERCENT') {
-      discountPercent = double.tryParse(data['discount_percent']?.toString() ?? '0') ?? 0.0;
-      discountAmount = subtotal * (discountPercent / 100);
+    // 2. Invoice / Order Discount (matching exact php logic)
+    final String discountType = (data['discount_type'] ?? 'PERCENT').toString().toUpperCase();
+    double invoiceDiscountPercent = 0.0;
+    double invoiceDiscountAmount = 0.0;
+
+    if (discountType == 'FIXED' || (data['discount_amount'] != null && double.tryParse(data['discount_amount'].toString()) != null && double.parse(data['discount_amount'].toString()) > 0.0 && data['discount_percent'] == null)) {
+      final double fixedAmount = double.tryParse(data['discount_amount']?.toString() ?? '0') ?? 0.0;
+      invoiceDiscountAmount = min(amountAfterPermDiscount, max(0.0, fixedAmount));
     } else {
-      discountAmount = double.tryParse(data['discount_amount']?.toString() ?? '0') ?? 0.0;
-      discountPercent = subtotal > 0 ? (discountAmount / subtotal) * 100 : 0.0;
+      invoiceDiscountPercent = double.tryParse(data['discount_percent']?.toString() ?? '0') ?? 0.0;
+      invoiceDiscountAmount = (amountAfterPermDiscount * invoiceDiscountPercent / 100.0).roundToDouble();
     }
 
-    final totalAmount = subtotal - discountAmount;
-    final totalProfit = (subtotal - totalCost) - discountAmount;
+    final double totalAmount = max(0.0, amountAfterPermDiscount - invoiceDiscountAmount);
 
     final orderNumber = existingOrderNumber ?? "LOCAL_${idStr.replaceAll('local_', '').substring(0, min(6, idStr.replaceAll('local_', '').length))}";
 
@@ -249,8 +283,10 @@ class OrderActions {
       'salesman_id': data['salesman_id'] ?? 0,
       'warehouse_id': data['warehouse_id'],
       'subtotal': subtotal,
-      'discount_amount': discountAmount,
-      'discount_percent': discountPercent,
+      'permanent_discount_percent': permDiscountPercent,
+      'permanent_discount_amount': permDiscountAmount,
+      'discount_amount': invoiceDiscountAmount,
+      'discount_percent': invoiceDiscountPercent,
       'discount_type': discountType,
       'total_amount': totalAmount,
       'total_profit': totalProfit,
@@ -308,17 +344,62 @@ class OrderActions {
     final existingStr = localBox.get(entityId);
     if (existingStr != null) {
       try {
-        final existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
+        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
+        
+        final mergedData = <String, dynamic>{...existingJson};
+        for (final key in data.keys) {
+          mergedData[key] = data[key];
+        }
+
         final updatedJson = _buildOptimisticOrderJson(
           idStr: entityId,
           intId: orderId,
-          data: data,
+          data: mergedData,
           ref: ref,
           status: existingJson['status'] ?? 'DRAFT',
           existingOrderNumber: existingJson['order_number'],
         );
-        // Retain any fields from existing that are not in optimistic payload
+
+        // Retain and preserve fields from existing order specifically matching instructions
+        updatedJson['id'] = existingJson['id'] ?? orderId;
+        updatedJson['order_number'] = existingJson['order_number'] ?? updatedJson['order_number'];
+        updatedJson['shared_key'] = data['shared_key'] ?? existingJson['shared_key'];
+        updatedJson['version'] = data['version'] ?? existingJson['version'] ?? 1;
+        updatedJson['customer_id'] = data['customer_id'] ?? existingJson['customer_id'];
+        updatedJson['salesman_id'] = data['salesman_id'] ?? existingJson['salesman_id'];
+        updatedJson['warehouse_id'] = data['warehouse_id'] ?? existingJson['warehouse_id'];
         updatedJson['created_at'] = existingJson['created_at'] ?? updatedJson['created_at'];
+
+        if (data['customer'] != null) {
+          updatedJson['customer'] = data['customer'];
+        } else if (existingJson['customer'] != null) {
+          updatedJson['customer'] = existingJson['customer'];
+        }
+
+        if (data['salesman'] != null) {
+          updatedJson['salesman'] = data['salesman'];
+        } else if (existingJson['salesman'] != null) {
+          updatedJson['salesman'] = existingJson['salesman'];
+        }
+
+        if (data['warehouse'] != null) {
+          updatedJson['warehouse'] = data['warehouse'];
+        } else if (existingJson['warehouse'] != null) {
+          updatedJson['warehouse'] = existingJson['warehouse'];
+        }
+
+        if (data['items'] == null) {
+          updatedJson['items'] = existingJson['items'];
+          updatedJson['subtotal'] = existingJson['subtotal'];
+          updatedJson['discount_amount'] = existingJson['discount_amount'];
+          updatedJson['discount_percent'] = existingJson['discount_percent'];
+          updatedJson['discount_type'] = existingJson['discount_type'];
+          updatedJson['total_amount'] = existingJson['total_amount'];
+          updatedJson['total_profit'] = existingJson['total_profit'];
+        }
+
+        updatedJson['pending_sync'] = true;
+
         await localBox.put(entityId, jsonEncode(updatedJson));
       } catch (_) {}
     }
@@ -334,12 +415,12 @@ class OrderActions {
       payload: {'status': newStatus},
     );
 
-    // Optimistically update status in Hive cache
+    // Optimistically update status in Hive cache preserving everything else
     final localBox = ref.read(localOrdersBoxProvider);
     final existingStr = localBox.get(orderId);
     if (existingStr != null) {
       try {
-        final existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
+        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
         existingJson['status'] = newStatus.toUpperCase();
         existingJson['pending_sync'] = true;
         await localBox.put(orderId, jsonEncode(existingJson));
