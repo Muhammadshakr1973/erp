@@ -525,7 +525,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
-          Text('${Formatters.currency(unitPrice)}', style: AppTextStyles.price),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('${Formatters.currency(unitPrice)}', style: AppTextStyles.price),
+              Text(
+                product.unit ?? 'دانە',
+                style: AppTextStyles.caption.copyWith(color: Colors.grey),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -601,7 +610,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   style: AppTextStyles.bodyBold,
                                 ),
                                 Text(
-                                  '${Formatters.currency(unitPrice)}',
+                                  '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
                                   style: AppTextStyles.caption,
                                 ),
                               ],
@@ -854,7 +863,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         return ListTile(
                           title: Text(product?.name ?? 'کاڵا'),
                           subtitle: Text(
-                            '$qty x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
+                            '$qty ${product?.unit ?? "دانە"} x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
