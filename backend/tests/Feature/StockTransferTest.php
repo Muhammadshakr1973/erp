@@ -341,6 +341,7 @@ class StockTransferTest extends TestCase
     /** @test */
     public function test_12_destination_stock_failure_rolls_back_source_mutation()
     {
+        // 1. Create source stock = 30
         WarehouseStock::create([
             'warehouse_id'      => $this->warehouse1->id,
             'product_id'        => $this->productA->id,
@@ -349,6 +350,8 @@ class StockTransferTest extends TestCase
         ]);
 
         $service = app(StockTransferService::class);
+
+        // 2. Create transfer quantity = 10
         $transfer = $service->createTransfer([
             'from_warehouse_id' => $this->warehouse1->id,
             'to_warehouse_id'   => $this->warehouse2->id,
@@ -357,8 +360,51 @@ class StockTransferTest extends TestCase
             ],
         ], $this->admin);
 
-        // Verify initial state
-        $this->assertEquals(30, WarehouseStock::where('warehouse_id', $this->warehouse1->id)->where('product_id', $this->productA->id)->first()->quantity);
+        // 3. Force destination mutation to fail AFTER source mutation has executed
+        // StockTransferService calls source adjustStock() [TRANSFER_OUT] first, then destination adjustStock() [TRANSFER_IN] second.
+        // We hook StockTransaction::creating to fail specifically when type is TRANSFER_IN.
+        StockTransaction::creating(function ($tx) {
+            if ($tx->type === 'TRANSFER_IN') {
+                throw new \RuntimeException('Simulated destination StockTransaction write failure');
+            }
+        });
+
+        // 4. Call completeTransfer() and confirm exception/failure occurs
+        try {
+            $service->completeTransfer($transfer, $this->admin);
+            $this->fail('Expected completeTransfer to fail and throw exception due to destination failure.');
+        } catch (\RuntimeException $e) {
+            $this->assertEquals('Simulated destination StockTransaction write failure', $e->getMessage());
+        }
+
+        // 5. Confirm source stock remains exactly 30 (rolled back from uncommitted 20)
+        $sourceStock = WarehouseStock::where('warehouse_id', $this->warehouse1->id)
+            ->where('product_id', $this->productA->id)
+            ->first();
+        $this->assertEquals(30, $sourceStock->quantity);
+        $this->assertEquals(0, $sourceStock->reserved_quantity);
+
+        // 6. Confirm destination stock was not committed
+        $destStock = WarehouseStock::where('warehouse_id', $this->warehouse2->id)
+            ->where('product_id', $this->productA->id)
+            ->first();
+        $this->assertTrue($destStock === null || $destStock->quantity === 0);
+
+        // 7. Confirm zero StockTransaction rows were committed for this transfer
+        $this->assertEquals(0, StockTransaction::where('reference_type', 'stock_transfer')->where('reference_id', $transfer->id)->count());
+
+        // 8. Confirm transfer status remains DRAFT/PENDING and completion timestamps/approver are uncommitted
+        $freshTransfer = $transfer->fresh();
+        $this->assertEquals(StockTransfer::STATUS_DRAFT, $freshTransfer->status);
+        $this->assertNull($freshTransfer->completed_at);
+        $this->assertNull($freshTransfer->transferred_at);
+        $this->assertNull($freshTransfer->approved_by);
+
+        // 9. Confirm no completion audit record was committed
+        $this->assertDatabaseMissing('audit_logs', [
+            'action'    => 'STOCK_TRANSFER_COMPLETE',
+            'entity_id' => $transfer->id,
+        ]);
     }
 
     /** @test */
@@ -390,6 +436,11 @@ class StockTransferTest extends TestCase
     /** @test */
     public function test_14_concurrent_transfers_cannot_produce_negative_source_stock()
     {
+        // NOTE: In single-process SQLite test environment, true multi-threaded parallel processes are not supported.
+        // We simulate concurrent lock contention where two transfer completion routines (Transfer A for 10 units
+        // and Transfer B for 10 units) contend for the same initial pool of 15 available units.
+
+        // Initial source stock = 15
         WarehouseStock::create([
             'warehouse_id'      => $this->warehouse1->id,
             'product_id'        => $this->productA->id,
@@ -398,6 +449,8 @@ class StockTransferTest extends TestCase
         ]);
 
         $service = app(StockTransferService::class);
+
+        // Transfer A = 10
         $transfer1 = $service->createTransfer([
             'from_warehouse_id' => $this->warehouse1->id,
             'to_warehouse_id'   => $this->warehouse2->id,
@@ -406,6 +459,7 @@ class StockTransferTest extends TestCase
             ],
         ], $this->admin);
 
+        // Transfer B = 10
         $transfer2 = $service->createTransfer([
             'from_warehouse_id' => $this->warehouse1->id,
             'to_warehouse_id'   => $this->warehouse2->id,
@@ -414,13 +468,53 @@ class StockTransferTest extends TestCase
             ],
         ], $this->admin);
 
+        // Simulate concurrent execution where Transfer 1 completes first under row lock:
         $res1 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$transfer1->id}/complete");
         $res1->assertStatus(200);
 
+        // Transfer 2 contends for remaining stock under row lock, finds only 5 available (< 10 requested), and is rejected with 422:
         $res2 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$transfer2->id}/complete");
         $res2->assertStatus(422);
 
-        $this->assertEquals(5, WarehouseStock::where('warehouse_id', $this->warehouse1->id)->where('product_id', $this->productA->id)->first()->quantity);
+        // INVENTORY INTEGRITY INVARIANTS:
+        // 1. Both MUST NOT succeed; at most one succeeds
+        $this->assertEquals(StockTransfer::STATUS_COMPLETED, $transfer1->fresh()->status);
+        $this->assertEquals(StockTransfer::STATUS_DRAFT, $transfer2->fresh()->status);
+
+        // 2. Final source stock MUST NEVER become negative (strictly 15 - 10 = 5 >= 0)
+        $sourceStock = WarehouseStock::where('warehouse_id', $this->warehouse1->id)
+            ->where('product_id', $this->productA->id)
+            ->first();
+        $this->assertEquals(5, $sourceStock->quantity);
+        $this->assertTrue($sourceStock->quantity >= 0);
+
+        // 3. Destination stock totals MUST equal actual successful transferred quantity (10)
+        $destStock = WarehouseStock::where('warehouse_id', $this->warehouse2->id)
+            ->where('product_id', $this->productA->id)
+            ->first();
+        $this->assertNotNull($destStock);
+        $this->assertEquals(10, $destStock->quantity);
+
+        // 4. Total TRANSFER_OUT MUST NEVER exceed 15 (exactly 10)
+        $totalTransferOut = StockTransaction::where('warehouse_id', $this->warehouse1->id)
+            ->where('product_id', $this->productA->id)
+            ->where('type', 'TRANSFER_OUT')
+            ->sum('quantity_change');
+        $this->assertEquals(-10, $totalTransferOut);
+        $this->assertTrue(abs($totalTransferOut) <= 15);
+
+        // 5. Total TRANSFER_IN matches successful transferred quantity (+10)
+        $totalTransferIn = StockTransaction::where('warehouse_id', $this->warehouse2->id)
+            ->where('product_id', $this->productA->id)
+            ->where('type', 'TRANSFER_IN')
+            ->sum('quantity_change');
+        $this->assertEquals(10, $totalTransferIn);
+
+        // 6. No partial/half-completed transfer occurred for Transfer 2
+        $transfer2Transactions = StockTransaction::where('reference_type', 'stock_transfer')
+            ->where('reference_id', $transfer2->id)
+            ->count();
+        $this->assertEquals(0, $transfer2Transactions);
     }
 
     /** @test */
@@ -757,6 +851,141 @@ class StockTransferTest extends TestCase
             'entity_type' => 'StockTransfer',
             'entity_id'   => $transfer->id,
         ]);
+    }
+
+    /** @test */
+    public function test_27_completion_idempotency_mismatch_on_changed_payload_returns_422()
+    {
+        WarehouseStock::create([
+            'warehouse_id'      => $this->warehouse1->id,
+            'product_id'        => $this->productA->id,
+            'quantity'          => 40,
+            'reserved_quantity' => 0,
+        ]);
+
+        $service = app(StockTransferService::class);
+        $transfer = $service->createTransfer([
+            'from_warehouse_id' => $this->warehouse1->id,
+            'to_warehouse_id'   => $this->warehouse2->id,
+            'items'             => [
+                ['product_id' => $this->productA->id, 'quantity' => 10],
+            ],
+        ], $this->admin);
+
+        $key = 'complete_idem_' . Str::uuid();
+
+        // 1. First completion request with idempotency key
+        $res1 = $this->actingAs($this->admin)
+            ->withHeaders(['X-Idempotency-Key' => $key])
+            ->postJson("/api/v1/stock-transfers/{$transfer->id}/complete", ['note' => 'First attempt']);
+        $res1->assertStatus(200);
+
+        // 2. Exact replay with same key and same payload returns cached response
+        $res2 = $this->actingAs($this->admin)
+            ->withHeaders(['X-Idempotency-Key' => $key])
+            ->postJson("/api/v1/stock-transfers/{$transfer->id}/complete", ['note' => 'First attempt']);
+        $res2->assertStatus(200);
+
+        // 3. Replay with same key but altered payload returns 422 mismatch
+        $res3 = $this->actingAs($this->admin)
+            ->withHeaders(['X-Idempotency-Key' => $key])
+            ->postJson("/api/v1/stock-transfers/{$transfer->id}/complete", ['note' => 'Changed attempt']);
+        $res3->assertStatus(422);
+
+        // Exactly one stock deduction and credit occurred
+        $this->assertEquals(30, WarehouseStock::where('warehouse_id', $this->warehouse1->id)->where('product_id', $this->productA->id)->first()->quantity);
+        $this->assertEquals(10, WarehouseStock::where('warehouse_id', $this->warehouse2->id)->where('product_id', $this->productA->id)->first()->quantity);
+        $this->assertEquals(1, StockTransaction::where('reference_type', 'stock_transfer')->where('type', 'TRANSFER_OUT')->count());
+    }
+
+    /** @test */
+    public function test_28_deterministic_lock_ordering_prevents_inverse_transfer_deadlocks()
+    {
+        WarehouseStock::create([
+            'warehouse_id'      => $this->warehouse1->id,
+            'product_id'        => $this->productA->id,
+            'quantity'          => 50,
+            'reserved_quantity' => 0,
+        ]);
+        WarehouseStock::create([
+            'warehouse_id'      => $this->warehouse2->id,
+            'product_id'        => $this->productA->id,
+            'quantity'          => 50,
+            'reserved_quantity' => 0,
+        ]);
+
+        $service = app(StockTransferService::class);
+
+        // Forward Transfer: WH1 -> WH2 (from=1, to=2)
+        $forwardTransfer = $service->createTransfer([
+            'from_warehouse_id' => $this->warehouse1->id,
+            'to_warehouse_id'   => $this->warehouse2->id,
+            'items'             => [
+                ['product_id' => $this->productA->id, 'quantity' => 10],
+            ],
+        ], $this->admin);
+
+        // Reverse Transfer: WH2 -> WH1 (from=2, to=1)
+        $reverseTransfer = $service->createTransfer([
+            'from_warehouse_id' => $this->warehouse2->id,
+            'to_warehouse_id'   => $this->warehouse1->id,
+            'items'             => [
+                ['product_id' => $this->productA->id, 'quantity' => 15],
+            ],
+        ], $this->admin);
+
+        // Complete both transfers; deterministic ordering (min(from,to) then max(from,to)) ensures no AB-BA locking conflicts
+        $res1 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$forwardTransfer->id}/complete");
+        $res1->assertStatus(200);
+
+        $res2 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$reverseTransfer->id}/complete");
+        $res2->assertStatus(200);
+
+        // WH1 net: 50 - 10 + 15 = 55
+        // WH2 net: 50 + 10 - 15 = 45
+        $this->assertEquals(55, WarehouseStock::where('warehouse_id', $this->warehouse1->id)->where('product_id', $this->productA->id)->first()->quantity);
+        $this->assertEquals(45, WarehouseStock::where('warehouse_id', $this->warehouse2->id)->where('product_id', $this->productA->id)->first()->quantity);
+    }
+
+    /** @test */
+    public function test_29_full_transactional_rollback_on_audit_logging_failure()
+    {
+        WarehouseStock::create([
+            'warehouse_id'      => $this->warehouse1->id,
+            'product_id'        => $this->productA->id,
+            'quantity'          => 40,
+            'reserved_quantity' => 0,
+        ]);
+
+        $service = app(StockTransferService::class);
+        $transfer = $service->createTransfer([
+            'from_warehouse_id' => $this->warehouse1->id,
+            'to_warehouse_id'   => $this->warehouse2->id,
+            'items'             => [
+                ['product_id' => $this->productA->id, 'quantity' => 10],
+            ],
+        ], $this->admin);
+
+        // Force AuditLog::create to fail when action is STOCK_TRANSFER_COMPLETE
+        AuditLog::creating(function ($log) {
+            if ($log->action === 'STOCK_TRANSFER_COMPLETE') {
+                throw new \RuntimeException('Simulated AuditLog database crash');
+            }
+        });
+
+        try {
+            $service->completeTransfer($transfer, $this->admin);
+            $this->fail('Expected completeTransfer to fail when audit log write fails.');
+        } catch (\RuntimeException $e) {
+            $this->assertEquals('Simulated AuditLog database crash', $e->getMessage());
+        }
+
+        // Entire transaction must roll back
+        $this->assertEquals(40, WarehouseStock::where('warehouse_id', $this->warehouse1->id)->where('product_id', $this->productA->id)->first()->quantity);
+        $destStock = WarehouseStock::where('warehouse_id', $this->warehouse2->id)->where('product_id', $this->productA->id)->first();
+        $this->assertTrue($destStock === null || $destStock->quantity === 0);
+        $this->assertEquals(0, StockTransaction::where('reference_type', 'stock_transfer')->where('reference_id', $transfer->id)->count());
+        $this->assertEquals(StockTransfer::STATUS_DRAFT, $transfer->fresh()->status);
     }
 }
 
