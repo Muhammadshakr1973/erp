@@ -434,26 +434,30 @@ class StockTransferTest extends TestCase
     }
 
     /** @test */
-    public function test_14_sequential_competing_transfers_never_overallocate_source_stock()
+    public function test_competing_transfers_never_overallocate_source_stock_sequential_simulation()
     {
         // =========================================================================
         // SEQUENTIAL COMPETING TRANSFERS & OVER-ALLOCATION VERIFICATION
         //
         // Environment Limitation & Architecture Note:
-        // Test Database Driver: SQLite (:memory:)
-        // True database-level parallel lock contention requires a server-based RDBMS
-        // test environment such as MySQL/MariaDB/PostgreSQL (with row-level lock queues)
-        // and is not executable under the current SQLite in-memory configuration.
+        // True database-level concurrent row-lock contention cannot be executed
+        // under the current SQLite :memory: test environment. The production
+        // implementation uses lockForUpdate(), but actual parallel locking must
+        // be verified under MySQL/MariaDB/PostgreSQL integration testing.
         //
-        // What this test proves:
+        // What this sequential invariant simulation proves:
         // When multiple transfer requests (Transfer A = 10 units, Transfer B = 10 units)
         // are created against a shared pool of 15 available units, sequential execution
         // of completion requests correctly re-evaluates committed stock under transaction/lock:
-        // - Transfer A consumes 10 units (leaving 5 units available).
-        // - Transfer B's completion is rejected (422) because 5 < 10 requested.
-        // - Final source stock remains strictly 5 (never negative).
-        // - Final destination stock is strictly 10.
-        // - No ghost or duplicate stock movements/audit logs are created for Transfer B.
+        // - Initial source stock = 15
+        // - Transfer A = 10 succeeds
+        // - Transfer B = 10 fails (422) because 5 < 10 requested
+        // - Final source stock = 5 (strictly non-negative)
+        // - Final destination stock = 10
+        // - Only one TRANSFER_OUT is recorded
+        // - Only one TRANSFER_IN is recorded
+        // - Failed transfer produces no stock transactions
+        // - Failed transfer remains DRAFT
         // =========================================================================
 
         // 1. Initial source stock = 15 units (reserved = 0, available = 15)
@@ -948,6 +952,10 @@ class StockTransferTest extends TestCase
     /** @test */
     public function test_28_deterministic_lock_ordering_prevents_inverse_transfer_deadlocks()
     {
+        // Static & sequential verification of deterministic warehouse lock ordering (min(from,to) then max(from,to)).
+        // Note: Real multi-threaded lock-contention and deadlock-cycle prevention at the RDBMS engine level
+        // is guaranteed by deterministic lock acquisition order in StockTransferService, and must be tested
+        // under a multi-connection MySQL/PostgreSQL integration environment.
         WarehouseStock::create([
             'warehouse_id'      => $this->warehouse1->id,
             'product_id'        => $this->productA->id,
