@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gardi_erp/features/shared/models/report_models.dart';
-import 'package:gardi_erp/features/orders/models/order_model.dart';
-import 'package:gardi_erp/features/shared/models/customer.dart';
-import 'package:gardi_erp/features/driver/models/delivery_trip_model.dart';
-import 'package:gardi_erp/features/products/models/supplier_model.dart';
-import 'package:gardi_erp/features/products/models/supplier_ledger_model.dart';
-import 'package:gardi_erp/features/shared/models/customer_ledger_model.dart';
+import 'package:pos_app/features/shared/models/report_models.dart';
+import 'package:pos_app/features/orders/models/order_model.dart';
+import 'package:pos_app/features/shared/models/customer.dart';
+import 'package:pos_app/features/driver/models/delivery_trip_model.dart';
+import 'package:pos_app/features/products/models/supplier_model.dart';
+import 'package:pos_app/features/products/models/supplier_ledger_model.dart';
+import 'package:pos_app/features/shared/models/customer_ledger_model.dart';
 
 void main() {
   group('API Contract Consistency & Response Parsing Tests', () {
