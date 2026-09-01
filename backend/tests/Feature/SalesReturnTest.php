@@ -687,4 +687,221 @@ class SalesReturnTest extends TestCase
         $stock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first();
         $this->assertEquals(11, $stock->quantity);
     }
+
+    /** @test */
+    public function it_rejects_duplicate_items_in_one_request_if_combined_quantity_exceeds_original_quantity()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        $payload = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 4,
+                ],
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        // Stock and balance before
+        $this->assertEquals(15000, $this->customer->current_balance);
+        $stock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first();
+        $this->assertEquals(10, $stock->quantity);
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/sales-returns', $payload);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('items');
+
+        // Verify NO sales return created
+        $this->assertEquals(0, SalesReturn::count());
+
+        // Verify NO stock mutation
+        $stock->refresh();
+        $this->assertEquals(10, $stock->quantity);
+
+        // Verify NO ledger mutation
+        $this->customer->refresh();
+        $this->assertEquals(15000, $this->customer->current_balance);
+    }
+
+    /** @test */
+    public function it_allows_duplicate_items_in_one_request_if_combined_quantity_equals_remaining_quantity()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        $payload = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 3,
+                ],
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        // Stock and balance before
+        $this->assertEquals(15000, $this->customer->current_balance);
+        $stock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first();
+        $this->assertEquals(10, $stock->quantity);
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/sales-returns', $payload);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.total_return_amount', 37500); // 5 * 7500
+
+        // Verify SalesReturn and items are created
+        $this->assertEquals(1, SalesReturn::count());
+        $this->assertEquals(2, SalesReturnItem::count());
+
+        // Verify stock increased exactly by 5
+        $stock->refresh();
+        $this->assertEquals(15, $stock->quantity);
+
+        // Verify customer balance decreased by total return amount (15000 - 37500 = -22500)
+        $this->customer->refresh();
+        $this->assertEquals(-22500, $this->customer->current_balance);
+
+        // Verify ledger updated exactly once for the total amount
+        $this->assertDatabaseHas('customer_ledgers', [
+            'customer_id' => $this->customer->id,
+            'entry_type' => 'RETURN',
+            'amount' => 37500,
+        ]);
+        $this->assertEquals(1, CustomerLedger::where('entry_type', 'RETURN')->count());
+    }
+
+    /** @test */
+    public function it_rejects_duplicate_items_if_combined_with_previous_partial_return_exceeds_original_quantity()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        // Previous partial return of 2
+        $payload1 = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/sales-returns', $payload1)->assertStatus(201);
+
+        // Current request with duplicate items: 2 + 2 = 4 (exceeds remaining 3)
+        $payload2 = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ],
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/sales-returns', $payload2);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('items');
+
+        // Only the first SalesReturn should exist
+        $this->assertEquals(1, SalesReturn::count());
+    }
+
+    /** @test */
+    public function it_allows_duplicate_items_if_combined_with_previous_partial_return_is_within_remaining_quantity()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        // Previous partial return of 2
+        $payload1 = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+        $this->actingAs($this->salesman)->postJson('/api/v1/sales-returns', $payload1)->assertStatus(201);
+
+        // Current request with duplicate items: 1 + 2 = 3 (exactly equals remaining 3)
+        $payload2 = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 1,
+                ],
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/sales-returns', $payload2);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.total_return_amount', 22500); // 3 * 7500
+
+        // Both SalesReturns should exist
+        $this->assertEquals(2, SalesReturn::count());
+
+        // Total cumulative returned stock should be 5 (original 10 + 2 + 3 = 15)
+        $stock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first();
+        $this->assertEquals(15, $stock->quantity);
+    }
 }

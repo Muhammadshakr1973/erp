@@ -52,6 +52,44 @@ class SalesReturnService
             // ٢. قفڵکردنی کڕیار بۆ دڵنیابوون لە پاراستنی دروستی باڵانس و ڕێگری لە هاوکاتی
             $customer = Customer::lockForUpdate()->findOrFail($order->customer_id);
 
+            // ٣. گروپکردن و پشکنینی بڕی گەڕێندراوە بۆ هەموو ئایتمەکان پێش تۆمارکردنی هیچ تۆمارێک
+            $groupedQuantities = [];
+            foreach ($data['items'] as $itemInput) {
+                $orderItemId = $itemInput['sales_order_item_id'];
+                $returnedQty = (int)$itemInput['quantity'];
+
+                if ($returnedQty <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'بڕی گەڕێندراو دەبێت لە ٠ زیاتر بێت.',
+                    ]);
+                }
+
+                if (!isset($groupedQuantities[$orderItemId])) {
+                    $groupedQuantities[$orderItemId] = 0;
+                }
+                $groupedQuantities[$orderItemId] += $returnedQty;
+            }
+
+            foreach ($groupedQuantities as $orderItemId => $totalRequestedQty) {
+                // دڵنیابوون لەوەی ئایتمەکە سەر بەم پسوڵەیەیە
+                $orderItem = SalesOrderItem::where('sales_order_id', $order->id)
+                    ->findOrFail($orderItemId);
+
+                // پشکنینی بڕی گەڕێندراوەی پێشوو لە داتابەیسدا (پێش ئەم داواکارییە)
+                $alreadyReturned = SalesReturnItem::whereHas('salesReturn', function ($q) use ($order) {
+                    $q->where('sales_order_id', $order->id)
+                      ->whereIn('status', [SalesReturn::STATUS_COMPLETED, SalesReturn::STATUS_COMPLETED_LOWER]);
+                })->where('sales_order_item_id', $orderItemId)->sum('quantity');
+
+                $availableToReturn = $orderItem->quantity - $alreadyReturned;
+
+                if ($totalRequestedQty > $availableToReturn) {
+                    throw ValidationException::withMessages([
+                        'items' => "بڕی گەڕێندراوی گشتی بۆ ئەم ئایتمە ({$totalRequestedQty}) ناتوانێت لە بڕی گەڕەنەوەی بەردەست ({$availableToReturn}) زیاتر بێت بۆ کاڵای '{$orderItem->product?->name}' (sales_order_item_id: {$orderItemId}).",
+                    ]);
+                }
+            }
+
             $returnNumber = 'RET-' . strtoupper(Str::random(8));
             
             // دروستکردنی کۆمەڵەی گەڕانەوەی سەرەکی (بەڵام جارێ کۆی گشتییەکە سفرە)
@@ -92,26 +130,6 @@ class SalesReturnService
                 $orderItem = $resolved['order_item'];
                 $orderItemId = $itemInput['sales_order_item_id'];
                 $returnedQty = (int)$itemInput['quantity'];
-
-                if ($returnedQty <= 0) {
-                    throw ValidationException::withMessages([
-                        'items' => 'بڕی گەڕێندراو دەبێت لە ٠ زیاتر بێت.',
-                    ]);
-                }
-
-                // پشکنینی بڕی گەڕێندراوەی پێشوو بۆ ئەم ئایتمە
-                $alreadyReturned = SalesReturnItem::whereHas('salesReturn', function ($q) use ($order) {
-                    $q->where('sales_order_id', $order->id)
-                      ->whereIn('status', [SalesReturn::STATUS_COMPLETED, SalesReturn::STATUS_COMPLETED_LOWER]);
-                })->where('sales_order_item_id', $orderItemId)->sum('quantity');
-
-                $availableToReturn = $orderItem->quantity - $alreadyReturned;
-
-                if ($returnedQty > $availableToReturn) {
-                    throw ValidationException::withMessages([
-                        'items' => "بڕی گەڕێندراو ({$returnedQty}) ناتوانێت لە بڕی گەڕەنەوەی بەردەست ({$availableToReturn}) زیاتر بێت بۆ کاڵای '{$orderItem->product?->name}'.",
-                    ]);
-                }
 
                 $unitPrice = (int)$orderItem->unit_price;
                 $itemTotalAmount = $returnedQty * $unitPrice;
