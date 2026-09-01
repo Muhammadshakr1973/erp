@@ -366,11 +366,11 @@ class IdempotencyConcurrencyTest extends TestCase
     }
 
     /**
-     * Scenario 6: Replaying a request with the same key but different payload returns original cached response.
+     * Scenario 6: Replaying a request with the same key but different payload returns 422 Payload Mismatch.
      */
-    public function test_same_key_with_different_payload_replays_original_cached_response(): void
+    public function test_same_key_with_different_payload_returns_422_mismatch(): void
     {
-        $idempotencyKey = 'order-key-6';
+        $idempotencyKey = 'order-key-6-mismatch';
         $payload1 = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
@@ -379,19 +379,20 @@ class IdempotencyConcurrencyTest extends TestCase
             ]
         ];
 
+        // First request succeeds
         $response1 = $this->actingAs($this->user)
             ->withHeader('X-Idempotency-Key', $idempotencyKey)
             ->postJson('/api/v1/orders', $payload1);
 
         $response1->assertStatus(201);
-        $originalOrderId = $response1->json('data.id');
+        $this->assertEquals(1, DB::table('sales_orders')->count());
 
-        // Send a different payload with the SAME key
+        // Second request with SAME key but DIFFERENT quantity
         $payload2 = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'items' => [
-                ['product_id' => $this->product->id, 'quantity' => 10] // different quantity
+                ['product_id' => $this->product->id, 'quantity' => 10]
             ]
         ];
 
@@ -399,9 +400,234 @@ class IdempotencyConcurrencyTest extends TestCase
             ->withHeader('X-Idempotency-Key', $idempotencyKey)
             ->postJson('/api/v1/orders', $payload2);
 
-        $response2->assertStatus(201);
+        // Must be rejected with 422 Unprocessable Entity
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+
+        // Ensure database state is pristine and no second order was created
+        $this->assertEquals(1, DB::table('sales_orders')->count());
+    }
+
+    /**
+     * Test same key with different amount on payment endpoint returns 422 mismatch.
+     */
+    public function test_payment_same_key_with_different_amount_returns_422_mismatch(): void
+    {
+        $idempotencyKey = 'pay-mismatch-key-1';
+
+        // 1. Request 1: amount = 20,000
+        $payload1 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 20000,
+            'payment_method' => 'CASH',
+            'notes' => 'Original payment'
+        ];
+
+        $response1 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload1);
+
+        $response1->assertStatus(201);
+        $this->assertEquals(1, DB::table('customer_payments')->count());
+        $this->assertEquals(1, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(80000, $this->customer->fresh()->current_balance);
+
+        // 2. Request 2: amount = 50,000 with SAME key
+        $payload2 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 50000,
+            'payment_method' => 'CASH',
+            'notes' => 'Tampered payment'
+        ];
+
+        $response2 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload2);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+
+        // Verify NO second payment, NO second ledger entry, NO balance mutation
+        $this->assertEquals(1, DB::table('customer_payments')->count());
+        $this->assertEquals(1, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(80000, $this->customer->fresh()->current_balance);
+    }
+
+    /**
+     * Test same key with different customer returns 422 mismatch.
+     */
+    public function test_payment_same_key_with_different_customer_returns_422_mismatch(): void
+    {
+        $route = \App\Models\Route::first();
+        $otherCustomer = Customer::create([
+            'name' => 'Other Customer',
+            'phone' => '07702222222',
+            'route_id' => $route->id,
+            'price_type' => 'N1',
+            'current_balance' => 50000,
+            'is_active' => true
+        ]);
+
+        $idempotencyKey = 'customer-mismatch-key-2';
+
+        $payload1 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 10000,
+            'payment_method' => 'CASH'
+        ];
+
+        $response1 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload1);
+        $response1->assertStatus(201);
+
+        $payload2 = [
+            'customer_id' => $otherCustomer->id,
+            'amount' => 10000,
+            'payment_method' => 'CASH'
+        ];
+
+        $response2 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload2);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+        $this->assertEquals(1, DB::table('customer_payments')->count());
+    }
+
+    /**
+     * Test same key across different endpoints/paths returns 422 mismatch.
+     */
+    public function test_same_key_across_different_endpoints_returns_422_mismatch(): void
+    {
+        $idempotencyKey = 'cross-endpoint-key-3';
+
+        // 1. Submit payment
+        $payloadPayment = [
+            'customer_id' => $this->customer->id,
+            'amount' => 5000,
+            'payment_method' => 'CASH'
+        ];
+
+        $response1 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payloadPayment);
+        $response1->assertStatus(201);
+
+        // 2. Submit order with SAME key
+        $payloadOrder = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 1]
+            ]
+        ];
+
+        $response2 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/orders', $payloadOrder);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+        $this->assertEquals(0, DB::table('sales_orders')->count());
+    }
+
+    /**
+     * Test supplier payment idempotency: replay returns cached response, different payload returns 422.
+     */
+    public function test_supplier_payment_idempotency_lifecycle(): void
+    {
+        $adminRole = Role::create([
+            'name' => Role::OWNER,
+            'permissions' => ['*']
+        ]);
+        $admin = User::create([
+            'name' => 'Admin User',
+            'phone' => '07700000099',
+            'password' => bcrypt('password'),
+            'role_id' => $adminRole->id,
+            'is_active' => true
+        ]);
+
+        $supplier = \App\Models\Supplier::create([
+            'name' => 'Supplier X',
+            'current_balance' => 100000,
+            'created_by' => $admin->id
+        ]);
+
+        $idempotencyKey = 'supplier-pay-key-777';
+        $payload1 = [
+            'amount' => 25000,
+            'payment_method' => 'cash',
+            'notes' => 'Supplier payment 1'
+        ];
+
+        // 1. Initial submission
+        $response1 = $this->actingAs($admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson("/api/v1/suppliers/{$supplier->id}/pay", $payload1);
+
+        $response1->assertStatus(200);
+        $this->assertEquals(75000, $supplier->fresh()->current_balance);
+        $this->assertEquals(1, DB::table('supplier_payments')->count());
+        $this->assertEquals(1, DB::table('supplier_ledgers')->count());
+
+        // 2. Replay with identical payload and key (indefinite replay)
+        $response2 = $this->actingAs($admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson("/api/v1/suppliers/{$supplier->id}/pay", $payload1);
+
+        $response2->assertStatus(200);
         $response2->assertHeader('X-Cache-Lookup', 'HIT');
-        $response2->assertJsonPath('data.id', $originalOrderId);
+        $this->assertEquals(75000, $supplier->fresh()->current_balance);
+        $this->assertEquals(1, DB::table('supplier_payments')->count());
+
+        // 3. Resubmit with same key but changed amount (e.g. 40,000)
+        $payloadChanged = [
+            'amount' => 40000,
+            'payment_method' => 'cash',
+            'notes' => 'Supplier payment 1'
+        ];
+
+        $response3 = $this->actingAs($admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson("/api/v1/suppliers/{$supplier->id}/pay", $payloadChanged);
+
+        $response3->assertStatus(422);
+        $response3->assertJsonPath('message', 'Idempotency key payload mismatch');
+        $this->assertEquals(75000, $supplier->fresh()->current_balance);
+        $this->assertEquals(1, DB::table('supplier_payments')->count());
+    }
+
+    /**
+     * Test different keys with same amount execute two legitimate payments when balance permits.
+     */
+    public function test_different_keys_with_same_amount_execute_two_legitimate_payments(): void
+    {
+        $payload1 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 20000,
+            'payment_method' => 'CASH'
+        ];
+
+        // Payment 1 with Key A
+        $response1 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', 'legit-key-a')
+            ->postJson('/api/v1/payments', $payload1);
+        $response1->assertStatus(201);
+        $this->assertEquals(80000, $this->customer->fresh()->current_balance);
+
+        // Payment 2 with Key B (different key, same amount)
+        $response2 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', 'legit-key-b')
+            ->postJson('/api/v1/payments', $payload1);
+        $response2->assertStatus(201);
+        $this->assertEquals(60000, $this->customer->fresh()->current_balance);
+
+        // Both payments and ledgers are recorded
+        $this->assertEquals(2, DB::table('customer_payments')->count());
+        $this->assertEquals(2, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
     }
 
     /**

@@ -28,14 +28,17 @@ class Idempotency
         // Limit length/format for safety
         $idempotencyKey = substr(trim($idempotencyKey), 0, 255);
         $userId = $request->user()?->id;
+        $requestHash = $this->computeRequestHash($request, $userId);
+        $normalizedParams = $this->normalizePayload($request->all());
 
         try {
-            // Try to register the key as processing
+            // Try to register the key as processing with canonical request hash
             DB::table('idempotency_keys')->insert([
                 'idempotency_key' => $idempotencyKey,
                 'user_id' => $userId,
                 'request_path' => $request->path(),
-                'request_params' => json_encode($request->all()),
+                'request_hash' => $requestHash,
+                'request_params' => json_encode($normalizedParams, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'status' => 'processing',
                 'created_at' => now(),
                 'updated_at' => now()
@@ -45,7 +48,7 @@ class Idempotency
             $existing = DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->first();
 
             if ($existing) {
-                // Security check: ensure requesting user owns this idempotency key
+                // 1. Security check: ensure requesting user owns this idempotency key
                 if ($existing->user_id !== null && $existing->user_id !== $userId) {
                     return response()->json([
                         'message' => 'تۆ ڕێگەپێدراو نیت بۆ بەکارهێنانی ئەم کردارە.',
@@ -53,6 +56,19 @@ class Idempotency
                     ], 403);
                 }
 
+                // 2. Hash / Payload mismatch check
+                // Compare calculated request hash against stored hash
+                $storedHash = $existing->request_hash ?? null;
+                $hashMatches = $storedHash ? hash_equals($storedHash, $requestHash) : ($existing->request_path === $request->path());
+
+                if (!$hashMatches) {
+                    return response()->json([
+                        'message' => 'Idempotency key payload mismatch',
+                        'error' => 'Idempotency key payload mismatch. The request parameters or endpoint do not match the original request.'
+                    ], 422);
+                }
+
+                // 3. Processing check
                 if ($existing->status === 'processing') {
                     return response()->json([
                         'message' => 'ئەم کردارە لە پرۆسەدایە، تکایە چاوەڕێ بکە.',
@@ -60,6 +76,7 @@ class Idempotency
                     ], 409);
                 }
 
+                // 4. Completed check: replay original response
                 if ($existing->status === 'completed') {
                     $headers = [
                         'X-Cache-Lookup' => 'HIT',
@@ -104,4 +121,46 @@ class Idempotency
             throw $e;
         }
     }
+
+    /**
+     * Build canonical representation and return its SHA-256 hash.
+     */
+    public function computeRequestHash(Request $request, ?int $userId): string
+    {
+        $normalizedParams = $this->normalizePayload($request->all());
+
+        $canonicalData = [
+            'method' => strtoupper($request->method()),
+            'path' => trim($request->path(), '/'),
+            'user_id' => $userId,
+            'params' => $normalizedParams,
+        ];
+
+        $canonicalJson = json_encode($canonicalData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return hash('sha256', $canonicalJson);
+    }
+
+    /**
+     * Recursively sort associative array keys to ensure deterministic hashing.
+     */
+    private function normalizePayload(mixed $data): mixed
+    {
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        // Check if associative array
+        $isAssoc = !empty($data) && array_keys($data) !== range(0, count($data) - 1);
+        if ($isAssoc) {
+            ksort($data);
+        }
+
+        foreach ($data as $key => $value) {
+            $data[$key] = $this->normalizePayload($value);
+        }
+
+        return $data;
+    }
 }
+

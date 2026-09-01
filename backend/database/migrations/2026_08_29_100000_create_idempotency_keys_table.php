@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('idempotency_key', 255)->unique();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('request_path', 255);
+            $table->string('request_hash', 64)->nullable();
             $table->text('request_params')->nullable();
             $table->string('status', 50)->default('processing'); // 'processing', 'completed'
             $table->integer('response_status')->nullable();

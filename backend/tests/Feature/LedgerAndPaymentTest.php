@@ -199,6 +199,79 @@ class LedgerAndPaymentTest extends TestCase
     }
 
     /** @test */
+    public function test_customer_payment_same_key_different_payload_fails_with_422_mismatch()
+    {
+        $idempotencyKey = 'customer-payment-mismatch-key-999';
+        $payload1 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 20000,
+            'payment_method' => 'CASH',
+            'notes' => 'Original Payment',
+        ];
+
+        // 1. Initial successful payment
+        $response1 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload1);
+        $response1->assertStatus(201);
+        $this->assertEquals(80000, $this->customer->fresh()->current_balance);
+
+        // 2. Resubmit with same key but altered amount
+        $payload2 = [
+            'customer_id' => $this->customer->id,
+            'amount' => 50000,
+            'payment_method' => 'CASH',
+            'notes' => 'Altered Payment',
+        ];
+
+        $response2 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/payments', $payload2);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+
+        // Confirm no secondary payment or ledger entry created, balance remains 80,000
+        $this->assertEquals(1, CustomerPayment::count());
+        $this->assertEquals(1, CustomerLedger::where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(80000, $this->customer->fresh()->current_balance);
+    }
+
+    /** @test */
+    public function test_supplier_payment_same_key_different_payload_fails_with_422_mismatch()
+    {
+        $idempotencyKey = 'supplier-payment-mismatch-key-888';
+        $payload1 = [
+            'amount' => 10000,
+            'payment_method' => 'cash',
+        ];
+
+        // 1. Initial supplier payment
+        $response1 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson("/api/v1/suppliers/{$this->supplier->id}/pay", $payload1);
+        $response1->assertStatus(200);
+        $this->assertEquals(90000, $this->supplier->fresh()->current_balance);
+
+        // 2. Resubmit with same key but altered amount
+        $payload2 = [
+            'amount' => 30000,
+            'payment_method' => 'cash',
+        ];
+
+        $response2 = $this->actingAs($this->admin)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson("/api/v1/suppliers/{$this->supplier->id}/pay", $payload2);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+
+        $this->assertEquals(1, SupplierPayment::count());
+        $this->assertEquals(1, SupplierLedger::where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(90000, $this->supplier->fresh()->current_balance);
+    }
+
+    /** @test */
     public function test_customer_overpayment_protection()
     {
         // 1. Attempt payment exceeding customer debt (balance is 100,000, try paying 100,001)
