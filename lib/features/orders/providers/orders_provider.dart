@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -19,32 +20,79 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
     if (response.statusCode == 200) {
       final List data = response.data['data'] ?? [];
       final orders = data.map((json) => OrderModel.fromJson(json)).toList();
+
       // Update local cache
-      // We store json string to simplify model caching for this example
-      // In a real app we'd have a Hive TypeAdapter for OrderModel
-      // but the prompt constraints imply sticking to minimal safe changes
+      // We clear the box first to ensure stale orders are removed, then put fresh entries
+      await localBox.clear();
+      for (var i = 0; i < data.length; i++) {
+        final order = orders[i];
+        final rawJson = data[i];
+        if (rawJson is Map) {
+          final Map<String, dynamic> castedJson = Map<String, dynamic>.from(rawJson);
+          await localBox.put(order.id.toString(), jsonEncode(castedJson));
+        }
+      }
       return orders;
     }
-    return [];
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
   } catch (e) {
     // Return cached orders on network error
-    // For now we just return an empty list or cached items if we had them
-    return [];
+    final cachedOrders = <OrderModel>[];
+    final corruptedKeys = <String>[];
+
+    for (final key in localBox.keys) {
+      final jsonStr = localBox.get(key);
+      if (jsonStr != null) {
+        try {
+          final Map<String, dynamic> json = jsonDecode(jsonStr);
+          cachedOrders.add(OrderModel.fromJson(json));
+        } catch (_) {
+          corruptedKeys.add(key.toString());
+        }
+      }
+    }
+
+    // Clean up corrupted keys if any
+    for (final key in corruptedKeys) {
+      await localBox.delete(key);
+    }
+
+    if (cachedOrders.isNotEmpty) {
+      return cachedOrders;
+    }
+
+    // Throw specific exception if there is no network connection and no cached orders
+    throw Exception('پەیوەندی هێڵ لەدەستدراوە و هیچ پسوڵەیەکی پاشەکەوتکراو نییە (No network connection and no cached orders)');
   }
 });
 
 final singleOrderProvider =
     FutureProvider.family<OrderModel?, String>((ref, orderId) async {
   final api = ref.watch(apiClientProvider);
+  final localBox = ref.watch(localOrdersBoxProvider);
 
   try {
     final response = await api.client.get('/orders/$orderId');
     if (response.statusCode == 200) {
       final data = response.data['data'] ?? response.data;
-      return OrderModel.fromJson(data);
+      final order = OrderModel.fromJson(data);
+      if (data is Map) {
+        final Map<String, dynamic> castedJson = Map<String, dynamic>.from(data);
+        await localBox.put(order.id.toString(), jsonEncode(castedJson));
+      }
+      return order;
     }
     return null;
   } catch (e) {
+    final cachedStr = localBox.get(orderId);
+    if (cachedStr != null) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(cachedStr);
+        return OrderModel.fromJson(json);
+      } catch (_) {
+        // Safe fallback - don't crash
+      }
+    }
     return null;
   }
 });
