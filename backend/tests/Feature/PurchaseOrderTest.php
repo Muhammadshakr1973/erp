@@ -172,4 +172,210 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals('OPEN', $requirement->status);
         $this->assertNull($requirement->purchase_order_id);
     }
+
+    /** @test */
+    public function it_supports_partial_receiving_of_purchase_order()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-PARTIAL',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 0,
+        ]);
+
+        $requirement = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'purchase_order_id' => $order->id,
+            'required_quantity' => 100,
+            'current_stock' => 0,
+            'status' => 'ORDERED',
+            'created_by' => $this->admin->id,
+        ]);
+
+        // First partial receive: 40 units
+        $response1 = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 40]
+            ]
+        ]);
+
+        $response1->assertStatus(200);
+
+        $order->refresh();
+        $item->refresh();
+        $this->assertEquals('DRAFT', $order->status); // Still DRAFT since 60 remain
+        $this->assertEquals(40, $item->received_quantity);
+
+        $stock1 = WarehouseStock::where('warehouse_id', $this->warehouse->id)->where('product_id', $this->product->id)->first();
+        $this->assertEquals(40, $stock1->quantity);
+
+        $this->assertEquals(4000, $this->supplier->refresh()->debt);
+
+        // Second partial receive: 60 units (completes order)
+        $response2 = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 60]
+            ]
+        ]);
+
+        $response2->assertStatus(200);
+
+        $order->refresh();
+        $item->refresh();
+        $requirement->refresh();
+
+        $this->assertEquals('RECEIVED', $order->status);
+        $this->assertEquals(100, $item->received_quantity);
+        $this->assertEquals('CLOSED', $requirement->status);
+
+        $stock2 = WarehouseStock::where('warehouse_id', $this->warehouse->id)->where('product_id', $this->product->id)->first();
+        $this->assertEquals(100, $stock2->quantity);
+
+        $this->assertEquals(10000, $this->supplier->refresh()->debt);
+    }
+
+    /** @test */
+    public function it_rejects_receiving_greater_than_remaining_quantity()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-OVER',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 5000,
+        ]);
+
+        $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 50,
+            'unit_cost' => 100,
+            'total_cost' => 5000,
+            'received_quantity' => 0,
+        ]);
+
+        // Attempting to receive 60 when only 50 ordered
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 60]
+            ]
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_rejects_zero_or_negative_receiving_quantity()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-ZERO',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 5000,
+        ]);
+
+        $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 50,
+            'unit_cost' => 100,
+            'total_cost' => 5000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 0]
+            ]
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_preserves_historical_unit_cost_when_product_cost_changes()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-HISTORICAL',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        // Agreed unit cost on PO is 100
+        $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'unit_cost' => 100,
+            'total_cost' => 1000,
+            'received_quantity' => 0,
+        ]);
+
+        // Product cost changes later in product master table
+        $this->product->update(['cost_price' => 200]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive");
+        $response->assertStatus(200);
+
+        // Supplier debt should be calculated using historical unit_cost (100 * 10 = 1000), not 200 * 10 = 2000
+        $this->assertEquals(1000, $this->supplier->refresh()->debt);
+
+        $ledger = SupplierLedger::where('reference_type', 'purchase_order')->where('reference_id', $order->id)->first();
+        $this->assertEquals(1000, $ledger->amount);
+    }
+
+    /** @test */
+    public function it_aggregates_requirements_for_same_product_when_converting()
+    {
+        $req1 = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'required_quantity' => 10,
+            'current_stock' => 0,
+            'status' => 'OPEN',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $req2 = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'required_quantity' => 15,
+            'current_stock' => 0,
+            'status' => 'OPEN',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/purchase-requirements/convert', [
+            'requirement_ids' => [$req1->id, $req2->id]
+        ]);
+
+        $response->assertStatus(200);
+
+        $po = PurchaseOrder::where('supplier_id', $this->supplier->id)->first();
+        $this->assertNotNull($po);
+        $this->assertCount(1, $po->items); // Aggregated into single item
+        $this->assertEquals(25, $po->items->first()->quantity);
+
+        $req1->refresh();
+        $req2->refresh();
+        $this->assertEquals('ORDERED', $req1->status);
+        $this->assertEquals('ORDERED', $req2->status);
+    }
 }

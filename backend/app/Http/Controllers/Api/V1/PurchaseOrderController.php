@@ -86,11 +86,20 @@ class PurchaseOrderController extends Controller
             ], 403);
         }
 
-        $completedOrder = $this->purchaseService->receiveOrder($order, $user);
+        $request->validate([
+            'items' => 'nullable|array',
+            'items.*.product_id' => 'nullable|integer',
+            'items.*.item_id' => 'nullable|integer',
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+        ]);
+
+        $itemsPayload = $request->input('items');
+
+        $completedOrder = $this->purchaseService->receiveOrder($order, $user, $itemsPayload);
 
         return response()->json([
             'message' => 'کاڵاکان بەسەرکەوتوویی وەرگیران و ستۆک زیاد کرا',
-            'data'    => $completedOrder
+            'data'    => $completedOrder->fresh(['items.product', 'supplier', 'warehouse'])
         ], 200);
     }
 

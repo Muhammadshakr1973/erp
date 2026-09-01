@@ -71,14 +71,18 @@ class PurchaseActions {
     }
   }
 
-  Future<void> receivePurchaseOrder(int orderId) async {
+  Future<void> receivePurchaseOrder(int orderId, {List<Map<String, dynamic>>? items}) async {
     final apiClient = _ref.read(apiClientProvider);
     final syncService = _ref.read(syncServiceProvider);
     try {
+      final payload = <String, dynamic>{};
+      if (items != null && items.isNotEmpty) {
+        payload['items'] = items;
+      }
       await syncService.enqueueOperation(
         entityId: orderId.toString(),
         operationType: 'PURCHASE_RECEIVE',
-        payload: {},
+        payload: payload,
       );
       await syncService.syncPendingOperations();
       // Invalidate purchase orders provider to refresh list

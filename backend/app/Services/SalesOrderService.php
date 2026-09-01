@@ -491,14 +491,31 @@ class SalesOrderService
 
                 $existingReq = PurchaseRequirement::where('product_id', $item->product_id)
                     ->where('sales_order_id', $order->id)
-                    ->where('status', 'OPEN')
+                    ->whereIn('status', ['OPEN', 'ORDERED'])
                     ->first();
 
                 if ($existingReq) {
-                    $existingReq->update([
-                        'required_quantity' => $shortage,
-                        'current_stock' => $warehouseStock->quantity,
-                    ]);
+                    if ($existingReq->status === 'OPEN') {
+                        $existingReq->update([
+                            'required_quantity' => $shortage,
+                            'current_stock' => $warehouseStock->quantity,
+                        ]);
+                    } elseif ($existingReq->status === 'ORDERED') {
+                        $additionalShortage = $shortage - $existingReq->required_quantity;
+                        if ($additionalShortage > 0) {
+                            $product = Product::find($item->product_id);
+                            PurchaseRequirement::create([
+                                'product_id' => $item->product_id,
+                                'warehouse_id' => $order->warehouse_id,
+                                'supplier_id' => $product ? $product->supplier_id : null,
+                                'sales_order_id' => $order->id,
+                                'required_quantity' => $additionalShortage,
+                                'current_stock' => $warehouseStock->quantity,
+                                'status' => 'OPEN',
+                                'created_by' => $user->id,
+                            ]);
+                        }
+                    }
                 } else {
                     $product = Product::find($item->product_id);
                     PurchaseRequirement::create([

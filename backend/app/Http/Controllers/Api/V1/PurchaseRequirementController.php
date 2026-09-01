@@ -118,20 +118,28 @@ class PurchaseRequirementController extends Controller
 
                     $totalAmount = 0;
 
+                    // Aggregate quantities by product_id to prevent unique constraint violation
+                    $productQuantities = [];
                     foreach ($groupReqs as $req) {
-                        $product = Product::find($req->product_id);
+                        $pId = $req->product_id;
+                        $productQuantities[$pId] = ($productQuantities[$pId] ?? 0) + $req->required_quantity;
+                    }
+
+                    foreach ($productQuantities as $productId => $qty) {
+                        $product = Product::find($productId);
                         $unitCost = $product ? $product->cost_price : 0;
-                        $lineTotal = $req->required_quantity * $unitCost;
+                        $lineTotal = $qty * $unitCost;
                         $totalAmount += $lineTotal;
 
-                        // دروستکردنی ئایتمی پسوڵەی کڕین
                         $purchaseOrder->items()->create([
-                            'product_id' => $req->product_id,
-                            'quantity'   => $req->required_quantity,
+                            'product_id' => $productId,
+                            'quantity'   => $qty,
                             'unit_cost'  => $unitCost,
                             'total_cost' => $lineTotal,
                         ]);
+                    }
 
+                    foreach ($groupReqs as $req) {
                         // ئەپدەیتی دۆخی داواکارییەکە بۆ ORDERED
                         $req->update([
                             'status' => 'ORDERED',
