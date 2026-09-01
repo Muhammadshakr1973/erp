@@ -106,6 +106,9 @@ class PurchaseOrderService
                 }
             } else {
                 // Partial/specified receiving mode
+                // Step 1: Normalize & group requested quantities by PurchaseOrderItem identity
+                $groupedQuantities = [];
+
                 foreach ($receivingItems as $reqItem) {
                     $productId = $reqItem['product_id'] ?? null;
                     $itemId = $reqItem['item_id'] ?? null;
@@ -115,31 +118,55 @@ class PurchaseOrderService
                         throw ValidationException::withMessages(['items' => 'بڕی وەرگیراو دەبێت لە ٠ گەورەتر بێت.']);
                     }
 
-                    $matchingItem = $allItems->first(function ($it) use ($productId, $itemId) {
-                        if ($itemId !== null && (int)$it->id === (int)$itemId) {
-                            return true;
+                    if ($itemId === null && $productId === null) {
+                        throw ValidationException::withMessages(['items' => 'پێویستە item_id یاخود product_id دیاری بكرێت.']);
+                    }
+
+                    $matchingItem = null;
+                    if ($itemId !== null) {
+                        $matchingItem = $allItems->first(function ($it) use ($itemId) {
+                            return (int)$it->id === (int)$itemId;
+                        });
+
+                        if ($matchingItem && $productId !== null && (int)$matchingItem->product_id !== (int)$productId) {
+                            throw ValidationException::withMessages(['items' => 'کۆدی کاڵا و زنجیرەی پسوڵە یەکناگرنەوە.']);
                         }
-                        if ($productId !== null && (int)$it->product_id === (int)$productId) {
-                            return true;
+                    } else {
+                        // Only product_id was provided
+                        $matchingItems = $allItems->filter(function ($it) use ($productId) {
+                            return (int)$it->product_id === (int)$productId;
+                        });
+
+                        if ($matchingItems->count() > 1) {
+                            throw ValidationException::withMessages(['items' => 'چەند دێڕێک هەن بۆ هەمان کاڵا، تکایە item_id دیاری بکە.']);
                         }
-                        return false;
-                    });
+
+                        $matchingItem = $matchingItems->first();
+                    }
 
                     if (!$matchingItem) {
                         throw ValidationException::withMessages(['items' => 'کاڵای دیاریکراو لەم پسوڵەی کڕینەدا بوونی نییە.']);
                     }
+
+                    $poItemId = (int) $matchingItem->id;
+                    $groupedQuantities[$poItemId] = ($groupedQuantities[$poItemId] ?? 0) + $qtyToReceive;
+                }
+
+                // Step 2: Validate grouped quantities against remaining quantity for each PurchaseOrderItem BEFORE mutating any state
+                foreach ($groupedQuantities as $poItemId => $totalQtyToReceive) {
+                    $matchingItem = $allItems->firstWhere('id', $poItemId);
 
                     $remaining = $matchingItem->quantity - $matchingItem->received_quantity;
                     if ($remaining <= 0) {
                         throw ValidationException::withMessages(['items' => "کاڵای (کۆد #{$matchingItem->product_id}) بە تەواوی وەرگیراوە."]);
                     }
 
-                    if ($qtyToReceive > $remaining) {
-                        throw ValidationException::withMessages(['items' => "بڕی وەرگیراو ({$qtyToReceive}) زیاترە لە بڕی مابووەوە ({$remaining})."]);
+                    if ($totalQtyToReceive > $remaining) {
+                        throw ValidationException::withMessages(['items' => "بڕی وەرگیراو ({$totalQtyToReceive}) زیاترە لە بڕی مابووەوە ({$remaining})."]);
                     }
-
-                    $receivingMap[$matchingItem->id] = ($receivingMap[$matchingItem->id] ?? 0) + $qtyToReceive;
                 }
+
+                $receivingMap = $groupedQuantities;
             }
 
             if (empty($receivingMap)) {

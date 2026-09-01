@@ -378,4 +378,218 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals('ORDERED', $req1->status);
         $this->assertEquals('ORDERED', $req2->status);
     }
+
+    /** @test */
+    public function test_a_it_rejects_same_request_duplicate_items_when_total_exceeds_ordered_quantity()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-DUP-A',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 60],
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 60],
+            ]
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertEquals(0, $item->fresh()->received_quantity);
+        $stock = WarehouseStock::where('warehouse_id', $this->warehouse->id)->where('product_id', $this->product->id)->first();
+        $this->assertNull($stock);
+        $this->assertEquals(0, SupplierLedger::where('reference_type', 'purchase_order')->where('reference_id', $order->id)->count());
+    }
+
+    /** @test */
+    public function test_b_it_accepts_same_request_duplicate_items_when_total_is_within_ordered_quantity()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-DUP-B',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 40],
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 60],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(100, $item->fresh()->received_quantity);
+        $stock = WarehouseStock::where('warehouse_id', $this->warehouse->id)->where('product_id', $this->product->id)->first();
+        $this->assertEquals(100, $stock->quantity);
+        $this->assertEquals(10000, $this->supplier->refresh()->debt);
+        $this->assertEquals('RECEIVED', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function test_c_it_accepts_valid_duplicate_items_when_already_partially_received()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-DUP-C',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 20,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 40],
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 40],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(100, $item->fresh()->received_quantity);
+        $this->assertEquals('RECEIVED', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function test_d_it_rejects_duplicate_items_exceeding_remaining_when_already_partially_received()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-DUP-D',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 20,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 50],
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 40],
+            ]
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertEquals(20, $item->fresh()->received_quantity);
+    }
+
+    /** @test */
+    public function test_e_it_handles_multiple_different_purchase_order_items_in_same_request()
+    {
+        $productB = Product::create(['name' => 'Prod B', 'sku' => 'PB', 'cost_price' => 200]);
+
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-DIFF-ITEMS',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 30000,
+        ]);
+
+        $itemA = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 0,
+        ]);
+
+        $itemB = $order->items()->create([
+            'product_id' => $productB->id,
+            'quantity' => 100,
+            'unit_cost' => 200,
+            'total_cost' => 20000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $itemA->id, 'product_id' => $this->product->id, 'quantity' => 50],
+                ['item_id' => $itemB->id, 'product_id' => $productB->id, 'quantity' => 70],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(50, $itemA->fresh()->received_quantity);
+        $this->assertEquals(70, $itemB->fresh()->received_quantity);
+    }
+
+    /** @test */
+    public function test_f_it_keeps_item_identity_distinct_for_same_product_across_multiple_po_lines()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-MULTI-LINES-SAME-PROD',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $line1 = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 50,
+            'unit_cost' => 100,
+            'total_cost' => 5000,
+            'received_quantity' => 0,
+        ]);
+
+        $line2 = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 50,
+            'unit_cost' => 100,
+            'total_cost' => 5000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $line1->id, 'quantity' => 30],
+                ['item_id' => $line2->id, 'quantity' => 40],
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(30, $line1->fresh()->received_quantity);
+        $this->assertEquals(40, $line2->fresh()->received_quantity);
+    }
 }
