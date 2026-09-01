@@ -14,7 +14,7 @@ class AuthenticationTest extends TestCase
     /** @test */
     public function it_can_login_with_valid_credentials()
     {
-        $role = Role::create(['name' => 'admin']);
+        $role = Role::create(['name' => 'admin', 'display_name' => 'Admin']);
         $user = User::factory()->create([
             'email' => 'admin@gardi.com',
             'password' => bcrypt('password123'),
@@ -34,7 +34,7 @@ class AuthenticationTest extends TestCase
     /** @test */
     public function it_cannot_login_with_invalid_credentials()
     {
-        $role = Role::create(['name' => 'admin']);
+        $role = Role::create(['name' => 'admin', 'display_name' => 'Admin']);
         $user = User::factory()->create([
             'email' => 'admin@gardi.com',
             'password' => bcrypt('password123'),
@@ -53,7 +53,7 @@ class AuthenticationTest extends TestCase
     /** @test */
     public function it_cannot_login_when_account_is_inactive()
     {
-        $role = Role::create(['name' => 'admin']);
+        $role = Role::create(['name' => 'admin', 'display_name' => 'Admin']);
         $user = User::factory()->create([
             'email' => 'admin@gardi.com',
             'password' => bcrypt('password123'),

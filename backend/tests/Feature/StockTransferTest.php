@@ -49,6 +49,9 @@ class StockTransferTest extends TestCase
             'name'       => 'Product Alpha',
             'sku'        => 'SKU-A',
             'cost_price' => 1000,
+            'price_n1'   => 1500,
+            'price_n2'   => 1400,
+            'price_n3'   => 1300,
             'is_active'  => true,
         ]);
 
@@ -56,6 +59,9 @@ class StockTransferTest extends TestCase
             'name'       => 'Product Beta',
             'sku'        => 'SKU-B',
             'cost_price' => 2000,
+            'price_n1'   => 2500,
+            'price_n2'   => 2400,
+            'price_n3'   => 2300,
             'is_active'  => true,
         ]);
     }

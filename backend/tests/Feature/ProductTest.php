@@ -18,7 +18,7 @@ class ProductTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $role = Role::firstOrCreate(['name' => 'admin']);
+        $role = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
         $this->admin = User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
     }
 
@@ -32,8 +32,9 @@ class ProductTest extends TestCase
             'sku' => 'TP-001',
             'category_id' => $category->id,
             'cost_price' => 1000,
-            'retail_price' => 1500,
-            'wholesale_price' => 1300
+            'price_n1' => 1500,
+            'price_n2' => 1400,
+            'price_n3' => 1300,
         ];
 
         $response = $this->actingAs($this->admin)->postJson('/api/v1/products', $payload);

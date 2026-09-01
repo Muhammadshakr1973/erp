@@ -23,6 +23,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['orders.create']
         ]);
 
@@ -47,6 +48,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['customers.view']
         ]);
 
@@ -99,6 +101,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['orders.create', 'customers.view']
         ]);
 
@@ -155,6 +158,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'driver',
+            'display_name' => 'Driver',
             'permissions' => ['delivery.update']
         ]);
 
@@ -217,11 +221,13 @@ class SecurityAuthorizationTest extends TestCase
     {
         $roleOwner = Role::create([
             'name' => Role::OWNER,
+            'display_name' => 'Owner',
             'permissions' => ['*']
         ]);
 
         $roleAdmin = Role::create([
             'name' => Role::ADMIN,
+            'display_name' => 'Admin',
             'permissions' => ['users.manage']
         ]);
 
@@ -264,11 +270,13 @@ class SecurityAuthorizationTest extends TestCase
     {
         $warehouseRole = Role::create([
             'name' => 'warehouse',
+            'display_name' => 'Warehouse',
             'permissions' => ['stock.view', 'stock.pack']
         ]);
 
         $driverRole = Role::create([
             'name' => 'driver',
+            'display_name' => 'Driver',
             'permissions' => ['delivery.view', 'delivery.update']
         ]);
 
@@ -304,6 +312,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['orders.create', 'customers.view']
         ]);
 
@@ -346,6 +355,7 @@ class SecurityAuthorizationTest extends TestCase
     {
         $role = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['customers.view']
         ]);
 
@@ -383,22 +393,27 @@ class SecurityAuthorizationTest extends TestCase
     {
         $salesmanRole = Role::create([
             'name' => 'salesman',
+            'display_name' => 'Salesman',
             'permissions' => ['orders.create', 'customers.view']
         ]);
         $warehouseRole = Role::create([
             'name' => 'warehouse',
+            'display_name' => 'Warehouse',
             'permissions' => ['stock.view', 'stock.pack']
         ]);
         $driverRole = Role::create([
             'name' => 'driver',
+            'display_name' => 'Driver',
             'permissions' => ['delivery.view', 'delivery.update']
         ]);
         $adminRole = Role::create([
             'name' => Role::ADMIN,
+            'display_name' => 'Admin',
             'permissions' => ['*']
         ]);
         $ownerRole = Role::create([
             'name' => Role::OWNER,
+            'display_name' => 'Owner',
             'permissions' => ['*']
         ]);
 

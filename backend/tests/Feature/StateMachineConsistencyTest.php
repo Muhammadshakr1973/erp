@@ -37,15 +37,17 @@ class StateMachineConsistencyTest extends TestCase
     {
         parent::setUp();
 
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
         $this->admin = User::factory()->create(['role_id' => $adminRole->id, 'is_active' => true]);
 
         $this->warehouse = Warehouse::create(['name' => 'Main WH', 'code' => 'WH01']);
         $this->product = Product::create([
             'name' => 'Product 1',
             'sku' => 'P1',
-            'price' => 1000,
             'cost_price' => 500,
+            'price_n1' => 1000,
+            'price_n2' => 900,
+            'price_n3' => 800,
             'min_stock_level' => 5,
         ]);
 
@@ -60,7 +62,7 @@ class StateMachineConsistencyTest extends TestCase
     /** @test */
     public function delivery_trip_lifecycle_starts_at_planned_and_auto_completes()
     {
-        $driverRole = Role::firstOrCreate(['name' => 'driver']);
+        $driverRole = Role::firstOrCreate(['name' => 'driver'], ['display_name' => 'Driver']);
         $driver = User::factory()->create(['role_id' => $driverRole->id, 'is_active' => true]);
 
         $customer = Customer::create(['name' => 'Cust 1', 'current_balance' => 0]);
@@ -152,7 +154,7 @@ class StateMachineConsistencyTest extends TestCase
     /** @test */
     public function commission_approval_payment_and_cancellation_guards()
     {
-        $salesmanRole = Role::firstOrCreate(['name' => 'salesman']);
+        $salesmanRole = Role::firstOrCreate(['name' => 'salesman'], ['display_name' => 'Salesman']);
         $salesman = User::factory()->create(['role_id' => $salesmanRole->id, 'is_active' => true]);
 
         $commission = SalesmanCommission::create([

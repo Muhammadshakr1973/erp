@@ -40,10 +40,10 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
         parent::setUp();
 
         // ١. ئامادەکردنی ڕۆڵەکان و بەکارهێنەران (Set up roles and users)
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $salesmanRole = Role::firstOrCreate(['name' => 'salesman']);
-        $driverRole = Role::firstOrCreate(['name' => 'driver']);
-        $warehouseRole = Role::firstOrCreate(['name' => 'warehouse']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
+        $salesmanRole = Role::firstOrCreate(['name' => 'salesman'], ['display_name' => 'Salesman']);
+        $driverRole = Role::firstOrCreate(['name' => 'driver'], ['display_name' => 'Driver']);
+        $warehouseRole = Role::firstOrCreate(['name' => 'warehouse'], ['display_name' => 'Warehouse']);
 
         $this->admin = User::factory()->create([
             'role_id'   => $adminRole->id,
@@ -90,8 +90,10 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
         $this->product = Product::create([
             'name'            => 'Cold Water Bottle XL',
             'sku'             => 'WAT-001',
-            'price'           => 10000, // نرخی فرۆشتن ١٠ هەزار دینار
-            'cost_price'      => 6000,  // تێچوو ٦ هەزار دینار
+            'cost_price'      => 6000,
+            'price_n1'        => 10000,
+            'price_n2'        => 9000,
+            'price_n3'        => 8000,
             'min_stock_level' => 5,
         ]);
 

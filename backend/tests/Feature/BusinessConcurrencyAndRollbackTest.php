@@ -30,12 +30,19 @@ class BusinessConcurrencyAndRollbackTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $role = Role::firstOrCreate(['name' => 'admin']);
+        $role = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
         $this->admin = User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
         
         $this->supplier = Supplier::create(['name' => 'Supplier A']);
         $this->warehouse = Warehouse::create(['name' => 'Main WH']);
-        $this->product = Product::create(['name' => 'Prod A', 'sku' => 'PA', 'cost_price' => 100]);
+        $this->product = Product::create([
+            'name' => 'Prod A',
+            'sku' => 'PA',
+            'cost_price' => 100,
+            'price_n1' => 150,
+            'price_n2' => 140,
+            'price_n3' => 130,
+        ]);
         
         $route = Route::firstOrCreate(['name' => 'گشتی']);
         $this->customer = Customer::create([

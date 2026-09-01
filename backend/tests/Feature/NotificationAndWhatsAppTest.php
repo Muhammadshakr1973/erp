@@ -50,7 +50,7 @@ class NotificationAndWhatsAppTest extends TestCase
 
         $route = \App\Models\Route::create([
             'name' => 'Route Center',
-            'code' => 'RC-01',
+            'is_active' => true,
         ]);
 
         $this->customer = Customer::create([

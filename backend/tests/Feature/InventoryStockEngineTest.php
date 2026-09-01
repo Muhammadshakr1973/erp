@@ -62,6 +62,8 @@ class InventoryStockEngineTest extends TestCase
             'sku' => 'SKU-TEST-999',
             'cost_price' => 1500,
             'price_n1' => 2000,
+            'price_n2' => 1900,
+            'price_n3' => 1800,
             'is_active' => true,
         ]);
     }

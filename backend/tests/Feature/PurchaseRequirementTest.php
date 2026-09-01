@@ -265,6 +265,9 @@ class PurchaseRequirementTest extends TestCase
             'sku' => 'TP-002',
             'supplier_id' => $this->supplier->id,
             'cost_price' => 3000,
+            'price_n1' => 5000,
+            'price_n2' => 4500,
+            'price_n3' => 4000,
             'is_active' => true,
         ]);
 

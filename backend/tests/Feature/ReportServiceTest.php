@@ -98,11 +98,10 @@ class ReportServiceTest extends TestCase
             'sku' => 'COL-250',
             'category_id' => $this->category->id,
             'supplier_id' => $this->supplier->id,
-            'purchase_cost' => 500,
-            'cost_type' => 'FIFO',
+            'cost_price' => 500,
             'price_n1' => 750,
             'price_n2' => 700,
-            'price_cash' => 650,
+            'price_n3' => 650,
             'is_active' => true,
         ]);
 

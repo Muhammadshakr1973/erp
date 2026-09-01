@@ -17,7 +17,7 @@ class CustomerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $role = Role::firstOrCreate(['name' => 'admin']);
+        $role = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
         $this->admin = User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
     }
 
