@@ -187,10 +187,14 @@ class SalesOrderService
         }
 
         return DB::transaction(function () use ($order, $data, $user) {
-            $customer = Customer::lockForUpdate()->findOrFail($order->customer_id);
+            $customerId = $data['customer_id'] ?? $order->customer_id;
+            $customer = Customer::lockForUpdate()->findOrFail($customerId);
+
+            $this->checkCustomerAssignment($customer, $user);
 
             // Update basic info
             $order->update([
+                'customer_id' => $customer->id,
                 'notes' => $data['notes'] ?? $order->notes,
                 'warehouse_id' => $data['warehouse_id'] ?? $order->warehouse_id,
             ]);

@@ -79,6 +79,15 @@ class SalesOrderController extends Controller
             ], 403);
         }
 
+        $targetCustomerId = $request->input('customer_id', $order->customer_id);
+
+        if (!$user->hasCustomerAccess($order->customer_id) || !$user->hasCustomerAccess($targetCustomerId)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاری پسوڵە بۆ ئەم کڕیارە بەهۆی نەبوونی دەسەڵاتی دەستڕاگەیشتن.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $updatedOrder = $this->salesOrderService->updateOrder($order, $request->validated(), $user);
 
         return response()->json([

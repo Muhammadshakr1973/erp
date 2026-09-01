@@ -375,4 +375,193 @@ class SecurityAuthorizationTest extends TestCase
             ->getJson("/api/v1/routes/{$route2->id}/customers")
             ->assertStatus(403);
     }
+
+    /**
+     * Test sales order update authorization for assigned salesman, unassigned customer, admin/owner, and warehouse/driver roles.
+     */
+    public function test_sales_order_update_authorization_rules(): void
+    {
+        $salesmanRole = Role::create([
+            'name' => 'salesman',
+            'permissions' => ['orders.create', 'customers.view']
+        ]);
+        $warehouseRole = Role::create([
+            'name' => 'warehouse',
+            'permissions' => ['stock.view', 'stock.pack']
+        ]);
+        $driverRole = Role::create([
+            'name' => 'driver',
+            'permissions' => ['delivery.view', 'delivery.update']
+        ]);
+        $adminRole = Role::create([
+            'name' => Role::ADMIN,
+            'permissions' => ['*']
+        ]);
+        $ownerRole = Role::create([
+            'name' => Role::OWNER,
+            'permissions' => ['*']
+        ]);
+
+        $route1 = RouteModel::create(['name' => 'Route 1']);
+        $route2 = RouteModel::create(['name' => 'Route 2']);
+
+        $salesman1 = User::create([
+            'name' => 'Salesman 1',
+            'phone' => '07700000050',
+            'password' => bcrypt('password'),
+            'role_id' => $salesmanRole->id,
+            'is_active' => true
+        ]);
+        $salesman1->routeSalesmen()->create([
+            'route_id' => $route1->id,
+            'is_active' => true
+        ]);
+
+        $salesman2 = User::create([
+            'name' => 'Salesman 2',
+            'phone' => '07700000051',
+            'password' => bcrypt('password'),
+            'role_id' => $salesmanRole->id,
+            'is_active' => true
+        ]);
+        $salesman2->routeSalesmen()->create([
+            'route_id' => $route2->id,
+            'is_active' => true
+        ]);
+
+        $admin = User::create([
+            'name' => 'Admin User',
+            'phone' => '07700000052',
+            'password' => bcrypt('password'),
+            'role_id' => $adminRole->id,
+            'is_active' => true
+        ]);
+
+        $owner = User::create([
+            'name' => 'Owner User',
+            'phone' => '07700000053',
+            'password' => bcrypt('password'),
+            'role_id' => $ownerRole->id,
+            'is_active' => true
+        ]);
+
+        $warehouseUser = User::create([
+            'name' => 'Warehouse User',
+            'phone' => '07700000054',
+            'password' => bcrypt('password'),
+            'role_id' => $warehouseRole->id,
+            'is_active' => true
+        ]);
+
+        $driverUser = User::create([
+            'name' => 'Driver User',
+            'phone' => '07700000055',
+            'password' => bcrypt('password'),
+            'role_id' => $driverRole->id,
+            'is_active' => true
+        ]);
+
+        $customer1 = Customer::create([
+            'name' => 'Cust 1',
+            'phone' => '07704444441',
+            'route_id' => $route1->id,
+            'current_balance' => 0
+        ]);
+
+        $customer2 = Customer::create([
+            'name' => 'Cust 2',
+            'phone' => '07704444442',
+            'route_id' => $route2->id,
+            'current_balance' => 0
+        ]);
+
+        $warehouse = \App\Models\Warehouse::create([
+            'name' => 'Main WH',
+            'is_main' => true,
+            'is_active' => true
+        ]);
+
+        $product = \App\Models\Product::create([
+            'name' => 'Prod 1',
+            'sku' => 'SKU-001',
+            'cost_price' => 1000,
+            'price_n1' => 2000,
+            'price_n2' => 2000,
+            'price_n3' => 2000,
+            'is_active' => true
+        ]);
+
+        $orderOfSalesman1 = SalesOrder::create([
+            'order_number' => 'ORD-SEC-1',
+            'customer_id' => $customer1->id,
+            'salesman_id' => $salesman1->id,
+            'warehouse_id' => $warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => 'DRAFT',
+            'subtotal' => 2000,
+            'total_amount' => 2000,
+            'total_profit' => 1000,
+            'created_by' => $salesman1->id
+        ]);
+        $orderOfSalesman1->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 2000,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 2000,
+            'total_price' => 2000,
+            'profit' => 1000
+        ]);
+
+        $updatePayloadAuthorized = [
+            'customer_id' => $customer1->id,
+            'warehouse_id' => $warehouse->id,
+            'notes' => 'Updated notes by salesman 1',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 2]
+            ]
+        ];
+
+        // 1. Authorized salesman update own order for assigned customer -> 200
+        $this->actingAs($salesman1)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(200);
+
+        // 2. Unauthorized salesman update another salesman's order -> 403
+        $this->actingAs($salesman2)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(403);
+
+        // 3. Salesman updating order to an unassigned customer -> 403
+        $updatePayloadUnassignedCustomer = [
+            'customer_id' => $customer2->id,
+            'warehouse_id' => $warehouse->id,
+            'notes' => 'Attempting to assign unassigned customer',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1]
+            ]
+        ];
+        $this->actingAs($salesman1)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadUnassignedCustomer)
+            ->assertStatus(403);
+
+        // 4. Warehouse and Driver staff updating sales order -> 403 Forbidden (Missing orders.create)
+        $this->actingAs($warehouseUser)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(403);
+
+        $this->actingAs($driverUser)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(403);
+
+        // 5. Admin and Owner updating sales order -> 200 OK
+        $this->actingAs($admin)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(200);
+
+        $this->actingAs($owner)
+            ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
+            ->assertStatus(200);
+    }
 }
