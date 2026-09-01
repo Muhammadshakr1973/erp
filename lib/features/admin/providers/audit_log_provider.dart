@@ -6,7 +6,13 @@ final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
   try {
     final response = await api.client.get('/audit-logs');
     if (response.statusCode == 200) {
-      return response.data['data'] ?? [];
+      final raw = response.data['data'];
+      if (raw is List) {
+        return raw;
+      } else if (raw is Map && raw['data'] is List) {
+        return raw['data'];
+      }
+      return [];
     }
     return [];
   } catch (e) {
