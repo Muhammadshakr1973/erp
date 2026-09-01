@@ -119,13 +119,19 @@ class SalesOrderTest extends TestCase
         $response->assertStatus(200); // Because it auto-confirmed and updated status, returning 200/201
 
         // Assert order exists in database
-        $order = SalesOrder::first();
+        $order = SalesOrder::with('items')->first();
         $this->assertNotNull($order);
         $this->assertEquals(SalesOrder::STATUS_CONFIRMED, $order->status);
         $this->assertEquals(37500, $order->subtotal); // 7500 * 5 = 37500
         $this->assertEquals(3750, $order->discount_amount); // 10% of 37500 = 3750
         $this->assertEquals(33750, $order->total_amount); // 37500 - 3750 = 33750
         $this->assertEquals(12500, $order->total_profit); // (7500 - 5000) * 5 = 12500
+
+        // Assert item total_price is persisted in database
+        $item = $order->items->first();
+        $this->assertNotNull($item);
+        $this->assertEquals(37500, $item->line_total);
+        $this->assertEquals(37500, $item->total_price);
 
         // Assert stock was reserved
         $stock = WarehouseStock::first();
@@ -937,6 +943,59 @@ class SalesOrderTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $service = resolve(\App\Services\SalesOrderService::class);
         $service->createOrder($payloadEdit, $this->salesman);
+    }
+
+    /** @test */
+    public function it_persists_sales_order_item_total_price_correctly_on_creation_and_update()
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 4,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::with('items')->latest('id')->first();
+        $this->assertCount(1, $order->items);
+
+        $item = $order->items->first();
+        // Price N2 = 7500. Quantity = 4. line_total = 30000. total_price = 30000.
+        $this->assertEquals(30000, $item->line_total);
+        $this->assertEquals(30000, $item->total_price);
+        $this->assertEquals(30000, $order->subtotal);
+        $this->assertEquals(10000, $order->total_profit); // (7500 - 5000) * 4
+
+        // Update draft order with new quantity
+        $updatePayload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 6,
+                ]
+            ]
+        ];
+
+        $updateResponse = $this->actingAs($this->salesman)->putJson("/api/v1/orders/{$order->id}", $updatePayload);
+        $updateResponse->assertStatus(200);
+
+        $order->refresh();
+        $updatedItem = $order->items()->first();
+
+        // Price N2 = 7500. Quantity = 6. line_total = 45000. total_price = 45000.
+        $this->assertEquals(45000, $updatedItem->line_total);
+        $this->assertEquals(45000, $updatedItem->total_price);
+        $this->assertEquals(45000, $order->subtotal);
+        $this->assertEquals(15000, $order->total_profit); // (7500 - 5000) * 6
     }
 }
 

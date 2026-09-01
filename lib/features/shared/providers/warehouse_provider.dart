@@ -20,14 +20,10 @@ class WarehouseModel {
 
 final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  try {
-    final response = await api.client.get('/warehouses');
-    if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
-      return data.map((json) => WarehouseModel.fromJson(json)).toList();
-    }
-    return [];
-  } catch (e) {
-    return [WarehouseModel(id: 1, name: 'کۆگای سەرەکی', isMain: true)];
+  final response = await api.client.get('/warehouses');
+  if (response.statusCode == 200) {
+    final List data = response.data['data'] ?? [];
+    return data.map((json) => WarehouseModel.fromJson(json)).toList();
   }
+  throw Exception('Failed to load warehouses');
 });

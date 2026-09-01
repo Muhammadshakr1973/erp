@@ -178,8 +178,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Future<void> _submitOrder(
     List<ProductModel> products,
-    List<WarehouseModel> warehouses,
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) async {
+    if (warehousesAsync.hasError || warehousesAsync.asData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    final warehouses = warehousesAsync.asData!.value;
+    if (warehouses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('هیچ کۆگایەک بەردەست نییە بۆ دروستکردنی پسوڵە'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -200,9 +221,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return;
     }
 
-    final warehouseId =
-        _selectedWarehouseId ??
-        (warehouses.isNotEmpty ? warehouses.first.id : 1);
+    final warehouseId = _selectedWarehouseId ??
+        (warehouses.any((w) => w.isMain)
+            ? warehouses.firstWhere((w) => w.isMain).id
+            : warehouses.first.id);
 
     final List<Map<String, dynamic>> itemsList = [];
     _cart.forEach((productId, qty) {
@@ -281,7 +303,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final warehousesAsync = ref.watch(warehouseListProvider);
 
     final allProducts = productsAsync.asData?.value ?? [];
-    final allWarehouses = warehousesAsync.asData?.value ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -302,7 +323,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           return Column(
             children: [
               // 1. Customer & Warehouse Selection Bar
-              _buildTopBar(customersAsync, allWarehouses),
+              _buildTopBar(customersAsync, warehousesAsync),
 
               // 2. Product selection & Cart Split
               Expanded(
@@ -320,7 +341,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           const VerticalDivider(width: 1, thickness: 1),
                           Expanded(
                             flex: 1,
-                            child: _buildCartPanel(allProducts, allWarehouses),
+                            child: _buildCartPanel(allProducts, warehousesAsync),
                           ),
                         ],
                       )
@@ -332,7 +353,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               allProducts,
                             ),
                           ),
-                          _buildMobileCartBar(allProducts, allWarehouses),
+                          _buildMobileCartBar(allProducts, warehousesAsync),
                         ],
                       ),
               ),
@@ -345,9 +366,167 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildTopBar(
     AsyncValue<List<Customer>> customersAsync,
-    List<WarehouseModel> warehouses,
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      color: theme.colorScheme.surfaceContainerLow,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: customersAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('هەڵە لە بارکردنی کڕیاران'),
+                  data: (customers) {
+                    return DropdownButtonFormField<int>(
+                      value: _selectedCustomer?.id,
+                      decoration: const InputDecoration(
+                        labelText: 'دیاریکردنی کڕیار',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      items: customers.map((c) {
+                        return DropdownMenuItem<int>(
+                          value: c.id,
+                          child: Text(
+                            '${c.name} (${c.priceType ?? 'N2'})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedCustomer = customers
+                              .where((c) => c.id == val)
+                              .firstOrNull;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              if (_selectedCustomer != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.primary),
+                  ),
+                  child: Text(
+                    'نرخی ${_selectedCustomer!.priceType ?? 'N2'}',
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          warehousesAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (err, _) => Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.danger),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Expanded(
+                    child: Text(
+                      'هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)',
+                      style: TextStyle(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 18, color: AppColors.danger),
+                    onPressed: () => ref.refresh(warehouseListProvider),
+                  ),
+                ],
+              ),
+            ),
+            data: (warehouses) {
+              if (warehouses.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: AppColors.warning, size: 20),
+                      SizedBox(width: AppSpacing.xs),
+                      Text('هیچ کۆگایەک بەردەست نییە'),
+                    ],
+                  ),
+                );
+              }
+              final selectedId = _selectedWarehouseId ??
+                  (warehouses.any((w) => w.isMain)
+                      ? warehouses.firstWhere((w) => w.isMain).id
+                      : warehouses.first.id);
+
+              return DropdownButtonFormField<int>(
+                value: warehouses.any((w) => w.id == selectedId)
+                    ? selectedId
+                    : warehouses.first.id,
+                decoration: const InputDecoration(
+                  labelText: 'دیاریکردنی کۆگا',
+                  prefixIcon: Icon(Icons.warehouse_outlined),
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+                items: warehouses.map((w) {
+                  return DropdownMenuItem<int>(
+                    value: w.id,
+                    child: Text(
+                      '${w.name}${w.isMain ? " (سەرەکی)" : ""}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedWarehouseId = val;
+                    });
+                  }
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -542,7 +721,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildCartPanel(
     List<ProductModel> allProducts,
-    List<WarehouseModel> warehouses,
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
@@ -728,8 +907,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 AppButton(
                   text: 'تەواوکردنی پسوڵە',
                   isLoading: _isSubmitting,
-                  onPressed: _cart.isNotEmpty
-                      ? () => _submitOrder(allProducts, warehouses)
+                  onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
+                      ? () => _submitOrder(allProducts, warehousesAsync)
                       : null,
                   size: AppButtonSize.lg,
                 ),
@@ -743,7 +922,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildMobileCartBar(
     List<ProductModel> allProducts,
-    List<WarehouseModel> warehouses,
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
@@ -789,9 +968,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             ),
             AppButton(
               text: 'بینین و تەواوکردن',
-              onPressed: _cart.isNotEmpty
+              onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
                   ? () {
-                      _showMobileCartBottomSheet(allProducts, warehouses);
+                      _showMobileCartBottomSheet(allProducts, warehousesAsync);
                     }
                   : null,
             ),
@@ -803,7 +982,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _showMobileCartBottomSheet(
     List<ProductModel> allProducts,
-    List<WarehouseModel> warehouses,
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     showModalBottomSheet(
       context: context,
@@ -982,10 +1161,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   AppButton(
                     text: 'پشتڕاستکردنەوە و ناردن',
                     isLoading: _isSubmitting,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _submitOrder(allProducts, warehouses);
-                    },
+                    onPressed: (!warehousesAsync.hasError && _cart.isNotEmpty)
+                        ? () {
+                            Navigator.pop(context);
+                            _submitOrder(allProducts, warehousesAsync);
+                          }
+                        : null,
                     size: AppButtonSize.lg,
                   ),
                 ],

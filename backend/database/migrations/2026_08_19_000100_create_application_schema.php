@@ -347,6 +347,7 @@ return new class extends Migration
             $table->decimal('discount_percent', 5, 2)->default(0);
             $table->unsignedBigInteger('discount_amount')->default(0);
             $table->unsignedBigInteger('line_total');
+            $table->unsignedBigInteger('total_price')->default(0);
             $table->bigInteger('profit')->default(0);
             $table->boolean('is_packed')->default(false)->index();
             $table->timestamp('packed_at')->nullable();
