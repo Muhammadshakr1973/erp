@@ -53,11 +53,21 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
             final Map<String, dynamic> json = jsonDecode(jsonStr);
             final localOrder = OrderModel.fromJson(json);
             
-            // Duplicate prevention: check if online orders contain this local order (by sharedKey)
+            // Duplicate prevention: check if online orders contain this local order (by sharedKey, mappedServerId, or ID)
+            Box<String>? idMappingsBox;
+            try {
+              idMappingsBox = Hive.box<String>('id_mappings');
+            } catch (_) {}
+
+            final mappedServerIdStr = idMappingsBox?.get(key);
+            final mappedServerId = mappedServerIdStr != null ? int.tryParse(mappedServerIdStr) : null;
+
             final alreadySynced = onlineOrders.any((o) =>
-                o.sharedKey != null &&
-                localOrder.sharedKey != null &&
-                o.sharedKey == localOrder.sharedKey);
+                (o.sharedKey != null &&
+                 localOrder.sharedKey != null &&
+                 o.sharedKey == localOrder.sharedKey) ||
+                (mappedServerId != null && o.id == mappedServerId) ||
+                (localOrder.id > 0 && o.id == localOrder.id));
             
             if (alreadySynced) {
               await localBox.delete(key); // Safe sweep: Synced order found, clean up local key
@@ -341,7 +351,28 @@ class OrderActions {
 
     // Optimistically update the existing cached order
     final localBox = ref.read(localOrdersBoxProvider);
-    final existingStr = localBox.get(entityId);
+    
+    String keyToUse = entityId;
+    String? existingStr = localBox.get(entityId);
+    if (existingStr == null && orderId < 0) {
+      // Find the local_ key that corresponds to this negative ID
+      for (final key in localBox.keys) {
+        if (key.toString().startsWith('local_')) {
+          final str = localBox.get(key);
+          if (str != null) {
+            try {
+              final Map<String, dynamic> parsed = jsonDecode(str);
+              if (parsed['id'] == orderId) {
+                keyToUse = key.toString();
+                existingStr = str;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
     if (existingStr != null) {
       try {
         final Map<String, dynamic> existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
@@ -352,7 +383,7 @@ class OrderActions {
         }
 
         final updatedJson = _buildOptimisticOrderJson(
-          idStr: entityId,
+          idStr: keyToUse,
           intId: orderId,
           data: mergedData,
           ref: ref,
@@ -400,7 +431,7 @@ class OrderActions {
 
         updatedJson['pending_sync'] = true;
 
-        await localBox.put(entityId, jsonEncode(updatedJson));
+        await localBox.put(keyToUse, jsonEncode(updatedJson));
       } catch (_) {}
     }
 
@@ -417,13 +448,35 @@ class OrderActions {
 
     // Optimistically update status in Hive cache preserving everything else
     final localBox = ref.read(localOrdersBoxProvider);
-    final existingStr = localBox.get(orderId);
+    
+    String keyToUse = orderId;
+    String? existingStr = localBox.get(orderId);
+    final isNegativeId = int.tryParse(orderId) != null && int.parse(orderId) < 0;
+    if (existingStr == null && isNegativeId) {
+      final orderIntId = int.parse(orderId);
+      for (final key in localBox.keys) {
+        if (key.toString().startsWith('local_')) {
+          final str = localBox.get(key);
+          if (str != null) {
+            try {
+              final Map<String, dynamic> parsed = jsonDecode(str);
+              if (parsed['id'] == orderIntId) {
+                keyToUse = key.toString();
+                existingStr = str;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
     if (existingStr != null) {
       try {
         final Map<String, dynamic> existingJson = Map<String, dynamic>.from(jsonDecode(existingStr));
         existingJson['status'] = newStatus.toUpperCase();
         existingJson['pending_sync'] = true;
-        await localBox.put(orderId, jsonEncode(existingJson));
+        await localBox.put(keyToUse, jsonEncode(existingJson));
       } catch (_) {}
     }
 

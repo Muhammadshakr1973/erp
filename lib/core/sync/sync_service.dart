@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -86,6 +87,15 @@ class SyncService {
     _isSyncing = true;
 
     final Map<String, dynamic> idMap = {};
+    try {
+      final idMappingsBox = await Hive.openBox<String>('id_mappings');
+      for (final key in idMappingsBox.keys) {
+        final val = idMappingsBox.get(key);
+        if (val != null) {
+          idMap[key.toString()] = val;
+        }
+      }
+    } catch (_) {}
 
     try {
       final pendingEntries =
@@ -141,6 +151,52 @@ class SyncService {
             }
             if (serverId != null) {
               idMap[entry.entityId!] = serverId;
+
+              try {
+                final idMappingsBox = await Hive.openBox<String>('id_mappings');
+                await idMappingsBox.put(entry.entityId!, serverId.toString());
+
+                // Generate and save negative integer ID mapping support
+                final cleanStr = entry.entityId!.replaceAll(RegExp(r'[^0-9]'), '');
+                final val = int.tryParse(cleanStr);
+                if (val != null) {
+                  final intId = -1 * (val % 1000000000);
+                  idMap[intId.toString()] = serverId;
+                  await idMappingsBox.put(intId.toString(), serverId.toString());
+                }
+              } catch (_) {}
+
+              // Reconcile and migrate optimistic cached order if this was CREATE_ORDER
+              if (entry.operationType == 'CREATE_ORDER') {
+                try {
+                  final localBox = await Hive.openBox<String>('local_orders');
+                  final cachedStr = localBox.get(entry.entityId);
+                  if (cachedStr != null) {
+                    final Map<String, dynamic> cachedJson = Map<String, dynamic>.from(jsonDecode(cachedStr));
+                    cachedJson['id'] = serverId;
+
+                    if (result is Map) {
+                      final responseData = result['data'] ?? result;
+                      if (responseData is Map) {
+                        if (responseData['order_number'] != null) {
+                          cachedJson['order_number'] = responseData['order_number'];
+                        }
+                        if (responseData['status'] != null) {
+                          cachedJson['status'] = responseData['status'];
+                        }
+                        if (responseData['created_at'] != null) {
+                          cachedJson['created_at'] = responseData['created_at'];
+                        }
+                      }
+                    }
+                    cachedJson['pending_sync'] = false;
+
+                    // Migrate: save with server ID as key, remove the local ID key
+                    await localBox.put(serverId.toString(), jsonEncode(cachedJson));
+                    await localBox.delete(entry.entityId);
+                  }
+                } catch (_) {}
+              }
             }
           }
         } on DioException catch (e) {

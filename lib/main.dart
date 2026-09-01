@@ -15,6 +15,7 @@ void main() async {
   Hive.registerAdapter(SyncQueueEntryAdapter());
   await Hive.openBox<SyncQueueEntry>('sync_queue');
   await Hive.openBox<String>('local_orders');
+  await Hive.openBox<String>('id_mappings');
 
   runApp(const ProviderScope(child: PosApp()));
 }
