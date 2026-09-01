@@ -22,6 +22,22 @@ class PaymentService
 
     public function collectPayment(array $data, $user): CustomerPayment
     {
+        // 0. Defensive validation for payment amount and order matching
+        if (!isset($data['amount']) || (int)$data['amount'] <= 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'amount' => ['بڕی پارە دەبێت ئەرێنی بێت / Payment amount must be a positive integer'],
+            ]);
+        }
+
+        if (isset($data['sales_order_id']) && $data['sales_order_id']) {
+            $salesOrder = \App\Models\SalesOrder::find($data['sales_order_id']);
+            if (!$salesOrder || $salesOrder->customer_id != $data['customer_id']) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'sales_order_id' => ['دیاریکراوی پسوڵە بۆ ئەم کڕیارە نییە / Sales order does not belong to customer'],
+                ]);
+            }
+        }
+
         // First check idempotency outside the transaction lock for faster check, or inside
         $existing = $this->checkPaymentIdempotency($data['customer_id'], $data['amount'], $data['sales_order_id'] ?? null);
         if ($existing) {

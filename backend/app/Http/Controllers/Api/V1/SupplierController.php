@@ -132,10 +132,20 @@ class SupplierController extends Controller
     public function pay(Request $request, $id): JsonResponse
     {
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|integer|min:1',
             'payment_method' => 'nullable|string|in:cash,bank,transfer',
             'notes' => 'nullable|string',
+            'purchase_order_id' => 'nullable|integer|exists:purchase_orders,id',
         ]);
+
+        if (!empty($validated['purchase_order_id'])) {
+            $po = \App\Models\PurchaseOrder::find($validated['purchase_order_id']);
+            if (!$po || $po->supplier_id != $id) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'purchase_order_id' => ['دیاریکراوی پسوڵەی دابینکەر نادروستە / Purchase order does not belong to supplier'],
+                ]);
+            }
+        }
 
         return DB::transaction(function () use ($id, $validated) {
             $supplier = Supplier::lockForUpdate()->findOrFail($id);
@@ -153,6 +163,7 @@ class SupplierController extends Controller
 
             $payment = SupplierPayment::create([
                 'supplier_id' => $supplier->id,
+                'purchase_order_id' => $validated['purchase_order_id'] ?? null,
                 'amount' => $validated['amount'],
                 'payment_method' => $validated['payment_method'] ?? 'cash',
                 'paid_at' => now()->toDateString(),

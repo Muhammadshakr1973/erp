@@ -15,7 +15,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
@@ -23,7 +22,6 @@ import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../../orders/providers/orders_provider.dart';
-import '../../orders/models/order_model.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;

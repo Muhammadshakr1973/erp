@@ -250,4 +250,62 @@ class LedgerAndPaymentTest extends TestCase
         $responseSupplier->assertJsonPath('data.stored_balance', 0); // Corrected to 0
         $this->assertEquals(0, $this->supplier->fresh()->current_balance);
     }
+
+    /** @test */
+    public function test_mismatched_order_associations_fail_validation()
+    {
+        // 1. Create a second customer
+        $route = \App\Models\Route::first();
+        $otherCustomer = Customer::create([
+            'route_id' => $route->id,
+            'name' => 'Other Customer',
+            'price_type' => 'N1',
+            'current_balance' => 0,
+            'is_active' => true,
+        ]);
+
+        // Create warehouse and sales order for other customer
+        $warehouse = \App\Models\Warehouse::create(['name' => 'W1', 'is_main' => true]);
+        $order = \App\Models\SalesOrder::create([
+            'order_number' => 'SO-OTHER-101',
+            'customer_id' => $otherCustomer->id,
+            'salesman_id' => $this->admin->id,
+            'warehouse_id' => $warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => 'DELIVERED',
+            'subtotal' => 10000,
+            'total_amount' => 10000,
+            'created_by' => $this->admin->id,
+        ]);
+
+        // Try paying for $this->customer using $otherCustomer's sales_order_id
+        $responseCustomer = $this->actingAs($this->admin)->postJson('/api/v1/payments', [
+            'customer_id' => $this->customer->id,
+            'sales_order_id' => $order->id,
+            'amount' => 5000,
+            'payment_method' => 'CASH',
+        ]);
+        $responseCustomer->assertStatus(422);
+
+        // 2. Create a second supplier and purchase order
+        $otherSupplier = Supplier::create([
+            'name' => 'Other Supplier',
+            'created_by' => $this->admin->id,
+        ]);
+        $po = \App\Models\PurchaseOrder::create([
+            'order_number' => 'PO-OTHER-101',
+            'supplier_id' => $otherSupplier->id,
+            'warehouse_id' => $warehouse->id,
+            'status' => 'CONFIRMED',
+            'total_amount' => 20000,
+            'created_by' => $this->admin->id,
+        ]);
+
+        // Try paying $this->supplier using $otherSupplier's purchase_order_id
+        $responseSupplier = $this->actingAs($this->admin)->postJson("/api/v1/suppliers/{$this->supplier->id}/pay", [
+            'amount' => 5000,
+            'purchase_order_id' => $po->id,
+        ]);
+        $responseSupplier->assertStatus(422);
+    }
 }
