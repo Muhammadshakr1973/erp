@@ -714,4 +714,93 @@ class InventoryStockEngineTest extends TestCase
         // Different key must execute a second legitimate adjustment (+15)
         $this->assertEquals($stockAfterRepeat + 15, $stockAfterDifferentKey);
     }
+
+    /** @test */
+    public function test_sales_return_lock_ordering_deterministic()
+    {
+        // 1. Create products with unsorted IDs to verify deterministic return processing
+        $p2 = Product::create([
+            'name' => 'High ID Product',
+            'sku' => 'SKU-HIGH',
+            'cost_price' => 1000,
+            'price_n1' => 1500,
+            'is_active' => true,
+        ]);
+
+        $p1 = Product::create([
+            'name' => 'Low ID Product',
+            'sku' => 'SKU-LOW',
+            'cost_price' => 1000,
+            'price_n1' => 1500,
+            'is_active' => true,
+        ]);
+
+        // 2. Setup customer and sales order (delivered)
+        $route = \App\Models\Route::create(['name' => 'Route R', 'is_active' => true]);
+        $customer = \App\Models\Customer::create([
+            'name' => 'Return Customer',
+            'phone' => '07700000008',
+            'route_id' => $route->id,
+            'price_type' => 'N1',
+            'current_balance' => 0,
+            'is_active' => true
+        ]);
+
+        $order = SalesOrder::create([
+            'order_number' => 'SO-RETURN-LOCK',
+            'customer_id' => $customer->id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'created_by' => $this->admin->id,
+            'subtotal' => 3000,
+            'total_amount' => 3000,
+        ]);
+
+        // Create order items
+        $item1 = $order->items()->create([
+            'product_id' => $p2->id,
+            'quantity' => 1,
+            'unit_price' => 1500,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 1500,
+        ]);
+
+        $item2 = $order->items()->create([
+            'product_id' => $p1->id,
+            'quantity' => 1,
+            'unit_price' => 1500,
+            'cost_price' => 1000,
+            'price_type' => 'N1',
+            'line_total' => 1500,
+        ]);
+
+        // 3. Initiate Sales Return with item list in high-product-id-first order [p2, p1]
+        $payload = [
+            'sales_order_id' => $order->id,
+            'reason' => 'Deterministic lock order check',
+            'items' => [
+                [
+                    'sales_order_item_id' => $item1->id,
+                    'quantity' => 1,
+                    'reason' => 'Damaged 1',
+                ],
+                [
+                    'sales_order_item_id' => $item2->id,
+                    'quantity' => 1,
+                    'reason' => 'Damaged 2',
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/sales-returns', $payload);
+        $response->assertStatus(201);
+
+        // 4. Assert that the returned quantities were properly restored in main warehouse
+        $stock1 = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)->where('product_id', $p1->id)->first();
+        $stock2 = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)->where('product_id', $p2->id)->first();
+
+        $this->assertEquals(1, $stock1->quantity);
+        $this->assertEquals(1, $stock2->quantity);
+    }
 }

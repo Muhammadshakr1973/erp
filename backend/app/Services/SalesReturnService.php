@@ -68,7 +68,28 @@ class SalesReturnService
             $totalReturnAmount = 0;
             $itemsData = $data['items'];
 
+            // Resolve product_id for each item to allow deterministic lock ordering (product_id ASC)
+            $resolvedItems = [];
             foreach ($itemsData as $itemInput) {
+                $orderItemId = $itemInput['sales_order_item_id'];
+                $orderItem = SalesOrderItem::where('sales_order_id', $order->id)
+                    ->findOrFail($orderItemId);
+
+                $resolvedItems[] = [
+                    'input' => $itemInput,
+                    'order_item' => $orderItem,
+                    'product_id' => $orderItem->product_id
+                ];
+            }
+
+            // Sort deterministically by product_id ASC to eliminate deadlock risks
+            usort($resolvedItems, function ($a, $b) {
+                return $a['product_id'] <=> $b['product_id'];
+            });
+
+            foreach ($resolvedItems as $resolved) {
+                $itemInput = $resolved['input'];
+                $orderItem = $resolved['order_item'];
                 $orderItemId = $itemInput['sales_order_item_id'];
                 $returnedQty = (int)$itemInput['quantity'];
 
@@ -77,10 +98,6 @@ class SalesReturnService
                         'items' => 'بڕی گەڕێندراو دەبێت لە ٠ زیاتر بێت.',
                     ]);
                 }
-
-                // دۆزینەوەی ئایتمی پسوڵە و دڵنیابوون لەوەی سەر بەم پسوڵەیەیە
-                $orderItem = SalesOrderItem::where('sales_order_id', $order->id)
-                    ->findOrFail($orderItemId);
 
                 // پشکنینی بڕی گەڕێندراوەی پێشوو بۆ ئەم ئایتمە
                 $alreadyReturned = SalesReturnItem::whereHas('salesReturn', function ($q) use ($order) {
