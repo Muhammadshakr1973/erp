@@ -433,7 +433,11 @@ class StockTransferTest extends TestCase
         $this->assertEquals(0, StockTransaction::where('reference_type', 'stock_transfer')->where('reference_id', $transfer->id)->count());
     }
 
-    /** @test */
+    /**
+     * IMPORTANT: This test is a sequential competition/inventory-invariant simulation, NOT a true concurrent database locking test. The current PHPUnit environment uses SQLite :memory:, so true multi-process row-lock contention cannot be demonstrated here. Production StockTransferService still uses DB transactions and lockForUpdate(). Real database-level concurrency must be verified later in a server-based RDBMS integration environment such as MySQL/MariaDB/PostgreSQL.
+     *
+     * @test
+     */
     public function test_competing_transfers_never_overallocate_source_stock_sequential_simulation()
     {
         // =========================================================================
