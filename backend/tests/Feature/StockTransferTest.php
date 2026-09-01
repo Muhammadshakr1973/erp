@@ -439,25 +439,27 @@ class StockTransferTest extends TestCase
         // =========================================================================
         // SEQUENTIAL COMPETING TRANSFERS & OVER-ALLOCATION VERIFICATION
         //
-        // Environment Limitation & Architecture Note:
-        // True database-level concurrent row-lock contention cannot be executed
-        // under the current SQLite :memory: test environment. The production
-        // implementation uses lockForUpdate(), but actual parallel locking must
-        // be verified under MySQL/MariaDB/PostgreSQL integration testing.
+        // 1. The current PHPUnit test database is SQLite :memory:.
+        // 2. True database-level parallel row-lock contention cannot be demonstrated
+        //    reliably in this environment.
+        // 3. The production StockTransferService still uses lockForUpdate() and DB transactions.
+        // 4. This test intentionally performs a sequential simulation of two competing transfers.
+        // 5. The test proves the important business invariant:
+        //    competing transfers must never over-allocate available source stock.
+        // 6. Actual database-level concurrency should be verified later in an
+        //    integration environment using a server-based RDBMS such as MySQL/MariaDB/PostgreSQL.
         //
-        // What this sequential invariant simulation proves:
+        // Simulation Scenario:
         // When multiple transfer requests (Transfer A = 10 units, Transfer B = 10 units)
-        // are created against a shared pool of 15 available units, sequential execution
-        // of completion requests correctly re-evaluates committed stock under transaction/lock:
+        // are created against a shared pool of 15 available units:
         // - Initial source stock = 15
-        // - Transfer A = 10 succeeds
-        // - Transfer B = 10 fails (422) because 5 < 10 requested
+        // - Transfer A = 10 executes first and succeeds (200)
+        // - Transfer B = 10 executes second and fails (422) because 5 < 10 requested
         // - Final source stock = 5 (strictly non-negative)
         // - Final destination stock = 10
-        // - Only one TRANSFER_OUT is recorded
-        // - Only one TRANSFER_IN is recorded
-        // - Failed transfer produces no stock transactions
-        // - Failed transfer remains DRAFT
+        // - Transfer A = COMPLETED with one TRANSFER_OUT and one TRANSFER_IN
+        // - Transfer B = DRAFT with zero stock transactions and no completion audit
+        // - No negative stock occurs.
         // =========================================================================
 
         // 1. Initial source stock = 15 units (reserved = 0, available = 15)
