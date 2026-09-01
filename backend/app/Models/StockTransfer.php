@@ -31,4 +31,12 @@ class StockTransfer extends Model
     {
         return $this->hasMany(StockTransferItem::class);
     }
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
 }

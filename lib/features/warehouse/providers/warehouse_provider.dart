@@ -127,4 +127,56 @@ class WarehouseActions {
       throw Exception(api.parseError(e));
     }
   }
+
+  Future<void> createStockTransfer({
+    required int fromWarehouseId,
+    required int toWarehouseId,
+    required List<Map<String, dynamic>> items,
+    String? notes,
+  }) async {
+    try {
+      await syncService.enqueueOperation(
+        operationType: 'STOCK_TRANSFER_CREATE',
+        payload: {
+          'from_warehouse_id': fromWarehouseId,
+          'to_warehouse_id': toWarehouseId,
+          'items': items,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        },
+      );
+      await syncService.syncPendingOperations();
+      ref.invalidate(warehouseStocksProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> completeStockTransfer(int transferId) async {
+    try {
+      await syncService.enqueueOperation(
+        entityId: transferId.toString(),
+        operationType: 'STOCK_TRANSFER_COMPLETE',
+        payload: {},
+      );
+      await syncService.syncPendingOperations();
+      ref.invalidate(warehouseStocksProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> cancelStockTransfer(int transferId) async {
+    try {
+      await syncService.enqueueOperation(
+        entityId: transferId.toString(),
+        operationType: 'STOCK_TRANSFER_CANCEL',
+        payload: {},
+      );
+      await syncService.syncPendingOperations();
+      ref.invalidate(warehouseStocksProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
 }
+

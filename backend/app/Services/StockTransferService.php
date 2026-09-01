@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\StockTransfer;
 use App\Models\WarehouseStock;
+use App\Models\Warehouse;
+use App\Models\Product;
 use App\Models\StockTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,22 +19,76 @@ class StockTransferService
     public function createTransfer(array $data, $user): StockTransfer
     {
         return DB::transaction(function () use ($data, $user) {
+            $fromWarehouseId = (int)$data['from_warehouse_id'];
+            $toWarehouseId   = (int)$data['to_warehouse_id'];
+
+            if ($fromWarehouseId === $toWarehouseId) {
+                throw ValidationException::withMessages([
+                    'to_warehouse_id' => 'کۆگای ناردن و وەرگرتن نابێت هەمان کۆگا بن.',
+                ]);
+            }
+
+            $fromWarehouse = Warehouse::where('id', $fromWarehouseId)->where('is_active', true)->first();
+            $toWarehouse   = Warehouse::where('id', $toWarehouseId)->where('is_active', true)->first();
+
+            if (!$fromWarehouse || !$toWarehouse) {
+                throw ValidationException::withMessages([
+                    'warehouses' => 'کۆگای دیاریکراو چالاک نییە یان بوونی نییە.',
+                ]);
+            }
+
+            if (empty($data['items']) || !is_array($data['items'])) {
+                throw ValidationException::withMessages([
+                    'items' => 'پێویستە لانی کەم یەک کاڵا دیاری بکرێت بۆ گواستنەوە.',
+                ]);
+            }
+
+            // Normalize and aggregate items by product_id to prevent duplicate database constraints
+            $normalizedItems = [];
+            foreach ($data['items'] as $item) {
+                $pId = (int)($item['product_id'] ?? 0);
+                $qty = (int)($item['quantity'] ?? 0);
+
+                if ($qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => 'بڕی کاڵا دەبێت لە 0 زیاتر بێت.',
+                    ]);
+                }
+
+                $product = Product::where('id', $pId)->first();
+                if (!$product) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای دیاریکراو بە ناسنامەی {$pId} بوونی نییە.",
+                    ]);
+                }
+
+                if (isset($normalizedItems[$pId])) {
+                    $normalizedItems[$pId]['quantity'] += $qty;
+                } else {
+                    $normalizedItems[$pId] = [
+                        'product_id' => $pId,
+                        'quantity'   => $qty,
+                        'notes'      => $item['notes'] ?? null,
+                    ];
+                }
+            }
 
             $transferNumber = 'TRF-' . strtoupper(Str::random(8));
 
             $transfer = StockTransfer::create([
                 'transfer_number'   => $transferNumber,
-                'from_warehouse_id' => $data['from_warehouse_id'],
-                'to_warehouse_id'   => $data['to_warehouse_id'],
-                'status'            => 'DRAFT',
+                'from_warehouse_id' => $fromWarehouseId,
+                'to_warehouse_id'   => $toWarehouseId,
+                'status'            => StockTransfer::STATUS_DRAFT,
                 'notes'             => $data['notes'] ?? null,
                 'created_by'        => $user->id,
             ]);
 
-            foreach ($data['items'] as $item) {
+            foreach ($normalizedItems as $itemData) {
                 $transfer->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity'   => $item['quantity'],
+                    'product_id' => $itemData['product_id'],
+                    'quantity'   => $itemData['quantity'],
+                    'notes'      => $itemData['notes'] ?? null,
                 ]);
             }
 
@@ -46,7 +102,7 @@ class StockTransferService
                     'transfer_number'   => $transfer->transfer_number,
                     'from_warehouse_id' => $transfer->from_warehouse_id,
                     'to_warehouse_id'   => $transfer->to_warehouse_id,
-                    'items_count'       => count($data['items']),
+                    'items_count'       => count($normalizedItems),
                 ],
                 'description' => "داواکاری گواستنەوەی ستۆک دروستکرا: {$transfer->transfer_number}",
                 'user'        => $user,
@@ -62,65 +118,74 @@ class StockTransferService
     public function completeTransfer(StockTransfer $transfer, $user): StockTransfer
     {
         return DB::transaction(function () use ($transfer, $user) {
-            $lockedTransfer = StockTransfer::lockForUpdate()->findOrFail($transfer->id);
+            $lockedTransfer = StockTransfer::lockForUpdate()->with('items')->findOrFail($transfer->id);
 
-            $currentStatus = strtolower($lockedTransfer->status);
-            if ($currentStatus === 'completed' || $currentStatus === StockTransfer::STATUS_COMPLETED) {
+            $currentStatus = strtoupper($lockedTransfer->status);
+            if ($currentStatus === StockTransfer::STATUS_COMPLETED || $currentStatus === 'COMPLETED') {
                 return $lockedTransfer;
             }
 
-            if ($currentStatus === 'cancelled' || $currentStatus === StockTransfer::STATUS_CANCELLED) {
-                throw ValidationException::withMessages(['status' => 'ناتوانرێت گواستنەوەی هەڵوەشاوە جێبەجێ بكرێت.']);
+            if ($currentStatus === StockTransfer::STATUS_CANCELLED || $currentStatus === 'CANCELLED') {
+                throw ValidationException::withMessages([
+                    'status' => 'ناتوانرێت گواستنەوەی هەڵوەشاوە جێبەجێ بكرێت.',
+                ]);
             }
 
-            // Sort items deterministically by product_id ASC to eliminate deadlock risks
-            $sortedItems = $lockedTransfer->items->sortBy('product_id');
-            foreach ($sortedItems as $item) {
-                // Lock warehouse stock rows in deterministic order of warehouse_id (smaller ID first) to prevent deadlocks
-                $firstWId = min($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
-                $secondWId = max($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
+            // Group items deterministically by product_id ASC to eliminate deadlock risks
+            $groupedItems = $lockedTransfer->items
+                ->groupBy('product_id')
+                ->map(function ($items, $productId) {
+                    return [
+                        'product_id' => (int)$productId,
+                        'quantity'   => (int)$items->sum('quantity'),
+                    ];
+                })
+                ->sortBy('product_id');
 
+            $firstWId = min($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
+            $secondWId = max($lockedTransfer->from_warehouse_id, $lockedTransfer->to_warehouse_id);
+
+            foreach ($groupedItems as $item) {
+                $productId = $item['product_id'];
+                $quantity  = $item['quantity'];
+
+                // Lock warehouse stock rows in deterministic order of warehouse_id (smaller ID first) to prevent deadlocks
                 $firstStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $firstWId, 'product_id' => $item->product_id],
+                    ['warehouse_id' => $firstWId, 'product_id' => $productId],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
                 $secondStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $secondWId, 'product_id' => $item->product_id],
+                    ['warehouse_id' => $secondWId, 'product_id' => $productId],
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $sourceStock = ($lockedTransfer->from_warehouse_id === $firstWId) ? $firstStock : $secondStock;
+                $sourceStock      = ($lockedTransfer->from_warehouse_id === $firstWId) ? $firstStock : $secondStock;
                 $destinationStock = ($lockedTransfer->to_warehouse_id === $firstWId) ? $firstStock : $secondStock;
 
-                // ١. خوێندنەوەی بڕی فیزیکی پێشوو (Step 1: Re-read authoritative current quantity)
-                $currentQty = $sourceStock->quantity;
-
-                // ٢. خوێندنەوەی بڕی حجزکراوی پێشوو (Step 2: Re-read authoritative reserved quantity)
-                $reservedQty = $sourceStock->reserved_quantity;
-
-                // ٣. هەژمارکردنی بڕی بەردەستی باوەڕپێکراو (Step 3: Calculate authoritative available quantity)
+                // 1. Check physical quantity and reserved quantity
+                $currentQty     = $sourceStock->quantity;
+                $reservedQty    = $sourceStock->reserved_quantity;
                 $availableStock = $currentQty - $reservedQty;
 
-                // ٤. پشکنینی گونجاویی بڕی داواکراوی گواستنەوە (Step 4: Validate requested deduction)
-                if ($availableStock < $item->quantity) {
-                    // ٥. هەڵدانی هەڵەی گونجاو لە کاتی نەبوونی ستۆکی بەردەست (Step 5: Throw business validation exception if insufficient)
+                // 2. Validate available stock for transfer
+                if ($availableStock < $quantity) {
                     throw ValidationException::withMessages([
-                        'stock' => "کاڵای ژمارە {$item->product_id} بڕی پێویست بەردەست نییە لە کۆگای نێرەر. بەردەست بۆ ناردن: {$availableStock}، بڕی داواکراو: {$item->quantity}",
+                        'stock' => "کاڵای ژمارە {$productId} بڕی پێویست بەردەست نییە لە کۆگای نێرەر. بەردەست بۆ ناردن: {$availableStock}، بڕی داواکراو: {$quantity}",
                     ]);
                 }
 
-                // ٦. کەمکردنەوەی ستۆک لە کۆگای نێرەر پاش پەسەندکردنی مەرجەکان (Step 6: Only then modify stock)
+                // 3. Deduct stock from source warehouse (TRANSFER_OUT)
                 $sourceStock->adjustStock(
-                    -$item->quantity,
+                    -$quantity,
                     'TRANSFER_OUT',
                     $user->id,
                     'stock_transfer',
                     $lockedTransfer->id
                 );
 
-                // ٧. زیادکردنی ستۆک بۆ کۆگای دووەم (To Warehouse)
+                // 4. Increase stock in destination warehouse (TRANSFER_IN)
                 $destinationStock->adjustStock(
-                    $item->quantity,
+                    $quantity,
                     'TRANSFER_IN',
                     $user->id,
                     'stock_transfer',
@@ -128,11 +193,13 @@ class StockTransferService
                 );
             }
 
-            // ٣. گۆڕینی دۆخی گواستنەوەکە بۆ تەواوبوو
+            // 5. Update transfer status to COMPLETED
+            $oldStatus = $lockedTransfer->status;
             $lockedTransfer->update([
-                'status'       => 'COMPLETED',
-                'completed_at' => now(),
-                'approved_by'  => $user->id,
+                'status'         => StockTransfer::STATUS_COMPLETED,
+                'completed_at'   => now(),
+                'transferred_at' => now(),
+                'approved_by'    => $user->id,
             ]);
 
             app(\App\Services\AuditService::class)->log([
@@ -140,9 +207,9 @@ class StockTransferService
                 'entity_type' => 'StockTransfer',
                 'entity_id'   => $lockedTransfer->id,
                 'table_name'  => 'stock_transfers',
-                'old_values'  => ['status' => $currentStatus],
+                'old_values'  => ['status' => $oldStatus],
                 'new_values'  => [
-                    'status'            => 'COMPLETED',
+                    'status'            => StockTransfer::STATUS_COMPLETED,
                     'transfer_number'   => $lockedTransfer->transfer_number,
                     'from_warehouse_id' => $lockedTransfer->from_warehouse_id,
                     'to_warehouse_id'   => $lockedTransfer->to_warehouse_id,
@@ -156,24 +223,28 @@ class StockTransferService
     }
 
     /**
-     * هەڵوەشاندنەوەی گواستنەوەی ستۆک
+     * هەڵوەشاندنەوەی داواکاری گواستنەوەی ستۆک (CANCELLED)
      */
     public function cancelTransfer(StockTransfer $transfer, $user): StockTransfer
     {
         return DB::transaction(function () use ($transfer, $user) {
             $lockedTransfer = StockTransfer::lockForUpdate()->findOrFail($transfer->id);
 
-            $currentStatus = strtolower($lockedTransfer->status);
-            if ($currentStatus === 'cancelled' || $currentStatus === StockTransfer::STATUS_CANCELLED) {
+            $currentStatus = strtoupper($lockedTransfer->status);
+            if ($currentStatus === StockTransfer::STATUS_CANCELLED || $currentStatus === 'CANCELLED') {
                 return $lockedTransfer;
             }
 
-            if ($currentStatus === 'completed' || $currentStatus === StockTransfer::STATUS_COMPLETED) {
-                throw ValidationException::withMessages(['status' => 'ناتوانرێت گواستنەوەی جێبەجێکراو هەڵبوەشێنرێتەوە.']);
+            if ($currentStatus === StockTransfer::STATUS_COMPLETED || $currentStatus === 'COMPLETED') {
+                throw ValidationException::withMessages([
+                    'status' => 'ناتوانرێت گواستنەوەی جێبەجێکراو هەڵبوەشێنرێتەوە.',
+                ]);
             }
 
             $oldStatus = $lockedTransfer->status;
-            $lockedTransfer->update(['status' => 'CANCELLED']);
+            $lockedTransfer->update([
+                'status' => StockTransfer::STATUS_CANCELLED,
+            ]);
 
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'STOCK_TRANSFER_CANCEL',
@@ -181,7 +252,7 @@ class StockTransferService
                 'entity_id'   => $lockedTransfer->id,
                 'table_name'  => 'stock_transfers',
                 'old_values'  => ['status' => $oldStatus],
-                'new_values'  => ['status' => 'CANCELLED'],
+                'new_values'  => ['status' => StockTransfer::STATUS_CANCELLED],
                 'description' => "داواکاری گواستنەوەی ستۆک هەڵوەشێنرایەوە: {$lockedTransfer->transfer_number}",
                 'user'        => $user,
             ]);
@@ -190,3 +261,4 @@ class StockTransferService
         });
     }
 }
+
