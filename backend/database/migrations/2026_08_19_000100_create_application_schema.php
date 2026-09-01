@@ -213,7 +213,7 @@ return new class extends Migration
             $table->string('transfer_number')->unique()->nullable();
             $table->foreignId('from_warehouse_id')->constrained('warehouses')->restrictOnDelete();
             $table->foreignId('to_warehouse_id')->constrained('warehouses')->restrictOnDelete();
-            $table->enum('status', ['DRAFT', 'COMPLETED', 'CANCELLED', 'in_transit'])->default('DRAFT')->index();
+            $table->enum('status', ['DRAFT', 'COMPLETED', 'CANCELLED', 'IN_TRANSIT', 'draft', 'completed', 'cancelled', 'in_transit'])->default('DRAFT')->index();
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
@@ -361,7 +361,7 @@ return new class extends Migration
             $table->foreignId('sales_order_id')->constrained()->restrictOnDelete();
             $table->foreignId('customer_id')->constrained()->restrictOnDelete();
             $table->text('reason')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending')->index();
+            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'pending', 'approved', 'rejected', 'completed'])->default('PENDING')->index();
             $table->unsignedBigInteger('total_return_amount')->default(0);
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->timestamps();
@@ -386,7 +386,7 @@ return new class extends Migration
             $table->string('trip_number')->unique();
             $table->foreignId('driver_id')->constrained('users')->restrictOnDelete();
             $table->date('trip_date')->index();
-            $table->enum('status', ['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'])->default('DRAFT')->index();
+            $table->enum('status', ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'draft', 'planned', 'in_progress', 'completed', 'cancelled'])->default('DRAFT')->index();
             $table->unsignedInteger('total_orders')->default(0);
             $table->unsignedBigInteger('total_amount_collected')->default(0);
             $table->text('notes')->nullable();
@@ -403,7 +403,7 @@ return new class extends Migration
             $table->foreignId('sales_order_id')->constrained()->restrictOnDelete();
             $table->unsignedBigInteger('received_amount')->default(0);
             $table->timestamp('delivered_at')->nullable();
-            $table->enum('status', ['PENDING', 'DELIVERED', 'FAILED'])->default('PENDING')->index();
+            $table->enum('status', ['PENDING', 'DELIVERED', 'FAILED', 'pending', 'delivered', 'failed'])->default('PENDING')->index();
             $table->integer('delivery_order')->default(0);
             // latitude/longitude EXCLUDED per request
             $table->text('failed_reason')->nullable();
@@ -453,7 +453,7 @@ return new class extends Migration
             $table->unsignedBigInteger('total_profit')->default(0);
             $table->decimal('commission_rate', 5, 2)->default(0);
             $table->unsignedBigInteger('commission_amount')->default(0);
-            $table->enum('status', ['calculated', 'approved', 'paid'])->default('calculated')->index();
+            $table->enum('status', ['calculated', 'approved', 'paid', 'cancelled', 'CALCULATED', 'APPROVED', 'PAID', 'CANCELLED'])->default('calculated')->index();
             $table->timestamp('paid_at')->nullable();
             $table->foreignId('calculated_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('paid_by')->nullable()->constrained('users')->nullOnDelete();
