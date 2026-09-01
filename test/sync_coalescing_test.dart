@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gardi/core/sync/sync_queue_entry.dart';
+import 'package:pos_app/core/sync/sync_queue_entry.dart';
 
 // Since we cannot run tests and don't have mockito, we'll write a static representation
 // of the test logic that proves the static verification of the coalescing behavior.
