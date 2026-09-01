@@ -26,7 +26,9 @@ final commissionsListProvider =
               )
               .toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }

@@ -61,7 +61,9 @@ final filteredCustomerListProvider =
           }
           return data.map((json) => Customer.fromJson(json)).toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }
@@ -127,8 +129,7 @@ class CustomerActions {
         if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
         if (routeId != null) 'route_id': routeId,
         if (priceType != null) 'price_type': priceType,
-        if (initialDebt != null && initialDebt > 0)
-          'initial_debt': initialDebt,
+        if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
       },

@@ -12,7 +12,7 @@ final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) asy
       final List data = response.data['data'] ?? [];
       return data.map((json) => WarehouseOrderModel.fromJson(json)).toList();
     }
-    return [];
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
   } catch (e) {
     throw Exception(api.parseError(e));
   }
@@ -26,7 +26,7 @@ final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) 
       final List data = response.data['data'] ?? [];
       return data.map((json) => WarehouseStockModel.fromJson(json)).toList();
     }
-    return [];
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
   } catch (e) {
     throw Exception(api.parseError(e));
   }
@@ -122,7 +122,7 @@ class WarehouseActions {
       if (response.statusCode == 200) {
         return response.data['data'] ?? [];
       }
-      return [];
+      throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
     } catch (e) {
       throw Exception(api.parseError(e));
     }

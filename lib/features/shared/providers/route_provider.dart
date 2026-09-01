@@ -34,7 +34,9 @@ final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
       final list = _parseListResponse(response.data);
       return list.map((json) => RouteModel.fromJson(json)).toList();
     }
-    return [];
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
     throw Exception(api.parseError(e));
   }
@@ -137,7 +139,9 @@ class RouteActions {
       if (response.statusCode == 200) {
         return _parseListResponse(response.data);
       }
-      return [];
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -149,7 +153,9 @@ class RouteActions {
       if (response.statusCode == 200) {
         return _parseListResponse(response.data);
       }
-      return [];
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
     } catch (e) {
       throw Exception(api.parseError(e));
     }

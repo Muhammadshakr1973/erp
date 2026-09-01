@@ -23,7 +23,9 @@ final supplierDebtsReportProvider =
               .map((json) => SupplierLedgerModel.fromJson(json))
               .toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }
@@ -46,7 +48,9 @@ final customerDebtsReportProvider =
               .map((json) => CustomerLedgerModel.fromJson(json))
               .toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }
@@ -69,7 +73,9 @@ final paymentsHistoryReportProvider =
               .map((json) => PaymentHistoryModel.fromJson(json))
               .toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }

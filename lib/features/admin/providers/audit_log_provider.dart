@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/api_client.dart';
 
 final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
@@ -14,22 +15,29 @@ final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
       }
       return [];
     }
-    return [];
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
-    return [];
+    throw Exception(api.parseError(e));
   }
 });
 
-final singleAuditLogProvider = FutureProvider.family<dynamic, int>((ref, id) async {
+final singleAuditLogProvider = FutureProvider.family<dynamic, int>((
+  ref,
+  id,
+) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/audit-logs/$id');
     if (response.statusCode == 200) {
       return response.data['data'] ?? response.data;
     }
-    return null;
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
-    return null;
+    throw Exception(api.parseError(e));
   }
 });
 
@@ -37,7 +45,7 @@ class EntityAuditParam {
   final String entityType;
   final int entityId;
   EntityAuditParam(this.entityType, this.entityId);
-  
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -50,15 +58,20 @@ class EntityAuditParam {
   int get hashCode => entityType.hashCode ^ entityId.hashCode;
 }
 
-final entityAuditLogsProvider = FutureProvider.family<List<dynamic>, EntityAuditParam>((ref, param) async {
-  final api = ref.watch(apiClientProvider);
-  try {
-    final response = await api.client.get('/audit-logs/entity/${param.entityType}/${param.entityId}');
-    if (response.statusCode == 200) {
-      return response.data['data'] ?? [];
-    }
-    return [];
-  } catch (e) {
-    return [];
-  }
-});
+final entityAuditLogsProvider =
+    FutureProvider.family<List<dynamic>, EntityAuditParam>((ref, param) async {
+      final api = ref.watch(apiClientProvider);
+      try {
+        final response = await api.client.get(
+          '/audit-logs/entity/${param.entityType}/${param.entityId}',
+        );
+        if (response.statusCode == 200) {
+          return response.data['data'] ?? [];
+        }
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
+      } catch (e) {
+        throw Exception(api.parseError(e));
+      }
+    });

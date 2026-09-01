@@ -12,9 +12,11 @@ final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
       final List data = response.data['data'] ?? [];
       return data.map((json) => SupplierModel.fromJson(json)).toList();
     }
-    return [];
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
-    return [];
+    throw Exception(api.parseError(e));
   }
 });
 
@@ -32,9 +34,11 @@ final supplierLedgerProvider =
               .map((json) => SupplierLedgerModel.fromJson(json))
               .toList();
         }
-        return [];
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
-        return [];
+        throw Exception(api.parseError(e));
       }
     });
 

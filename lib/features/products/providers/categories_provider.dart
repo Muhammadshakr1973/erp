@@ -11,7 +11,9 @@ final categoriesListProvider = FutureProvider<List<CategoryModel>>((ref) async {
       final List data = response.data['data'] ?? [];
       return data.map((json) => CategoryModel.fromJson(json)).toList();
     }
-    return [];
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
     throw Exception(api.parseError(e));
   }
