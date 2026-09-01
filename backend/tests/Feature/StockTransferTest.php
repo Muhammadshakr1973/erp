@@ -436,11 +436,22 @@ class StockTransferTest extends TestCase
     /** @test */
     public function test_14_concurrent_transfers_cannot_produce_negative_source_stock()
     {
-        // NOTE: In single-process SQLite test environment, true multi-threaded parallel processes are not supported.
-        // We simulate concurrent lock contention where two transfer completion routines (Transfer A for 10 units
-        // and Transfer B for 10 units) contend for the same initial pool of 15 available units.
+        // =========================================================================
+        // DETERMINISTIC TRANSACTION LOCK-CONTENTION VERIFICATION
+        //
+        // Test Environment DB Driver: SQLite (:memory:)
+        // Note on Driver Concurrency:
+        // In SQLite in-memory mode, multi-threaded OS processes with row-level lock
+        // queues are not natively supported by the single-connection PDO memory driver.
+        // True multi-process row locking (SELECT ... FOR UPDATE) requires a client-server
+        // RDBMS engine such as MySQL (InnoDB) or PostgreSQL.
+        //
+        // Under this deterministic test, we verify the transactional lock-contention
+        // lifecycle where Transfer A (10 units) and Transfer B (10 units) contend
+        // for an initial pool of 15 available units on the same source WarehouseStock row.
+        // =========================================================================
 
-        // Initial source stock = 15
+        // 1. Initial source stock = 15 units (reserved = 0, available = 15)
         WarehouseStock::create([
             'warehouse_id'      => $this->warehouse1->id,
             'product_id'        => $this->productA->id,
@@ -450,7 +461,7 @@ class StockTransferTest extends TestCase
 
         $service = app(StockTransferService::class);
 
-        // Transfer A = 10
+        // 2. Create Transfer A = 10 units
         $transfer1 = $service->createTransfer([
             'from_warehouse_id' => $this->warehouse1->id,
             'to_warehouse_id'   => $this->warehouse2->id,
@@ -459,7 +470,7 @@ class StockTransferTest extends TestCase
             ],
         ], $this->admin);
 
-        // Transfer B = 10
+        // 3. Create Transfer B = 10 units (both created when initial visible pool was 15)
         $transfer2 = $service->createTransfer([
             'from_warehouse_id' => $this->warehouse1->id,
             'to_warehouse_id'   => $this->warehouse2->id,
@@ -468,34 +479,59 @@ class StockTransferTest extends TestCase
             ],
         ], $this->admin);
 
-        // Simulate concurrent execution where Transfer 1 completes first under row lock:
+        // 4. Interlocking transaction simulation:
+        // Transaction T1 (Transfer A) acquires lockForUpdate() on source and destination WarehouseStock rows.
+        // Inside T1: available stock = 15 >= 10 -> deducts 10 (remaining = 5) -> credits 10 to WH2 -> commits.
         $res1 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$transfer1->id}/complete");
         $res1->assertStatus(200);
 
-        // Transfer 2 contends for remaining stock under row lock, finds only 5 available (< 10 requested), and is rejected with 422:
+        // Transaction T2 (Transfer B) attempts to complete against the same WarehouseStock row.
+        // With lockForUpdate() inside the transaction block, T2 re-evaluates the committed row state:
+        // Source available stock is now 5 (< 10 requested).
+        // T2 must be rejected with HTTP 422 and a validation message indicating insufficient available stock.
         $res2 = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$transfer2->id}/complete");
         $res2->assertStatus(422);
+        $res2->assertJsonValidationErrors(['stock']);
 
-        // INVENTORY INTEGRITY INVARIANTS:
-        // 1. Both MUST NOT succeed; at most one succeeds
-        $this->assertEquals(StockTransfer::STATUS_COMPLETED, $transfer1->fresh()->status);
-        $this->assertEquals(StockTransfer::STATUS_DRAFT, $transfer2->fresh()->status);
+        // 5. Re-attempting Transfer B immediately fails again with 422 because stock remains 5
+        $res2Retry = $this->actingAs($this->admin)->postJson("/api/v1/stock-transfers/{$transfer2->id}/complete");
+        $res2Retry->assertStatus(422);
 
-        // 2. Final source stock MUST NEVER become negative (strictly 15 - 10 = 5 >= 0)
+        // =========================================================================
+        // INVENTORY INTEGRITY INVARIANTS & AUDIT VERIFICATION:
+        // =========================================================================
+
+        // Invariant 1: At most one competing transfer succeeds; the second remains DRAFT
+        $freshTransfer1 = $transfer1->fresh();
+        $freshTransfer2 = $transfer2->fresh();
+        $this->assertEquals(StockTransfer::STATUS_COMPLETED, $freshTransfer1->status);
+        $this->assertNotNull($freshTransfer1->completed_at);
+        $this->assertNotNull($freshTransfer1->transferred_at);
+        $this->assertEquals($this->admin->id, $freshTransfer1->approved_by);
+
+        $this->assertEquals(StockTransfer::STATUS_DRAFT, $freshTransfer2->status);
+        $this->assertNull($freshTransfer2->completed_at);
+        $this->assertNull($freshTransfer2->transferred_at);
+        $this->assertNull($freshTransfer2->approved_by);
+
+        // Invariant 2: Final source stock MUST NEVER become negative (strictly 15 - 10 = 5 >= 0)
         $sourceStock = WarehouseStock::where('warehouse_id', $this->warehouse1->id)
             ->where('product_id', $this->productA->id)
             ->first();
+        $this->assertNotNull($sourceStock);
         $this->assertEquals(5, $sourceStock->quantity);
+        $this->assertEquals(0, $sourceStock->reserved_quantity);
         $this->assertTrue($sourceStock->quantity >= 0);
 
-        // 3. Destination stock totals MUST equal actual successful transferred quantity (10)
+        // Invariant 3: Destination stock equals actual successful transfer quantity (exactly 10)
         $destStock = WarehouseStock::where('warehouse_id', $this->warehouse2->id)
             ->where('product_id', $this->productA->id)
             ->first();
         $this->assertNotNull($destStock);
         $this->assertEquals(10, $destStock->quantity);
+        $this->assertEquals(0, $destStock->reserved_quantity);
 
-        // 4. Total TRANSFER_OUT MUST NEVER exceed 15 (exactly 10)
+        // Invariant 4: Total successful TRANSFER_OUT <= 15 (exactly -10)
         $totalTransferOut = StockTransaction::where('warehouse_id', $this->warehouse1->id)
             ->where('product_id', $this->productA->id)
             ->where('type', 'TRANSFER_OUT')
@@ -503,18 +539,24 @@ class StockTransferTest extends TestCase
         $this->assertEquals(-10, $totalTransferOut);
         $this->assertTrue(abs($totalTransferOut) <= 15);
 
-        // 5. Total TRANSFER_IN matches successful transferred quantity (+10)
+        // Invariant 5: Total TRANSFER_IN equals actual successful transferred quantity (+10)
         $totalTransferIn = StockTransaction::where('warehouse_id', $this->warehouse2->id)
             ->where('product_id', $this->productA->id)
             ->where('type', 'TRANSFER_IN')
             ->sum('quantity_change');
         $this->assertEquals(10, $totalTransferIn);
 
-        // 6. No partial/half-completed transfer occurred for Transfer 2
+        // Invariant 6: Failed transfer (Transfer B) creates zero StockTransaction rows
         $transfer2Transactions = StockTransaction::where('reference_type', 'stock_transfer')
             ->where('reference_id', $transfer2->id)
             ->count();
         $this->assertEquals(0, $transfer2Transactions);
+
+        // Invariant 7: Failed transfer (Transfer B) creates zero completion AuditLog entries
+        $this->assertDatabaseMissing('audit_logs', [
+            'action'    => 'STOCK_TRANSFER_COMPLETE',
+            'entity_id' => $transfer2->id,
+        ]);
     }
 
     /** @test */
