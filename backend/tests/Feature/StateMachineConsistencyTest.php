@@ -174,11 +174,11 @@ class StateMachineConsistencyTest extends TestCase
         $this->assertEquals(SalesmanCommission::STATUS_APPROVED, $approved->status);
 
         // Pay
-        $paid = $commissionService->payCommission($commission->id, ['payment_method' => 'CASH'], $this->admin);
+        $paid = $commissionService->payCommission($commission->id, $this->admin, ['payment_method' => 'CASH']);
         $this->assertEquals(SalesmanCommission::STATUS_PAID, $paid->status);
 
         // Re-pay idempotent
-        $rePaid = $commissionService->payCommission($commission->id, ['payment_method' => 'CASH'], $this->admin);
+        $rePaid = $commissionService->payCommission($commission->id, $this->admin, ['payment_method' => 'CASH']);
         $this->assertEquals(SalesmanCommission::STATUS_PAID, $rePaid->status);
 
         // Cancelling paid commission must fail
