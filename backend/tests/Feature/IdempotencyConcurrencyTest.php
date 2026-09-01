@@ -57,7 +57,7 @@ class IdempotencyConcurrencyTest extends TestCase
             'phone' => '07701111111',
             'route_id' => $route->id,
             'price_type' => 'N2',
-            'current_balance' => 0,
+            'current_balance' => 100000,
             'is_active' => true
         ]);
 

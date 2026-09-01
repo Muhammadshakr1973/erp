@@ -326,6 +326,13 @@ class SyncService {
           options: options,
         );
         return response.data;
+      case 'PAY_SUPPLIER':
+        final response = await api.client.post(
+          '/suppliers/${entry.entityId}/pay',
+          data: entry.payload,
+          options: options,
+        );
+        return response.data;
       case 'STORE_DELIVERY':
         final response = await api.client.post(
           '/delivery-trips',

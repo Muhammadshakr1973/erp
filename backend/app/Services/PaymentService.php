@@ -5,52 +5,61 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\CustomerLedger;
+use App\Models\SalesOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
-    private function checkPaymentIdempotency(int $customerId, int $amount, ?int $salesOrderId = null): ?CustomerPayment
-    {
-        return CustomerPayment::where('customer_id', $customerId)
-            ->where('amount', $amount)
-            ->where('sales_order_id', $salesOrderId)
-            ->where('created_at', '>=', now()->subSeconds(90))
-            ->orderBy('id', 'desc')
-            ->first();
-    }
-
     public function collectPayment(array $data, $user): CustomerPayment
     {
         // 0. Defensive validation for payment amount and order matching
         if (!isset($data['amount']) || (int)$data['amount'] <= 0) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'amount' => ['بڕی پارە دەبێت ئەرێنی بێت / Payment amount must be a positive integer'],
             ]);
         }
 
         if (isset($data['sales_order_id']) && $data['sales_order_id']) {
-            $salesOrder = \App\Models\SalesOrder::find($data['sales_order_id']);
+            $salesOrder = SalesOrder::find($data['sales_order_id']);
             if (!$salesOrder || $salesOrder->customer_id != $data['customer_id']) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'sales_order_id' => ['دیاریکراوی پسوڵە بۆ ئەم کڕیارە نییە / Sales order does not belong to customer'],
                 ]);
             }
         }
 
-        // First check idempotency outside the transaction lock for faster check, or inside
-        $existing = $this->checkPaymentIdempotency($data['customer_id'], $data['amount'], $data['sales_order_id'] ?? null);
-        if ($existing) {
-            return $existing;
-        }
-
         $result = DB::transaction(function () use ($data, $user) {
             $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
+            $previousBalance = (int) $customer->current_balance;
+            $paymentAmount = (int) $data['amount'];
 
-            // Double check inside the transaction lock to prevent concurrent double-submissions
-            $existing = $this->checkPaymentIdempotency($customer->id, $data['amount'], $data['sales_order_id'] ?? null);
-            if ($existing) {
-                return $existing;
+            // Overpayment Protection: customer cannot pay more than their total outstanding debt
+            if ($paymentAmount > $previousBalance) {
+                throw ValidationException::withMessages([
+                    'amount' => ['بڕی پارەدان زیاترە لە کۆی قەرزی کڕیار / Payment amount exceeds customer outstanding debt'],
+                ]);
+            }
+
+            // If payment is linked to a specific Sales Order, enforce remaining order balance check
+            if (isset($data['sales_order_id']) && $data['sales_order_id']) {
+                $salesOrder = SalesOrder::lockForUpdate()->find($data['sales_order_id']);
+                if (!$salesOrder || $salesOrder->customer_id != $customer->id) {
+                    throw ValidationException::withMessages([
+                        'sales_order_id' => ['دیاریکراوی پسوڵە بۆ ئەم کڕیارە نییە / Sales order does not belong to customer'],
+                    ]);
+                }
+
+                $totalPaidForOrder = (int) CustomerPayment::where('sales_order_id', $salesOrder->id)->sum('amount');
+                $orderTotal = (int) $salesOrder->total_amount;
+                $orderRemaining = max(0, $orderTotal - $totalPaidForOrder);
+
+                if ($paymentAmount > $orderRemaining) {
+                    throw ValidationException::withMessages([
+                        'amount' => ['بڕی پارەدان زیاترە لە قەرزی ماوەی ئەم پسوڵەیە / Payment amount exceeds remaining order balance'],
+                    ]);
+                }
             }
 
             // دروستکردنی ژمارەی پسوڵەی پارەدان
@@ -61,26 +70,25 @@ class PaymentService
                 'payment_number' => $paymentNumber,
                 'customer_id'    => $customer->id,
                 'sales_order_id' => $data['sales_order_id'] ?? null,
-                'amount'         => $data['amount'],
+                'amount'         => $paymentAmount,
                 'payment_method' => $data['payment_method'] ?? 'CASH',
                 'paid_at'        => now()->toDateString(),
-                'collected_by'   => $user->id, // ئەو کەسەی پارەکەی وەرگرت (مەندوب/شۆفێر)
+                'collected_by'   => $user->id,
                 'received_by'    => $user->id,
                 'notes'          => $data['notes'] ?? null,
             ]);
 
             // ٢. هەژمارکردنی قەرزی نوێی کڕیارەکە (Balance After)
-            $previousBalance = $customer->current_balance;
-            $newBalance = $previousBalance - $data['amount']; // پارەی داوە، قەرزەکەی کەم دەبێتەوە
+            $newBalance = $previousBalance - $paymentAmount;
 
             // ٣. تۆمارکردنی لە لیجەر (Ledger Principle) بۆ مێژوو
             CustomerLedger::create([
                 'customer_id'    => $customer->id,
                 'entry_type'     => 'PAYMENT',
-                'type'           => 'credit', // Credit واتە پارەهاتنە ناوەوە / کەمبوونەوەی قەرز
+                'type'           => 'credit',
                 'debit'          => 0,
-                'credit'         => $data['amount'],
-                'amount'         => $data['amount'],
+                'credit'         => $paymentAmount,
+                'amount'         => $paymentAmount,
                 'balance_before' => $previousBalance,
                 'balance_after'  => $newBalance,
                 'reference_type' => 'customer_payment',
@@ -91,7 +99,7 @@ class PaymentService
 
             // ٤. نوێکردنەوەی کۆی قەرزی کڕیار لە تەیبڵی خۆی
             $customer->update([
-                'current_balance' => $newBalance
+                'current_balance' => $newBalance,
             ]);
 
             // ٥. تۆمارکردنی جوڵەکە لە لۆگی چالاکیەکان (Audit Trail)

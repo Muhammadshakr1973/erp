@@ -120,15 +120,6 @@ class SupplierController extends Controller
         ]);
     }
 
-    private function checkSupplierPaymentIdempotency(int $supplierId, int $amount): ?SupplierPayment
-    {
-        return SupplierPayment::where('supplier_id', $supplierId)
-            ->where('amount', $amount)
-            ->where('created_at', '>=', now()->subSeconds(90))
-            ->orderBy('id', 'desc')
-            ->first();
-    }
-
     public function pay(Request $request, $id): JsonResponse
     {
         $validated = $request->validate([
@@ -151,36 +142,55 @@ class SupplierController extends Controller
             $supplier = Supplier::lockForUpdate()->findOrFail($id);
             $user = auth()->user() ?? User::first();
             $userId = $user ? $user->id : 1;
+            $previousBalance = (int) $supplier->current_balance;
+            $paymentAmount = (int) $validated['amount'];
 
-            // Check for duplicate payment request (Idempotency)
-            $existingPayment = $this->checkSupplierPaymentIdempotency($supplier->id, $validated['amount']);
-            if ($existingPayment) {
-                return response()->json([
-                    'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا (دووبارەبوونەوەی پاراستن)',
-                    'data' => $supplier->append('debt')
-                ], 200);
+            // Overpayment Protection: cannot pay more than total outstanding supplier debt
+            if ($paymentAmount > $previousBalance) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'amount' => ['بڕی پارەدان زیاترە لە کۆی قەرزی دابینکەر / Payment amount exceeds supplier outstanding debt'],
+                ]);
+            }
+
+            // If linked to a purchase order, enforce remaining order balance check
+            if (!empty($validated['purchase_order_id'])) {
+                $po = \App\Models\PurchaseOrder::lockForUpdate()->find($validated['purchase_order_id']);
+                if (!$po || $po->supplier_id != $supplier->id) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'purchase_order_id' => ['دیاریکراوی پسوڵەی دابینکەر نادروستە / Purchase order does not belong to supplier'],
+                    ]);
+                }
+
+                $totalPaidForPo = (int) SupplierPayment::where('purchase_order_id', $po->id)->sum('amount');
+                $poTotal = (int) $po->total_amount;
+                $poRemaining = max(0, $poTotal - $totalPaidForPo);
+
+                if ($paymentAmount > $poRemaining) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'amount' => ['بڕی پارەدان زیاترە لە قەرزی ماوەی ئەم پسوڵەی کڕینە / Payment amount exceeds remaining purchase order balance'],
+                    ]);
+                }
             }
 
             $payment = SupplierPayment::create([
                 'supplier_id' => $supplier->id,
                 'purchase_order_id' => $validated['purchase_order_id'] ?? null,
-                'amount' => $validated['amount'],
+                'amount' => $paymentAmount,
                 'payment_method' => $validated['payment_method'] ?? 'cash',
                 'paid_at' => now()->toDateString(),
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => $userId,
             ]);
 
-            $previousBalance = (int) $supplier->current_balance;
-            $newBalance = $previousBalance - $validated['amount'];
+            $newBalance = $previousBalance - $paymentAmount;
 
             SupplierLedger::create([
                 'supplier_id' => $supplier->id,
                 'entry_type' => 'PAYMENT',
                 'type' => 'debit',
-                'debit' => $validated['amount'],
+                'debit' => $paymentAmount,
                 'credit' => 0,
-                'amount' => $validated['amount'],
+                'amount' => $paymentAmount,
                 'balance_before' => $previousBalance,
                 'balance_after' => $newBalance,
                 'reference_type' => 'supplier_payment',
@@ -215,7 +225,7 @@ class SupplierController extends Controller
             return response()->json([
                 'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا',
                 'data' => $supplier->append('debt')
-            ]);
+            ], 200);
         });
     }
 
