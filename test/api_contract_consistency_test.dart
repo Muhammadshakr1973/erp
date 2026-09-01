@@ -6,6 +6,8 @@ import 'package:pos_app/features/driver/models/delivery_trip_model.dart';
 import 'package:pos_app/features/products/models/supplier_model.dart';
 import 'package:pos_app/features/products/models/supplier_ledger_model.dart';
 import 'package:pos_app/features/shared/models/customer_ledger_model.dart';
+import 'package:pos_app/features/shared/models/commission_model.dart';
+import 'package:pos_app/features/admin/models/purchase_requirement_model.dart';
 
 void main() {
   group('API Contract Consistency & Response Parsing Tests', () {
@@ -198,6 +200,106 @@ void main() {
       expect(trip.tripNumber, equals('TRIP-001'));
       expect(trip.orders.length, equals(1));
       expect(trip.orders.first.receivedAmount, equals(45000));
+    });
+
+    test('Supplier Model JSON Contract Verification', () {
+      final json = {
+        'id': 1,
+        'name': 'Darya Co',
+        'phone': '07501234567',
+        'address': 'Sulaymaniyah',
+        'contact_person': 'Soran',
+        'current_balance': 1500000,
+        'debt': 1500000,
+      };
+
+      final supplier = SupplierModel.fromJson(json);
+      expect(supplier.id, equals(1));
+      expect(supplier.name, equals('Darya Co'));
+      expect(supplier.debt, equals(1500000));
+    });
+
+    test('Supplier Ledger Model JSON Contract Verification', () {
+      final json = {
+        'id': 12,
+        'supplier_id': 1,
+        'entry_type': 'PAYMENT',
+        'type': 'debit',
+        'debit': 500000,
+        'credit': 0,
+        'amount': 500000,
+        'balance_before': 1500000,
+        'balance_after': 1000000,
+        'description': 'Paid invoice #5',
+        'created_at': '2026-03-01T15:00:00.000000Z',
+      };
+
+      final ledger = SupplierLedgerModel.fromJson(json);
+      expect(ledger.id, equals(12));
+      expect(ledger.debit, equals(500000));
+      expect(ledger.balanceAfter, equals(1000000));
+    });
+
+    test('Commission Model JSON Contract Verification', () {
+      final json = {
+        'id': 5,
+        'salesman_id': 3,
+        'salesman_name': 'Hakar',
+        'period_from': '2026-02-01',
+        'period_to': '2026-02-28',
+        'total_sales': 12000000,
+        'total_profit': 3000000,
+        'commission_rate': '0.05',
+        'commission_amount': 150000,
+        'status': 'APPROVED',
+        'details': [
+          {
+            'id': 20,
+            'sales_order_id': 101,
+            'sales_amount': 2000000,
+            'profit_amount': 500000,
+            'commission_amount': 25000,
+            'order': {
+              'order_number': 'ORD-101',
+              'customer': {
+                'name': 'Rewan Shop'
+              }
+            }
+          }
+        ]
+      };
+
+      final commission = CommissionModel.fromJson(json);
+      expect(commission.id, equals(5));
+      expect(commission.status, equals('approved'));
+      expect(commission.commissionAmount, equals(150000));
+      expect(commission.details.length, equals(1));
+      expect(commission.details.first.customerName, equals('Rewan Shop'));
+      expect(commission.details.first.orderNumber, equals('ORD-101'));
+    });
+
+    test('Purchase Requirement Model JSON Contract Verification', () {
+      final json = {
+        'id': 8,
+        'product_id': 50,
+        'product': {'name': 'Soft Drink'},
+        'warehouse_id': 2,
+        'warehouse': {'name': 'Koya Wh'},
+        'supplier_id': 1,
+        'supplier': {'name': 'Darya Co'},
+        'required_quantity': 100,
+        'current_stock': 10,
+        'is_urgent': 1,
+        'status': 'OPEN',
+      };
+
+      final req = PurchaseRequirementModel.fromJson(json);
+      expect(req.id, equals(8));
+      expect(req.productName, equals('Soft Drink'));
+      expect(req.warehouseName, equals('Koya Wh'));
+      expect(req.supplierName, equals('Darya Co'));
+      expect(req.requiredQuantity, equals(100));
+      expect(req.isUrgent, isTrue);
     });
   });
 }
