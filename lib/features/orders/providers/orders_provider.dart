@@ -5,7 +5,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../models/order_model.dart';
 
@@ -195,7 +197,6 @@ class OrderActions {
     final products = ref.read(productsListProvider).value ?? [];
     final itemsData = data['items'] ?? [];
     
-    double totalCost = 0.0;
     double subtotal = 0.0;
     double totalProfit = 0.0;
     final List<Map<String, dynamic>> resolvedItems = [];
@@ -231,7 +232,6 @@ class OrderActions {
 
       final double itemSubtotal = qty * unitPrice;
       subtotal += itemSubtotal;
-      totalCost += qty * costPrice;
       
       final double profit = (unitPrice - costPrice) * qty;
       totalProfit += profit;
