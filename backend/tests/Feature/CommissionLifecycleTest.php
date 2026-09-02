@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\SalesmanCommission;
 use App\Models\SalesmanCommissionDetail;
@@ -23,6 +24,7 @@ class CommissionLifecycleTest extends TestCase
     protected User $otherSalesman;
     protected Customer $customer;
     protected Warehouse $warehouse;
+    protected Product $product;
 
     protected function setUp(): void
     {
@@ -82,6 +84,16 @@ class CommissionLifecycleTest extends TestCase
             'name'      => 'Main Warehouse',
             'location'  => 'Erbil Industrial',
             'is_active' => true,
+        ]);
+
+        $this->product = Product::create([
+            'name'        => 'Commission Test Product',
+            'sku'         => 'PROD-COMM-001',
+            'cost_price'  => 6000,
+            'price_n1'    => 10000,
+            'price_n2'    => 10000,
+            'price_n3'    => 10000,
+            'is_active'   => true,
         ]);
     }
 

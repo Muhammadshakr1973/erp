@@ -164,6 +164,7 @@ class InventoryStockEngineTest extends TestCase
         ]);
 
         $service = app(PurchaseOrderService::class);
+        $service->confirmOrder($po, $this->admin);
         $service->receiveOrder($po, $this->admin);
 
         $stock = WarehouseStock::where('product_id', $this->product->id)
