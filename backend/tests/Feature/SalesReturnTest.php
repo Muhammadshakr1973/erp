@@ -904,4 +904,221 @@ class SalesReturnTest extends TestCase
         $stock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first();
         $this->assertEquals(15, $stock->quantity);
     }
+
+    /** @test */
+    public function it_enforces_idempotency_on_sales_return_creation_preventing_duplicate_effects()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        // Initial conditions
+        $initialStock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first()->quantity;
+        $initialCustomerBalance = $this->customer->fresh()->current_balance;
+        $initialLedgerCount = CustomerLedger::where('customer_id', $this->customer->id)->count();
+        $initialStockTxCount = StockTransaction::where('product_id', $this->product->id)->count();
+
+        $idempotencyKey = 'sr-idempotency-test-' . uniqid();
+        $payload = [
+            'sales_order_id' => $order->id,
+            'reason' => 'Defective batch',
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                    'reason' => 'Broken seal',
+                ]
+            ]
+        ];
+
+        // 1. First POST /api/v1/sales-returns with unique X-Idempotency-Key succeeds
+        $response1 = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload);
+
+        $response1->assertStatus(201);
+        $returnId = $response1->json('data.id');
+        $this->assertNotNull($returnId);
+        $response1->assertJsonPath('data.total_return_amount', 15000); // 2 * 7500
+
+        // Assert single return created
+        $this->assertEquals(1, SalesReturn::count());
+        $this->assertEquals(1, SalesReturnItem::count());
+
+        // Assert stock incremented by 2 exactly once
+        $newStock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first()->quantity;
+        $this->assertEquals($initialStock + 2, $newStock);
+
+        // Assert stock transaction recorded exactly once
+        $this->assertEquals($initialStockTxCount + 1, StockTransaction::where('product_id', $this->product->id)->count());
+
+        // Assert customer ledger entry created exactly once
+        $this->assertEquals($initialLedgerCount + 1, CustomerLedger::where('customer_id', $this->customer->id)->count());
+
+        // Assert customer balance credited (reduced) by 15000 exactly once
+        $newCustomerBalance = $this->customer->fresh()->current_balance;
+        $this->assertEquals($initialCustomerBalance - 15000, $newCustomerBalance);
+
+        // 2. Repeating the exact same request with the same X-Idempotency-Key returns cached result
+        $response2 = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload);
+
+        $response2->assertStatus(201);
+        $response2->assertHeader('X-Cache-Lookup', 'HIT');
+        $response2->assertHeader('X-Idempotency-Key', $idempotencyKey);
+        $this->assertEquals($response1->getContent(), $response2->getContent());
+        $this->assertEquals($returnId, $response2->json('data.id'));
+
+        // Assert NO duplicate SalesReturn row is created
+        $this->assertEquals(1, SalesReturn::count());
+        $this->assertEquals(1, SalesReturnItem::count());
+
+        // Assert NO duplicate stock movement occurs
+        $stockAfterRepeat = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first()->quantity;
+        $this->assertEquals($initialStock + 2, $stockAfterRepeat);
+        $this->assertEquals($initialStockTxCount + 1, StockTransaction::where('product_id', $this->product->id)->count());
+
+        // Assert NO duplicate customer ledger entry occurs
+        $this->assertEquals($initialLedgerCount + 1, CustomerLedger::where('customer_id', $this->customer->id)->count());
+
+        // Assert NO duplicate customer balance adjustment occurs
+        $balanceAfterRepeat = $this->customer->fresh()->current_balance;
+        $this->assertEquals($initialCustomerBalance - 15000, $balanceAfterRepeat);
+
+        // 3. A different idempotency key creates a distinct return when otherwise valid
+        $differentKey = 'sr-idempotency-different-' . uniqid();
+        $payloadSecondReturn = [
+            'sales_order_id' => $order->id,
+            'reason' => 'Customer changed mind',
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 1,
+                    'reason' => 'Unopened extra item',
+                ]
+            ]
+        ];
+
+        $response3 = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $differentKey)
+            ->postJson('/api/v1/sales-returns', $payloadSecondReturn);
+
+        $response3->assertStatus(201);
+        $this->assertEquals(2, SalesReturn::count());
+        $this->assertEquals(2, SalesReturnItem::count());
+
+        $finalStock = WarehouseStock::where(['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id])->first()->quantity;
+        $this->assertEquals($initialStock + 3, $finalStock);
+        $this->assertEquals($initialCustomerBalance - 15000 - 7500, $this->customer->fresh()->current_balance);
+    }
+
+    /** @test */
+    public function it_rejects_sales_return_with_same_idempotency_key_and_different_payload()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        $idempotencyKey = 'sr-payload-mismatch-' . uniqid();
+        $payload1 = [
+            'sales_order_id' => $order->id,
+            'reason' => 'Defective item',
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 1,
+                ]
+            ]
+        ];
+
+        // First submission
+        $response1 = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload1);
+        $response1->assertStatus(201);
+        $this->assertEquals(1, SalesReturn::count());
+
+        // Second submission with same key but DIFFERENT quantity in payload
+        $payload2 = [
+            'sales_order_id' => $order->id,
+            'reason' => 'Defective item',
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response2 = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload2);
+
+        $response2->assertStatus(422);
+        $response2->assertJsonPath('message', 'Idempotency key payload mismatch');
+
+        // Verify still only 1 return exists
+        $this->assertEquals(1, SalesReturn::count());
+    }
+
+    /** @test */
+    public function it_rejects_sales_return_replay_across_different_users_with_403()
+    {
+        $order = $this->createDeliveredOrder([
+            [
+                'product_id' => $this->product->id,
+                'quantity' => 5,
+                'unit_price' => 7500,
+                'cost_price' => 5000,
+                'line_total' => 37500,
+            ]
+        ]);
+        $orderItem = $order->items()->first();
+
+        $role = Role::where('name', Role::SALESMAN)->first();
+        $salesmanB = User::factory()->create([
+            'role_id' => $role->id,
+            'is_active' => true,
+        ]);
+
+        $idempotencyKey = 'sr-cross-user-' . uniqid();
+        $payload = [
+            'sales_order_id' => $order->id,
+            'items' => [
+                [
+                    'sales_order_item_id' => $orderItem->id,
+                    'quantity' => 1,
+                ]
+            ]
+        ];
+
+        // Salesman A submits first
+        $responseA = $this->actingAs($this->salesman)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload);
+        $responseA->assertStatus(201);
+
+        // Salesman B submits with the SAME key
+        $responseB = $this->actingAs($salesmanB)
+            ->withHeader('X-Idempotency-Key', $idempotencyKey)
+            ->postJson('/api/v1/sales-returns', $payload);
+
+        $responseB->assertStatus(403);
+        $responseB->assertJsonPath('error', 'Forbidden. This idempotency key belongs to another user.');
+    }
 }
