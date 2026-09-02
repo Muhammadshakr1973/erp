@@ -27,11 +27,13 @@ void main() {
         items: [
           OrderItemModel(
             id: 101,
+            orderId: 999,
             productId: 55,
             productName: 'ڕۆنی زەیتوون',
             quantity: 5,
             unitPrice: 10000,
             subtotal: 50000,
+            isPacked: true,
           ),
         ],
       );
@@ -122,19 +124,23 @@ void main() {
     final testItems = [
       OrderItemModel(
         id: 1,
+        orderId: 999,
         productId: 10,
         productName: 'چای مەحموود',
         quantity: 10,
         unitPrice: 5000,
         subtotal: 50000,
+        isPacked: true,
       ),
       OrderItemModel(
         id: 2,
+        orderId: 999,
         productId: 20,
         productName: 'برنجی کوردی',
         quantity: 4,
         unitPrice: 15000,
         subtotal: 60000,
+        isPacked: true,
       ),
     ];
 
