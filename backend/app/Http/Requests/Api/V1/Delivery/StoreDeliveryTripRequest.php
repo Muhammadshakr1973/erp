@@ -11,6 +11,21 @@ class StoreDeliveryTripRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('orders') && !$this->has('order_ids') && is_array($this->orders)) {
+            $ids = [];
+            foreach ($this->orders as $o) {
+                if (is_array($o) && isset($o['sales_order_id'])) {
+                    $ids[] = $o['sales_order_id'];
+                } elseif (is_numeric($o)) {
+                    $ids[] = $o;
+                }
+            }
+            $this->merge(['order_ids' => $ids]);
+        }
+    }
+
     public function rules(): array
     {
         return [

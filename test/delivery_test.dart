@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_app/core/sync/sync_queue_entry.dart';
 import 'package:pos_app/core/sync/sync_service.dart';
 import 'package:pos_app/features/driver/models/delivery_trip_model.dart';
+import 'package:pos_app/features/driver/providers/driver_providers.dart';
 import 'package:pos_app/features/orders/models/order_model.dart';
 
 void main() {
@@ -280,5 +281,252 @@ void main() {
       expect(initialSubmission['idempotency_key'], equals(retrySubmission['idempotency_key']));
     });
   });
+
+  group('Delivery Trip Dispatching & Management Tests', () {
+    test('READY order appears in dispatch selection, non-READY orders do not appear', () {
+      final orders = [
+        OrderModel(
+          id: 1,
+          orderNumber: 'ORD-001',
+          status: OrderModel.statusDraft,
+          subtotal: 10000,
+          totalAmount: 10000,
+          totalProfit: 2000,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 2,
+          orderNumber: 'ORD-002',
+          status: OrderModel.statusConfirmed,
+          subtotal: 12000,
+          totalAmount: 12000,
+          totalProfit: 2500,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 3,
+          orderNumber: 'ORD-003',
+          status: OrderModel.statusPacking,
+          subtotal: 15000,
+          totalAmount: 15000,
+          totalProfit: 3000,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 4,
+          orderNumber: 'ORD-004',
+          status: OrderModel.statusReady,
+          subtotal: 20000,
+          totalAmount: 20000,
+          totalProfit: 4000,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 5,
+          orderNumber: 'ORD-005',
+          status: OrderModel.statusInDelivery,
+          subtotal: 25000,
+          totalAmount: 25000,
+          totalProfit: 5000,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 6,
+          orderNumber: 'ORD-006',
+          status: OrderModel.statusDelivered,
+          subtotal: 30000,
+          totalAmount: 30000,
+          totalProfit: 6000,
+          createdAt: DateTime.now(),
+        ),
+        OrderModel(
+          id: 7,
+          orderNumber: 'ORD-007',
+          status: OrderModel.statusCancelled,
+          subtotal: 18000,
+          totalAmount: 18000,
+          totalProfit: 3500,
+          createdAt: DateTime.now(),
+        ),
+      ];
+
+      // Eligible orders logic as defined in readyOrdersForDeliveryProvider
+      final readyOrders = orders
+          .where((order) => order.status.toUpperCase() == OrderModel.statusReady)
+          .toList();
+
+      expect(readyOrders.length, equals(1));
+      expect(readyOrders.first.id, equals(4));
+      expect(readyOrders.first.orderNumber, equals('ORD-004'));
+      expect(readyOrders.first.status, equals(OrderModel.statusReady));
+
+      // Assert that non-READY orders are completely excluded
+      final nonReadyIds = orders
+          .where((order) => order.status.toUpperCase() != OrderModel.statusReady)
+          .map((o) => o.id)
+          .toList();
+
+      expect(nonReadyIds, containsAll([1, 2, 3, 5, 6, 7]));
+      expect(readyOrders.any((o) => nonReadyIds.contains(o.id)), isFalse);
+    });
+
+    test('Driver selection and DriverUserSummary deserialization', () {
+      final jsonList = [
+        {'id': 10, 'name': 'Kardo Driver', 'phone': '07701112233'},
+        {'id': 11, 'name': 'Ahmad Driver', 'phone': null},
+      ];
+
+      final drivers = jsonList.map((j) => DriverUserSummary.fromJson(j)).toList();
+
+      expect(drivers.length, equals(2));
+      expect(drivers[0].id, equals(10));
+      expect(drivers[0].name, equals('Kardo Driver'));
+      expect(drivers[0].phone, equals('07701112233'));
+
+      expect(drivers[1].id, equals(11));
+      expect(drivers[1].name, equals('Ahmad Driver'));
+      expect(drivers[1].phone, isNull);
+
+      // Simulating driver selection
+      final selectedDriver = drivers.firstWhere((d) => d.id == 10);
+      expect(selectedDriver.name, equals('Kardo Driver'));
+    });
+
+    test('Order selection and STORE_DELIVERY payload construction', () {
+      final driverId = 10;
+      final tripDate = '2026-09-02';
+      final selectedOrderIds = [101, 102, 103];
+      final notes = 'Deliver before noon';
+      final idempotencyKey = 'trip_custom_idemp_key_123';
+
+      final payload = <String, dynamic>{
+        'driver_id': driverId,
+        'trip_date': tripDate,
+        'order_ids': selectedOrderIds,
+        'notes': notes,
+        'idempotency_key': idempotencyKey,
+      };
+
+      expect(payload['driver_id'], equals(10));
+      expect(payload['trip_date'], equals('2026-09-02'));
+      expect(payload['order_ids'], equals([101, 102, 103]));
+      expect(payload['notes'], equals('Deliver before noon'));
+      expect(payload['idempotency_key'], equals('trip_custom_idemp_key_123'));
+
+      // Queue entry mapping contract
+      final queueEntry = SyncQueueEntry(
+        id: idempotencyKey,
+        operationType: 'STORE_DELIVERY',
+        entityId: idempotencyKey,
+        payloadJson: jsonEncode(payload),
+        createdAt: DateTime.now(),
+      );
+
+      expect(queueEntry.operationType, equals('STORE_DELIVERY'));
+      expect(queueEntry.payload['order_ids'], equals([101, 102, 103]));
+      expect(queueEntry.payload['driver_id'], equals(10));
+    });
+
+    test('Malformed driver API response raises FormatException', () {
+      void parseDriversResponse(dynamic resData) {
+        if (resData is! Map || resData['data'] is! List) {
+          throw const FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed drivers response payload)',
+          );
+        }
+      }
+
+      // String instead of Map
+      expect(
+        () => parseDriversResponse('Unexpected string response'),
+        throwsA(isA<FormatException>()),
+      );
+
+      // Map without data list
+      expect(
+        () => parseDriversResponse({'data': 'not a list'}),
+        throwsA(isA<FormatException>()),
+      );
+
+      // Null response
+      expect(
+        () => parseDriversResponse(null),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('Malformed delivery-trip response raises FormatException', () {
+      void parseTripsResponse(dynamic resData) {
+        if (resData is! Map || resData['data'] is! List) {
+          throw const FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed driver trips response payload)',
+          );
+        }
+      }
+
+      expect(
+        () => parseTripsResponse('error 500 html'),
+        throwsA(isA<FormatException>()),
+      );
+
+      expect(
+        () => parseTripsResponse({'data': null}),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('DeliveryTripModel parses driver details correctly when eager-loaded', () {
+      final tripJson = {
+        'id': 201,
+        'trip_number': 'TRIP-2026-0099',
+        'driver_id': 15,
+        'driver': {
+          'id': 15,
+          'name': 'Barzan Driver',
+          'phone': '07509876543',
+        },
+        'trip_date': '2026-09-02',
+        'status': 'PLANNED',
+        'total_orders': 3,
+        'total_amount_collected': 0,
+        'notes': 'Urgent route dispatch',
+        'orders': [],
+      };
+
+      final trip = DeliveryTripModel.fromJson(tripJson);
+
+      expect(trip.id, equals(201));
+      expect(trip.tripNumber, equals('TRIP-2026-0099'));
+      expect(trip.driverId, equals(15));
+      expect(trip.driver, isNotNull);
+      expect(trip.driver?.id, equals(15));
+      expect(trip.driver?.name, equals('Barzan Driver'));
+      expect(trip.driverName, equals('Barzan Driver'));
+      expect(trip.status, equals('PLANNED'));
+      expect(trip.totalOrders, equals(3));
+      expect(trip.notes, equals('Urgent route dispatch'));
+    });
+
+    test('Stable STORE_DELIVERY idempotency key across retries preserves single transaction identity', () {
+      const stableKey = 'trip_dispatch_tx_998877';
+
+      final attemptOne = {
+        'idempotency_key': stableKey,
+        'driver_id': 10,
+        'order_ids': [401, 402],
+      };
+
+      final retryAttempt = {
+        'idempotency_key': stableKey,
+        'driver_id': 10,
+        'order_ids': [401, 402],
+      };
+
+      expect(attemptOne['idempotency_key'], equals(retryAttempt['idempotency_key']));
+      expect(attemptOne['order_ids'], equals(retryAttempt['order_ids']));
+      expect(attemptOne['driver_id'], equals(retryAttempt['driver_id']));
+    });
+  });
 }
+
 

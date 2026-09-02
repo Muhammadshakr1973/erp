@@ -22,6 +22,13 @@ class AdminOrdersScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('هەموو پسوڵەکان', style: AppTextStyles.h2),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.local_shipping_outlined),
+              tooltip: 'گەشتەکانی گەیاندن',
+              onPressed: () {
+                context.push('/admin-delivery-trips');
+              },
+            ),
             IconButton(icon: const Icon(AppIcons.filter), onPressed: () {}),
             IconButton(
               icon: const Icon(Icons.refresh),

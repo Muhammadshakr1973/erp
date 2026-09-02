@@ -114,6 +114,7 @@ Route::prefix('v1')->group(function () {
         
         // Delivery Trips (Requires delivery permissions)
         Route::get('/delivery-trips', [DeliveryTripController::class, 'index'])->middleware('permission:delivery.view');
+        Route::get('/delivery-trips/drivers', [DeliveryTripController::class, 'drivers'])->middleware('permission:delivery.view');
         Route::get('/delivery-trips/{id}', [DeliveryTripController::class, 'show'])->middleware('permission:delivery.view');
         Route::post('/delivery-trips', [DeliveryTripController::class, 'store'])->middleware(['permission:delivery.update', 'idempotent']);
         Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware(['permission:delivery.update', 'idempotent']);

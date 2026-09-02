@@ -36,6 +36,20 @@ class DeliveryTripController extends Controller
         ], 200);
     }
 
+    // لیستی شۆفێرە چالاکەکان بۆ ناردنی گەشت
+    public function drivers(): JsonResponse
+    {
+        $drivers = \App\Models\User::active()
+            ->drivers()
+            ->select('id', 'name', 'phone')
+            ->get();
+
+        return response()->json([
+            'message' => 'لیستی شۆفێرە چالاکەکان',
+            'data'    => $drivers
+        ], 200);
+    }
+
     // پیشاندانی وردەکاری گەشت
     public function show(\Illuminate\Http\Request $request, $id): JsonResponse
     {
@@ -62,7 +76,7 @@ class DeliveryTripController extends Controller
 
         return response()->json([
             'message' => 'گەشتەکە بەسەرکەوتوویی دروستکرا و پسوڵەکان دران بە شۆفێر',
-            'data'    => $trip->load('orders.order.customer')
+            'data'    => $trip->load(['driver', 'orders.order.customer'])
         ], 201);
     }
 

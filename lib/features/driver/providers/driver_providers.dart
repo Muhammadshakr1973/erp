@@ -1,7 +1,51 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../models/delivery_trip_model.dart';
+
+class DriverUserSummary {
+  final int id;
+  final String name;
+  final String? phone;
+
+  DriverUserSummary({
+    required this.id,
+    required this.name,
+    this.phone,
+  });
+
+  factory DriverUserSummary.fromJson(Map<String, dynamic> json) {
+    return DriverUserSummary(
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+    );
+  }
+}
+
+final activeDriversProvider = FutureProvider<List<DriverUserSummary>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/delivery-trips/drivers');
+    if (response.statusCode == 200) {
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed drivers response payload)',
+        );
+      }
+      final List data = resData['data'] as List;
+      return data
+          .whereType<Map>()
+          .map((json) => DriverUserSummary.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    }
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە: ${response.statusCode}');
+  } catch (e) {
+    throw Exception(api.parseError(e));
+  }
+});
 
 final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
@@ -55,6 +99,39 @@ class DriverActions {
   final Ref ref;
 
   DriverActions(this.api, this.syncService, this.ref);
+
+  Future<void> createDeliveryTrip({
+    required int driverId,
+    required String tripDate,
+    required List<int> orderIds,
+    String? notes,
+    String? customEntityId,
+  }) async {
+    try {
+      final entityId = customEntityId ?? 'trip_${DateTime.now().microsecondsSinceEpoch}';
+      final payload = <String, dynamic>{
+        'driver_id': driverId,
+        'trip_date': tripDate,
+        'order_ids': orderIds,
+        'idempotency_key': entityId,
+      };
+      if (notes != null && notes.trim().isNotEmpty) {
+        payload['notes'] = notes.trim();
+      }
+
+      await syncService.enqueueOperation(
+        entityId: entityId,
+        operationType: 'STORE_DELIVERY',
+        payload: payload,
+      );
+
+      ref.invalidate(driverTripsProvider);
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(readyOrdersForDeliveryProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
 
   Future<void> deliverOrder({
     required int tripOrderId,

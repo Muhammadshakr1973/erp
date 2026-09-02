@@ -671,3 +671,13 @@ final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
   final api = ref.watch(apiClientProvider);
   return SalesReturnActions(syncService, api, ref);
 });
+
+/// پسوڵە ئامادەکراوەکان بۆ دابەشکردن و دروستکردنی گەشتی شۆفێر
+/// تەنها ئەو پسوڵانە دەگرێتەوە کە لە دۆخی READY دان
+final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((ref) async {
+  final orders = await ref.watch(ordersListProvider.future);
+  return orders
+      .where((order) => order.status.toUpperCase() == OrderModel.statusReady)
+      .toList();
+});
+

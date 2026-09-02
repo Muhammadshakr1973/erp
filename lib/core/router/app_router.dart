@@ -19,6 +19,7 @@ import '../../features/shared/views/sales_returns_list_screen.dart';
 import '../../features/shared/views/sales_return_detail_screen.dart';
 import '../../features/admin/views/admin_purchases_screen.dart';
 import '../../features/admin/views/admin_audit_logs_screen.dart';
+import '../../features/admin/views/admin_delivery_trips_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
@@ -204,6 +205,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin-audit-logs',
         name: 'adminAuditLogs',
         builder: (context, state) => const AdminAuditLogsScreen(),
+      ),
+      GoRoute(
+        path: '/admin-delivery-trips',
+        name: 'adminDeliveryTrips',
+        builder: (context, state) => const AdminDeliveryTripsScreen(),
       ),
       GoRoute(
         path: '/trip/:id',

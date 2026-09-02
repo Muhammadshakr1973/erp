@@ -1,4 +1,5 @@
 import '../../orders/models/order_model.dart';
+import '../../auth/models/user_model.dart';
 
 class DeliveryTripModel {
   final int id;
@@ -10,6 +11,8 @@ class DeliveryTripModel {
   final int totalAmountCollected;
   final String? notes;
   final List<DeliveryTripOrderModel> orders;
+  final UserModel? driver;
+  final String? driverName;
 
   DeliveryTripModel({
     required this.id,
@@ -21,12 +24,23 @@ class DeliveryTripModel {
     required this.totalAmountCollected,
     this.notes,
     required this.orders,
+    this.driver,
+    this.driverName,
   });
 
   factory DeliveryTripModel.fromJson(Map<String, dynamic> json) {
     var ordersList = json['orders'] as List? ?? [];
     List<DeliveryTripOrderModel> parsedOrders =
         ordersList.map((i) => DeliveryTripOrderModel.fromJson(i)).toList();
+
+    UserModel? driverObj;
+    String? driverNameVal;
+    if (json['driver'] != null && json['driver'] is Map) {
+      driverObj = UserModel.fromJson(Map<String, dynamic>.from(json['driver'] as Map));
+      driverNameVal = driverObj.name;
+    } else if (json['driver_name'] != null) {
+      driverNameVal = json['driver_name'].toString();
+    }
 
     return DeliveryTripModel(
       id: json['id'] ?? 0,
@@ -38,6 +52,8 @@ class DeliveryTripModel {
       totalAmountCollected: json['total_amount_collected'] ?? 0,
       notes: json['notes'],
       orders: parsedOrders,
+      driver: driverObj,
+      driverName: driverNameVal,
     );
   }
 }
