@@ -6,6 +6,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -536,14 +537,18 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit_outlined,
-                                        size: 20,
+                                    PermissionGuard(
+                                      permission: 'stock.pack',
+                                      fallback: const SizedBox.shrink(),
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.edit_outlined,
+                                          size: 20,
+                                        ),
+                                        tooltip: 'دەستکاریکردنی ستۆک',
+                                        onPressed: () =>
+                                            _showAdjustStockDialog(stock),
                                       ),
-                                      tooltip: 'دەستکاریکردنی ستۆک',
-                                      onPressed: () =>
-                                          _showAdjustStockDialog(stock),
                                     ),
                                     IconButton(
                                       icon: const Icon(
