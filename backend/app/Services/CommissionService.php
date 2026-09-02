@@ -23,7 +23,7 @@ class CommissionService
 
         // وەرگرتنی گەڕانەوە سەرکەوتووەکانی ئەم پسوڵەیە
         $returns = SalesReturn::where('sales_order_id', $order->id)
-            ->where('status', 'completed')
+            ->whereIn('status', [SalesReturn::STATUS_COMPLETED, SalesReturn::STATUS_COMPLETED_LOWER])
             ->with('items.orderItem')
             ->get();
 
