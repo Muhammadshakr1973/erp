@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_pagination.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -268,7 +269,8 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                     ),
                   ),
                 ),
-                data: (customers) {
+                data: (paginated) {
+                  final customers = paginated.data;
                   if (customers.isEmpty) {
                     return _buildEmptyState(theme);
                   }
@@ -304,7 +306,15 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                         ),
                       ),
                       // Pagination Controls
-                      _buildPaginationRow(context, customers.length),
+                      AppPagination(
+                        currentPage: paginated.currentPage,
+                        totalPages: paginated.lastPage,
+                        onPageChanged: (page) {
+                          setState(() {
+                            _currentPage = page;
+                          });
+                        },
+                      ),
                     ],
                   );
                 },
@@ -597,67 +607,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationRow(BuildContext context, int count) {
-    final theme = Theme.of(context);
-    final hasNext = count >= 20; // 20 is Laravel's default pagination size
-    final hasPrev = _currentPage > 1;
-
-    if (!hasNext && !hasPrev) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 12,
-        horizontal: AppSpacing.screenHorizontal,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Next page button (since list is RTL, next is left physically, but let's label them clearly)
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            tooltip: 'لاپەڕەی پێشوو',
-            onPressed: hasPrev
-                ? () {
-                    setState(() {
-                      _currentPage--;
-                    });
-                  }
-                : null,
-          ),
-
-          // Current page indicator
-          Text(
-            'لاپەڕە $_currentPage',
-            style: AppTextStyles.bodyBold.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-          ),
-
-          // Next page button
-          IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, size: 18),
-            tooltip: 'لاپەڕەی داهاتوو',
-            onPressed: hasNext
-                ? () {
-                    setState(() {
-                      _currentPage++;
-                    });
-                  }
-                : null,
-          ),
-        ],
       ),
     );
   }

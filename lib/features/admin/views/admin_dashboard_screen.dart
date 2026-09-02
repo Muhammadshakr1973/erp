@@ -185,21 +185,21 @@ class AdminDashboardScreen extends ConsumerWidget {
 
                           StatusBadgeType badgeType;
                           String statusText;
-                          switch (order.status.toLowerCase()) {
-                            case 'delivered':
+                          switch (order.status.toUpperCase()) {
+                            case 'DELIVERED':
                               badgeType = StatusBadgeType.success;
                               statusText = 'گەیشتووە';
                               break;
-                            case 'in_delivery':
+                            case 'IN_DELIVERY':
                               badgeType = StatusBadgeType.info;
                               statusText = 'لە ڕێگایە';
                               break;
-                            case 'ready':
-                            case 'packing':
+                            case 'READY':
+                            case 'PACKING':
                               badgeType = StatusBadgeType.warning;
                               statusText = 'ئامادەکردن';
                               break;
-                            case 'cancelled':
+                            case 'CANCELLED':
                               badgeType = StatusBadgeType.danger;
                               statusText = 'گەڕاوە';
                               break;

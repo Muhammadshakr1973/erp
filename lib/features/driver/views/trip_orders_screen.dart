@@ -61,8 +61,8 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
         ),
         data: (trip) {
           int total = trip.orders.length;
-          int delivered = trip.orders.where((o) => o.status == 'delivered').length;
-          int failed = trip.orders.where((o) => o.status == 'failed').length;
+          int delivered = trip.orders.where((o) => o.status == 'DELIVERED').length;
+          int failed = trip.orders.where((o) => o.status == 'FAILED').length;
           int pending = total - delivered - failed;
 
           return Column(
@@ -78,7 +78,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                     final tripOrder = trip.orders[index];
                     final order = tripOrder.order;
                     final customerName = _getCustomerName(order?.customer);
-                    final isPending = tripOrder.status == 'pending';
+                    final isPending = tripOrder.status == 'PENDING';
 
                     return AppCard(
                       child: Column(
@@ -167,10 +167,10 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   String _getOrderStatusLabel(String status) {
-    switch (status.toLowerCase()) {
-      case 'delivered':
+    switch (status.toUpperCase()) {
+      case 'DELIVERED':
         return 'گەیشتووە';
-      case 'failed':
+      case 'FAILED':
         return 'شکستی هێنا';
       default:
         return 'لە ڕێگادایە';
@@ -178,10 +178,10 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   StatusBadgeType _getOrderStatusBadgeType(String status) {
-    switch (status.toLowerCase()) {
-      case 'delivered':
+    switch (status.toUpperCase()) {
+      case 'DELIVERED':
         return StatusBadgeType.success;
-      case 'failed':
+      case 'FAILED':
         return StatusBadgeType.danger;
       default:
         return StatusBadgeType.warning;

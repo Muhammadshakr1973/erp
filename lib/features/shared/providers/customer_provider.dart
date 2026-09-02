@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../../core/models/paginated_response.dart';
 import '../models/customer.dart';
 
 class CustomerFilters {
@@ -41,7 +42,7 @@ class CustomerFilters {
 }
 
 final filteredCustomerListProvider =
-    FutureProvider.family<List<Customer>, CustomerFilters>((
+    FutureProvider.family<PaginatedResponse<Customer>, CustomerFilters>((
       ref,
       filters,
     ) async {
@@ -59,17 +60,21 @@ final filteredCustomerListProvider =
             );
           }
           var rawData = resData['data'];
-          List data;
-          if (rawData is Map && rawData['data'] is List) {
-            data = rawData['data'] as List;
+          if (rawData is Map) {
+            return PaginatedResponse<Customer>.fromJson(rawData as Map<String, dynamic>, (json) => Customer.fromJson(json));
           } else if (rawData is List) {
-            data = rawData;
+            return PaginatedResponse<Customer>(
+              data: rawData.map((json) => Customer.fromJson(json)).toList(),
+              currentPage: 1,
+              lastPage: 1,
+              total: rawData.length,
+              perPage: rawData.length,
+            );
           } else {
             throw FormatException(
               'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer list structure)',
             );
           }
-          return data.map((json) => Customer.fromJson(json)).toList();
         }
         throw Exception(
           'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -80,9 +85,10 @@ final filteredCustomerListProvider =
     });
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) async {
-  return ref.watch(
+  final paginated = await ref.watch(
     filteredCustomerListProvider(const CustomerFilters()).future,
   );
+  return paginated.data;
 });
 
 final singleCustomerProvider = FutureProvider.family<Customer, int>((

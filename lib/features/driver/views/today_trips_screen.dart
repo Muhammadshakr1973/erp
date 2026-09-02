@@ -113,10 +113,10 @@ class TodayTripsScreen extends ConsumerWidget {
   }
 
   String _getStatusLabel(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return 'تەواوبوو';
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return 'لە گەیاندن';
       default:
         return 'پلان بۆ داڕێژراو';
@@ -124,10 +124,10 @@ class TodayTripsScreen extends ConsumerWidget {
   }
 
   StatusBadgeType _getStatusBadgeType(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return StatusBadgeType.success;
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return StatusBadgeType.warning;
       default:
         return StatusBadgeType.info;

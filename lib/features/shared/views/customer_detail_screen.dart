@@ -883,14 +883,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               String statusLabel = 'ئامادەکردن';
               StatusBadgeType statusType = StatusBadgeType.warning;
 
-              if (order.status == 'delivered') {
+              if (order.status == 'DELIVERED') {
                 statusLabel = 'گەیشتووە';
                 statusType = StatusBadgeType.success;
-              } else if (order.status == 'in_delivery') {
+              } else if (order.status == 'IN_DELIVERY') {
                 statusLabel = 'لە ڕێگایە';
                 statusType = StatusBadgeType.info;
-              } else if (order.status == 'cancelled' ||
-                  order.status == 'returned') {
+              } else if (order.status == 'CANCELLED' ||
+                  order.status == 'RETURNED') {
                 statusLabel = 'گەڕاوە';
                 statusType = StatusBadgeType.danger;
               }

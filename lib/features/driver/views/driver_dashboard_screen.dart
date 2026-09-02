@@ -60,7 +60,7 @@ class DriverDashboardScreen extends ConsumerWidget {
           for (final trip in trips) {
             totalOrdersCount += trip.orders.length;
             for (final order in trip.orders) {
-              if (order.status == 'delivered') {
+              if (order.status == 'DELIVERED') {
                 deliveredOrdersCount++;
                 totalCollected += order.receivedAmount;
               }
@@ -192,10 +192,10 @@ class DriverDashboardScreen extends ConsumerWidget {
   }
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return AppColors.success;
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return AppColors.warning;
       default:
         return AppColors.info;
@@ -203,10 +203,10 @@ class DriverDashboardScreen extends ConsumerWidget {
   }
 
   String _getStatusLabel(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return 'تەواوبوو';
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return 'لە گەیاندن';
       default:
         return 'پلان بۆ داڕێژراو';
