@@ -13,6 +13,53 @@ class WarehouseStock extends Model
     protected $table = 'warehouse_stock';
     protected $fillable = ['warehouse_id', 'product_id', 'quantity', 'reserved_quantity', 'min_stock_level', 'max_stock_level', 'average_cost'];
     protected $casts = ['quantity' => 'integer', 'reserved_quantity' => 'integer', 'min_stock_level' => 'integer'];
+    public static function booted()
+    {
+        static::saved(function (WarehouseStock $stock) {
+            // We only care about physical quantity changes
+            if (!$stock->isDirty('quantity')) {
+                return;
+            }
+
+            $oldQty = $stock->getOriginal('quantity');
+            $newQty = (int) $stock->quantity;
+            $threshold = (int) $stock->min_stock_level;
+
+            // We need a previous state to detect a "crossing" of the threshold.
+            // If oldQty is null, it means the record was just created.
+            if (is_null($oldQty)) {
+                return;
+            }
+
+            $oldQty = (int) $oldQty;
+
+            // We capture the product here to ensure it's available for the afterCommit callback
+            $product = $stock->product;
+
+            DB::afterCommit(function () use ($stock, $oldQty, $newQty, $threshold, $product) {
+                $service = app(\App\Services\NotificationService::class);
+
+                // NOT-007: Out of Stock (quantity <= 0)
+                // Trigger only when crossing from > 0 to <= 0
+                $wasInStock = $oldQty > 0;
+                $isNowOut = $newQty <= 0;
+
+                if ($wasInStock && $isNowOut) {
+                    $service->notifyOutOfStock($stock, $product);
+                }
+
+                // NOT-006: Low Stock (quantity <= min_stock_level)
+                // Trigger only when crossing from > threshold to <= threshold
+                $wasAboveThreshold = $oldQty > $threshold;
+                $isNowLow = $newQty <= $threshold;
+
+                if ($wasAboveThreshold && $isNowLow) {
+                    $service->notifyLowStock($stock, $product);
+                }
+            });
+        });
+    }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
