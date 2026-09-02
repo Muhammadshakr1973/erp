@@ -14,7 +14,9 @@ import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
 import '../models/purchase_order_model.dart';
 import '../providers/purchase_provider.dart';
+import '../../products/views/supplier_reconciliation_dialog.dart';
 import 'supplier_form_dialog.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
@@ -820,6 +822,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
     final theme = Theme.of(context);
     final bool hasDebt = supplier.debt > 0;
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    final canReconcile = user?.hasPermission('users.manage') ?? false;
 
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
@@ -847,9 +852,32 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    supplier.name,
-                    style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          supplier.name,
+                          style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (canReconcile)
+                        IconButton(
+                          icon: const Icon(Icons.account_balance_wallet_outlined,
+                              size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) =>
+                                  SupplierReconciliationDialog(
+                                      supplier: supplier),
+                            );
+                          },
+                          tooltip: 'لێکترازانی دارایی',
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
