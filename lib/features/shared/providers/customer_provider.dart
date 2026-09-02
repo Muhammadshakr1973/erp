@@ -226,20 +226,28 @@ class CustomerActions {
     }
   }
 
-  Future<void> fixCustomerBalance(int id) async {
+  Future<CustomerReconciliationModel> fixCustomerBalance(int id) async {
     try {
       final response = await api.client.post(
         '/customers/$id/reconcile',
         data: {'fix': true},
       );
       if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw const FormatException('Malformed response from server');
+        }
+
+        final result = CustomerReconciliationModel.fromJson(
+          Map<String, dynamic>.from(resData['data']),
+        );
+
         // Invalidate providers to force refresh
         ref.invalidate(singleCustomerProvider(id));
         ref.invalidate(customerReconciliationProvider(id));
         ref.invalidate(customerListProvider);
-        // Also invalidate reports if they exist and are relevant
-        // Note: report providers might use more complex keys, 
-        // but invalidating the general ones should help.
+
+        return result;
       } else {
         throw Exception('Failed to fix customer balance');
       }

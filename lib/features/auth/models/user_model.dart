@@ -82,6 +82,11 @@ class UserModel {
     };
   }
 
+  bool get isAdmin {
+    final lowerRole = role.toLowerCase();
+    return lowerRole == 'admin' || lowerRole == 'owner';
+  }
+
   bool hasPermission(String permission) {
     final lowerRole = role.toLowerCase();
 

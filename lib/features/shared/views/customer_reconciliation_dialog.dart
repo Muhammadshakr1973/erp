@@ -30,7 +30,8 @@ class _CustomerReconciliationDialogState
     final reconciliationAsync =
         ref.watch(customerReconciliationProvider(widget.customer.id));
     final currentUser = ref.watch(authProvider).user;
-    final canFix = currentUser?.hasPermission('users.manage') ?? false;
+    final canFix = (currentUser?.isAdmin ?? false) &&
+        (currentUser?.hasPermission('users.manage') ?? false);
 
     return AlertDialog(
       title: const Text('هاوتاکردنەوەی بالانس', style: AppTextStyles.h2),
@@ -199,19 +200,28 @@ class _CustomerReconciliationDialogState
     if (confirmed == true) {
       setState(() => _isFixing = true);
       try {
-        await ref
+        final result = await ref
             .read(customerActionsProvider)
             .fixCustomerBalance(widget.customer.id);
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context);
+        if (result.isConsistent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('سێرڤەر نەیتوانی بالانسەکە ڕاستبکاتەوە (پێویستت بە دەسەڵاتی بەڕێوەبەر هەیە)'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
       } catch (e) {
         if (!mounted) return;
 
