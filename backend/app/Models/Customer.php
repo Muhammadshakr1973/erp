@@ -74,15 +74,8 @@ class Customer extends Model
 
     public function getPriceDetailsForProduct(Product $product): array
     {
-        $today = now()->toDateString();
         $special = $this->specialPrices()
             ->where('product_id', $product->id)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
-            })
-            ->where(function ($q) use ($today) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
-            })
             ->first();
 
         if ($special) {

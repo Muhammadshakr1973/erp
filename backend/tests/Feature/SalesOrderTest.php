@@ -720,9 +720,6 @@ class SalesOrderTest extends TestCase
             'customer_id' => $this->customer->id,
             'product_id' => $this->product->id,
             'price' => 6500,
-            'start_date' => now()->subDay()->toDateString(),
-            'end_date' => now()->addDay()->toDateString(),
-            'is_active' => true,
         ]);
 
         $payload = [
