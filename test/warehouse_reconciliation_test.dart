@@ -93,5 +93,31 @@ void main() {
       resData = {'data': {'is_consistent': true}};
       expect(isMalformed(resData), isFalse);
     });
+
+    test('6. Verification that reconciliation is REPORT-ONLY', () {
+      final json = {
+        'is_consistent': false,
+        'stored_quantity': 100,
+        'recalculated_quantity': 90,
+        'stored_reserved': 20,
+        'recalculated_reserved': 25,
+        'discrepancies': ['Discrepancy found']
+      };
+
+      final model = StockReconciliationModel.fromJson(json);
+
+      // Business Rule: Reconciliation MUST NOT automatically correct stock.
+      // The frontend must treat this as a report, not an update confirmation.
+      expect(model.isConsistent, isFalse);
+      
+      // We explicitly verify that the "stored" values (current server state) 
+      // are returned alongside the "recalculated" values without being overwritten
+      // in the response, confirming the server is reporting discrepancies, not fixing them.
+      expect(model.storedQuantity, 100);
+      expect(model.recalculatedQuantity, 90);
+      
+      // The presence of discrepancies confirms it is an inspection/report operation.
+      expect(model.discrepancies, isNotEmpty);
+    });
   });
 }

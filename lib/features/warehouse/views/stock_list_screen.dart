@@ -173,7 +173,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
             return AlertDialog(
               title: const Text('هاوتاکردنەوەی ستۆک (Reconcile)'),
               content: Text(
-                'ئایا دڵنیایت لە هاوتاکردنەوەی کۆی حجزکراو و گشتی بۆ کاڵای "${stock.productName}"؟ سیستەمەکە سەرلەنوێ کۆی بڕی حجزکراو لە پسوڵە کڕاوەکانەوە دەژمێرێتەوە بۆ پاراستنی یەکپارچەیی کۆگا.',
+                'ئایا دڵنیایت لە پشکنینی هاوتاکردنەوەی بڕی حجزکراو و گشتی بۆ کاڵای "${stock.productName}"؟ ئەم کارە تەنها بۆ پشکنین و دۆزینەوەی جیاوازییەکانە و هیچ گۆڕانکارییەک لە ستۆکی سێرڤەردا ناکات.',
               ),
               actions: [
                 TextButton(
@@ -305,7 +305,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                   )
                 else
                   Text(
-                    'جیاوازی دۆزرایەوە! ستۆکی سێرڤەر بە شێوەیەکی خۆکار لەسەر بنەمای مێژووی جوڵەکان نوێکرایەوە.',
+                    'جیاوازی دۆزرایەوە! تکایە تێبینی بکە کە ئەم پڕۆسەیە تەنها بۆ ڕاپۆرتکردن و دۆزینەوەی جیاوازییەکانە، و هیچ گۆڕانکارییەکی خۆکار لە ستۆکی سێرڤەردا ئەنجام نەدراوە.',
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
               ],
