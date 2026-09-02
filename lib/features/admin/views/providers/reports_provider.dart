@@ -18,7 +18,13 @@ final supplierDebtsReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final List data = response.data['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed supplier debts response payload)',
+            );
+          }
+          final List data = resData['data'] as List;
           return data
               .map((json) => SupplierLedgerModel.fromJson(json))
               .toList();
@@ -43,7 +49,13 @@ final customerDebtsReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final List data = response.data['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer debts response payload)',
+            );
+          }
+          final List data = resData['data'] as List;
           return data
               .map((json) => CustomerLedgerModel.fromJson(json))
               .toList();
@@ -68,7 +80,13 @@ final paymentsHistoryReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final List data = response.data['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed payments history response payload)',
+            );
+          }
+          final List data = resData['data'] as List;
           return data
               .map((json) => PaymentHistoryModel.fromJson(json))
               .toList();
@@ -94,7 +112,13 @@ final salesReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return SalesReportData.fromJson(response.data['data'] ?? {});
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales report payload)',
+            );
+          }
+          return SalesReportData.fromJson(Map<String, dynamic>.from(resData['data']));
         }
         throw Exception('نەتوانرا داتای ڕاپۆرتی فرۆشتن بهێنرێت');
       } catch (e) {
@@ -115,7 +139,13 @@ final profitReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return ProfitReportData.fromJson(response.data['data'] ?? {});
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed profit report payload)',
+            );
+          }
+          return ProfitReportData.fromJson(Map<String, dynamic>.from(resData['data']));
         }
         throw Exception('نەتوانرا داتای ڕاپۆرتی قازانج بهێنرێت');
       } catch (e) {
@@ -136,8 +166,14 @@ final salesBySalesmanReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales by salesman report payload)',
+            );
+          }
           return SalesBySalesmanReportData.fromJson(
-            response.data['data'] ?? {},
+            Map<String, dynamic>.from(resData['data']),
           );
         }
         throw Exception('نەتوانرا داتای فرۆشتنی مەندوبەکان بهێنرێت');
@@ -159,7 +195,13 @@ final lowStockReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return LowStockReportData.fromJson(response.data['data'] ?? {});
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed low stock report payload)',
+            );
+          }
+          return LowStockReportData.fromJson(Map<String, dynamic>.from(resData['data']));
         }
         throw Exception('نەتوانرا داتای کاڵا کەمبووەکان بهێنرێت');
       } catch (e) {
@@ -180,7 +222,13 @@ final stockMovementsReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return StockMovementsReportData.fromJson(response.data['data'] ?? {});
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed stock movements report payload)',
+            );
+          }
+          return StockMovementsReportData.fromJson(Map<String, dynamic>.from(resData['data']));
         }
         throw Exception('نەتوانرا داتای جوڵەی ستۆک بهێنرێت');
       } catch (e) {
@@ -201,7 +249,13 @@ final stockTransfersReportProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return StockTransfersReportData.fromJson(response.data['data'] ?? {});
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed stock transfers report payload)',
+            );
+          }
+          return StockTransfersReportData.fromJson(Map<String, dynamic>.from(resData['data']));
         }
         throw Exception('نەتوانرا داتای گواستنەوەکان بهێنرێت');
       } catch (e) {

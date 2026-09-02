@@ -8,7 +8,13 @@ final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async 
   try {
     final response = await api.client.get('/delivery-trips');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed driver trips response payload)',
+        );
+      }
+      final List data = resData['data'] as List;
       return data.map((json) => DeliveryTripModel.fromJson(json)).toList();
     }
     throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
@@ -23,8 +29,13 @@ final tripDetailProvider =
   try {
     final response = await api.client.get('/delivery-trips/$tripId');
     if (response.statusCode == 200) {
-      final Map<String, dynamic> data = response.data['data'] ?? {};
-      return DeliveryTripModel.fromJson(data);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed trip detail response payload)',
+        );
+      }
+      return DeliveryTripModel.fromJson(Map<String, dynamic>.from(resData['data']));
     }
     throw Exception('گەشتەکە نەدۆزرایەوە');
   } catch (e) {

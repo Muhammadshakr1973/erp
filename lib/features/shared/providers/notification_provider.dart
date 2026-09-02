@@ -46,13 +46,19 @@ class NotificationsNotifier
       );
 
       if (response.statusCode == 200) {
-        final List list = response.data['data'] ?? [];
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! List) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed notifications response payload)',
+          );
+        }
+        final List list = resData['data'] as List;
         final items = list
             .map((json) => AppNotification.fromJson(json))
             .toList();
 
         final unreadCount =
-            response.data['unread_count'] as int? ??
+            resData['unread_count'] as int? ??
             items.where((n) => !n.isRead).length;
         _ref.read(unreadNotificationsCountProvider.notifier).state =
             unreadCount;
@@ -133,7 +139,13 @@ final whatsAppLogsProvider =
         );
 
         if (response.statusCode == 200) {
-          final List list = response.data['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed WhatsApp logs response payload)',
+            );
+          }
+          final List list = resData['data'] as List;
           return list.map((json) => WhatsAppLog.fromJson(json)).toList();
         }
         throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
@@ -158,8 +170,11 @@ class NotificationActions {
     try {
       final res = await _api.client.get(ApiConstants.notificationsUnreadCount);
       if (res.statusCode == 200) {
-        final count = res.data['unread_count'] as int? ?? 0;
-        _ref.read(unreadNotificationsCountProvider.notifier).state = count;
+        final resData = res.data;
+        if (resData is Map && resData.containsKey('unread_count')) {
+          final count = resData['unread_count'] as int;
+          _ref.read(unreadNotificationsCountProvider.notifier).state = count;
+        }
       }
     } catch (_) {}
   }
@@ -196,7 +211,13 @@ class NotificationActions {
       final res = await _api.client.post(
         '${ApiConstants.notifications}/whatsapp/$logId/retry',
       );
-      return WhatsAppLog.fromJson(res.data['data']);
+      final resData = res.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed WhatsApp retry log payload)',
+        );
+      }
+      return WhatsAppLog.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(_api.parseError(e));
     }

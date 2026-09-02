@@ -8,9 +8,20 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   try {
     final response = await api.client.get('/users');
     if (response.statusCode == 200) {
-      final rawData = response.data['data'];
-      final List usersList = rawData['users'] ?? [];
-      final List rolesList = rawData['roles'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed user admin response payload)',
+        );
+      }
+      final rawData = resData['data'] as Map;
+      if (rawData['users'] is! List || rawData['roles'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Users or roles list missing or malformed)',
+        );
+      }
+      final List usersList = rawData['users'] as List;
+      final List rolesList = rawData['roles'] as List;
       return {
         'users': usersList.map((json) => UserModel.fromJson(json)).toList(),
         'roles': rolesList, // e.g. [{id: 1, name: "owner", display_name: "خاوەن کار"}, ...]

@@ -67,7 +67,13 @@ class RouteActions {
         },
       );
       ref.invalidate(routeListProvider);
-      return RouteModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed route response payload)',
+        );
+      }
+      return RouteModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -89,7 +95,13 @@ class RouteActions {
         },
       );
       ref.invalidate(routeListProvider);
-      return RouteModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed route response payload)',
+        );
+      }
+      return RouteModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }

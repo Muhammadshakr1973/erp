@@ -75,7 +75,13 @@ final commissionDetailProvider = FutureProvider.family<CommissionModel, int>((
   try {
     final response = await api.client.get('/commissions/$commissionId');
     if (response.statusCode == 200) {
-      return CommissionModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission detail response payload)',
+        );
+      }
+      return CommissionModel.fromJson(Map<String, dynamic>.from(resData['data']));
     }
     throw Exception('کۆمسیۆن نەدۆزرایەوە');
   } catch (e) {
@@ -136,7 +142,13 @@ class CommissionActionNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
       _ref.invalidate(commissionsListProvider);
       _ref.invalidate(commissionSummaryProvider);
-      return CommissionModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission response payload)',
+        );
+      }
+      return CommissionModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       throw Exception(_api.parseError(e));
@@ -157,7 +169,13 @@ class CommissionActionNotifier extends StateNotifier<AsyncValue<void>> {
       _ref.invalidate(commissionsListProvider);
       _ref.invalidate(commissionSummaryProvider);
       _ref.invalidate(commissionDetailProvider(commissionId));
-      return CommissionModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission response payload)',
+        );
+      }
+      return CommissionModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       throw Exception(_api.parseError(e));
@@ -184,7 +202,13 @@ class CommissionActionNotifier extends StateNotifier<AsyncValue<void>> {
       _ref.invalidate(commissionsListProvider);
       _ref.invalidate(commissionSummaryProvider);
       _ref.invalidate(commissionDetailProvider(commissionId));
-      return CommissionModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission response payload)',
+        );
+      }
+      return CommissionModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       throw Exception(_api.parseError(e));
@@ -205,7 +229,13 @@ class CommissionActionNotifier extends StateNotifier<AsyncValue<void>> {
       _ref.invalidate(commissionsListProvider);
       _ref.invalidate(commissionSummaryProvider);
       _ref.invalidate(commissionDetailProvider(commissionId));
-      return CommissionModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission response payload)',
+        );
+      }
+      return CommissionModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       throw Exception(_api.parseError(e));

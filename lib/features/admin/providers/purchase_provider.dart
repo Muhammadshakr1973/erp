@@ -11,7 +11,13 @@ final purchaseRequirementsProvider =
       final apiClient = ref.watch(apiClientProvider);
       try {
         final response = await apiClient.client.get('/purchase-requirements');
-        final List<dynamic> data = response.data['data'] ?? [];
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! List) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase requirements response payload)',
+          );
+        }
+        final List<dynamic> data = resData['data'] as List;
         return data
             .map((json) => PurchaseRequirementModel.fromJson(json))
             .toList();
@@ -25,7 +31,13 @@ final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) as
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.client.get('/purchase-requirements/group');
-    return response.data['data'] ?? [];
+    final resData = response.data;
+    if (resData is! Map || resData['data'] is! List) {
+      throw FormatException(
+        'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed grouped purchase requirements response payload)',
+      );
+    }
+    return resData['data'] as List<dynamic>;
   } catch (e) {
     throw Exception(apiClient.parseError(e));
   }
@@ -37,7 +49,13 @@ final purchaseOrdersProvider = FutureProvider<List<PurchaseOrderModel>>((
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.client.get('/purchase-orders');
-    final List<dynamic> data = response.data['data'] ?? [];
+    final resData = response.data;
+    if (resData is! Map || resData['data'] is! List) {
+      throw FormatException(
+        'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase orders response payload)',
+      );
+    }
+    final List<dynamic> data = resData['data'] as List;
     return data.map((json) => PurchaseOrderModel.fromJson(json)).toList();
   } catch (e) {
     throw Exception(apiClient.parseError(e));

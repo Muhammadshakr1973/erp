@@ -23,9 +23,16 @@ final myCommissionsProvider =
         );
         if (response.statusCode == 200) {
           final resData = response.data['data'];
-          final List items = (resData is Map && resData.containsKey('data'))
-              ? resData['data']
-              : (resData is List ? resData : []);
+          final List items;
+          if (resData is Map && resData['data'] is List) {
+            items = resData['data'];
+          } else if (resData is List) {
+            items = resData;
+          } else {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed my-commissions response payload)',
+            );
+          }
           return items
               .map(
                 (json) =>

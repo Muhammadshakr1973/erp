@@ -8,7 +8,13 @@ final categoriesListProvider = FutureProvider<List<CategoryModel>>((ref) async {
   try {
     final response = await api.client.get('/categories');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed categories response payload)',
+        );
+      }
+      final List data = resData['data'] as List;
       return data.map((json) => CategoryModel.fromJson(json)).toList();
     }
     throw Exception(
@@ -37,7 +43,13 @@ class CategoryActions {
         data: {'name': name},
       );
       ref.invalidate(categoriesListProvider);
-      return CategoryModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed category response payload)',
+        );
+      }
+      return CategoryModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -50,7 +62,13 @@ class CategoryActions {
         data: {'name': name},
       );
       ref.invalidate(categoriesListProvider);
-      return CategoryModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed category response payload)',
+        );
+      }
+      return CategoryModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }

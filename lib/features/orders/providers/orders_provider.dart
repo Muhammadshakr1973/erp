@@ -595,7 +595,13 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
   try {
     final response = await api.client.get('/sales-returns');
     if (response.statusCode == 200) {
-      return response.data['data'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales returns list payload)',
+        );
+      }
+      return resData['data'] as List<dynamic>;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -613,7 +619,14 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
   try {
     final response = await api.client.get('/sales-returns/$id');
     if (response.statusCode == 200) {
-      return response.data['data'] ?? response.data;
+      final resData = response.data;
+      final data = (resData is Map && resData.containsKey('data')) ? resData['data'] : resData;
+      if (data is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales return detail payload)',
+        );
+      }
+      return data;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',

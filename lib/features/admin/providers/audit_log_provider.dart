@@ -37,7 +37,14 @@ final singleAuditLogProvider = FutureProvider.family<dynamic, int>((
   try {
     final response = await api.client.get('/audit-logs/$id');
     if (response.statusCode == 200) {
-      return response.data['data'] ?? response.data;
+      final resData = response.data;
+      final data = (resData is Map && resData.containsKey('data')) ? resData['data'] : resData;
+      if (data is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed single audit log response payload)',
+        );
+      }
+      return data;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',

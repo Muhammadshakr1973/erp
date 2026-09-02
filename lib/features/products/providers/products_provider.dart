@@ -8,7 +8,13 @@ final productsListProvider = FutureProvider<List<ProductModel>>((ref) async {
   try {
     final response = await api.client.get('/products');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed products response payload)',
+        );
+      }
+      final List data = resData['data'] as List;
       return data.map((json) => ProductModel.fromJson(json)).toList();
     }
     throw Exception(

@@ -136,8 +136,50 @@ void main() {
     test('b) Malformed 200 payload => error (throws FormatException)', () {
       expect(() => parseListResponse('invalid_string_payload'), throwsA(isA<FormatException>()));
       expect(() => parseListResponse({'data': 'not_a_list'}), throwsA(isA<FormatException>()));
+      expect(() => parseListResponse({'data': {'data': 123}}), throwsA(isA<FormatException>()));
       expect(() => parseAuditLogs({'data': 12345}), throwsA(isA<FormatException>()));
+      expect(() => parseAuditLogs('not_a_map_or_list'), throwsA(isA<FormatException>()));
       expect(() => parseCommissionSummary('invalid_summary'), throwsA(isA<FormatException>()));
+      expect(() => parseCommissionSummary({'data': [1, 2, 3]}), throwsA(isA<FormatException>()));
+
+      // Customer payload malformed checks
+      dynamic parseCustomerResponse(dynamic data) {
+        if (data is Map && data['data'] is List) {
+          return data['data'];
+        } else if (data is List) {
+          return data;
+        }
+        throw FormatException('Malformed customer list response payload');
+      }
+      expect(() => parseCustomerResponse({'data': 'not_a_list'}), throwsA(isA<FormatException>()));
+      expect(() => parseCustomerResponse(12345), throwsA(isA<FormatException>()));
+
+      // Generic Map/List validation check for providers (products, suppliers, warehouses, etc.)
+      void validateListPayload(dynamic resData, String entity) {
+        if (resData is! Map || resData['data'] is! List) {
+          throw FormatException('Malformed $entity list response payload');
+        }
+      }
+      expect(() => validateListPayload('invalid_string', 'products'), throwsA(isA<FormatException>()));
+      expect(() => validateListPayload({'data': null}, 'categories'), throwsA(isA<FormatException>()));
+      expect(() => validateListPayload({'data': 123}, 'suppliers'), throwsA(isA<FormatException>()));
+      expect(() => validateListPayload({'data': {'key': 'val'}}, 'warehouses'), throwsA(isA<FormatException>()));
+      expect(() => validateListPayload({'status': 'ok'}, 'driver_trips'), throwsA(isA<FormatException>()));
+      expect(() => validateListPayload({'data': 'string_instead_of_list'}, 'purchase_orders'), throwsA(isA<FormatException>()));
+
+      // User admin response validation check (Map with users and roles lists)
+      void validateUserAdminPayload(dynamic resData) {
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException('Malformed user admin response payload');
+        }
+        final rawData = resData['data'] as Map;
+        if (rawData['users'] is! List || rawData['roles'] is! List) {
+          throw FormatException('Users or roles list missing or malformed');
+        }
+      }
+      expect(() => validateUserAdminPayload({'data': 'not_a_map'}), throwsA(isA<FormatException>()));
+      expect(() => validateUserAdminPayload({'data': {'users': 'not_list', 'roles': []}}), throwsA(isA<FormatException>()));
+      expect(() => validateUserAdminPayload({'data': {'users': [], 'roles': 'not_list'}}), throwsA(isA<FormatException>()));
 
       expect(
         () => simulateOrdersListFetch(

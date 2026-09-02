@@ -8,7 +8,13 @@ final dashboardProvider = FutureProvider<DashboardModel>((ref) async {
   try {
     final response = await api.client.get('/reports/dashboard');
     if (response.statusCode == 200) {
-      return DashboardModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed dashboard response payload)',
+        );
+      }
+      return DashboardModel.fromJson(Map<String, dynamic>.from(resData['data']));
     }
     throw Exception('داتا نەگەڕایەوە');
   } catch (e) {

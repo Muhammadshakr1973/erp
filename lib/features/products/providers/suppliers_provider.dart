@@ -9,7 +9,13 @@ final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
   try {
     final response = await api.client.get('/suppliers');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed suppliers response payload)',
+        );
+      }
+      final List data = resData['data'] as List;
       return data.map((json) => SupplierModel.fromJson(json)).toList();
     }
     throw Exception(
@@ -29,7 +35,13 @@ final supplierLedgerProvider =
       try {
         final response = await api.client.get('/suppliers/$supplierId/ledger');
         if (response.statusCode == 200) {
-          final List data = response.data['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed supplier ledger response payload)',
+            );
+          }
+          final List data = resData['data'] as List;
           return data
               .map((json) => SupplierLedgerModel.fromJson(json))
               .toList();
@@ -72,7 +84,13 @@ class SupplierActions {
         },
       );
       ref.invalidate(suppliersListProvider);
-      return SupplierModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed supplier response payload)',
+        );
+      }
+      return SupplierModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -96,7 +114,13 @@ class SupplierActions {
         },
       );
       ref.invalidate(suppliersListProvider);
-      return SupplierModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed supplier response payload)',
+        );
+      }
+      return SupplierModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -128,7 +152,13 @@ class SupplierActions {
       );
       ref.invalidate(suppliersListProvider);
       ref.invalidate(supplierLedgerProvider(id));
-      return SupplierModel.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed supplier response payload)',
+        );
+      }
+      return SupplierModel.fromJson(Map<String, dynamic>.from(resData['data']));
     } catch (e) {
       throw Exception(api.parseError(e));
     }

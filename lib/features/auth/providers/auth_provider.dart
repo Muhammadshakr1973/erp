@@ -64,10 +64,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (response.statusCode == 200) {
-        final token = response.data['data']['token'];
-        final userData = response.data['data']['user'];
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed auth response payload)');
+        }
+        final dataMap = resData['data'] as Map;
+        final token = dataMap['token'];
+        final userData = dataMap['user'];
+        if (token is! String || userData is! Map) {
+          throw FormatException('تۆکن یان زانیاری بەکارهێنەر لە وەڵامدا بەردەست نییە (Token or user object missing/malformed)');
+        }
 
-        final user = UserModel.fromJson(userData);
+        final user = UserModel.fromJson(Map<String, dynamic>.from(userData));
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
@@ -97,10 +105,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (response.statusCode == 200) {
-        final token = response.data['data']['token'];
-        final userData = response.data['data']['user'];
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed auth response payload)');
+        }
+        final dataMap = resData['data'] as Map;
+        final token = dataMap['token'];
+        final userData = dataMap['user'];
+        if (token is! String || userData is! Map) {
+          throw FormatException('تۆکن یان زانیاری بەکارهێنەر لە وەڵامدا بەردەست نییە (Token or user object missing/malformed)');
+        }
 
-        final user = UserModel.fromJson(userData);
+        final user = UserModel.fromJson(Map<String, dynamic>.from(userData));
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);

@@ -52,12 +52,22 @@ final filteredCustomerListProvider =
           queryParameters: filters.toMap(),
         );
         if (response.statusCode == 200) {
-          var rawData = response.data['data'];
-          List data = [];
-          if (rawData is Map<String, dynamic> && rawData.containsKey('data')) {
-            data = rawData['data'] ?? [];
+          final resData = response.data;
+          if (resData is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer response payload)',
+            );
+          }
+          var rawData = resData['data'];
+          List data;
+          if (rawData is Map && rawData['data'] is List) {
+            data = rawData['data'] as List;
           } else if (rawData is List) {
             data = rawData;
+          } else {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer list structure)',
+            );
           }
           return data.map((json) => Customer.fromJson(json)).toList();
         }
@@ -83,7 +93,13 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   try {
     final response = await api.client.get('/customers/$id');
     if (response.statusCode == 200) {
-      return Customer.fromJson(response.data['data']);
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! Map) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer detail payload)',
+        );
+      }
+      return Customer.fromJson(Map<String, dynamic>.from(resData['data']));
     }
     throw Exception('Failed to load customer');
   } catch (e) {
