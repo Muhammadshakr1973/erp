@@ -148,7 +148,6 @@ class SalesReturnService
                         'product_id'        => $orderItem->product_id,
                         'quantity'          => 0,
                         'reserved_quantity' => 0,
-                        'min_stock_level'   => 5,
                         'average_cost'      => $orderItem->cost_price ?? 0,
                     ]);
                     $warehouseStock = WarehouseStock::lockForUpdate()->find($warehouseStock->id);
