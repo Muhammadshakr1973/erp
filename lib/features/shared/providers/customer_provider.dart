@@ -4,6 +4,7 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/models/paginated_response.dart';
 import '../models/customer.dart';
+import '../models/customer_reconciliation_model.dart';
 
 class CustomerFilters {
   final int page;
@@ -113,6 +114,28 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   }
 });
 
+final customerReconciliationProvider =
+    FutureProvider.family<CustomerReconciliationModel, int>((ref, id) async {
+      final api = ref.watch(apiClientProvider);
+      try {
+        final response = await api.client.get('/customers/$id/reconcile');
+        if (response.statusCode == 200) {
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! Map) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed reconciliation response)',
+            );
+          }
+          return CustomerReconciliationModel.fromJson(
+            Map<String, dynamic>.from(resData['data']),
+          );
+        }
+        throw Exception('Failed to fetch reconciliation report');
+      } catch (e) {
+        throw Exception(api.parseError(e));
+      }
+    });
+
 final customerActionsProvider = Provider<CustomerActions>((ref) {
   final api = ref.watch(apiClientProvider);
   final syncService = ref.watch(syncServiceProvider);
@@ -198,6 +221,28 @@ class CustomerActions {
     try {
       await api.client.delete('/customers/$id');
       ref.invalidate(customerListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> fixCustomerBalance(int id) async {
+    try {
+      final response = await api.client.post(
+        '/customers/$id/reconcile',
+        data: {'fix': true},
+      );
+      if (response.statusCode == 200) {
+        // Invalidate providers to force refresh
+        ref.invalidate(singleCustomerProvider(id));
+        ref.invalidate(customerReconciliationProvider(id));
+        ref.invalidate(customerListProvider);
+        // Also invalidate reports if they exist and are relevant
+        // Note: report providers might use more complex keys, 
+        // but invalidating the general ones should help.
+      } else {
+        throw Exception('Failed to fix customer balance');
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }

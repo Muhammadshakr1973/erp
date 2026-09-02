@@ -20,6 +20,7 @@ import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
+import '../views/customer_reconciliation_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 
@@ -310,6 +311,17 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               data: (customer) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.account_balance_wallet_outlined),
+                    tooltip: 'هاوتاکردنەوەی بالانس',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) =>
+                            CustomerReconciliationDialog(customer: customer),
+                      );
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     tooltip: 'دەستکاریکردنی کڕیار',
@@ -622,17 +634,33 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           AppCard(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                const Text('کۆی قەرزی ئێستا', style: AppTextStyles.bodyLarge),
-                Text(
-                  _formatCurrency(customer.balance),
-                  style: AppTextStyles.priceLarge.copyWith(
-                    color: customer.balance > 0
-                        ? AppColors.danger
-                        : AppColors.success,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('کۆی قەرزی ئێستا', style: AppTextStyles.bodyLarge),
+                    Text(
+                      _formatCurrency(customer.balance),
+                      style: AppTextStyles.priceLarge.copyWith(
+                        color: customer.balance > 0
+                            ? AppColors.danger
+                            : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: AppSpacing.lg),
+                AppButton(
+                  text: 'هاوتاکردنەوەی بالانس',
+                  type: AppButtonType.outline,
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) =>
+                          CustomerReconciliationDialog(customer: customer),
+                    );
+                  },
                 ),
               ],
             ),
