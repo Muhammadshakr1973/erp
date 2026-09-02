@@ -15,12 +15,11 @@ return new class extends Migration
         $driver = DB::getDriverName();
 
         if (in_array($driver, ['mysql', 'mariadb'])) {
-            DB::statement("ALTER TABLE `delivery_trips` MODIFY COLUMN `status` ENUM('DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'draft', 'planned', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'DRAFT'");
+            DB::statement("ALTER TABLE `delivery_trips` MODIFY COLUMN `status` ENUM('DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT'");
         } else {
             Schema::table('delivery_trips', function (Blueprint $table) {
                 $table->enum('status', [
-                    'DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED',
-                    'draft', 'planned', 'in_progress', 'completed', 'cancelled'
+                    'DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
                 ])->default('DRAFT')->change();
             });
         }
@@ -31,9 +30,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Convert any PLANNED / planned statuses to DRAFT before narrowing enum to prevent truncation
+        // Convert any PLANNED statuses to DRAFT before narrowing enum to prevent truncation
         DB::table('delivery_trips')
-            ->whereIn('status', ['PLANNED', 'planned'])
+            ->where('status', 'PLANNED')
             ->update(['status' => 'DRAFT']);
 
         $driver = DB::getDriverName();
