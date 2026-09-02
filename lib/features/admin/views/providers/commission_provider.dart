@@ -48,7 +48,9 @@ final commissionSummaryProvider =
         if (response.statusCode == 200) {
           return response.data['data'] as Map<String, dynamic>? ?? {};
         }
-        return {};
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }

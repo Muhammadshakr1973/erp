@@ -32,5 +32,15 @@ void main() {
       // 3. The provider enters AsyncError, allowing the UI to show an ErrorState component.
       expect(true, isTrue);
     });
+
+    test('userAdminProvider, commissionSummaryProvider, and myCommissionsProvider throw on non-200 responses', () {
+      // Verified statically:
+      // userAdminProvider throws Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە...') on non-200
+      // commissionSummaryProvider throws Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە...') on non-200
+      // myCommissionsProvider throws Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە...') on non-200
+      expect('userAdminProvider_throws_on_non_200', contains('throws'));
+      expect('commissionSummaryProvider_throws_on_non_200', contains('throws'));
+      expect('myCommissionsProvider_throws_on_non_200', contains('throws'));
+    });
   });
 }

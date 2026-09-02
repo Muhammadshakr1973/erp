@@ -16,7 +16,9 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
         'roles': rolesList, // e.g. [{id: 1, name: "owner", display_name: "خاوەن کار"}, ...]
       };
     }
-    return {'users': <UserModel>[], 'roles': []};
+    throw Exception(
+      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+    );
   } catch (e) {
     throw Exception(api.parseError(e));
   }
