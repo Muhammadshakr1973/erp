@@ -23,6 +23,7 @@ import '../views/customer_form_dialog.dart';
 import '../views/customer_reconciliation_dialog.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -300,6 +301,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   Widget build(BuildContext context) {
     final customerIdInt = int.tryParse(widget.customerId) ?? 0;
     final customerAsync = ref.watch(singleCustomerProvider(customerIdInt));
+    final currentUser = ref.watch(authProvider).user;
+    final canViewReconciliation =
+        currentUser?.hasPermission('users.manage') ?? false;
 
     return DefaultTabController(
       length: 3,
@@ -311,17 +315,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               data: (customer) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.account_balance_wallet_outlined),
-                    tooltip: 'هاوتاکردنەوەی بالانس',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) =>
-                            CustomerReconciliationDialog(customer: customer),
-                      );
-                    },
-                  ),
+                  if (canViewReconciliation)
+                    IconButton(
+                      icon: const Icon(Icons.account_balance_wallet_outlined),
+                      tooltip: 'هاوتاکردنەوەی بالانس',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) =>
+                              CustomerReconciliationDialog(customer: customer),
+                        );
+                      },
+                    ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     tooltip: 'دەستکاریکردنی کڕیار',
@@ -651,17 +656,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   ],
                 ),
                 const Divider(height: AppSpacing.lg),
-                AppButton(
-                  text: 'هاوتاکردنەوەی بالانس',
-                  type: AppButtonType.outline,
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) =>
-                          CustomerReconciliationDialog(customer: customer),
-                    );
-                  },
-                ),
+                if (canViewReconciliation)
+                  AppButton(
+                    text: 'هاوتاکردنەوەی بالانس',
+                    type: AppButtonType.outline,
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) =>
+                            CustomerReconciliationDialog(customer: customer),
+                      );
+                    },
+                  ),
               ],
             ),
           ),

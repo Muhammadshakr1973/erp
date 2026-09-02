@@ -84,4 +84,45 @@ void main() {
       expect(canFix, isFalse);
     });
   });
+
+  group('Customer Reconciliation UI Visibility Tests', () {
+    test('User with users.manage permission should see reconciliation action', () {
+      final manager = UserModel(
+        id: 10,
+        name: 'Manager',
+        phone: '111',
+        role: 'salesman',
+        permissions: ['users.manage'],
+      );
+
+      final canViewReconciliation = manager.hasPermission('users.manage');
+      expect(canViewReconciliation, isTrue);
+    });
+
+    test('User without users.manage permission should NOT see reconciliation action', () {
+      final salesman = UserModel(
+        id: 11,
+        name: 'Salesman',
+        phone: '222',
+        role: 'salesman',
+        permissions: ['orders.create'],
+      );
+
+      final canViewReconciliation = salesman.hasPermission('users.manage');
+      expect(canViewReconciliation, isFalse);
+    });
+
+    test('Admin user should see reconciliation action by default', () {
+      final admin = UserModel(
+        id: 12,
+        name: 'Admin',
+        phone: '333',
+        role: 'admin',
+      );
+
+      final canViewReconciliation = admin.hasPermission('users.manage');
+      expect(admin.isAdmin, isTrue);
+      expect(canViewReconciliation, isTrue);
+    });
+  });
 }
