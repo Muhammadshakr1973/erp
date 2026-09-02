@@ -74,6 +74,7 @@ void main() {
         barcode: '12345678',
         quantity: 15,
         reservedQuantity: 2,
+        minStockLevel: 0,
       )
     ];
 

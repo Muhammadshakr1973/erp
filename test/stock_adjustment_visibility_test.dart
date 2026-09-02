@@ -14,8 +14,10 @@ class MockAuthNotifier extends AuthNotifier {
   }
   
   @override
-  Future<void> _loadUser() async {
-    // Skip real SharedPreferences loading during test
+  Future<void> login(String phone, String password) async {
+    // Override login to prevent real API calls in this mock if needed, 
+    // though here we mainly just care about state.
+    return super.login(phone, password);
   }
 }
 
@@ -30,6 +32,7 @@ void main() {
       barcode: '12345678',
       quantity: 15,
       reservedQuantity: 2,
+      minStockLevel: 0,
     )
   ];
 

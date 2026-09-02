@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gardi_erp/features/warehouse/models/warehouse_stock_model.dart';
+import 'package:pos_app/features/warehouse/models/warehouse_stock_model.dart';
 
 void main() {
   group('WarehouseStockModel Low Stock Logic', () {
