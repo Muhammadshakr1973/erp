@@ -99,7 +99,7 @@ class BusinessConcurrencyAndRollbackTest extends TestCase
             'order_number' => 'PO-RACE-1',
             'supplier_id' => $this->supplier->id,
             'warehouse_id' => $this->warehouse->id,
-            'status' => 'DRAFT',
+            'status' => PurchaseOrder::STATUS_CONFIRMED,
             'created_by' => $this->admin->id,
             'total_amount' => 1000,
         ]);

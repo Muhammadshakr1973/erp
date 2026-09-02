@@ -178,6 +178,40 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
   }
 
+  void _confirmPO(PurchaseOrderModel order) async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'پەسەندکردنی پسوڵەی کڕین',
+      message:
+          'ئایا دڵنیایت لە پەسەندکردنی پسوڵەی کڕینی #${order.orderNumber}؟',
+      confirmText: 'پەسەندکردن',
+      cancelText: 'پەشیمانبوونەوە',
+    );
+
+    if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('پسوڵەی کڕین پەسەند دەکرێت...')),
+      );
+      try {
+        await ref.read(purchaseActionsProvider).confirmPurchaseOrder(order.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('پسوڵەی کڕین بەسەرکەوتوویی پەسەندکرا'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          );
+        }
+      }
+    }
+  }
+
   void _receivePO(PurchaseOrderModel order) async {
     final confirmed = await AppDialog.showConfirm(
       context,
@@ -637,21 +671,40 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final order = orders[index];
-              final isDraft = order.status.toUpperCase() == 'DRAFT';
+              final status = order.status.toUpperCase();
+              final isDraft = status == 'DRAFT';
+              final isConfirmed = status == 'CONFIRMED';
+              final isReceived = status == 'RECEIVED';
+              final isCancelled = status == 'CANCELLED';
+
+              String badgeLabel = 'ڕەشنووس';
+              StatusBadgeType badgeType = StatusBadgeType.warning;
+              if (isConfirmed) {
+                badgeLabel = 'پەسەندکراوە';
+                badgeType = StatusBadgeType.info;
+              } else if (isReceived) {
+                badgeLabel = 'وەرگیراوە';
+                badgeType = StatusBadgeType.success;
+              } else if (isCancelled) {
+                badgeLabel = 'هەڵوەشاوە';
+                badgeType = StatusBadgeType.danger;
+              }
 
               return AppCard(
-                onTap: isDraft ? () => _receivePO(order) : null,
+                onTap: isConfirmed ? () => _receivePO(order) : null,
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    backgroundColor: isDraft
-                        ? theme.colorScheme.primaryContainer
-                        : AppColors.success.withValues(alpha: 0.1),
+                    backgroundColor: isReceived
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : (isConfirmed
+                            ? theme.colorScheme.primaryContainer
+                            : theme.colorScheme.surfaceContainerHighest),
                     child: Icon(
                       AppIcons.order,
-                      color: isDraft
-                          ? theme.colorScheme.primary
-                          : AppColors.success,
+                      color: isReceived
+                          ? AppColors.success
+                          : theme.colorScheme.primary,
                     ),
                   ),
                   title: Text(
@@ -666,25 +719,26 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       StatusBadge(
-                        label: isDraft ? 'چاوەڕوانە' : (order.status.toUpperCase() == 'CANCELLED' ? 'هەڵوەشاوە' : 'وەرگیراوە'),
-                        type: isDraft
-                            ? StatusBadgeType.warning
-                            : (order.status.toUpperCase() == 'CANCELLED' ? StatusBadgeType.danger : StatusBadgeType.success),
+                        label: badgeLabel,
+                        type: badgeType,
                       ),
                       if (isDraft)
+                        IconButton(
+                          icon: const Icon(Icons.check_circle_outline, color: AppColors.success),
+                          tooltip: 'پەسەندکردن',
+                          onPressed: () => _confirmPO(order),
+                        ),
+                      if (isConfirmed)
+                        IconButton(
+                          icon: const Icon(Icons.download_done, color: AppColors.success),
+                          tooltip: 'وەرگرتن',
+                          onPressed: () => _receivePO(order),
+                        ),
+                      if (isDraft || isConfirmed)
                         IconButton(
                           icon: const Icon(Icons.cancel_outlined, color: AppColors.danger),
                           tooltip: 'هەڵوەشاندنەوە',
                           onPressed: () => _cancelPO(order),
-                        ),
-                      if (isDraft)
-                        const Padding(
-                          padding: EdgeInsets.only(right: 4.0),
-                          child: Icon(
-                            Icons.arrow_forward_ios,
-                            size: 14,
-                            color: Colors.grey,
-                          ),
                         ),
                     ],
                   ),

@@ -71,6 +71,16 @@ class PurchaseActions {
     }
   }
 
+  Future<void> confirmPurchaseOrder(int orderId) async {
+    final apiClient = _ref.read(apiClientProvider);
+    try {
+      await apiClient.client.post('/purchase-orders/$orderId/confirm');
+      _ref.invalidate(purchaseOrdersProvider);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
+
   Future<void> receivePurchaseOrder(int orderId, {List<Map<String, dynamic>>? items}) async {
     final apiClient = _ref.read(apiClientProvider);
     final syncService = _ref.read(syncServiceProvider);

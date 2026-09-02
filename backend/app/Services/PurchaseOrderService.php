@@ -81,6 +81,10 @@ class PurchaseOrderService
                 throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی هەڵوەشاوە وەربگیرێت.']);
             }
 
+            if ($lockedOrder->status === PurchaseOrder::STATUS_DRAFT || $lockedOrder->status === PurchaseOrder::STATUS_DRAFT_LOWER) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی ڕەشنووس وەربگیرێت، پێویستە پێشتر پەسەند بکرێت.']);
+            }
+
             // Check if all items are already fully received
             $allItems = $lockedOrder->items()->get();
             $isAlreadyFullyReceived = $allItems->every(function ($it) {
@@ -241,10 +245,6 @@ class PurchaseOrderService
 
                 // Close connected purchase requirements
                 $lockedOrder->requirements()->update(['status' => 'CLOSED']);
-            } elseif ($lockedOrder->status === PurchaseOrder::STATUS_DRAFT) {
-                $lockedOrder->update([
-                    'status' => PurchaseOrder::STATUS_CONFIRMED,
-                ]);
             }
 
             app(\App\Services\AuditService::class)->log([
