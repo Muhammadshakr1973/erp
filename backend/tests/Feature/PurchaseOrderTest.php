@@ -521,7 +521,14 @@ class PurchaseOrderTest extends TestCase
     /** @test */
     public function test_e_it_handles_multiple_different_purchase_order_items_in_same_request()
     {
-        $productB = Product::create(['name' => 'Prod B', 'sku' => 'PB', 'cost_price' => 200]);
+        $productB = Product::create([
+            'name' => 'Prod B',
+            'sku' => 'PB',
+            'cost_price' => 200,
+            'price_n1' => 300,
+            'price_n2' => 280,
+            'price_n3' => 260,
+        ]);
 
         $order = PurchaseOrder::create([
             'order_number' => 'PO-TEST-DIFF-ITEMS',

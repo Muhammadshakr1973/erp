@@ -83,17 +83,18 @@ class AuditTrailTest extends TestCase
 
         $product = Product::create([
             'name' => 'Rice 5KG',
+            'sku' => 'RICE-5KG',
             'barcode' => '123456789',
-            'purchase_price' => 5000,
-            'retail_price' => 7000,
-            'wholesale_price' => 6000,
-            'special_price' => 5500,
+            'cost_price' => 5000,
+            'price_n1' => 7000,
+            'price_n2' => 6000,
+            'price_n3' => 5500,
             'is_active' => true,
         ]);
 
         $product->update([
-            'retail_price' => 8000,
-            'wholesale_price' => 6500,
+            'price_n1' => 8000,
+            'price_n2' => 6500,
         ]);
 
         $log = AuditLog::where('entity_type', 'Product')
@@ -102,10 +103,10 @@ class AuditTrailTest extends TestCase
             ->first();
 
         $this->assertNotNull($log);
-        $this->assertEquals(7000, $log->old_values['retail_price']);
-        $this->assertEquals(8000, $log->new_values['retail_price']);
-        $this->assertEquals(6000, $log->old_values['wholesale_price']);
-        $this->assertEquals(6500, $log->new_values['wholesale_price']);
+        $this->assertEquals(7000, $log->old_values['price_n1']);
+        $this->assertEquals(8000, $log->new_values['price_n1']);
+        $this->assertEquals(6000, $log->old_values['price_n2']);
+        $this->assertEquals(6500, $log->new_values['price_n2']);
     }
 
     /**

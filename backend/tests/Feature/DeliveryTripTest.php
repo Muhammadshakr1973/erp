@@ -18,14 +18,14 @@ class DeliveryTripTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $role = Role::firstOrCreate(['name' => 'driver']);
+        $role = Role::firstOrCreate(['name' => 'driver'], ['display_name' => 'Driver']);
         $this->driver = User::factory()->create(['role_id' => $role->id, 'is_active' => true]);
     }
 
     /** @test */
     public function it_can_create_and_manage_a_delivery_trip()
     {
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['display_name' => 'Admin']);
         $admin = User::factory()->create(['role_id' => $adminRole->id, 'is_active' => true]);
         $route = Route::create(['name' => 'Route A']);
 
