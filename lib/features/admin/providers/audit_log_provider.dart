@@ -7,13 +7,19 @@ final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
   try {
     final response = await api.client.get('/audit-logs');
     if (response.statusCode == 200) {
-      final raw = response.data['data'];
-      if (raw is List) {
-        return raw;
-      } else if (raw is Map && raw['data'] is List) {
-        return raw['data'];
+      final data = response.data;
+      if (data is List) {
+        return data;
       }
-      return [];
+      if (data is Map) {
+        final raw = data['data'];
+        if (raw is List) {
+          return raw;
+        } else if (raw is Map && raw['data'] is List) {
+          return raw['data'];
+        }
+      }
+      throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed audit log response payload)');
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -66,7 +72,19 @@ final entityAuditLogsProvider =
           '/audit-logs/entity/${param.entityType}/${param.entityId}',
         );
         if (response.statusCode == 200) {
-          return response.data['data'] ?? [];
+          final data = response.data;
+          if (data is List) {
+            return data;
+          }
+          if (data is Map) {
+            final raw = data['data'];
+            if (raw is List) {
+              return raw;
+            } else if (raw is Map && raw['data'] is List) {
+              return raw['data'];
+            }
+          }
+          throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed entity audit log response payload)');
         }
         throw Exception(
           'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',

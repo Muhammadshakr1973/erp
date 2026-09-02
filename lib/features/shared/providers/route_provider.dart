@@ -5,17 +5,16 @@ import '../models/route_model.dart';
 import 'customer_provider.dart';
 
 List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
-  if (rawData == null) return [];
   if (rawData is List) {
     return List<Map<String, dynamic>>.from(rawData);
   }
-  if (rawData is Map<String, dynamic>) {
+  if (rawData is Map) {
     if (rawData.containsKey('data')) {
       final inner = rawData['data'];
       if (inner is List) {
         return List<Map<String, dynamic>>.from(inner);
       }
-      if (inner is Map<String, dynamic> && inner.containsKey('data')) {
+      if (inner is Map && inner.containsKey('data')) {
         final doubleInner = inner['data'];
         if (doubleInner is List) {
           return List<Map<String, dynamic>>.from(doubleInner);
@@ -23,7 +22,7 @@ List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
       }
     }
   }
-  return [];
+  throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response structure)');
 }
 
 final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {

@@ -15,10 +15,15 @@ final commissionsListProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final resData = response.data['data'];
-          final List items = (resData is Map && resData.containsKey('data'))
-              ? resData['data']
-              : (resData is List ? resData : []);
+          final resData = response.data['data'] ?? response.data;
+          final List items;
+          if (resData is List) {
+            items = resData;
+          } else if (resData is Map && resData['data'] is List) {
+            items = resData['data'];
+          } else {
+            throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commissions list response payload)');
+          }
           return items
               .map(
                 (json) =>
@@ -46,7 +51,13 @@ final commissionSummaryProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          return response.data['data'] as Map<String, dynamic>? ?? {};
+          final resData = response.data['data'] ?? response.data;
+          if (resData is Map<String, dynamic>) {
+            return resData;
+          } else if (resData is Map) {
+            return Map<String, dynamic>.from(resData);
+          }
+          throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission summary response payload)');
         }
         throw Exception(
           'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -93,7 +104,13 @@ class CommissionActionNotifier extends StateNotifier<AsyncValue<void>> {
           'period_to': periodTo,
         },
       );
-      return response.data['data'] as Map<String, dynamic>? ?? {};
+      final resData = response.data['data'] ?? response.data;
+      if (resData is Map<String, dynamic>) {
+        return resData;
+      } else if (resData is Map) {
+        return Map<String, dynamic>.from(resData);
+      }
+      throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed commission preview response payload)');
     } catch (e) {
       throw Exception(_api.parseError(e));
     }

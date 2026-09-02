@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -17,6 +18,28 @@ final localOrdersBoxProvider = Provider<Box<String>>((ref) {
   return Hive.box<String>('local_orders');
 });
 
+bool _isNetworkError(dynamic e) {
+  if (e is DioException) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return true;
+    }
+    if (e.response == null) {
+      return true;
+    }
+    return false;
+  }
+  final errStr = e.toString().toLowerCase();
+  if (errStr.contains('socketexception') ||
+      errStr.contains('networkisunreachable') ||
+      errStr.contains('connection refused')) {
+    return true;
+  }
+  return false;
+}
+
 final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final localBox = ref.watch(localOrdersBoxProvider);
@@ -25,9 +48,13 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   try {
     final response = await api.client.get('/orders');
     if (response.statusCode == 200) {
-      final List data = response.data['data'] ?? [];
+      final resData = response.data['data'] ?? response.data;
+      if (resData is! List) {
+        throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
+      }
+      final List data = resData;
       final onlineOrders = data
-          .map((json) => OrderModel.fromJson(json))
+          .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
           .toList();
 
       // Update local cache: clear server-cached entries (keys not starting with 'local_')
@@ -126,35 +153,41 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
     );
   } catch (e) {
-    // Return cached orders on network error
-    final cachedOrders = <OrderModel>[];
-    final corruptedKeys = <String>[];
+    if (_isNetworkError(e)) {
+      // Return cached orders on genuine network error
+      final cachedOrders = <OrderModel>[];
+      final corruptedKeys = <String>[];
 
-    for (final key in localBox.keys) {
-      final jsonStr = localBox.get(key);
-      if (jsonStr != null) {
-        try {
-          final Map<String, dynamic> json = jsonDecode(jsonStr);
-          cachedOrders.add(OrderModel.fromJson(json));
-        } catch (_) {
-          corruptedKeys.add(key.toString());
+      for (final key in localBox.keys) {
+        final jsonStr = localBox.get(key);
+        if (jsonStr != null) {
+          try {
+            final Map<String, dynamic> json = jsonDecode(jsonStr);
+            cachedOrders.add(OrderModel.fromJson(json));
+          } catch (_) {
+            corruptedKeys.add(key.toString());
+          }
         }
       }
-    }
 
-    // Clean up corrupted keys if any
-    for (final key in corruptedKeys) {
-      await localBox.delete(key);
-    }
+      // Clean up corrupted keys if any
+      for (final key in corruptedKeys) {
+        await localBox.delete(key);
+      }
 
-    if (cachedOrders.isNotEmpty) {
-      return cachedOrders;
-    }
+      if (cachedOrders.isNotEmpty) {
+        return cachedOrders;
+      }
 
-    // Throw specific exception if there is no network connection and no cached orders
-    throw Exception(
-      'پەیوەندی هێڵ لەدەستدراوە و هیچ پسوڵەیەکی پاشەکەوتکراو نییە (No network connection and no cached orders)',
-    );
+      // Throw specific exception if there is no network connection and no cached orders
+      throw Exception(
+        'پەیوەندی هێڵ لەدەستدراوە و هیچ پسوڵەیەکی پاشەکەوتکراو نییە (No network connection and no cached orders)',
+      );
+    }
+    if (e is DioException) {
+      throw Exception(api.parseError(e));
+    }
+    rethrow;
   }
 });
 
@@ -169,27 +202,33 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
     final response = await api.client.get('/orders/$orderId');
     if (response.statusCode == 200) {
       final data = response.data['data'] ?? response.data;
-      final order = OrderModel.fromJson(data);
-      if (data is Map) {
-        final Map<String, dynamic> castedJson = Map<String, dynamic>.from(data);
-        await localBox.put(order.id.toString(), jsonEncode(castedJson));
+      if (data is! Map) {
+        throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
       }
+      final order = OrderModel.fromJson(Map<String, dynamic>.from(data));
+      final Map<String, dynamic> castedJson = Map<String, dynamic>.from(data);
+      await localBox.put(order.id.toString(), jsonEncode(castedJson));
       return order;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
     );
   } catch (e) {
-    final cachedStr = localBox.get(orderId);
-    if (cachedStr != null) {
-      try {
-        final Map<String, dynamic> json = jsonDecode(cachedStr);
-        return OrderModel.fromJson(json);
-      } catch (_) {
-        // Safe fallback - don't crash
+    if (_isNetworkError(e)) {
+      final cachedStr = localBox.get(orderId);
+      if (cachedStr != null) {
+        try {
+          final Map<String, dynamic> json = jsonDecode(cachedStr);
+          return OrderModel.fromJson(json);
+        } catch (_) {
+          // Safe fallback - don't crash
+        }
       }
     }
-    throw Exception(api.parseError(e));
+    if (e is DioException) {
+      throw Exception(api.parseError(e));
+    }
+    rethrow;
   }
 });
 
