@@ -130,15 +130,15 @@ void main() {
     });
 
     test('Replayed response with X-Cache-Lookup HIT resolves to valid Sales Return data', () {
-      final mockServerResponse = {
+      final Map<String, dynamic> mockServerResponse = {
         'status': 201,
-        'headers': {
+        'headers': <String, dynamic>{
           'X-Cache-Lookup': 'HIT',
           'X-Idempotency-Key': 'cached_key_3333',
         },
-        'data': {
+        'data': <String, dynamic>{
           'message': 'کاڵاکە بە سەرکەوتوویی گەڕێندرایەوە و باڵانسی کڕیار نوێکرایەوە',
-          'data': {
+          'data': <String, dynamic>{
             'id': 12,
             'sales_order_id': 200,
             'total_return_amount': 25000,
@@ -147,8 +147,10 @@ void main() {
         }
       };
 
-      expect(mockServerResponse['headers']?['X-Cache-Lookup'], equals('HIT'));
-      final returnData = mockServerResponse['data']?['data'] as Map<String, dynamic>;
+      final headers = mockServerResponse['headers'] as Map<String, dynamic>;
+      expect(headers['X-Cache-Lookup'], equals('HIT'));
+      final responseBody = mockServerResponse['data'] as Map<String, dynamic>;
+      final returnData = responseBody['data'] as Map<String, dynamic>;
       expect(returnData['id'], equals(12));
       expect(returnData['total_return_amount'], equals(25000));
       expect(returnData['status'], equals('COMPLETED'));
