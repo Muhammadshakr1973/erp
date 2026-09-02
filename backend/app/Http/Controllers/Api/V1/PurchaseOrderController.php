@@ -103,6 +103,26 @@ class PurchaseOrderController extends Controller
         ], 200);
     }
 
+    public function confirm(Request $request, $id): JsonResponse
+    {
+        $order = PurchaseOrder::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ پەسەندکردنی ئەم پسوڵەی کڕینە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $confirmedOrder = $this->purchaseService->confirmOrder($order, $user);
+
+        return response()->json([
+            'message' => 'پسوڵەی کڕین بەسەرکەوتوویی پەسەند کرا',
+            'data'    => $confirmedOrder
+        ], 200);
+    }
+
     public function cancel(Request $request, $id): JsonResponse
     {
         $order = PurchaseOrder::findOrFail($id);

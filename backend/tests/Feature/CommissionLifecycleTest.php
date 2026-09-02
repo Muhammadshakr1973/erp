@@ -635,4 +635,116 @@ class CommissionLifecycleTest extends TestCase
         ]);
         $cancelRes->assertStatus(422);
     }
+
+    /**
+     * Test sales returns BEFORE calculation reduce net profit used for commission.
+     */
+    public function test_returns_before_commission_calculation_deduct_sales_and_profit(): void
+    {
+        $this->actingAs($this->admin);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-20260830-RET1',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 100000,
+            'total_cost'      => 60000,
+            'total_profit'    => 40000,
+            'delivered_at'    => '2026-08-30 10:00:00',
+        ]);
+
+        $orderItem = \App\Models\SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'unit_price' => 10000,
+            'cost_price' => 6000,
+            'total' => 100000,
+        ]);
+
+        // Process a return of 5 items before commission calculation
+        app(\App\Services\SalesReturnService::class)->createReturn([
+            'sales_order_id' => $order->id,
+            'reason' => 'Customer changed mind',
+            'items' => [
+                ['sales_order_item_id' => $orderItem->id, 'quantity' => 5]
+            ]
+        ], $this->admin);
+
+        // Calculate commission
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+        $commission = SalesmanCommission::findOrFail($commissionId);
+
+        // Net profit should be 20,000 (40,000 original - 20,000 returned profit)
+        // Commission at 5% rate on 20,000 = 1,000
+        $this->assertEquals(20000, $commission->total_profit);
+        $this->assertEquals(1000, $commission->commission_amount);
+    }
+
+    /**
+     * Test sales returns AFTER commission payment do not rewrite paid commission snapshots.
+     */
+    public function test_returns_after_commission_paid_do_not_rewrite_commission_snapshot(): void
+    {
+        $this->actingAs($this->admin);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-20260830-RET2',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 100000,
+            'total_cost'      => 60000,
+            'total_profit'    => 40000,
+            'delivered_at'    => '2026-08-30 10:00:00',
+        ]);
+
+        $orderItem = \App\Models\SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'unit_price' => 10000,
+            'cost_price' => 6000,
+            'total' => 100000,
+        ]);
+
+        // Calculate & Pay commission
+        $calcRes = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+        $commissionId = $calcRes->json('data.id');
+        $this->postJson("/api/v1/commissions/{$commissionId}/approve")->assertStatus(200);
+        $this->postJson("/api/v1/commissions/{$commissionId}/pay", ['payment_method' => 'cash'])->assertStatus(200);
+
+        $paidCommissionBefore = SalesmanCommission::findOrFail($commissionId);
+        $originalAmount = $paidCommissionBefore->commission_amount; // 2000
+
+        // Now process a return after payment
+        app(\App\Services\SalesReturnService::class)->createReturn([
+            'sales_order_id' => $order->id,
+            'reason' => 'Late Return',
+            'items' => [
+                ['sales_order_item_id' => $orderItem->id, 'quantity' => 5]
+            ]
+        ], $this->admin);
+
+        // Verify the paid commission snapshot is untouched
+        $paidCommissionAfter = SalesmanCommission::findOrFail($commissionId);
+        $this->assertEquals($originalAmount, $paidCommissionAfter->commission_amount);
+        $this->assertEquals(SalesmanCommission::STATUS_PAID, $paidCommissionAfter->status);
+    }
 }

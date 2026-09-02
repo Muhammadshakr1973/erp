@@ -733,4 +733,44 @@ class IdempotencyConcurrencyTest extends TestCase
         $responseB->assertStatus(403);
         $responseB->assertJsonPath('error', 'Forbidden. This idempotency key belongs to another user.');
     }
+
+    /**
+     * Scenario 9: Network timeout mid-request: Server processed order, client retries with SAME key (returns 201 cached)
+     * and retries with DIFFERENT key (creates second order if payload/key is different).
+     */
+    public function test_network_drop_recovery_replay_with_same_key_and_different_key(): void
+    {
+        $sameKey = 'offline-net-drop-key-1';
+        $differentKey = 'offline-net-drop-key-2';
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2]
+            ]
+        ];
+
+        // 1. Initial request completes on server, but client drops connection
+        $response1 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $sameKey)
+            ->postJson('/api/v1/orders', $payload);
+        $response1->assertStatus(201);
+        $this->assertEquals(1, DB::table('sales_orders')->count());
+
+        // 2. Client reconnects and retries with SAME key -> returns cached result without duplicate order
+        $response2 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $sameKey)
+            ->postJson('/api/v1/orders', $payload);
+        $response2->assertStatus(201);
+        $response2->assertHeader('X-Cache-Lookup', 'HIT');
+        $this->assertEquals(1, DB::table('sales_orders')->count());
+
+        // 3. Client attempts to submit same payload with a DIFFERENT key -> creates second order
+        $response3 = $this->actingAs($this->user)
+            ->withHeader('X-Idempotency-Key', $differentKey)
+            ->postJson('/api/v1/orders', $payload);
+        $response3->assertStatus(201);
+        $this->assertEquals(2, DB::table('sales_orders')->count());
+    }
 }

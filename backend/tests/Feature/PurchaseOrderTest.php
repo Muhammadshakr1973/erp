@@ -222,7 +222,7 @@ class PurchaseOrderTest extends TestCase
 
         $order->refresh();
         $item->refresh();
-        $this->assertEquals('DRAFT', $order->status); // Still DRAFT since 60 remain
+        $this->assertEquals('CONFIRMED', $order->status); // Status changes to CONFIRMED after partial receive
         $this->assertEquals(40, $item->received_quantity);
 
         $stock1 = WarehouseStock::where('warehouse_id', $this->warehouse->id)->where('product_id', $this->product->id)->first();
@@ -646,5 +646,53 @@ class PurchaseOrderTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertNotEquals('CANCELLED', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function it_can_confirm_a_draft_purchase_order()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-CONFIRM',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => PurchaseOrder::STATUS_DRAFT,
+            'created_by' => $this->admin->id,
+            'total_amount' => 5000,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/confirm");
+
+        $response->assertStatus(200);
+        $this->assertEquals(PurchaseOrder::STATUS_CONFIRMED, $order->fresh()->status);
+    }
+
+    /** @test */
+    public function it_can_receive_a_confirmed_purchase_order()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-CONFIRM-RECEIVE',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => PurchaseOrder::STATUS_CONFIRMED,
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 10,
+            'unit_cost' => 100,
+            'total_cost' => 1000,
+            'received_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 10]
+            ]
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(PurchaseOrder::STATUS_RECEIVED, $order->fresh()->status);
     }
 }

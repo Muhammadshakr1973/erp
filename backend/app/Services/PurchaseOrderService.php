@@ -272,6 +272,41 @@ class PurchaseOrderService
     }
 
     /**
+     * پەسەندکردنی پسوڵەی کڕین
+     */
+    public function confirmOrder(PurchaseOrder $order, $user): PurchaseOrder
+    {
+        return DB::transaction(function () use ($order, $user) {
+            $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی هەڵوەشاوە پەسەند بكرێت.']);
+            }
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
+                throw ValidationException::withMessages(['status' => 'ئەم پسوڵەی کڕینە پێشتر وەرگیراوە.']);
+            }
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_DRAFT) {
+                $lockedOrder->update(['status' => PurchaseOrder::STATUS_CONFIRMED]);
+
+                app(\App\Services\AuditService::class)->log([
+                    'action'      => 'CONFIRM',
+                    'entity_type' => 'PurchaseOrder',
+                    'entity_id'   => $lockedOrder->id,
+                    'table_name'  => 'purchase_orders',
+                    'old_values'  => ['status' => PurchaseOrder::STATUS_DRAFT],
+                    'new_values'  => ['status' => PurchaseOrder::STATUS_CONFIRMED],
+                    'description' => "پسوڵەی کڕینی {$lockedOrder->order_number} پەسەند کرا",
+                    'user'        => $user,
+                ]);
+            }
+
+            return $lockedOrder;
+        });
+    }
+
+    /**
      * هەڵوەشاندنەوەی پسوڵەی کڕین
      */
     public function cancelOrder(PurchaseOrder $order, $user): PurchaseOrder

@@ -125,7 +125,7 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(37500, $order->subtotal); // 7500 * 5 = 37500
         $this->assertEquals(3750, $order->discount_amount); // 10% of 37500 = 3750
         $this->assertEquals(33750, $order->total_amount); // 37500 - 3750 = 33750
-        $this->assertEquals(12500, $order->total_profit); // (7500 - 5000) * 5 = 12500
+        $this->assertEquals(8750, $order->total_profit); // Net profit: (7500 - 5000) * 5 - 3750 discount = 8750
 
         // Assert item total_price is persisted in database
         $item = $order->items->first();
@@ -1065,6 +1065,128 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(15000, $order->subtotal);
         $this->assertEquals(12825, $order->total_amount);
         $this->assertEquals(2825, $order->total_profit); // 5000 item profit - 1500 perm discount - 675 invoice discount = 2825
+    }
+
+    /** @test */
+    public function it_calculates_net_profit_with_no_discount()
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_percent' => 0,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2] // price 7500, cost 5000 => item profit 5000
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(5000, $order->total_profit);
+    }
+
+    /** @test */
+    public function it_calculates_net_profit_with_fixed_invoice_discount_only()
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 2000,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2] // subtotal 15000, item profit 5000
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(13000, $order->total_amount);
+        $this->assertEquals(3000, $order->total_profit); // 5000 item profit - 2000 fixed discount = 3000
+    }
+
+    /** @test */
+    public function it_calculates_net_profit_with_100_percent_discount()
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_percent' => 100,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2] // subtotal 15000, item profit 5000
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(0, $order->total_amount);
+        $this->assertEquals(-10000, $order->total_profit); // 5000 item profit - 15000 discount = -10000
+    }
+
+    /** @test */
+    public function it_calculates_net_profit_when_discount_is_larger_than_profit()
+    {
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 6000,
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2] // subtotal 15000, item profit 5000
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(9000, $order->total_amount);
+        $this->assertEquals(-1000, $order->total_profit); // 5000 item profit - 6000 discount = -1000
+    }
+
+    /** @test */
+    public function it_calculates_net_profit_with_negative_profit_edge_case()
+    {
+        // Product sold below cost
+        $lowProduct = \App\Models\Product::create([
+            'name' => 'Loss Leader Product',
+            'sku' => 'LOSS-1',
+            'cost_price' => 10000,
+            'price_n1' => 8000,
+            'price_n2' => 8000,
+            'price_n3' => 8000,
+            'is_active' => true,
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('warehouse_stock')->insert([
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $lowProduct->id,
+            'quantity' => 50,
+            'reserved_quantity' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 1000,
+            'items' => [
+                ['product_id' => $lowProduct->id, 'quantity' => 2] // subtotal 16000, cost 20000, raw profit -4000
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(15000, $order->total_amount);
+        $this->assertEquals(-5000, $order->total_profit); // -4000 raw profit - 1000 discount = -5000
     }
 }
 

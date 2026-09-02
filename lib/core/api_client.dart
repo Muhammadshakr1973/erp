@@ -92,7 +92,7 @@ class ApiClient {
         case DioExceptionType.connectionError:
           return 'هێڵی ئینتەرنێتت پچڕاوە.';
         default:
-          return 'هەڵەیەک ڕوویدا: ${error.message}';
+          return 'هەڵەیەک ڕوویدا: ${error.message ?? 'هەڵەی نادیار'}';
       }
     }
     return error.toString();
