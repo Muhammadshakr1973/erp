@@ -147,7 +147,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   void _showQrCodeDialog(BuildContext context, Customer customer) {
@@ -216,9 +216,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     prefixIcon: Icons.money,
                     keyboardType: TextInputType.number,
                     validator: (val) {
-                      if (val == null || val.isEmpty)
+                      if (val == null || val.isEmpty) {
                         return 'تکایە بڕی پارە بنووسە';
-                      if (int.tryParse(val) == null) return 'بڕی پارە نادروستە';
+                      }
+                      if (int.tryParse(val) == null) {
+                        return 'بڕی پارە نادروستە';
+                      }
                       return null;
                     },
                   ),
@@ -265,7 +268,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       );
                       ref.invalidate(customerListProvider);
                       
-                      if (mounted) {
+                      if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -276,7 +279,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         );
                       }
                     } catch (e) {
-                      if (mounted) {
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('هەڵە ڕوویدا: $e'),
@@ -466,7 +469,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           error: (e, st) => Center(child: Text('هەڵە ڕوویدا: $e')),
           data: (customer) => TabBarView(
             children: [
-              _buildInfoTab(context, customer),
+              _buildInfoTab(context, customer, canViewReconciliation),
               _buildLedgerTab(context, customer),
               _buildOrdersTab(context, customer),
             ],
@@ -485,7 +488,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     );
   }
 
-  Widget _buildInfoTab(BuildContext context, Customer customer) {
+  Widget _buildInfoTab(
+    BuildContext context,
+    Customer customer,
+    bool canViewReconciliation,
+  ) {
     final theme = Theme.of(context);
     final routesAsync = ref.watch(routeListProvider);
     String routeName = 'بێ گەڕەک / ڕاوت';
@@ -841,11 +848,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       : AppColors.danger;
 
                   String entryTypeLabel = entry.entryType;
-                  if (entryTypeLabel == 'PAYMENT') entryTypeLabel = 'پارەدان';
-                  if (entryTypeLabel == 'SALE') entryTypeLabel = 'فرۆشتن';
-                  if (entryTypeLabel == 'RETURN') entryTypeLabel = 'گەڕانەوە';
-                  if (entryTypeLabel == 'ADJUSTMENT')
+                  if (entryTypeLabel == 'PAYMENT') {
+                    entryTypeLabel = 'پارەدان';
+                  }
+                  if (entryTypeLabel == 'SALE') {
+                    entryTypeLabel = 'فرۆشتن';
+                  }
+                  if (entryTypeLabel == 'RETURN') {
+                    entryTypeLabel = 'گەڕانەوە';
+                  }
+                  if (entryTypeLabel == 'ADJUSTMENT') {
                     entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
+                  }
 
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -972,7 +986,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${Formatters.currency(order.totalAmount)}',
+                            Formatters.currency(order.totalAmount),
                             style: AppTextStyles.price,
                           ),
                           const SizedBox(height: 4),
