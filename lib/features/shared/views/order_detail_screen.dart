@@ -12,6 +12,7 @@ import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/utils/formatters.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
+import 'create_sales_return_dialog.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -73,6 +74,30 @@ class OrderDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleCreateReturn(
+    BuildContext context,
+    WidgetRef ref,
+    OrderModel order,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CreateSalesReturnDialog(order: order),
+    );
+
+    if (result == true && context.mounted) {
+      ref.invalidate(singleOrderProvider(order.id.toString()));
+      ref.invalidate(salesReturnsListProvider);
+      ref.invalidate(ordersListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('کاڵاکان بە سەرکەوتوویی گەڕێندرانەوە'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orderAsync = ref.watch(singleOrderProvider(orderId));
@@ -83,6 +108,11 @@ class OrderDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('پسوڵەی #$orderId', style: AppTextStyles.h2),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.assignment_return_outlined),
+            tooltip: 'کاڵا ڕاگەڕێندراوەکان',
+            onPressed: () => context.push('/sales-returns'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(singleOrderProvider(orderId)),
@@ -395,6 +425,14 @@ class OrderDetailScreen extends ConsumerWidget {
             text: 'هەڵوەشاندنەوەی پسوڵە (Cancel)',
             type: AppButtonType.danger,
             onPressed: () => _handleCancelOrder(context, ref),
+          ),
+        ],
+        if (order.status == OrderModel.statusDelivered) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            text: 'گەڕاندنەوەی کاڵا',
+            type: AppButtonType.outline,
+            onPressed: () => _handleCreateReturn(context, ref, order),
           ),
         ],
       ],

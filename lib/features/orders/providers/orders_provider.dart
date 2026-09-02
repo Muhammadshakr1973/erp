@@ -658,6 +658,10 @@ class SalesReturnActions {
       payload: payload,
     );
 
+    if (payload['sales_order_id'] != null) {
+      ref.invalidate(singleOrderProvider(payload['sales_order_id'].toString()));
+    }
+    ref.invalidate(ordersListProvider);
     ref.invalidate(salesReturnsListProvider);
   }
 }

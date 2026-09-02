@@ -15,6 +15,8 @@ import '../../features/shared/views/order_detail_screen.dart';
 import '../../features/driver/views/trip_orders_screen.dart';
 import '../../features/shared/views/profile_screen.dart';
 import '../../features/shared/views/notifications_screen.dart';
+import '../../features/shared/views/sales_returns_list_screen.dart';
+import '../../features/shared/views/sales_return_detail_screen.dart';
 import '../../features/admin/views/admin_purchases_screen.dart';
 import '../../features/admin/views/admin_audit_logs_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
@@ -170,6 +172,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return OrderDetailScreen(orderId: id);
+        },
+      ),
+      GoRoute(
+        path: '/sales-returns',
+        name: 'salesReturnsList',
+        builder: (context, state) => const SalesReturnsListScreen(),
+      ),
+      GoRoute(
+        path: '/sales-return/:id',
+        name: 'salesReturnDetail',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SalesReturnDetailScreen(returnId: id);
         },
       ),
       GoRoute(
