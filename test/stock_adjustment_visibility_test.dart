@@ -14,7 +14,7 @@ class MockAuthNotifier extends AuthNotifier {
   }
   
   @override
-  Future<void> login(String phone, String password) async {
+  Future<bool> login(String phone, String password) async {
     // Override login to prevent real API calls in this mock if needed, 
     // though here we mainly just care about state.
     return super.login(phone, password);
