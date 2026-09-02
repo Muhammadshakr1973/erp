@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/customer.dart';
+import '../models/customer_reconciliation_model.dart';
 import '../providers/customer_provider.dart';
 
 class CustomerReconciliationDialog extends ConsumerStatefulWidget {
@@ -202,24 +203,24 @@ class _CustomerReconciliationDialogState
             .read(customerActionsProvider)
             .fixCustomerBalance(widget.customer.id);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pop(context);
-        }
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        Navigator.pop(context);
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('هەڵە لە ڕاستکردنەوە: $e'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('هەڵە لە ڕاستکردنەوە: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       } finally {
         if (mounted) setState(() => _isFixing = false);
       }
