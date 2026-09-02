@@ -181,7 +181,14 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                   child: const Text('نەخێر'),
                 ),
                 isSubmitting
-                    ? const CircularProgressIndicator()
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
                     : TextButton(
                         onPressed: () async {
                           setDialogState(() {
@@ -189,22 +196,15 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                           });
 
                           try {
-                            await ref
+                            final result = await ref
                                 .read(warehouseActionsProvider)
                                 .reconcileStock(
                                   warehouseId: stock.warehouseId,
                                   productId: stock.productId,
                                 );
                             if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'هاوتاکردنەوە بە سەرکەوتوویی جێبەجێ کرا',
-                                  ),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
+                              Navigator.pop(context); // Close confirm dialog
+                              _showReconciliationResult(stock, result);
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -231,6 +231,113 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showReconciliationResult(
+      WarehouseStockModel stock, StockReconciliationModel result) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                result.isConsistent ? Icons.check_circle : Icons.warning_amber,
+                color: result.isConsistent
+                    ? AppColors.success
+                    : theme.colorScheme.error,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Text('ئەنجامی هاوتاکردنەوە'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stock.productName,
+                  style: AppTextStyles.bodyBold,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _buildReconcileRow(
+                  'بڕی فیزیکی (تۆمارکراو)',
+                  result.storedQuantity.toString(),
+                ),
+                _buildReconcileRow(
+                  'بڕی فیزیکی (ژمێردراو)',
+                  result.recalculatedQuantity.toString(),
+                  isDiscrepant:
+                      result.storedQuantity != result.recalculatedQuantity,
+                ),
+                const Divider(),
+                _buildReconcileRow(
+                  'بڕی حجزکراو (تۆمارکراو)',
+                  result.storedReserved.toString(),
+                ),
+                _buildReconcileRow(
+                  'بڕی حجزکراو (ژمێردراو)',
+                  result.recalculatedReserved.toString(),
+                  isDiscrepant:
+                      result.storedReserved != result.recalculatedReserved,
+                ),
+                if (result.discrepancies.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('جیاوازییە دۆزراوەکان:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  ...result.discrepancies.map((d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text('• $d',
+                            style: AppTextStyles.caption.copyWith(
+                              color: theme.colorScheme.error,
+                            )),
+                      )),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                if (result.isConsistent)
+                  const Text(
+                    'ئەم کاڵایە هیچ کێشەیەکی نییە و هاوتایە.',
+                    style: TextStyle(color: AppColors.success),
+                  )
+                else
+                  Text(
+                    'جیاوازی دۆزرایەوە! ستۆکی سێرڤەر بە شێوەیەکی خۆکار لەسەر بنەمای مێژووی جوڵەکان نوێکرایەوە.',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('داخستن'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildReconcileRow(String label, String value,
+      {bool isDiscrepant = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTextStyles.caption),
+          Text(
+            value,
+            style: AppTextStyles.bodyBold.copyWith(
+              color: isDiscrepant ? Theme.of(context).colorScheme.error : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -109,15 +109,28 @@ class WarehouseActions {
     }
   }
 
-  Future<void> reconcileStock({
+  Future<StockReconciliationModel> reconcileStock({
     required int warehouseId,
     required int productId,
   }) async {
     try {
-      await api.client.get(
+      final response = await api.client.get(
         '/warehouses/$warehouseId/stock/$productId/reconcile',
       );
-      ref.invalidate(warehouseStocksProvider);
+      
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map<String, dynamic>) {
+          throw const FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed reconciliation response payload)',
+          );
+        }
+        
+        ref.invalidate(warehouseStocksProvider);
+        return StockReconciliationModel.fromJson(resData['data']);
+      }
+      
+      throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
     } catch (e) {
       throw Exception(api.parseError(e));
     }

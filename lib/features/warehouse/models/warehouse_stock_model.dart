@@ -49,3 +49,32 @@ class WarehouseStockModel {
     );
   }
 }
+
+class StockReconciliationModel {
+  final bool isConsistent;
+  final int storedQuantity;
+  final int recalculatedQuantity;
+  final int storedReserved;
+  final int recalculatedReserved;
+  final List<String> discrepancies;
+
+  StockReconciliationModel({
+    required this.isConsistent,
+    required this.storedQuantity,
+    required this.recalculatedQuantity,
+    required this.storedReserved,
+    required this.recalculatedReserved,
+    required this.discrepancies,
+  });
+
+  factory StockReconciliationModel.fromJson(Map<String, dynamic> json) {
+    return StockReconciliationModel(
+      isConsistent: json['is_consistent'] ?? false,
+      storedQuantity: json['stored_quantity'] ?? 0,
+      recalculatedQuantity: json['recalculated_quantity'] ?? 0,
+      storedReserved: json['stored_reserved'] ?? 0,
+      recalculatedReserved: json['recalculated_reserved'] ?? 0,
+      discrepancies: List<String>.from(json['discrepancies'] ?? []),
+    );
+  }
+}
