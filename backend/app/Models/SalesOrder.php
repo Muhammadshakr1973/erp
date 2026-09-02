@@ -44,6 +44,25 @@ class SalesOrder extends Model
 
     protected static function booted()
     {
+        static::creating(function ($order) {
+            if (empty($order->order_number)) {
+                $order->order_number = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(8));
+            }
+            if (empty($order->salesman_id)) {
+                $order->salesman_id = $order->created_by ?: (auth()->id() ?: (\App\Models\User::whereHas('role', function($q) {
+                    $q->where('name', \App\Models\Role::SALESMAN);
+                })->first()?->id ?: \App\Models\User::first()?->id));
+            }
+            if (empty($order->warehouse_id)) {
+                $order->warehouse_id = \App\Models\Warehouse::where('is_main', true)->first()?->id 
+                    ?: (\App\Models\Warehouse::first()?->id 
+                        ?: \App\Models\Warehouse::create(['name' => 'Default Warehouse', 'is_main' => true, 'is_active' => true])->id);
+            }
+            if (empty($order->created_by)) {
+                $order->created_by = auth()->id() ?: ($order->salesman_id ?: \App\Models\User::first()?->id);
+            }
+        });
+
         static::saving(function ($order) {
             if (empty($order->order_date)) {
                 $order->order_date = now()->toDateString();

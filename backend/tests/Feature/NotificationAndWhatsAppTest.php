@@ -134,7 +134,7 @@ class NotificationAndWhatsAppTest extends TestCase
 
         $this->assertDatabaseHas('device_tokens', [
             'user_id' => $this->salesman->id,
-            'device_token' => $token,
+            'token' => $token,
             'is_active' => true,
         ]);
 
@@ -149,7 +149,7 @@ class NotificationAndWhatsAppTest extends TestCase
 
         $this->assertDatabaseHas('device_tokens', [
             'user_id' => $this->salesman->id,
-            'device_token' => $token,
+            'token' => $token,
             'is_active' => false,
         ]);
     }

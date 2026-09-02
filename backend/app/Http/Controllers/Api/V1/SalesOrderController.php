@@ -60,11 +60,15 @@ class SalesOrderController extends Controller
         // ناردنی داتاکان و بەکارهێنەرەکە بۆ لۆژیکی Service
         $order = $this->salesOrderService->createOrder($request->validated(), $user);
 
-        // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی 201 (Created)
+        // Check if the order already existed (cooperative dual-entry update)
+        $statusCode = $order->wasRecentlyCreated ? 201 : 200;
+        $message = $order->wasRecentlyCreated ? 'پسوڵە بەسەرکەوتوویی دروستکرا' : 'پسوڵەی هاوبەش بەسەرکەوتوویی نوێکرایەوە';
+
+        // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی گونجاو
         return response()->json([
-            'message' => 'پسوڵە بەسەرکەوتوویی دروستکرا',
+            'message' => $message,
             'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
-        ], 201);
+        ], $statusCode);
     }
 
     public function update(UpdateSalesOrderRequest $request, int $id): JsonResponse

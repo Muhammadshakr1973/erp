@@ -473,10 +473,7 @@ class NotificationService
     public function removeDeviceToken(User $user, string $token): bool
     {
         return (bool) DeviceToken::where('user_id', $user->id)
-            ->where(function ($q) use ($token) {
-                $q->where('token', $token)
-                  ->orWhere('device_token', $token);
-            })
+            ->where('token', $token)
             ->update(['is_active' => false]);
     }
 }

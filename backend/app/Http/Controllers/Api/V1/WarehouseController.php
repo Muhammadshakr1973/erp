@@ -70,13 +70,21 @@ class WarehouseController extends Controller
 
         if (!$hasTrueIdempotency) {
             // Idempotency check: 15-second submission window for identical unkeyed manual adjustments
-            $existing = StockTransaction::where('warehouse_id', $warehouseId)
+            $existingQuery = StockTransaction::where('warehouse_id', $warehouseId)
                 ->where('product_id', $productId)
                 ->where('type', $type)
                 ->where('quantity_change', $validated['quantity_change'])
-                ->where('notes', $validated['notes'] ?? null)
-                ->where('created_at', '>=', now()->subSeconds(15))
-                ->first();
+                ->where('created_at', '>=', now()->subSeconds(15)->toDateTimeString());
+
+            if (isset($validated['notes']) && $validated['notes'] !== '') {
+                $existingQuery->where('notes', $validated['notes']);
+            } else {
+                $existingQuery->where(function ($q) {
+                    $q->whereNull('notes')->orWhere('notes', '')->orWhere('notes', 'Manual stock adjustment');
+                });
+            }
+
+            $existing = $existingQuery->first();
 
             if ($existing) {
                 return response()->json([

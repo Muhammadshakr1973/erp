@@ -13,6 +13,20 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
     protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($customer) {
+            if (empty($customer->route_id)) {
+                $defaultRoute = \App\Models\Route::firstOrCreate(
+                    ['name' => 'گشتی'],
+                    ['color' => '#888888', 'is_active' => true]
+                );
+                $customer->route_id = $defaultRoute->id;
+            }
+        });
+    }
     protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'permanent_discount' => 'decimal:2', 'is_active' => 'boolean', 'visit_order' => 'integer'];
     const PRICE_N1 = 'N1';
     const PRICE_N2 = 'N2';

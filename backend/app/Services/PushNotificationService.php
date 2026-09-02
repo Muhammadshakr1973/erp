@@ -93,7 +93,6 @@ class PushNotificationService
                         if (isset($res['error']) && in_array($res['error'], ['NotRegistered', 'InvalidRegistration'])) {
                             if (isset($tokenStrings[$index])) {
                                 DeviceToken::where('token', $tokenStrings[$index])
-                                    ->orWhere('device_token', $tokenStrings[$index])
                                     ->update(['is_active' => false]);
                             }
                         }

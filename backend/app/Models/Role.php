@@ -24,6 +24,15 @@ class Role extends Model
     public const WAREHOUSE = 'warehouse';
     public const DRIVER = 'driver';
 
+    protected static function booted()
+    {
+        static::creating(function ($role) {
+            if (empty($role->display_name)) {
+                $role->display_name = ucfirst($role->name);
+            }
+        });
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
