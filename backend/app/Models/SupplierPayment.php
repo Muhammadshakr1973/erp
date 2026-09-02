@@ -9,6 +9,9 @@ class SupplierPayment extends Model
 {
     use HasFactory;
     protected $fillable = ['supplier_id', 'purchase_order_id', 'amount', 'payment_method', 'paid_at', 'notes', 'created_by'];
+    protected $casts = [
+        'paid_at' => 'datetime',
+    ];
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
