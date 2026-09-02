@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_app/core/sync/sync_queue_entry.dart';
+import 'package:pos_app/core/sync/sync_service.dart';
 import 'package:pos_app/features/driver/models/delivery_trip_model.dart';
 import 'package:pos_app/features/orders/models/order_model.dart';
-import 'package:pos_app/core/sync/sync_service.dart';
 
 void main() {
   group('Delivery Trip & Orders Domain & Serialization Tests', () {
@@ -224,8 +227,8 @@ void main() {
         id: idempotencyKey,
         operationType: 'DELIVER_ORDER',
         entityId: '$tripOrderId',
-        payload: payload,
-        timestamp: DateTime.now(),
+        payloadJson: jsonEncode(payload),
+        createdAt: DateTime.now(),
       );
 
       expect(routePath, equals('/delivery-trips/orders/501/deliver'));
@@ -248,8 +251,8 @@ void main() {
         id: idempotencyKey,
         operationType: 'FAIL_ORDER',
         entityId: '$tripOrderId',
-        payload: payload,
-        timestamp: DateTime.now(),
+        payloadJson: jsonEncode(payload),
+        createdAt: DateTime.now(),
       );
 
       expect(routePath, equals('/delivery-trips/orders/502/fail'));
