@@ -180,7 +180,7 @@ void main() {
         'trip_number': 'TRIP-001',
         'driver_id': 4,
         'trip_date': '2026-03-01',
-        'status': 'in_progress',
+        'status': 'IN_PROGRESS',
         'total_orders': 2,
         'total_amount_collected': 45000,
         'orders': [
@@ -188,7 +188,7 @@ void main() {
             'id': 1,
             'delivery_trip_id': 1,
             'sales_order_id': 10,
-            'status': 'delivered',
+            'status': 'DELIVERED',
             'delivery_order': 1,
             'received_amount': 45000,
           }

@@ -1,0 +1,85 @@
+00:00 +0: loading /app/applet/test/product_test.dart
+00:00 +0: /app/applet/test/product_test.dart: Product catalog listing and search
+00:00 +1: loading /app/applet/test/sync_coalescing_test.dart
+00:01 +1: /app/applet/test/sync_coalescing_test.dart: Sync Coalescing Safety UPDATE_ORDER coalesces when pending entry exists
+00:01 +2: /app/applet/test/sync_coalescing_test.dart: Sync Coalescing Safety STOCK_ADJUSTMENT does not coalesce when pending entry exists
+00:01 +3: /app/applet/test/sync_coalescing_test.dart: Sync Coalescing Safety PAY_SUPPLIER does not coalesce
+00:01 +4: loading /app/applet/test/provider_error_state_test.dart
+00:02 +4: /app/applet/test/provider_error_state_test.dart: Frontend Reliability & Parsing Scenarios a) Valid 200 + empty list => empty success
+00:02 +5: /app/applet/test/provider_error_state_test.dart: Frontend Reliability & Parsing Scenarios b) Malformed 200 payload => error (throws FormatException)
+00:02 +6: /app/applet/test/provider_error_state_test.dart: Frontend Reliability & Parsing Scenarios c) HTTP 401/403/500 => error (no cache fallback)
+00:02 +7: /app/applet/test/provider_error_state_test.dart: Frontend Reliability & Parsing Scenarios d) Genuine network failure with cache => cache fallback
+00:02 +8: /app/applet/test/provider_error_state_test.dart: Frontend Reliability & Parsing Scenarios e) Genuine network failure without cache => error
+00:02 +9: loading /app/applet/test/warehouse_packing_widget_test.dart
+00:04 +9: /app/applet/test/warehouse_packing_widget_test.dart: OrdersToPackScreen shows empty state when no orders
+00:05 +10: /app/applet/test/warehouse_packing_widget_test.dart: OrdersToPackScreen lists orders correctly
+00:06 +11: /app/applet/test/warehouse_packing_widget_test.dart: StockListScreen displays stock items from warehouseStocksProvider
+00:06 +12: loading /app/applet/test/api_contract_consistency_test.dart
+00:07 +12: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Audit Log Paginated JSON Contract Unwrapping
+00:08 +13: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Sales Report JSON Contract Verification
+00:08 +14: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Profit Report JSON Contract Verification
+00:08 +15: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Order Model JSON Contract Verification
+00:08 +16: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Delivery Trip Model JSON Contract Verification
+00:08 +17: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Supplier Model JSON Contract Verification
+00:08 +18: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Supplier Ledger Model JSON Contract Verification
+00:08 +19: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Commission Model JSON Contract Verification
+00:08 +20: /app/applet/test/api_contract_consistency_test.dart: API Contract Consistency & Response Parsing Tests Purchase Requirement Model JSON Contract Verification
+00:08 +21: loading /app/applet/test/responsive_layout_test.dart
+00:09 +21: /app/applet/test/responsive_layout_test.dart: Responsive layouts scale based on screen size
+00:09 +22: loading /app/applet/test/dual_entry_test.dart
+00:10 +22: /app/applet/test/dual_entry_test.dart: Dual-Entry Offline Concurrency & Safe Coalescing System Tests 1. Safe Coalescing: Multiple offline edits to same order coalesce into single pending operation
+00:10 +23: /app/applet/test/dual_entry_test.dart: Dual-Entry Offline Concurrency & Safe Coalescing System Tests 2. Concurrency Protection: Stale client base version (3) rejected when server version advanced (4)
+00:10 +24: /app/applet/test/dual_entry_test.dart: Dual-Entry Offline Concurrency & Safe Coalescing System Tests 3. Successful Sync: Matching base version (3) updates server and increments version to 4
+00:10 +25: /app/applet/test/dual_entry_test.dart: Dual-Entry Offline Concurrency & Safe Coalescing System Tests 4. Target Endpoint & Idempotency: UPDATE_ORDER uses PUT /orders/{id} and X-Idempotency-Key
+00:10 +26: /app/applet/test/dual_entry_test.dart: Dual-Entry Offline Concurrency & Safe Coalescing System Tests 5. Operation Type Isolation: CREATE_ORDER vs UPDATE_ORDER separation
+00:10 +27: loading /app/applet/test/login_test.dart
+00:11 +27: /app/applet/test/login_test.dart: Login screen validation and authentication flow
+00:12 +28: loading /app/applet/test/purchase_group_test.dart
+00:13 +28: /app/applet/test/purchase_group_test.dart: Purchase Requirement Grouping Verification Grouped purchase requirements correctly structure by supplier
+00:13 +29: /app/applet/test/purchase_group_test.dart: Purchase Requirement Grouping Verification Selecting a supplier group extracts all requirement IDs for PO creation
+00:13 +30: loading /app/applet/test/customer_test.dart
+00:14 +30: /app/applet/test/customer_test.dart: Customer creation and listing
+00:14 +31: loading /app/applet/test/payment_test.dart
+00:15 +31: /app/applet/test/payment_test.dart: Payment processing and ledger updates
+00:15 +32: loading /app/applet/test/sales_return_idempotency_test.dart
+00:17 +32: /app/applet/test/sales_return_idempotency_test.dart: Sales Return Idempotency & Sync Queue Verification Sales return creation enqueues with stable idempotency key
+00:17 +33: /app/applet/test/sales_return_idempotency_test.dart: Sales Return Idempotency & Sync Queue Verification Repeated sales return submission preserves identical idempotency key
+00:17 +34: loading /app/applet/test/sync_service_test.dart
+00:18 +34: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping Recursive ID mapping correctly replaces local_ IDs with server IDs
+00:18 +35: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping Validation error (422/400) marks operation as permanently FAILED (retryCount 999)
+00:18 +36: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping Conflict error (409) pauses synchronization loops
+00:18 +37: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping Network timeout or disconnect retains PENDING status and increments retryCount
+00:18 +38: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping Authentication error (401/403) halts execution for credential renewal
+00:18 +39: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 1. CREATE_CUSTOMER same-key retry sends identical entry.id header and preserves operation identity
+00:18 +40: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 2. UPDATE_CUSTOMER same-key retry reuses entry.id to hit backend idempotency cache
+00:18 +41: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 3. PURCHASE_RECEIVE operation mapping uses correct endpoint route
+00:18 +42: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 4. STOCK_TRANSFER operation mappings (CREATE, COMPLETE, CANCEL) construct valid API routes and assign local_ entityId for creation
+00:18 +43: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 5. STOCK_ADJUSTMENT operation mapping resolves warehouse_id and product_id correctly
+00:18 +44: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 6. Dependency ordering prevents execution of dependent operations with unresolved local_ entityId
+00:18 +45: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 7. Stale update or conflict error (409) keeps entry PENDING and halts batch
+00:18 +46: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 8. Duplicate CREATE_PAYMENT reuses same-key X-Idempotency-Key header
+00:18 +47: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 9. Duplicate DELIVER_ORDER reuses same-key X-Idempotency-Key header
+00:18 +48: /app/applet/test/sync_service_test.dart: Synchronization State Machine & ID Mapping 10. Duplicate CREATE_SALES_RETURN reuses same-key X-Idempotency-Key header
+00:18 +49: loading /app/applet/test/routing_test.dart
+00:19 +49: /app/applet/test/routing_test.dart: Routing redirects based on authentication and roles
+00:19 +50: loading /app/applet/test/widget_test.dart
+00:21 +50: /app/applet/test/widget_test.dart: PosApp initializes correctly
+00:23 +51: loading /app/applet/test/audit_log_navigation_test.dart
+00:24 +51: /app/applet/test/audit_log_navigation_test.dart: Audit Log Route Guard & Permission Verification Admin and Owner roles are permitted access to audit logs
+00:24 +52: loading /app/applet/test/rtl_test.dart
+00:25 +52: /app/applet/test/rtl_test.dart: RTL layouts are preserved
+00:25 +53: loading /app/applet/test/order_lifecycle_test.dart
+00:27 +53: /app/applet/test/order_lifecycle_test.dart: Order transitions through statuses correctly
+00:27 +54: loading /app/applet/test/role_guards_test.dart
+00:28 +54: /app/applet/test/role_guards_test.dart: Role guards protect unauthorized access
+00:28 +55: loading /app/applet/test/create_order_test.dart
+00:29 +55: /app/applet/test/create_order_test.dart: Create order cart logic and calculations
+00:29 +56: loading /app/applet/test/delivery_test.dart
+00:31 +56: /app/applet/test/delivery_test.dart: Delivery Trip & Orders Domain & Serialization Tests DeliveryTripModel and DeliveryTripOrderModel deserialize correctly from backend API response
+00:31 +57: /app/applet/test/delivery_test.dart: Delivery Trip & Orders Domain & Serialization Tests Trip status metrics and order filtering aggregate accurately
+00:31 +58: /app/applet/test/delivery_test.dart: Delivery Trip & Orders Domain & Serialization Tests Trip orders sequence correctly based on delivery_order index
+00:31 +59: /app/applet/test/delivery_test.dart: Delivery Trip & Orders Domain & Serialization Tests DeliveryTripOrderModel handles null and missing optional fields safely
+00:31 +60: /app/applet/test/delivery_test.dart: Delivery Sync Queue & Offline Idempotency Contract Tests DELIVER_ORDER sync queue mapping targets correct API endpoint and payload
+00:31 +61: /app/applet/test/delivery_test.dart: Delivery Sync Queue & Offline Idempotency Contract Tests FAIL_ORDER sync queue mapping targets correct API endpoint with failure reason
+00:31 +62: /app/applet/test/delivery_test.dart: Delivery Sync Queue & Offline Idempotency Contract Tests Repeated delivery confirmation preserves identical X-Idempotency-Key across retries
+00:31 +63: All tests passed!

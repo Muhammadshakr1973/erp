@@ -20,7 +20,7 @@ void main() {
         },
         'route_id': 2,
         'trip_date': '2026-03-02',
-        'status': 'in_progress',
+        'status': 'IN_PROGRESS',
         'total_orders': 2,
         'total_amount_collected': 35000,
         'created_at': '2026-03-02T08:00:00.000000Z',
@@ -29,7 +29,7 @@ void main() {
             'id': 501,
             'delivery_trip_id': 101,
             'sales_order_id': 2001,
-            'status': 'delivered',
+            'status': 'DELIVERED',
             'delivery_order': 1,
             'received_amount': 35000,
             'notes': 'Partial payment received on delivery',
@@ -56,7 +56,7 @@ void main() {
             'id': 502,
             'delivery_trip_id': 101,
             'sales_order_id': 2002,
-            'status': 'pending',
+            'status': 'PENDING',
             'delivery_order': 2,
             'received_amount': 0,
             'notes': null,
@@ -87,7 +87,7 @@ void main() {
       expect(trip.id, equals(101));
       expect(trip.tripNumber, equals('TRIP-2026-0001'));
       expect(trip.driverId, equals(4));
-      expect(trip.status, equals('in_progress'));
+      expect(trip.status, equals('IN_PROGRESS'));
       expect(trip.totalOrders, equals(2));
       expect(trip.totalAmountCollected, equals(35000));
       expect(trip.orders.length, equals(2));
@@ -96,7 +96,7 @@ void main() {
       expect(firstOrder.id, equals(501));
       expect(firstOrder.deliveryTripId, equals(101));
       expect(firstOrder.salesOrderId, equals(2001));
-      expect(firstOrder.status, equals('delivered'));
+      expect(firstOrder.status, equals('DELIVERED'));
       expect(firstOrder.deliveryOrder, equals(1));
       expect(firstOrder.receivedAmount, equals(35000));
       expect(firstOrder.notes, equals('Partial payment received on delivery'));
@@ -106,7 +106,7 @@ void main() {
 
       final secondOrder = trip.orders[1];
       expect(secondOrder.id, equals(502));
-      expect(secondOrder.status, equals('pending'));
+      expect(secondOrder.status, equals('PENDING'));
       expect(secondOrder.deliveryOrder, equals(2));
       expect(secondOrder.receivedAmount, equals(0));
       expect(secondOrder.order?.orderNumber, equals('ORD-2002'));
@@ -118,7 +118,7 @@ void main() {
           id: 1,
           deliveryTripId: 10,
           salesOrderId: 101,
-          status: 'delivered',
+          status: 'DELIVERED',
           deliveryOrder: 1,
           receivedAmount: 40000,
         ),
@@ -126,7 +126,7 @@ void main() {
           id: 2,
           deliveryTripId: 10,
           salesOrderId: 102,
-          status: 'failed',
+          status: 'FAILED',
           deliveryOrder: 2,
           receivedAmount: 0,
           failedReason: 'کڕیار لە شوێنەکە نەبوو',
@@ -135,15 +135,15 @@ void main() {
           id: 3,
           deliveryTripId: 10,
           salesOrderId: 103,
-          status: 'pending',
+          status: 'PENDING',
           deliveryOrder: 3,
           receivedAmount: 0,
         ),
       ];
 
       final total = tripOrders.length;
-      final delivered = tripOrders.where((o) => o.status == 'delivered').length;
-      final failed = tripOrders.where((o) => o.status == 'failed').length;
+      final delivered = tripOrders.where((o) => o.status == 'DELIVERED').length;
+      final failed = tripOrders.where((o) => o.status == 'FAILED').length;
       final pending = total - delivered - failed;
 
       expect(total, equals(3));
@@ -152,7 +152,7 @@ void main() {
       expect(pending, equals(1));
 
       final totalCollected = tripOrders
-          .where((o) => o.status == 'delivered')
+          .where((o) => o.status == 'DELIVERED')
           .fold<int>(0, (sum, item) => sum + item.receivedAmount);
       expect(totalCollected, equals(40000));
     });
@@ -163,7 +163,7 @@ void main() {
           id: 1,
           deliveryTripId: 10,
           salesOrderId: 101,
-          status: 'pending',
+          status: 'PENDING',
           deliveryOrder: 3,
           receivedAmount: 0,
         ),
@@ -171,7 +171,7 @@ void main() {
           id: 2,
           deliveryTripId: 10,
           salesOrderId: 102,
-          status: 'pending',
+          status: 'PENDING',
           deliveryOrder: 1,
           receivedAmount: 0,
         ),
@@ -179,7 +179,7 @@ void main() {
           id: 3,
           deliveryTripId: 10,
           salesOrderId: 103,
-          status: 'pending',
+          status: 'PENDING',
           deliveryOrder: 2,
           receivedAmount: 0,
         ),
@@ -200,7 +200,7 @@ void main() {
         'id': 12,
         'delivery_trip_id': 4,
         'sales_order_id': 99,
-        'status': 'pending',
+        'status': 'PENDING',
         'delivery_order': 1,
       };
 
