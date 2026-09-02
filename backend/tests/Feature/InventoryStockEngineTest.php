@@ -410,6 +410,7 @@ class InventoryStockEngineTest extends TestCase
         $this->assertEquals(0, $stock->fresh()->reserved_quantity);
 
         // Reset
+        $stock = $stock->fresh();
         $stock->update(['quantity' => 10, 'reserved_quantity' => 2]);
 
         // 2. Exact available: deducting 10 (which is the physical quantity) should succeed (physical qty becomes 0, reserved becomes 0)
@@ -418,6 +419,7 @@ class InventoryStockEngineTest extends TestCase
         $this->assertEquals(0, $stock->fresh()->reserved_quantity);
 
         // Reset
+        $stock = $stock->fresh();
         $stock->update(['quantity' => 10, 'reserved_quantity' => 2]);
 
         // 3. Greater than available physical quantity: deducting 11 should fail

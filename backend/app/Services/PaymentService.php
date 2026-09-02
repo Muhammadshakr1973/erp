@@ -71,7 +71,7 @@ class PaymentService
                 'customer_id'    => $customer->id,
                 'sales_order_id' => $data['sales_order_id'] ?? null,
                 'amount'         => $paymentAmount,
-                'payment_method' => $data['payment_method'] ?? 'CASH',
+                'payment_method' => isset($data['payment_method']) ? strtoupper($data['payment_method']) : 'CASH',
                 'paid_at'        => now()->toDateString(),
                 'collected_by'   => $user->id,
                 'received_by'    => $user->id,

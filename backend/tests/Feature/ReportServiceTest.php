@@ -123,6 +123,7 @@ class ReportServiceTest extends TestCase
             'total_cost' => 10000, // 20 * 500
             'total_profit' => 4000, // 14000 - 10000
             'status' => SalesOrder::STATUS_DELIVERED,
+            'created_by' => $this->salesman->id,
             'order_date' => now()->toDateString(),
         ]);
 
@@ -178,6 +179,7 @@ class ReportServiceTest extends TestCase
             'total_cost' => 50000,
             'total_profit' => 25000,
             'status' => SalesOrder::STATUS_DELIVERED,
+            'created_by' => $this->salesman->id,
             'order_date' => now()->toDateString(),
         ]);
 
@@ -269,6 +271,7 @@ class ReportServiceTest extends TestCase
             'total_amount' => 90000,
             'total_cost' => 60000,
             'total_profit' => 30000,
+            'created_by' => $this->salesman->id,
             'order_date' => now()->toDateString(),
         ]);
 

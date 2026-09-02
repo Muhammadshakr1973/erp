@@ -157,7 +157,8 @@ class SalesOrderService
             ]);
 
             // ئەگەر دۆخی تایبەت دیاری کرابوو وەک DRAFT ئەوا وەکو خۆی دەیهێڵینەوە، ئەگەرنا دەچێتە ڕەوتی CONFIRMED
-            $requestedStatus = $data['status'] ?? SalesOrder::STATUS_CONFIRMED;
+            $defaultStatus = isset($data['shared_key']) ? SalesOrder::STATUS_DRAFT : SalesOrder::STATUS_CONFIRMED;
+            $requestedStatus = $data['status'] ?? $defaultStatus;
             if ($requestedStatus === SalesOrder::STATUS_DRAFT) {
                 return $order;
             }
@@ -200,7 +201,7 @@ class SalesOrderService
             ]);
 
             // Remove old items
-            $order->items()->delete();
+            $order->items()->forceDelete();
 
             $subtotal = 0;
             $totalProfit = 0;
@@ -793,7 +794,7 @@ class SalesOrderService
             $this->checkCustomerAssignment($customer, $user);
 
             // Clear old items
-            $order->items()->delete();
+            $order->items()->forceDelete();
 
             $subtotal = 0;
             $totalProfit = 0;

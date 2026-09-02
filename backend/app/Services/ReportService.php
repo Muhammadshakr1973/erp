@@ -613,7 +613,7 @@ class ReportService
             $reserved = (int) $ws->reserved_quantity;
             $available = max(0, $quantity - $reserved);
             $minLevel = (int) $ws->min_stock_level;
-            $reorderQty = max(0, ($minLevel > 0 ? $minLevel * 2 : 50) - $available);
+            $reorderQty = max(0, ($minLevel > 0 ? $minLevel : 50) - $available);
 
             return [
                 'warehouse_id'       => $ws->warehouse_id,
