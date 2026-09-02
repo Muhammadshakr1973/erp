@@ -23,4 +23,9 @@ class CustomerPayment extends Model
     {
         return $this->belongsTo(User::class, 'collected_by');
     }
+
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
 }
