@@ -568,15 +568,22 @@ class PurchaseOrderTest extends TestCase
     }
 
     /** @test */
-    public function test_f_it_keeps_item_identity_distinct_for_same_product_across_multiple_po_lines()
+    public function test_f_it_keeps_item_identity_distinct_for_different_products_across_multiple_po_lines()
     {
         $order = PurchaseOrder::create([
-            'order_number' => 'PO-TEST-MULTI-LINES-SAME-PROD',
+            'order_number' => 'PO-TEST-MULTI-LINES-DIFF-PROD',
             'supplier_id' => $this->supplier->id,
             'warehouse_id' => $this->warehouse->id,
             'status' => 'DRAFT',
             'created_by' => $this->admin->id,
             'total_amount' => 10000,
+        ]);
+
+        $productB = Product::create([
+            'name' => 'Prod B',
+            'sku' => 'PB',
+            'cost_price' => 100,
+            'price_n1' => 150,
         ]);
 
         $line1 = $order->items()->create([
@@ -588,7 +595,7 @@ class PurchaseOrderTest extends TestCase
         ]);
 
         $line2 = $order->items()->create([
-            'product_id' => $this->product->id,
+            'product_id' => $productB->id,
             'quantity' => 50,
             'unit_cost' => 100,
             'total_cost' => 5000,

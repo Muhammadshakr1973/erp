@@ -459,7 +459,6 @@ class NotificationService
             ['token' => $token],
             [
                 'user_id' => $user->id,
-                'device_token' => $token,
                 'device_type' => $deviceType,
                 'device_name' => $deviceName,
                 'is_active' => true,

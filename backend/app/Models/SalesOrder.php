@@ -11,6 +11,7 @@ class SalesOrder extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = [
         'order_number',
+        'order_date',
         'shared_key',
         'version',
         'customer_id',
@@ -32,6 +33,7 @@ class SalesOrder extends Model
         'created_by',
     ];
     protected $casts = [
+        'order_date' => 'date',
         'permanent_discount_percent' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'confirmed_at' => 'datetime',
@@ -39,6 +41,15 @@ class SalesOrder extends Model
         'delivered_at' => 'datetime',
         'version' => 'integer',
     ];
+
+    protected static function booted()
+    {
+        static::saving(function ($order) {
+            if (empty($order->order_date)) {
+                $order->order_date = now()->toDateString();
+            }
+        });
+    }
     const STATUS_DRAFT = 'DRAFT';
     const STATUS_CONFIRMED = 'CONFIRMED';
     const STATUS_PACKING = 'PACKING';

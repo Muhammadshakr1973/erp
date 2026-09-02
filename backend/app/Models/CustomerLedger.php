@@ -23,6 +23,11 @@ class CustomerLedger extends Model
     // Ledger is immutable - prevent update/delete
     protected static function booted(): void
     {
+        static::creating(function ($ledger) {
+            if (empty($ledger->created_by)) {
+                $ledger->created_by = auth()->id() ?? 1;
+            }
+        });
         static::updating(fn() => false);
         static::deleting(fn() => false);
     }

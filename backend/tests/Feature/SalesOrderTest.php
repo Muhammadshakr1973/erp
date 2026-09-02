@@ -32,7 +32,7 @@ class SalesOrderTest extends TestCase
         $salesmanRole = Role::create([
             'name' => Role::SALESMAN,
             'display_name' => 'Salesman',
-            'permissions' => []
+            'permissions' => ['orders.create', 'orders.view', 'orders.update']
         ]);
 
         // Create user

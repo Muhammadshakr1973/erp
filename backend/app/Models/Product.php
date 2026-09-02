@@ -12,6 +12,24 @@ class Product extends Model
     use HasFactory, SoftDeletes, Auditable;
     protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'supplier_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
     protected $casts = ['is_active' => 'boolean', 'units_per_carton' => 'integer'];
+
+    protected static function booted()
+    {
+        static::saving(function ($product) {
+            if (!isset($product->cost_price) || $product->cost_price === null) {
+                $product->cost_price = 0;
+            }
+            if (!isset($product->price_n1) || $product->price_n1 === null) {
+                $product->price_n1 = 0;
+            }
+            if (!isset($product->price_n2) || $product->price_n2 === null) {
+                $product->price_n2 = $product->price_n1;
+            }
+            if (!isset($product->price_n3) || $product->price_n3 === null) {
+                $product->price_n3 = $product->price_n1;
+            }
+        });
+    }
     public function category()
     {
         return $this->belongsTo(Category::class);

@@ -18,6 +18,11 @@ class SupplierLedger extends Model
     }
     protected static function booted()
     {
+        static::creating(function ($ledger) {
+            if (empty($ledger->created_by)) {
+                $ledger->created_by = auth()->id() ?? 1;
+            }
+        });
         static::updating(fn() => false);
         static::deleting(fn() => false);
     }

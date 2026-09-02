@@ -11,7 +11,7 @@ use App\Models\Role;
 use App\Models\Route as CustomerRoute;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
-use App\Models\Stock;
+use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
 use App\Models\Supplier;
 use App\Models\SupplierLedger;
@@ -240,7 +240,7 @@ class ReportServiceTest extends TestCase
     public function test_low_stock_report_detects_inventory_under_threshold(): void
     {
         // Create stock item below min_stock_level
-        Stock::create([
+        WarehouseStock::create([
             'warehouse_id' => $this->warehouse->id,
             'product_id' => $this->product->id,
             'quantity' => 5,

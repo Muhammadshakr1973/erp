@@ -21,7 +21,10 @@ class CheckActiveUser
 
         if ($user && !$user->is_active) {
             // Revoke current token
-            $user->currentAccessToken()?->delete();
+            $token = $user->currentAccessToken();
+            if ($token && method_exists($token, 'delete')) {
+                $token->delete();
+            }
 
             return response()->json([
                 'message' => 'ئەم هەژمارە ناچالاک کراوە، پەیوەندی بە ئادمینەوە بکە.',
