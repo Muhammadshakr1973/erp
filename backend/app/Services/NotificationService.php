@@ -241,12 +241,13 @@ class NotificationService
     public function notifyLowStock(WarehouseStock $stock, Product $product): void
     {
         $title = 'ئاگاداری کەمبوونەوەی کاڵا لە کۆگا';
-        $body = "بڕی ماوەی کاڵای '{$product->name}' لە کۆگا تەنها {$stock->quantity} دانەیە (کەمترین ئاست: {$product->min_stock_level}).";
+        $body = "بڕی ماوەی کاڵای '{$product->name}' لە کۆگا تەنها {$stock->quantity} دانەیە (کەمترین ئاست: {$stock->min_stock_level}).";
 
         $data = [
             'product_id' => $product->id,
             'warehouse_id' => $stock->warehouse_id,
             'quantity' => $stock->quantity,
+            'min_stock_level' => $stock->min_stock_level,
             'action' => 'open_stock',
         ];
 
