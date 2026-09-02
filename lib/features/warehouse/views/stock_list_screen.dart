@@ -442,7 +442,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                         stock.productName.toLowerCase().contains(searchLower) ||
                         stock.barcode.toLowerCase().contains(searchLower);
                     if (_filterLowStock) {
-                      return matchesSearch && stock.quantity < 20;
+                      return matchesSearch && stock.quantity <= stock.minStockLevel;
                     }
                     return matchesSearch;
                   }).toList();
@@ -484,7 +484,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final stock = filtered[index];
-                      final bool isLow = stock.quantity < 20;
+                      final bool isLow = stock.quantity <= stock.minStockLevel;
 
                       return AppCard(
                         child: Row(

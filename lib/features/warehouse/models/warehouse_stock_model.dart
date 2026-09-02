@@ -7,6 +7,7 @@ class WarehouseStockModel {
   final String barcode;
   final int quantity;
   final int reservedQuantity;
+  final int minStockLevel;
 
   WarehouseStockModel({
     required this.id,
@@ -17,6 +18,7 @@ class WarehouseStockModel {
     required this.barcode,
     required this.quantity,
     required this.reservedQuantity,
+    required this.minStockLevel,
   });
 
   /// Authoritative available stock calculation per GARDI stock equation:
@@ -46,6 +48,7 @@ class WarehouseStockModel {
       barcode: pBarcode,
       quantity: json['quantity'] ?? 0,
       reservedQuantity: json['reserved_quantity'] ?? 0,
+      minStockLevel: json['min_stock_level'] ?? 0,
     );
   }
 }
