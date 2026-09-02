@@ -11,6 +11,10 @@ class AppRadius {
   static const double xxl = 24.0; // Bottom Sheet
   static const double pill = 999.0; // Badge, Chip
 
+  // Semantic Aliases
+  static const double input = md;
+  static const double card = lg;
+
   // BorderRadii
   static final BorderRadius radiusSm = BorderRadius.circular(sm);
   static final BorderRadius radiusMd = BorderRadius.circular(md);
@@ -18,4 +22,6 @@ class AppRadius {
   static final BorderRadius radiusXl = BorderRadius.circular(xl);
   static final BorderRadius radiusXxl = BorderRadius.circular(xxl);
   static final BorderRadius radiusPill = BorderRadius.circular(pill);
+  static final BorderRadius radiusInput = radiusMd;
+  static final BorderRadius radiusCard = radiusLg;
 }

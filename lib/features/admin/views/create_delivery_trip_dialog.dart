@@ -9,7 +9,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../driver/providers/driver_providers.dart';
-import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 
 class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
@@ -104,7 +103,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 750),
         child: Padding(
@@ -164,8 +163,8 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                             return Container(
                               padding: const EdgeInsets.all(AppSpacing.md),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.error.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(AppRadius.input),
+                                color: theme.colorScheme.error.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
                               child: const Text(
                                 'هیچ شۆفێرێکی چالاک نەدۆزرایەوە لە سیستەمدا.',
@@ -175,14 +174,14 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                           }
 
                           return DropdownButtonFormField<int>(
-                            value: _selectedDriverId,
+                            initialValue: _selectedDriverId,
                             decoration: InputDecoration(
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.md,
                                 vertical: AppSpacing.sm,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.input),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
                               hintText: 'شۆفێرێک هەڵبژێرە...',
                             ),
@@ -212,7 +211,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                       const SizedBox(height: AppSpacing.xs),
                       InkWell(
                         onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(AppRadius.input),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
@@ -220,7 +219,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                           ),
                           decoration: BoxDecoration(
                             border: Border.all(color: theme.dividerColor),
-                            borderRadius: BorderRadius.circular(AppRadius.input),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -245,7 +244,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                         decoration: InputDecoration(
                           hintText: 'تێبینی بۆ شۆفێر یان ڕێگای گەیاندن...',
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.input),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                         ),
                       ),
@@ -269,8 +268,8 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                               width: double.infinity,
                               padding: const EdgeInsets.all(AppSpacing.md),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
-                                borderRadius: BorderRadius.circular(AppRadius.card),
+                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(AppRadius.lg),
                               ),
                               child: const Column(
                                 children: [
@@ -306,9 +305,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                         } else {
                                           _selectedOrderIds.clear();
                                           for (final o in orders) {
-                                            if (o.id != null) {
-                                              _selectedOrderIds.add(o.id!);
-                                            }
+                                            _selectedOrderIds.add(o.id);
                                           }
                                         }
                                       });
@@ -328,10 +325,10 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: orders.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                                separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xs),
                                 itemBuilder: (context, index) {
                                   final order = orders[index];
-                                  final orderId = order.id ?? 0;
+                                  final orderId = order.id;
                                   final isSelected = _selectedOrderIds.contains(orderId);
 
                                   return Container(
@@ -342,9 +339,9 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                             : theme.dividerColor,
                                         width: isSelected ? 1.5 : 1.0,
                                       ),
-                                      borderRadius: BorderRadius.circular(AppRadius.input),
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
                                       color: isSelected
-                                          ? theme.colorScheme.primary.withOpacity(0.04)
+                                          ? theme.colorScheme.primary.withValues(alpha: 0.04)
                                           : null,
                                     ),
                                     child: CheckboxListTile(
