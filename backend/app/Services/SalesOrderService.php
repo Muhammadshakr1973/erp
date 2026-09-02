@@ -17,7 +17,7 @@ class SalesOrderService
 {
     protected array $validTransitions = [
         SalesOrder::STATUS_DRAFT => [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED],
-        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
@@ -371,6 +371,11 @@ class SalesOrderService
                     break;
 
                 case SalesOrder::STATUS_READY:
+                    // If transitioning directly from CONFIRMED to READY, auto-mark all items as packed!
+                    if ($oldStatus === SalesOrder::STATUS_CONFIRMED) {
+                        $lockedOrder->items()->update(['is_packed' => true]);
+                    }
+
                     // Count packed items
                     $packedCount = $lockedOrder->items()->where('is_packed', true)->count();
                     if ($packedCount === 0) {

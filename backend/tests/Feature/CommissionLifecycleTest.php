@@ -487,6 +487,17 @@ class CommissionLifecycleTest extends TestCase
     {
         $this->actingAs($this->admin);
 
+        $product = \App\Models\Product::create([
+            'name' => 'Test Product',
+            'sku' => 'TEST-SKU-RETURNS',
+            'unit' => 'PCS',
+            'cost_price' => 12000,
+            'price_n1' => 22000,
+            'price_n2' => 20000,
+            'price_n3' => 18000,
+            'is_active' => true,
+        ]);
+
         // Create delivered order: Sales 200,000, Cost 120,000, Profit 80,000
         $order = SalesOrder::create([
             'order_number'    => 'SO-20260828-999',
@@ -503,11 +514,12 @@ class CommissionLifecycleTest extends TestCase
 
         $orderItem = \App\Models\SalesOrderItem::create([
             'sales_order_id' => $order->id,
-            'product_id'     => 1, // Let's assume product_id 1
+            'product_id'     => $product->id,
             'quantity'       => 10,
             'unit_price'     => 20000,
             'cost_price'     => 12000,
-            'total'          => 200000,
+            'line_total'     => 200000,
+            'total_price'    => 200000,
         ]);
 
         // Create completed return on this order
@@ -523,7 +535,7 @@ class CommissionLifecycleTest extends TestCase
         $returnItem = \App\Models\SalesReturnItem::create([
             'sales_return_id'     => $return->id,
             'sales_order_item_id' => $orderItem->id,
-            'product_id'          => 1,
+            'product_id'          => $product->id,
             'quantity'            => 2,
             'unit_price'          => 20000,
             'total'               => 40000,

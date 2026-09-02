@@ -162,6 +162,12 @@ class SecurityAuthorizationTest extends TestCase
             'permissions' => ['delivery.update']
         ]);
 
+        $salesmanRole = Role::create([
+            'name' => 'salesman',
+            'display_name' => 'Salesman',
+            'permissions' => ['orders.create']
+        ]);
+
         $driver1 = User::create([
             'name' => 'Driver 1',
             'phone' => '07700000004',
@@ -178,19 +184,43 @@ class SecurityAuthorizationTest extends TestCase
             'is_active' => true
         ]);
 
+        $salesman = User::create([
+            'name' => 'Salesman User',
+            'phone' => '07700000099',
+            'password' => bcrypt('password'),
+            'role_id' => $salesmanRole->id,
+            'is_active' => true
+        ]);
+
+        $route = RouteModel::create(['name' => 'Route']);
+
+        $customer = Customer::create([
+            'name' => 'Customer User',
+            'phone' => '07704444499',
+            'route_id' => $route->id,
+            'current_balance' => 0
+        ]);
+
+        $warehouse = \App\Models\Warehouse::create([
+            'name' => 'Test WH',
+            'is_main' => true,
+            'is_active' => true
+        ]);
+
         $trip = DeliveryTrip::create([
             'trip_number' => 'TRP-1',
             'driver_id' => $driver1->id,
             'trip_date' => now()->toDateString(),
             'status' => 'IN_PROGRESS',
             'total_orders' => 1,
-            'created_by' => 1
+            'created_by' => $salesman->id
         ]);
 
         $order = SalesOrder::create([
             'order_number' => 'ORD-2',
-            'customer_id' => 1,
-            'salesman_id' => 1,
+            'customer_id' => $customer->id,
+            'salesman_id' => $salesman->id,
+            'warehouse_id' => $warehouse->id,
             'status' => 'IN_DELIVERY',
             'total_amount' => 100,
             'discount_amount' => 0,

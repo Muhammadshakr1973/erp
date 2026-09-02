@@ -185,7 +185,7 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertDatabaseHas('whatsapp_notification_logs', [
             'customer_id' => $this->customer->id,
             'notification_type' => 'PAYMENT_RECEIVED',
-            'reference_type' => 'CustomerPayment',
+            'reference_type' => 'customer_payment',
             'reference_id' => $payment->id,
         ]);
 

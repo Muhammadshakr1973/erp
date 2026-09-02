@@ -292,7 +292,7 @@ class InventoryStockEngineTest extends TestCase
             $payload
         );
         $response2->assertStatus(200);
-        $response2->assertSee('ئەم گۆڕانکارییە پێشتر تۆمارکراوە');
+        $response2->assertJsonFragment(['message' => 'ئەم گۆڕانکارییە پێشتر تۆمارکراوە (Idempotency Hit)']);
 
         // Check stock is only incremented once
         $stock = WarehouseStock::where('warehouse_id', $this->mainWarehouse->id)->where('product_id', $this->product->id)->first();

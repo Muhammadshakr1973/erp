@@ -150,6 +150,17 @@ class CommissionService
                 ]);
             }
 
+            // Clean up any old cancelled commissions for the exact same salesman and period to satisfy database unique constraint
+            $existingCancelled = SalesmanCommission::where('salesman_id', $salesman->id)
+                ->where('period_from', $periodFrom)
+                ->where('period_to', $periodTo)
+                ->where('status', SalesmanCommission::STATUS_CANCELLED)
+                ->get();
+            foreach ($existingCancelled as $oldComm) {
+                $oldComm->details()->delete();
+                $oldComm->delete();
+            }
+
             // پشکنینی ڕێگری لە دووبارەبوونەوە: ئایا کۆمسیۆنێکی چالاک لەم مەودایەدا هەیە؟
             $existingActive = SalesmanCommission::where('salesman_id', $salesman->id)
                 ->where('period_from', $periodFrom)
@@ -351,7 +362,9 @@ class CommissionService
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_PAID) {
-                return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver', 'payer']);
+                throw ValidationException::withMessages([
+                    'status' => 'ئەم کۆمسیۆنە پێشتر پارەکەی دراوە.',
+                ]);
             }
 
             if ($commission->status === SalesmanCommission::STATUS_CALCULATED) {

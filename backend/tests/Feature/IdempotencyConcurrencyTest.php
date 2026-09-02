@@ -78,7 +78,7 @@ class IdempotencyConcurrencyTest extends TestCase
             'is_active' => true,
         ]);
 
-        DB::table('warehouse_stocks')->insert([
+        DB::table('warehouse_stock')->insert([
             'warehouse_id' => $this->warehouse->id,
             'product_id' => $this->product->id,
             'quantity' => 100,
