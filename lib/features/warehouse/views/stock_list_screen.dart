@@ -402,20 +402,25 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                                   Text(
                                     stock.productName,
                                     style: AppTextStyles.bodyBold,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${stock.warehouseName} • حجز: ${stock.reservedQuantity} • بەردەست: ${stock.availableQuantity}',
+                                    '${stock.warehouseName} • حجزکراو: ${stock.reservedQuantity} • بەردەست: ${stock.availableQuantity}',
                                     style: AppTextStyles.caption,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 StatusBadge(
-                                  label: 'بڕ: ${stock.quantity}',
+                                  label: 'ستۆک: ${stock.quantity}',
                                   type: isLow
                                       ? StatusBadgeType.danger
                                       : StatusBadgeType.info,

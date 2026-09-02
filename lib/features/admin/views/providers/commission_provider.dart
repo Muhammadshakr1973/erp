@@ -15,7 +15,12 @@ final commissionsListProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final resData = response.data['data'] ?? response.data;
+          final dynamic resData;
+          if (response.data is Map && response.data.containsKey('data')) {
+            resData = response.data['data'];
+          } else {
+            resData = response.data;
+          }
           final List items;
           if (resData is List) {
             items = resData;
@@ -51,7 +56,12 @@ final commissionSummaryProvider =
           queryParameters: filters,
         );
         if (response.statusCode == 200) {
-          final resData = response.data['data'] ?? response.data;
+          final dynamic resData;
+          if (response.data is Map && response.data.containsKey('data')) {
+            resData = response.data['data'];
+          } else {
+            resData = response.data;
+          }
           if (resData is Map<String, dynamic>) {
             return resData;
           } else if (resData is Map) {

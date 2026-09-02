@@ -41,7 +41,12 @@ List<dynamic> parseAuditLogs(dynamic data) {
 
 // Helper function logic under test matching commission_provider.dart
 Map<String, dynamic> parseCommissionSummary(dynamic data) {
-  final resData = data is Map && data.containsKey('data') && data['data'] is Map ? data['data'] : data;
+  final dynamic resData;
+  if (data is Map && data.containsKey('data')) {
+    resData = data['data'];
+  } else {
+    resData = data;
+  }
   if (resData is Map<String, dynamic>) {
     return resData;
   } else if (resData is Map) {

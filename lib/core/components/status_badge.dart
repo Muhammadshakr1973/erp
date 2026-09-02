@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_extension.dart';
@@ -20,31 +21,37 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final ext = theme.extension<AppThemeExtension>()!;
+    final ext = theme.extension<AppThemeExtension>();
+
+    final successColor = ext?.success ?? AppColors.success;
+    final warningColor = ext?.warning ?? AppColors.warning;
+    final dangerColor = ext?.danger ?? AppColors.danger;
+    final infoColor = ext?.info ?? AppColors.info;
+    final purpleColor = ext?.purple ?? AppColors.purple;
 
     Color bgColor;
     Color textColor;
 
     switch (type) {
       case StatusBadgeType.success:
-        bgColor = ext.success.withOpacity(0.15);
-        textColor = ext.success;
+        bgColor = successColor.withOpacity(0.15);
+        textColor = successColor;
         break;
       case StatusBadgeType.warning:
-        bgColor = ext.warning.withOpacity(0.15);
-        textColor = ext.warning;
+        bgColor = warningColor.withOpacity(0.15);
+        textColor = warningColor;
         break;
       case StatusBadgeType.danger:
-        bgColor = ext.danger.withOpacity(0.15);
-        textColor = ext.danger;
+        bgColor = dangerColor.withOpacity(0.15);
+        textColor = dangerColor;
         break;
       case StatusBadgeType.info:
-        bgColor = ext.info.withOpacity(0.15);
-        textColor = ext.info;
+        bgColor = infoColor.withOpacity(0.15);
+        textColor = infoColor;
         break;
       case StatusBadgeType.purple:
-        bgColor = ext.purple.withOpacity(0.15);
-        textColor = ext.purple;
+        bgColor = purpleColor.withOpacity(0.15);
+        textColor = purpleColor;
         break;
       case StatusBadgeType.neutral:
       // ignore: unreachable_switch_default
