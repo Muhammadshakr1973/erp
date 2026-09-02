@@ -203,6 +203,21 @@ class SalesOrderController extends Controller
             ], 403);
         }
 
+        if ($user->role?->name === 'driver') {
+            $onTrip = \DB::table('delivery_trip_orders')
+                ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+                ->where('delivery_trip_orders.sales_order_id', $order->id)
+                ->where('delivery_trips.driver_id', $user->id)
+                ->exists();
+
+            if (!$onTrip) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی ئەم پسوڵەیە.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
+        }
+
         $updatedOrder = $this->salesOrderService->transitionTo($order, $status, $user);
 
         return response()->json([

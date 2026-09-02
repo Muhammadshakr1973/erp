@@ -609,4 +609,65 @@ class SecurityAuthorizationTest extends TestCase
             ->putJson("/api/v1/orders/{$orderOfSalesman1->id}", $updatePayloadAuthorized)
             ->assertStatus(200);
     }
+
+    /**
+     * Test that route salesman assignment rejects non-salesmen or inactive users.
+     */
+    public function test_route_assignment_rejects_non_salesmen_or_inactive_users(): void
+    {
+        $adminRole = Role::create([
+            'name' => Role::ADMIN,
+            'display_name' => 'Admin',
+            'permissions' => ['*']
+        ]);
+        $admin = User::create([
+            'name' => 'Admin User',
+            'phone' => '07709999999',
+            'password' => bcrypt('password'),
+            'role_id' => $adminRole->id,
+            'is_active' => true
+        ]);
+
+        $driverRole = Role::create([
+            'name' => Role::DRIVER,
+            'display_name' => 'Driver',
+            'permissions' => []
+        ]);
+        $driverUser = User::create([
+            'name' => 'Driver User',
+            'phone' => '07708888888',
+            'password' => bcrypt('password'),
+            'role_id' => $driverRole->id,
+            'is_active' => true
+        ]);
+
+        $salesmanRole = Role::create([
+            'name' => Role::SALESMAN,
+            'display_name' => 'Salesman',
+            'permissions' => []
+        ]);
+        $inactiveSalesman = User::create([
+            'name' => 'Inactive Salesman',
+            'phone' => '07707777777',
+            'password' => bcrypt('password'),
+            'role_id' => $salesmanRole->id,
+            'is_active' => false
+        ]);
+
+        $route = RouteModel::create(['name' => 'Route X']);
+
+        // 1. Assign driver (non-salesman) -> 422
+        $this->actingAs($admin)
+            ->postJson("/api/v1/routes/{$route->id}/assign-salesman", [
+                'salesman_id' => $driverUser->id,
+            ])
+            ->assertStatus(422);
+
+        // 2. Assign inactive salesman -> 422
+        $this->actingAs($admin)
+            ->postJson("/api/v1/routes/{$route->id}/assign-salesman", [
+                'salesman_id' => $inactiveSalesman->id,
+            ])
+            ->assertStatus(422);
+    }
 }

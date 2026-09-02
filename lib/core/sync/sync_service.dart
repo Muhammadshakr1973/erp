@@ -125,7 +125,7 @@ class SyncService {
 
       for (var entry in pendingEntries) {
         // Resolve ordering dependencies / replace temporary IDs with actual server IDs
-        _resolvePendingEntryWithMap(entry, idMap);
+        await _resolvePendingEntryWithMap(entry, idMap);
 
         // Dependency Guard: If entityId is still a temporary local ID ('local_...') for a non-creation operation,
         // it means its parent creation operation has not resolved a server ID yet.
@@ -259,20 +259,36 @@ class SyncService {
     }
   }
 
-  void _resolvePendingEntryWithMap(SyncQueueEntry entry, Map<String, dynamic> idMap) {
+  Future<void> _resolvePendingEntryWithMap(SyncQueueEntry entry, Map<String, dynamic> idMap) async {
     if (idMap.isEmpty) return;
+
+    bool mutated = false;
 
     // 1. Resolve entityId itself if it was mapped from a temporary local ID
     if (entry.entityId != null && idMap.containsKey(entry.entityId)) {
       entry.entityId = idMap[entry.entityId].toString();
+      mutated = true;
     }
 
     // 2. Resolve recursive occurrences of local IDs inside the payload
     try {
       final decoded = entry.payload;
       final resolved = _resolveValue(decoded, idMap);
-      entry.payload = resolved as Map<String, dynamic>;
+      if (jsonEncode(decoded) != jsonEncode(resolved)) {
+        entry.payload = resolved as Map<String, dynamic>;
+        mutated = true;
+      }
     } catch (_) {}
+
+    if (mutated) {
+      final oldId = entry.id;
+      final randomHex = _generateRandomHex(8);
+      final newKey = '${DateTime.now().microsecondsSinceEpoch}_${entry.entityId}_$randomHex';
+
+      await box.delete(oldId);
+      entry.id = newKey;
+      await box.put(newKey, entry);
+    }
   }
 
   dynamic _resolveValue(dynamic value, Map<String, dynamic> idMap) {

@@ -613,4 +613,38 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(30, $line1->fresh()->received_quantity);
         $this->assertEquals(40, $line2->fresh()->received_quantity);
     }
+
+    /** @test */
+    public function it_prevents_cancelling_partially_received_purchase_order()
+    {
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-TEST-PARTIAL-CANCEL',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+            'total_amount' => 10000,
+        ]);
+
+        $item = $order->items()->create([
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'unit_cost' => 100,
+            'total_cost' => 10000,
+            'received_quantity' => 0,
+        ]);
+
+        // Partially receive 20 items
+        $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/receive", [
+            'items' => [
+                ['item_id' => $item->id, 'product_id' => $this->product->id, 'quantity' => 20]
+            ]
+        ]);
+
+        // Attempt cancellation
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/cancel");
+
+        $response->assertStatus(422);
+        $this->assertNotEquals('CANCELLED', $order->fresh()->status);
+    }
 }

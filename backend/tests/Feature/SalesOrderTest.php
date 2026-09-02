@@ -997,5 +997,74 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(45000, $order->subtotal);
         $this->assertEquals(15000, $order->total_profit); // (7500 - 5000) * 6
     }
+
+    /** @test */
+    public function it_prevents_driver_from_updating_order_status_if_not_assigned_to_driver_trip()
+    {
+        $driverRole = Role::create([
+            'name' => Role::DRIVER,
+            'display_name' => 'Driver',
+            'permissions' => ['delivery.update']
+        ]);
+
+        $driverUser = User::factory()->create([
+            'role_id' => $driverRole->id,
+            'is_active' => true,
+        ]);
+
+        $order = SalesOrder::create([
+            'order_number' => 'ORD-DRV-1',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_IN_DELIVERY,
+            'subtotal' => 10000,
+            'total_amount' => 10000,
+            'total_profit' => 2000,
+            'created_by' => $this->salesman->id,
+        ]);
+
+        // Attempt status update by driver who is NOT assigned to this order via delivery_trip
+        $response = $this->actingAs($driverUser)->postJson("/api/v1/orders/{$order->id}/status", [
+            'status' => SalesOrder::STATUS_DELIVERED
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    /** @test */
+    public function it_deducts_discounts_from_total_profit()
+    {
+        // 1 item: qty 2, price 7500, cost 5000 => item profit = (7500 - 5000)*2 = 5000
+        // Permanent discount 10% on subtotal 15,000 = 1,500
+        // Invoice discount 5% on 13,500 = 675
+        // Total discount = 2,175
+        // Net Total profit = 5000 - 2175 = 2825
+        $this->customer->update([
+            'price_type' => 'N2',
+            'permanent_discount' => 10,
+        ]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_percent' => 5,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(15000, $order->subtotal);
+        $this->assertEquals(12825, $order->total_amount);
+        $this->assertEquals(2825, $order->total_profit); // 5000 item profit - 1500 perm discount - 675 invoice discount = 2825
+    }
 }
 

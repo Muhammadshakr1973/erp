@@ -235,12 +235,16 @@ class PurchaseOrderService
 
             if ($isFullyReceived) {
                 $lockedOrder->update([
-                    'status'      => 'RECEIVED',
+                    'status'      => PurchaseOrder::STATUS_RECEIVED,
                     'received_at' => now(),
                 ]);
 
                 // Close connected purchase requirements
                 $lockedOrder->requirements()->update(['status' => 'CLOSED']);
+            } elseif ($lockedOrder->status === PurchaseOrder::STATUS_DRAFT) {
+                $lockedOrder->update([
+                    'status' => PurchaseOrder::STATUS_CONFIRMED,
+                ]);
             }
 
             app(\App\Services\AuditService::class)->log([
@@ -281,6 +285,10 @@ class PurchaseOrderService
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
                 throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی کڕین هەڵبوەشێنرێتەوە چونکە پێشتر وەرگیراوە.']);
+            }
+
+            if ($lockedOrder->items()->where('received_quantity', '>', 0)->exists()) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی کڕین هەڵبوەشێنرێتەوە چونکە بەشێک لە کاڵاکانی وەرگیراون.']);
             }
 
             $oldStatus = $lockedOrder->status;

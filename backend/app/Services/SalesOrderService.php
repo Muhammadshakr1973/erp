@@ -144,6 +144,7 @@ class SalesOrderService
             }
 
             $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
+            $netTotalProfit = $totalProfit - $permDiscountAmount - $invoiceDiscountAmount;
 
             $order->update([
                 'subtotal' => $subtotal,
@@ -153,7 +154,7 @@ class SalesOrderService
                 'discount_amount' => $invoiceDiscountAmount,
                 'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
-                'total_profit' => $totalProfit,
+                'total_profit' => $netTotalProfit,
             ]);
 
             // ئەگەر دۆخی تایبەت دیاری کرابوو وەک DRAFT ئەوا وەکو خۆی دەیهێڵینەوە، ئەگەرنا دەچێتە ڕەوتی CONFIRMED
@@ -265,6 +266,7 @@ class SalesOrderService
             }
 
             $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
+            $netTotalProfit = $totalProfit - $permDiscountAmount - $invoiceDiscountAmount;
 
             $order->update([
                 'subtotal' => $subtotal,
@@ -274,7 +276,7 @@ class SalesOrderService
                 'discount_amount' => $invoiceDiscountAmount,
                 'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
-                'total_profit' => $totalProfit,
+                'total_profit' => $netTotalProfit,
             ]);
 
             $requestedStatus = $data['status'] ?? $order->status;
@@ -423,13 +425,14 @@ class SalesOrderService
                             $invoiceDiscountAmount = (int) round(($amountAfterPermDiscount * $lockedOrder->discount_percent) / 100);
                         }
                         $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
+                        $netTotalProfit = $totalProfit - $permDiscountAmount - $invoiceDiscountAmount;
 
                         $lockedOrder->update([
                             'subtotal' => $subtotal,
                             'permanent_discount_amount' => $permDiscountAmount,
                             'discount_amount' => $invoiceDiscountAmount,
                             'total_amount' => $totalAmount,
-                            'total_profit' => $totalProfit,
+                            'total_profit' => $netTotalProfit,
                         ]);
                     }
 
@@ -865,6 +868,7 @@ class SalesOrderService
             }
 
             $totalAmount = max(0, $amountAfterPermDiscount - $invoiceDiscountAmount);
+            $netTotalProfit = $totalProfit - $permDiscountAmount - $invoiceDiscountAmount;
 
             // Increment version and save order
             $order->update([
@@ -878,7 +882,7 @@ class SalesOrderService
                 'discount_amount' => $invoiceDiscountAmount,
                 'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
-                'total_profit' => $totalProfit,
+                'total_profit' => $netTotalProfit,
                 'version' => $order->version + 1,
             ]);
 

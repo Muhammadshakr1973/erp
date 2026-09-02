@@ -93,6 +93,19 @@ class RouteController extends Controller
             'work_date' => 'nullable|date',
         ]);
 
+        $salesman = User::where('id', $validated['salesman_id'])
+            ->where('is_active', true)
+            ->whereHas('role', function ($q) {
+                $q->where('name', Role::SALESMAN);
+            })->first();
+
+        if (!$salesman) {
+            return response()->json([
+                'message' => 'بەکارهێنەری هەڵبژێردراو چالاک نیست یان دەسەڵاتی مەندوبی نییە.',
+                'error' => 'Validation error. User must be an active salesman.'
+            ], 422);
+        }
+
         $workDate = $request->input('work_date') ?? now()->toDateString();
 
         $assignment = RouteSalesman::updateOrCreate(
