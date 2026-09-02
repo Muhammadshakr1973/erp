@@ -293,9 +293,9 @@ class WarehouseController extends Controller
             ], 403);
         }
 
-        if ($order->status !== SalesOrder::STATUS_PACKING) {
+        if ($order->status !== SalesOrder::STATUS_PACKING && $order->status !== SalesOrder::STATUS_CONFIRMED) {
             return response()->json([
-                'message' => 'تەنها پسوڵەی لە حاڵەتی پاکەتکردن دەکرێت بە ئامادەکراو بنرێت.'
+                'message' => 'تەنها پسوڵەی لە حاڵەتی پاکەتکردن یان پشتڕاستکراوە دەکرێت بە ئامادەکراو بنرێت.'
             ], 400);
         }
 

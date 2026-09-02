@@ -172,6 +172,7 @@ class SalesOrderService
             app(NotificationService::class)->notifyNewOrderCreated($order, $user);
         }
 
+        $order->wasRecentlyCreated = true;
         return $order;
     }
 
@@ -371,9 +372,12 @@ class SalesOrderService
                     break;
 
                 case SalesOrder::STATUS_READY:
-                    // If transitioning directly from CONFIRMED to READY, auto-mark all items as packed!
+                    // If transitioning directly from CONFIRMED to READY, auto-mark all items as packed if none are already packed!
                     if ($oldStatus === SalesOrder::STATUS_CONFIRMED) {
-                        $lockedOrder->items()->update(['is_packed' => true]);
+                        $hasPacked = $lockedOrder->items()->where('is_packed', true)->exists();
+                        if (!$hasPacked) {
+                            $lockedOrder->items()->update(['is_packed' => true]);
+                        }
                     }
 
                     // Count packed items

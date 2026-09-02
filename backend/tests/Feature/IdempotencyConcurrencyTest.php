@@ -113,7 +113,7 @@ class IdempotencyConcurrencyTest extends TestCase
 
         // Check database effects (Exactly 1 payment and ledger entries created)
         $this->assertEquals(1, DB::table('customer_payments')->count());
-        $this->assertEquals(1, DB::table('customer_ledgers')->count());
+        $this->assertEquals(1, DB::table('customer_ledger')->count());
 
         // 2. Resubmit with the same key
         $response2 = $this->actingAs($this->user)
@@ -127,7 +127,7 @@ class IdempotencyConcurrencyTest extends TestCase
 
         // Ensure database is safe - still only 1 record exists!
         $this->assertEquals(1, DB::table('customer_payments')->count());
-        $this->assertEquals(1, DB::table('customer_ledgers')->count());
+        $this->assertEquals(1, DB::table('customer_ledger')->count());
     }
 
     /**
@@ -429,7 +429,7 @@ class IdempotencyConcurrencyTest extends TestCase
 
         $response1->assertStatus(201);
         $this->assertEquals(1, DB::table('customer_payments')->count());
-        $this->assertEquals(1, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(1, DB::table('customer_ledger')->where('entry_type', 'PAYMENT')->count());
         $this->assertEquals(80000, $this->customer->fresh()->current_balance);
 
         // 2. Request 2: amount = 50,000 with SAME key
@@ -449,7 +449,7 @@ class IdempotencyConcurrencyTest extends TestCase
 
         // Verify NO second payment, NO second ledger entry, NO balance mutation
         $this->assertEquals(1, DB::table('customer_payments')->count());
-        $this->assertEquals(1, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(1, DB::table('customer_ledger')->where('entry_type', 'PAYMENT')->count());
         $this->assertEquals(80000, $this->customer->fresh()->current_balance);
     }
 
@@ -571,7 +571,7 @@ class IdempotencyConcurrencyTest extends TestCase
         $response1->assertStatus(200);
         $this->assertEquals(75000, $supplier->fresh()->current_balance);
         $this->assertEquals(1, DB::table('supplier_payments')->count());
-        $this->assertEquals(1, DB::table('supplier_ledgers')->count());
+        $this->assertEquals(1, DB::table('supplier_ledger')->count());
 
         // 2. Replay with identical payload and key (indefinite replay)
         $response2 = $this->actingAs($admin)
@@ -627,7 +627,7 @@ class IdempotencyConcurrencyTest extends TestCase
 
         // Both payments and ledgers are recorded
         $this->assertEquals(2, DB::table('customer_payments')->count());
-        $this->assertEquals(2, DB::table('customer_ledgers')->where('entry_type', 'PAYMENT')->count());
+        $this->assertEquals(2, DB::table('customer_ledger')->where('entry_type', 'PAYMENT')->count());
     }
 
     /**
@@ -645,12 +645,11 @@ class IdempotencyConcurrencyTest extends TestCase
             'is_active' => true
         ]);
 
-        // Assign userB to route for today
-        DB::table('route_salesmen')->insert([
-            'route_id' => $this->customer->route_id,
+        // Assign userB directly to customer instead of route_salesmen (to respect UNIQUE route_id+work_date)
+        DB::table('customer_assignments')->insert([
+            'customer_id' => $this->customer->id,
             'salesman_id' => $userB->id,
-            'work_date' => now()->toDateString(),
-            'is_active' => true,
+            'assigned_from' => now()->toDateString(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -701,12 +700,11 @@ class IdempotencyConcurrencyTest extends TestCase
             'is_active' => true
         ]);
 
-        // Assign userB to route for today
-        DB::table('route_salesmen')->insert([
-            'route_id' => $this->customer->route_id,
+        // Assign userB directly to customer instead of route_salesmen (to respect UNIQUE route_id+work_date)
+        DB::table('customer_assignments')->insert([
+            'customer_id' => $this->customer->id,
             'salesman_id' => $userB->id,
-            'work_date' => now()->toDateString(),
-            'is_active' => true,
+            'assigned_from' => now()->toDateString(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

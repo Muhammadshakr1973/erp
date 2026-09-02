@@ -558,7 +558,7 @@ class SalesReturnTest extends TestCase
             ->assertStatus(201);
 
         // Verify customer ledger entry exists
-        $this->assertDatabaseHas('customer_ledgers', [
+        $this->assertDatabaseHas('customer_ledger', [
             'customer_id' => $this->customer->id,
             'entry_type' => 'RETURN',
             'type' => 'credit',
@@ -791,7 +791,7 @@ class SalesReturnTest extends TestCase
         $this->assertEquals(-22500, $this->customer->current_balance);
 
         // Verify ledger updated exactly once for the total amount
-        $this->assertDatabaseHas('customer_ledgers', [
+        $this->assertDatabaseHas('customer_ledger', [
             'customer_id' => $this->customer->id,
             'entry_type' => 'RETURN',
             'amount' => 37500,

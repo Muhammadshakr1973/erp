@@ -87,7 +87,7 @@ class BusinessConcurrencyAndRollbackTest extends TestCase
 
         // Verify rollback happened - neither customer nor ledger should exist
         $this->assertDatabaseMissing('customers', ['phone' => '07509998877']);
-        $this->assertDatabaseMissing('customer_ledgers', ['amount' => 50000]);
+        $this->assertDatabaseMissing('customer_ledger', ['amount' => 50000]);
     }
 
     /** @test */
