@@ -590,10 +590,7 @@ class ReportService
     {
         $query = WarehouseStock::query()
             ->with(['product:id,name,sku,barcode,unit,cost_price,supplier_id,category_id', 'product.category:id,name', 'product.supplier:id,name', 'warehouse:id,name'])
-            ->where(function ($q) {
-                $q->whereColumn('quantity', '<=', 'min_stock_level')
-                  ->orWhere('quantity', '<=', 10);
-            });
+            ->lowStock();
 
         if (!empty($filters['warehouse_id'])) {
             $query->where('warehouse_id', $filters['warehouse_id']);
