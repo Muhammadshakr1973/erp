@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
@@ -80,11 +81,11 @@ class PurchaseActions {
     try {
       final sortedIds = List<int>.from(requirementIds)..sort();
       final key = idempotencyKey ??
-          'convert_${sortedIds.join('_')}_${notes != null ? notes.hashCode : 'none'}';
+          'convert_${sortedIds.join('_')}_${_deterministicHash(notes ?? 'none')}';
 
       await apiClient.client.post(
         '/purchase-requirements/convert',
-        data: {'requirement_ids': requirementIds, 'notes': notes},
+        data: {'requirement_ids': sortedIds, 'notes': notes},
         options: Options(
           headers: {
             'X-Idempotency-Key': key,
@@ -157,4 +158,25 @@ class PurchaseActions {
       throw Exception(apiClient.parseError(e));
     }
   }
+}
+
+String _deterministicHash(String input) {
+  final bytes = utf8.encode(input);
+  // FNV-1a 32-bit
+  int fnvHash = 2166136261;
+  for (final byte in bytes) {
+    fnvHash ^= byte;
+    fnvHash = (fnvHash * 16777619) & 0xFFFFFFFF;
+  }
+
+  // DJB2 hash
+  int djbHash = 5381;
+  for (final byte in bytes) {
+    djbHash = ((djbHash << 5) + djbHash) + byte;
+    djbHash = djbHash & 0xFFFFFFFF;
+  }
+
+  final fnvHex = fnvHash.toRadixString(16).padLeft(8, '0');
+  final djbHex = djbHash.toRadixString(16).padLeft(8, '0');
+  return '$fnvHex$djbHex';
 }

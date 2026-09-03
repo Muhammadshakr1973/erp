@@ -249,5 +249,124 @@ void main() {
         throwsException,
       );
     });
+
+    test('A. Same requirement set in different input orders produces the same canonical payload and same generated key', () async {
+      final actions = container.read(purchaseActionsProvider);
+      
+      // Order 1
+      await actions.convertRequirementsToPO(
+        requirementIds: [30, 10, 20],
+        notes: 'deterministic notes',
+      );
+      final req1 = mockInterceptor.lastRequest;
+      expect(req1, isNotNull);
+      final key1 = req1!.headers['X-Idempotency-Key'];
+      final payload1 = req1.data['requirement_ids'] as List<int>;
+
+      // Order 2
+      await actions.convertRequirementsToPO(
+        requirementIds: [20, 30, 10],
+        notes: 'deterministic notes',
+      );
+      final req2 = mockInterceptor.lastRequest;
+      expect(req2, isNotNull);
+      final key2 = req2!.headers['X-Idempotency-Key'];
+      final payload2 = req2.data['requirement_ids'] as List<int>;
+
+      expect(key1, equals(key2));
+      expect(payload1, equals([10, 20, 30]));
+      expect(payload2, equals([10, 20, 30]));
+    });
+
+    test('B. Different requirement sets produce different keys', () async {
+      final actions = container.read(purchaseActionsProvider);
+
+      await actions.convertRequirementsToPO(
+        requirementIds: [1, 2, 3],
+        notes: 'some notes',
+      );
+      final key1 = mockInterceptor.lastRequest!.headers['X-Idempotency-Key'];
+
+      await actions.convertRequirementsToPO(
+        requirementIds: [1, 2, 4],
+        notes: 'some notes',
+      );
+      final key2 = mockInterceptor.lastRequest!.headers['X-Idempotency-Key'];
+
+      expect(key1, isNot(equals(key2)));
+    });
+
+    test('C. Different notes produce different keys', () async {
+      final actions = container.read(purchaseActionsProvider);
+
+      await actions.convertRequirementsToPO(
+        requirementIds: [1, 2, 3],
+        notes: 'note A',
+      );
+      final key1 = mockInterceptor.lastRequest!.headers['X-Idempotency-Key'];
+
+      await actions.convertRequirementsToPO(
+        requirementIds: [1, 2, 3],
+        notes: 'note B',
+      );
+      final key2 = mockInterceptor.lastRequest!.headers['X-Idempotency-Key'];
+
+      expect(key1, isNot(equals(key2)));
+    });
+
+    test('D. Explicit idempotency key is preserved exactly', () async {
+      final actions = container.read(purchaseActionsProvider);
+      const customKey = 'explicit-custom-key-9999';
+
+      await actions.convertRequirementsToPO(
+        requirementIds: [1, 2],
+        idempotencyKey: customKey,
+      );
+
+      final key = mockInterceptor.lastRequest!.headers['X-Idempotency-Key'];
+      expect(key, equals(customKey));
+    });
+
+    test('E. Request payload uses the same canonical sorted requirement ID list represented by the generated key', () async {
+      final actions = container.read(purchaseActionsProvider);
+      final inputIds = [5, 2, 9, 1];
+
+      await actions.convertRequirementsToPO(
+        requirementIds: inputIds,
+        notes: 'payload check',
+      );
+
+      final req = mockInterceptor.lastRequest;
+      expect(req, isNotNull);
+      final sentPayload = req!.data['requirement_ids'] as List<int>;
+      expect(sentPayload, equals([1, 2, 5, 9]));
+
+      final generatedKey = req.headers['X-Idempotency-Key'] as String;
+      expect(generatedKey, contains('1_2_5_9'));
+    });
+
+    test('F. Existing confirm/cancel idempotency behavior remains intact', () async {
+      final actions = container.read(purchaseActionsProvider);
+
+      // Confirm purchase order
+      await actions.confirmPurchaseOrder(123);
+      final confirmReq = mockInterceptor.lastRequest;
+      expect(confirmReq, isNotNull);
+      expect(confirmReq!.headers['X-Idempotency-Key'], equals('confirm_po_123'));
+
+      // Confirm purchase order with explicit key
+      await actions.confirmPurchaseOrder(123, idempotencyKey: 'custom_confirm');
+      expect(mockInterceptor.lastRequest!.headers['X-Idempotency-Key'], equals('custom_confirm'));
+
+      // Cancel purchase order
+      await actions.cancelPurchaseOrder(456);
+      final cancelReq = mockInterceptor.lastRequest;
+      expect(cancelReq, isNotNull);
+      expect(cancelReq!.headers['X-Idempotency-Key'], equals('cancel_po_456'));
+
+      // Cancel purchase order with explicit key
+      await actions.cancelPurchaseOrder(456, idempotencyKey: 'custom_cancel');
+      expect(mockInterceptor.lastRequest!.headers['X-Idempotency-Key'], equals('custom_cancel'));
+    });
   });
 }
