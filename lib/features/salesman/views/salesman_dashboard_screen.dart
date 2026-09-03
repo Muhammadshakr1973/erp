@@ -12,6 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../shared/views/customer_selection_dialog.dart';
 import 'salesman_my_commissions_screen.dart';
 
 class SalesmanDashboardScreen extends ConsumerWidget {
@@ -48,12 +49,16 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           IconButton(
             icon: Icon(
               Icons.sync,
-              color: syncStatus == SyncStatus.syncing ? theme.colorScheme.primary : null,
+              color: syncStatus == SyncStatus.syncing
+                  ? theme.colorScheme.primary
+                  : null,
             ),
             onPressed: () {
               ref.read(syncServiceProvider).syncPendingOperations();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('دەستکرا بە سینککردنی داتاکان...')),
+                const SnackBar(
+                  content: Text('دەستکرا بە سینککردنی داتاکان...'),
+                ),
               );
             },
           ),
@@ -115,9 +120,22 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               crossAxisSpacing: AppSpacing.md,
               childAspectRatio: 2.5,
               children: [
-                _buildActionCard(context, 'پسوڵەی نوێ', AppIcons.newOrder, () {
-                  context.push('/salesman/create-order');
-                }),
+                _buildActionCard(
+                  context,
+                  'پسوڵەی نوێ',
+                  AppIcons.newOrder,
+                  () async {
+                    final selectedCustomer = await CustomerSelectionDialog.show(
+                      context,
+                    );
+                    if (selectedCustomer != null && context.mounted) {
+                      context.push(
+                        '/salesman/create-order',
+                        extra: {'preselectedCustomerId': selectedCustomer.id},
+                      );
+                    }
+                  },
+                ),
                 _buildActionCard(context, 'کۆمسیۆنەکانم', Icons.percent, () {
                   Navigator.push(
                     context,
@@ -209,7 +227,11 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSyncStatusBanner(BuildContext context, SyncStatus status, SyncService syncService) {
+  Widget _buildSyncStatusBanner(
+    BuildContext context,
+    SyncStatus status,
+    SyncService syncService,
+  ) {
     Color bgColor;
     Color borderColor;
     Color textColor;

@@ -9,6 +9,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../shared/views/customer_selection_dialog.dart';
 
 class SalesmanOrdersScreen extends ConsumerWidget {
   const SalesmanOrdersScreen({super.key});
@@ -23,8 +24,16 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () {
-                context.push('/salesman/create-order');
+              onPressed: () async {
+                final selectedCustomer = await CustomerSelectionDialog.show(
+                  context,
+                );
+                if (selectedCustomer != null && context.mounted) {
+                  context.push(
+                    '/salesman/create-order',
+                    extra: {'preselectedCustomerId': selectedCustomer.id},
+                  );
+                }
               },
             ),
             IconButton(
@@ -84,7 +93,16 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   ElevatedButton.icon(
-                    onPressed: () => context.push('/salesman/create-order'),
+                    onPressed: () async {
+                      final selectedCustomer =
+                          await CustomerSelectionDialog.show(context);
+                      if (selectedCustomer != null && context.mounted) {
+                        context.push(
+                          '/salesman/create-order',
+                          extra: {'preselectedCustomerId': selectedCustomer.id},
+                        );
+                      }
+                    },
                     icon: const Icon(Icons.add),
                     label: const Text('دروستکردنی پسوڵە'),
                   ),
@@ -175,7 +193,11 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                               ),
                               if (order.pendingSync) ...[
                                 const SizedBox(width: 4),
-                                const Icon(Icons.sync, size: 12, color: Colors.orange),
+                                const Icon(
+                                  Icons.sync,
+                                  size: 12,
+                                  color: Colors.orange,
+                                ),
                               ],
                             ],
                           ),

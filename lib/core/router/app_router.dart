@@ -130,6 +130,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               final extra = state.extra;
               if (extra is OrderModel) {
                 return CreateOrderScreen(existingOrder: extra);
+              } else if (extra is Map<String, dynamic> &&
+                  extra.containsKey('preselectedCustomerId')) {
+                return CreateOrderScreen(
+                  preselectedCustomerId: extra['preselectedCustomerId'] as int,
+                );
               }
               return const CreateOrderScreen();
             },
