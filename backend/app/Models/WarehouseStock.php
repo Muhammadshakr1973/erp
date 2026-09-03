@@ -33,10 +33,16 @@ class WarehouseStock extends Model
 
             $oldQty = (int) $oldQty;
 
-            // We capture the product here to ensure it's available for the afterCommit callback
-            $product = $stock->product;
+            DB::afterCommit(function () use ($stock, $oldQty, $newQty, $threshold) {
+                // Reload the authoritative WarehouseStock row
+                $stock->refresh();
+                // Load the related Product
+                $product = $stock->product;
 
-            DB::afterCommit(function () use ($stock, $oldQty, $newQty, $threshold, $product) {
+                if (!$product) {
+                    return;
+                }
+
                 $service = app(\App\Services\NotificationService::class);
 
                 // NOT-007: Out of Stock (quantity <= 0)
