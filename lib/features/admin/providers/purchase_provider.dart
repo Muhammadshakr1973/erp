@@ -99,10 +99,18 @@ class PurchaseActions {
     }
   }
 
-  Future<void> confirmPurchaseOrder(int orderId) async {
+  Future<void> confirmPurchaseOrder(int orderId, {String? idempotencyKey}) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
-      await apiClient.client.post('/purchase-orders/$orderId/confirm');
+      final key = idempotencyKey ?? 'confirm_po_$orderId';
+      await apiClient.client.post(
+        '/purchase-orders/$orderId/confirm',
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': key,
+          },
+        ),
+      );
       _ref.invalidate(purchaseOrdersProvider);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
@@ -130,10 +138,18 @@ class PurchaseActions {
     }
   }
 
-  Future<void> cancelPurchaseOrder(int orderId) async {
+  Future<void> cancelPurchaseOrder(int orderId, {String? idempotencyKey}) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
-      await apiClient.client.post('/purchase-orders/$orderId/cancel');
+      final key = idempotencyKey ?? 'cancel_po_$orderId';
+      await apiClient.client.post(
+        '/purchase-orders/$orderId/cancel',
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': key,
+          },
+        ),
+      );
       // Invalidate both lists
       _ref.invalidate(purchaseOrdersProvider);
       _ref.invalidate(purchaseRequirementsProvider);

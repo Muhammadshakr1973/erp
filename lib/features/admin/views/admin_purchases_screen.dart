@@ -215,38 +215,23 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _receivePO(PurchaseOrderModel order) async {
-    final confirmed = await AppDialog.showConfirm(
-      context,
-      title: 'وەرگرتنی کاڵاکان لە کۆگا',
-      message:
-          'ئایا دڵنیایت لە وەرگرتنی کاڵاکانی پسوڵەی کڕینی #${order.orderNumber}؟ ئەم کردارە ستۆکی کۆگا زیاد دەکات و قەرزەکە دەخاتە سەر کۆمپانیا.',
-      confirmText: 'وەرگرتن',
-      cancelText: 'پەشیمانبوونەوە',
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => ReceivePODialog(
+        order: order,
+        actions: ref.read(purchaseActionsProvider),
+      ),
     );
 
     if (confirmed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('داواکارییەکە جێبەجێ دەکرێت...')),
+        const SnackBar(
+          content: Text(
+            'کرداری وەرگرتنی پسوڵەی کڕین جێبەجێکرا',
+          ),
+          backgroundColor: AppColors.success,
+        ),
       );
-      try {
-        await ref.read(purchaseActionsProvider).receivePurchaseOrder(order.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'پسوڵەی کڕین بەسەرکەوتوویی وەرگیرا و ستۆک نوێکرایەوە',
-              ),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-          );
-        }
-      }
     }
   }
 
@@ -963,5 +948,219 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         ),
       ),
     );
+  }
+}
+
+class ReceivePODialog extends StatefulWidget {
+  final PurchaseOrderModel order;
+  final PurchaseActions actions;
+
+  const ReceivePODialog({
+    super.key,
+    required this.order,
+    required this.actions,
+  });
+
+  @override
+  State<ReceivePODialog> createState() => _ReceivePODialogState();
+}
+
+class _ReceivePODialogState extends State<ReceivePODialog> {
+  final Map<int, TextEditingController> _controllers = {};
+  final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    for (var item in widget.order.items) {
+      final remaining = item.quantity - item.receivedQuantity;
+      _controllers[item.id] = TextEditingController(text: remaining.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: Text(
+        'وەرگرتنی پسوڵەی کڕین #${widget.order.orderNumber}',
+        style: AppTextStyles.bodyBold,
+        textAlign: TextAlign.right,
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'دەتوانیت بڕی وەرگیراو بۆ هەر کاڵایەک دەستکاری بکەیت بۆ وەرگرتنی بەشەکی، یان سەرجەمیان وەک خۆی وەرگریت.',
+                  style: AppTextStyles.caption,
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ...widget.order.items.map((item) {
+                  final remaining = item.quantity - item.receivedQuantity;
+                  final controller = _controllers[item.id];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.productName,
+                          style: AppTextStyles.bodyBold,
+                          textDirection: TextDirection.rtl,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'سەرجەم: ${item.quantity} • وەرگیراو: ${item.receivedQuantity}',
+                              style: AppTextStyles.caption,
+                            ),
+                            Text(
+                              'مابووەوە: $remaining',
+                              style: AppTextStyles.caption.copyWith(
+                                color: remaining > 0 ? AppColors.warning : AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'بڕی وەرگیراوی ئەمجارە',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'پێویستە بڕێک بنووسیت';
+                            }
+                            final qty = int.tryParse(value);
+                            if (qty == null) {
+                              return 'پێویستە ژمارەی تەواو بێت';
+                            }
+                            if (qty < 0) {
+                              return 'ناتوانرێت بڕی کەمتر لە ٠ بێت';
+                            }
+                            if (qty > remaining) {
+                              return 'ناتوانرێت لە بڕی مابووەوە ($remaining) زیاتر بێت';
+                            }
+                            return null;
+                          },
+                        ),
+                        const Divider(height: AppSpacing.lg),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: const Text('پاشگەزبوونەوە'),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitFullReceive,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.success.withValues(alpha: 0.1),
+            foregroundColor: AppColors.success,
+          ),
+          child: const Text('وەرگرتنی تەواو'),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitPartialReceive,
+          child: const Text('وەرگرتنی دیاریکراو'),
+        ),
+      ],
+    );
+  }
+
+  void _submitFullReceive() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+    try {
+      await widget.actions.receivePurchaseOrder(widget.order.id);
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  void _submitPartialReceive() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final List<Map<String, dynamic>> itemsPayload = [];
+      for (var item in widget.order.items) {
+        final controller = _controllers[item.id];
+        final qty = int.parse(controller!.text);
+        if (qty > 0) {
+          itemsPayload.add({
+            'item_id': item.id,
+            'product_id': item.productId,
+            'quantity': qty,
+          });
+        }
+      }
+
+      if (itemsPayload.isEmpty) {
+        throw Exception('هیچ کاڵایەک هەڵنەبژێردراوە بۆ وەرگرتن (بڕی هەموویان ٠ یە).');
+      }
+
+      await widget.actions.receivePurchaseOrder(widget.order.id, items: itemsPayload);
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 }
