@@ -881,4 +881,211 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(30, $line1->fresh()->received_quantity);
         $this->assertEquals(40, $line2->fresh()->received_quantity);
     }
+
+    /** @test */
+    public function test_po_cancellation_lifecycle_requirements()
+    {
+        // Scenario A, C, D, H: Single ordered requirement, preserve sales order / other attributes, check audit trail
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-CANCEL-A',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'CONFIRMED',
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        $route = \App\Models\Route::create([
+            'name' => 'Route A',
+            'is_active' => true,
+        ]);
+
+        $customer = \App\Models\Customer::create([
+            'name' => 'Customer A',
+            'phone' => '07701234567',
+            'route_id' => $route->id,
+            'price_tier' => 'N1',
+            'is_active' => true,
+        ]);
+
+        $salesOrder = \App\Models\SalesOrder::create([
+            'order_number' => 'SO-123',
+            'customer_id' => $customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'PENDING',
+            'created_by' => $this->admin->id,
+            'total_amount' => 5000,
+        ]);
+
+        $requirement = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'purchase_order_id' => $order->id,
+            'sales_order_id' => $salesOrder->id,
+            'required_quantity' => 10,
+            'current_stock' => 5,
+            'status' => 'ORDERED',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/cancel");
+        $response->assertStatus(200);
+
+        $order->refresh();
+        $this->assertEquals('CANCELLED', $order->status);
+
+        $requirement->refresh();
+        $this->assertEquals('OPEN', $requirement->status);
+        $this->assertNull($requirement->purchase_order_id);
+
+        // Assert attributes are preserved
+        $this->assertEquals($salesOrder->id, $requirement->sales_order_id);
+        $this->assertEquals($this->product->id, $requirement->product_id);
+        $this->assertEquals($this->warehouse->id, $requirement->warehouse_id);
+        $this->assertEquals($this->supplier->id, $requirement->supplier_id);
+        $this->assertEquals(10, $requirement->required_quantity);
+        $this->assertEquals(5, $requirement->current_stock);
+
+        // Assert audit trail
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'REOPENED',
+            'entity_type' => 'PurchaseRequirement',
+            'entity_id' => $requirement->id,
+        ]);
+    }
+
+    /** @test */
+    public function test_po_cancellation_multiple_requirements()
+    {
+        // Scenario B: Multiple requirements linked to the same PO
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-CANCEL-B',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'CONFIRMED',
+            'created_by' => $this->admin->id,
+            'total_amount' => 2000,
+        ]);
+
+        $req1 = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'purchase_order_id' => $order->id,
+            'required_quantity' => 10,
+            'current_stock' => 0,
+            'status' => 'ORDERED',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $req2 = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'purchase_order_id' => $order->id,
+            'required_quantity' => 5,
+            'current_stock' => 0,
+            'status' => 'ORDERED',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/cancel");
+        $response->assertStatus(200);
+
+        $req1->refresh();
+        $req2->refresh();
+
+        $this->assertEquals('OPEN', $req1->status);
+        $this->assertNull($req1->purchase_order_id);
+
+        $this->assertEquals('OPEN', $req2->status);
+        $this->assertNull($req2->purchase_order_id);
+    }
+
+    /** @test */
+    public function test_po_cancellation_received_po_cannot_be_cancelled()
+    {
+        // Scenario E: RECEIVED PO cannot be cancelled
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-CANCEL-E',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'RECEIVED',
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/cancel");
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function test_po_cancellation_idempotency()
+    {
+        // Scenario F: Cancelling an already CANCELLED PO remains idempotent/no duplicate side effects
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-CANCEL-F',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'CANCELLED',
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson("/api/v1/purchase-orders/{$order->id}/cancel");
+        $response->assertStatus(200);
+
+        $order->refresh();
+        $this->assertEquals('CANCELLED', $order->status);
+    }
+
+    /** @test */
+    public function test_po_cancellation_rollback_on_exception()
+    {
+        // Scenario G: Transaction rollback leaves both PO and requirements unchanged if an exception occurs
+        $order = PurchaseOrder::create([
+            'order_number' => 'PO-CANCEL-G',
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => 'CONFIRMED',
+            'created_by' => $this->admin->id,
+            'total_amount' => 1000,
+        ]);
+
+        $requirement = PurchaseRequirement::create([
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'supplier_id' => $this->supplier->id,
+            'purchase_order_id' => $order->id,
+            'required_quantity' => 10,
+            'current_stock' => 0,
+            'status' => 'ORDERED',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $this->mock(\App\Services\AuditService::class, function ($mock) {
+            $mock->shouldReceive('log')
+                ->with(\Mockery::on(function ($argument) {
+                    return isset($argument['action']) && $argument['action'] === 'REOPENED';
+                }))
+                ->andThrow(new \Exception('Database error'));
+            
+            $mock->shouldReceive('log')->byDefault();
+        });
+
+        try {
+            app(\App\Services\PurchaseOrderService::class)->cancelOrder($order, $this->admin);
+            $this->fail('Expected exception was not thrown');
+        } catch (\Exception $e) {
+            $this->assertEquals('Database error', $e->getMessage());
+        }
+
+        $order->refresh();
+        $this->assertEquals('CONFIRMED', $order->status);
+
+        $requirement->refresh();
+        $this->assertEquals('ORDERED', $requirement->status);
+        $this->assertEquals($order->id, $requirement->purchase_order_id);
+    }
 }

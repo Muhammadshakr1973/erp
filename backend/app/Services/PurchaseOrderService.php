@@ -330,10 +330,34 @@ class PurchaseOrderService
             $lockedOrder->update(['status' => PurchaseOrder::STATUS_CANCELLED]);
 
             // داواکارییەکانی کڕین دەکرێنەوە بۆ ئەوەی دووبارە بکرێن بە پسوڵە ئەگەر پێویست بکات
-            $lockedOrder->requirements()->update([
-                'status' => 'OPEN',
-                'purchase_order_id' => null
-            ]);
+            $requirements = $lockedOrder->requirements()->get();
+
+            foreach ($requirements as $req) {
+                $oldReqStatus = $req->status;
+                $oldPOId = $req->purchase_order_id;
+
+                $req->update([
+                    'status' => 'OPEN',
+                    'purchase_order_id' => null
+                ]);
+
+                app(\App\Services\AuditService::class)->log([
+                    'action'      => 'REOPENED',
+                    'entity_type' => 'PurchaseRequirement',
+                    'entity_id'   => $req->id,
+                    'table_name'  => 'purchase_requirements',
+                    'old_values'  => [
+                        'status' => $oldReqStatus,
+                        'purchase_order_id' => $oldPOId
+                    ],
+                    'new_values'  => [
+                        'status' => 'OPEN',
+                        'purchase_order_id' => null
+                    ],
+                    'description' => "داواکاری کڕینی #{$req->id} گۆڕدرا لە {$oldReqStatus} بۆ OPEN و لۆگی purchase_order_id پاککرایەوە بەهۆی هەڵوەشاندنەوەی پسوڵەی کڕین",
+                    'user'        => $user,
+                ]);
+            }
 
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'CANCEL',
