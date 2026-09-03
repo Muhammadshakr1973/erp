@@ -47,8 +47,9 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (DioException e, handler) {
-          // Handle 401 Unauthorized or 403 Forbidden globally to protect client session
-          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+          // Handle 401 Unauthorized globally to protect client session
+          // 403 Forbidden means insufficient permissions, but the session is still valid
+          if (e.response?.statusCode == 401) {
             SharedPreferences.getInstance().then((prefs) {
               prefs.remove('auth_token');
               prefs.remove('current_user');

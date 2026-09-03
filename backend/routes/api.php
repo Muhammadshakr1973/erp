@@ -92,7 +92,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders/{id}/status', [SalesOrderController::class, 'updateStatus'])->middleware('idempotent'); // Status permissions checked inside controller method
         
         // Warehouses & Stock
-        Route::get('/warehouses', [WarehouseController::class, 'index'])->middleware('permission:stock.view');
+        Route::get('/warehouses', [WarehouseController::class, 'index']);
         Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::get('/warehouses/{warehouseId}/stock/{productId}/reconcile', [WarehouseController::class, 'reconcileStock'])->middleware('permission:stock.view');
         
