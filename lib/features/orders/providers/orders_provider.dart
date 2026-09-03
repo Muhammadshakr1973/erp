@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -238,6 +239,10 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   }
 });
 
+// Coalesce and debounce structures for rapid refetches
+final Map<String, int> _lastRefetchedVersions = {};
+final Map<String, Timer?> _refetchDebounceTimers = {};
+
 final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
   orderId,
@@ -269,6 +274,13 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
 
       final eventVersion = int.tryParse(eventData['version']?.toString() ?? '') ?? 0;
 
+      // Coalesce/debounce: ignore if we are already refetching/have refetched this or a newer version
+      final lastRefetched = _lastRefetchedVersions[orderId];
+      if (lastRefetched != null && lastRefetched >= eventVersion) {
+        debugPrint("Coalescing: already refetched or processing a version >= $eventVersion for order $orderId");
+        return;
+      }
+
       // Read current local authoritative order from cache to do version comparison
       final cachedStr = localBox.get(orderId);
       if (cachedStr != null) {
@@ -293,29 +305,50 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
           if (eventVersion == currentVersion + 1) {
             debugPrint("Accepting next expected version $eventVersion");
             if (eventData['authoritative_signal'] == 'refetch') {
-              ref.invalidateSelf();
-              ref.invalidate(ordersListProvider);
+              _lastRefetchedVersions[orderId] = eventVersion;
+              _refetchDebounceTimers[orderId]?.cancel();
+              _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+                debugPrint("Coalesced refetch triggered for order $orderId at version $eventVersion");
+                ref.invalidateSelf();
+                ref.invalidate(ordersListProvider);
+              });
             }
           } else {
             // Version skipped (eventVersion > currentVersion + 1)
             // Trigger a full server refetch to heal state.
             debugPrint("Version skipped (event version $eventVersion > expected ${currentVersion + 1}). Invalidating self to refetch.");
-            ref.invalidateSelf();
-            ref.invalidate(ordersListProvider);
+            _lastRefetchedVersions[orderId] = eventVersion;
+            _refetchDebounceTimers[orderId]?.cancel();
+            _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+              debugPrint("Coalesced refetch (skipped version) triggered for order $orderId at version $eventVersion");
+              ref.invalidateSelf();
+              ref.invalidate(ordersListProvider);
+            });
           }
         } catch (e) {
-          ref.invalidateSelf();
-          ref.invalidate(ordersListProvider);
+          _lastRefetchedVersions[orderId] = eventVersion;
+          _refetchDebounceTimers[orderId]?.cancel();
+          _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+            ref.invalidateSelf();
+            ref.invalidate(ordersListProvider);
+          });
         }
       } else {
         // No local cache yet, refetch
-        ref.invalidateSelf();
-        ref.invalidate(ordersListProvider);
+        _lastRefetchedVersions[orderId] = eventVersion;
+        _refetchDebounceTimers[orderId]?.cancel();
+        _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+          ref.invalidateSelf();
+          ref.invalidate(ordersListProvider);
+        });
       }
     });
 
     // Unsubscribe when provider is disposed to clean subscription lifecycle (PRV-001)
     ref.onDispose(() {
+      _refetchDebounceTimers[orderId]?.cancel();
+      _refetchDebounceTimers.remove(orderId);
+      _lastRefetchedVersions.remove(orderId);
       pusher.unsubscribeFromOrder(parsedId);
     });
   }

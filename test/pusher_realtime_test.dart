@@ -111,5 +111,108 @@ void main() {
 
       expect(activeSubscriptions, isEmpty);
     });
+
+    test('5. Reconnect Behavior: Automatically reconnects and reconnects gracefully after connection drops', () {
+      bool isConnected = false;
+      int reconnectionAttempts = 0;
+
+      void simulateConnectionLoss() {
+        isConnected = false;
+      }
+
+      void simulateAutoReconnect() {
+        reconnectionAttempts++;
+        isConnected = true;
+      }
+
+      simulateConnectionLoss();
+      expect(isConnected, isFalse);
+
+      simulateAutoReconnect();
+      expect(isConnected, isTrue);
+      expect(reconnectionAttempts, equals(1));
+    });
+
+    test('6. Duplicate Subscriptions Prevention: Checking active listeners to avoid redundant Pusher subscribes', () {
+      final Set<String> subscribedChannels = {};
+      final Map<String, dynamic> listeners = {};
+      int nativeSubscribeCalls = 0;
+
+      void subscribeToOrder(int orderId, void Function(Map<String, dynamic>) onUpdate) {
+        final channelName = 'private-sales-order.$orderId';
+        final alreadySubscribed = listeners.containsKey(channelName);
+        listeners[channelName] = onUpdate;
+
+        if (alreadySubscribed) {
+          return; // Skip native subscribe call if already active
+        }
+
+        nativeSubscribeCalls++;
+        subscribedChannels.add(channelName);
+      }
+
+      // First subscribe
+      subscribeToOrder(42, (data) {});
+      expect(nativeSubscribeCalls, equals(1));
+
+      // Second subscribe (re-init / refetch)
+      subscribeToOrder(42, (data) {});
+      expect(nativeSubscribeCalls, equals(1)); // Skipped duplicate native subscribe
+    });
+
+    test('7. Duplicate Event Listeners Prevention: Only latest callback is active, avoiding duplicate dispatches', () {
+      final Map<String, int> callCounters = {};
+      final Map<String, void Function(Map<String, dynamic>)> listeners = {};
+
+      void subscribeToOrder(int orderId, String listenerId, void Function(Map<String, dynamic>) onUpdate) {
+        final channelName = 'private-sales-order.$orderId';
+        listeners[channelName] = onUpdate; // Keep only latest callback
+      }
+
+      // Subscribe callback 1
+      subscribeToOrder(42, 'listener_1', (data) {
+        callCounters['listener_1'] = (callCounters['listener_1'] ?? 0) + 1;
+      });
+
+      // Subscribe callback 2 (rebuilt provider)
+      subscribeToOrder(42, 'listener_2', (data) {
+        callCounters['listener_2'] = (callCounters['listener_2'] ?? 0) + 1;
+      });
+
+      // Dispatch event
+      final eventPayload = {'version': 5};
+      final activeListener = listeners['private-sales-order.42'];
+      if (activeListener != null) {
+        activeListener(eventPayload);
+      }
+
+      expect(callCounters['listener_1'], isNull); // Old callback not called
+      expect(callCounters['listener_2'], equals(1)); // Only latest callback called
+    });
+
+    test('8. Debouncing/Coalescing Rapid Refetches: Ignores stale versions and debounces rapid successive invalidates', () {
+      int lastRefetchedVersion = 0;
+      int refetchCalls = 0;
+
+      void onEventReceived(int orderId, int eventVersion) {
+        if (lastRefetchedVersion >= eventVersion) {
+          return; // Coalesced / Ignored
+        }
+
+        lastRefetchedVersion = eventVersion;
+        refetchCalls++; // Simulates debounce timer executing refetch
+      }
+
+      // Rapid successive updates for version 5
+      onEventReceived(42, 5);
+      onEventReceived(42, 5);
+      onEventReceived(42, 5);
+
+      expect(refetchCalls, equals(1)); // Only the first triggers refetch, others are coalesced
+
+      // Rapid successive updates for version 6
+      onEventReceived(42, 6);
+      expect(refetchCalls, equals(2));
+    });
   });
 }

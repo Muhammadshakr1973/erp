@@ -47,4 +47,12 @@ class AuthController extends Controller
             ]
         ], 200);
     }
+
+    public function broadcastingConfig(Request $request): JsonResponse
+    {
+        return response()->json([
+            'key' => config('broadcasting.connections.pusher.key'),
+            'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+        ], 200);
+    }
 }

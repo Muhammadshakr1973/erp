@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../models/user_model.dart';
 
 import 'dart:convert';
@@ -137,6 +138,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
+    try {
+      ref.read(pusherServiceProvider).disconnect();
+    } catch (_) {}
+
     try {
       final api = ref.read(apiClientProvider);
       await api.client.post('/auth/logout');
