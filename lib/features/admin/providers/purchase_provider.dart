@@ -74,12 +74,22 @@ class PurchaseActions {
   Future<void> convertRequirementsToPO({
     required List<int> requirementIds,
     String? notes,
+    String? idempotencyKey,
   }) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
+      final sortedIds = List<int>.from(requirementIds)..sort();
+      final key = idempotencyKey ??
+          'convert_${sortedIds.join('_')}_${notes != null ? notes.hashCode : 'none'}';
+
       await apiClient.client.post(
         '/purchase-requirements/convert',
         data: {'requirement_ids': requirementIds, 'notes': notes},
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': key,
+          },
+        ),
       );
       // Invalidate the lists to trigger a refresh
       _ref.invalidate(purchaseRequirementsProvider);

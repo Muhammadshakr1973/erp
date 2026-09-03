@@ -8,9 +8,11 @@ class PurchaseRequirementModel {
   final String? supplierName;
   final int requiredQuantity;
   final int currentStock;
+  final int suggestedQuantity;
   final bool isUrgent;
   final String status;
   final int? salesOrderId;
+  final int? purchaseOrderId;
   final String? createdByName;
 
   PurchaseRequirementModel({
@@ -23,9 +25,11 @@ class PurchaseRequirementModel {
     this.supplierName,
     required this.requiredQuantity,
     required this.currentStock,
+    required this.suggestedQuantity,
     required this.isUrgent,
     required this.status,
     this.salesOrderId,
+    this.purchaseOrderId,
     this.createdByName,
   });
 
@@ -44,9 +48,11 @@ class PurchaseRequirementModel {
           : null,
       requiredQuantity: json['required_quantity'] ?? 0,
       currentStock: json['current_stock'] ?? 0,
+      suggestedQuantity: json['suggested_quantity'] ?? 0,
       isUrgent: json['is_urgent'] == true || json['is_urgent'] == 1,
       status: json['status'] ?? 'OPEN',
       salesOrderId: json['sales_order_id'],
+      purchaseOrderId: json['purchase_order_id'],
       createdByName: json['creator'] != null
           ? json['creator']['name'] ?? ''
           : '',
