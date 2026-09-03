@@ -152,6 +152,38 @@ class SyncService {
           entry.syncResult = result;
           await entry.save();
 
+          // Look-ahead version adjustment for subsequent updates of the same entity
+          if (entry.operationType == 'UPDATE_ORDER' || entry.operationType == 'CREATE_ORDER') {
+            final targetEntityId = entry.entityId;
+            if (targetEntityId != null) {
+              int? serverVersion;
+              if (result is Map) {
+                final dataObj = result['data'] ?? result;
+                if (dataObj is Map && dataObj['version'] != null) {
+                  serverVersion = int.tryParse(dataObj['version'].toString());
+                }
+              }
+
+              if (serverVersion != null) {
+                final subsequentOps = box.values.where(
+                  (e) =>
+                      e.entityId == targetEntityId &&
+                      e.operationType == 'UPDATE_ORDER' &&
+                      (e.status == 'PENDING' || e.status == 'FAILED'),
+                );
+                for (final nextEntry in subsequentOps) {
+                  final payload = Map<String, dynamic>.from(nextEntry.payload);
+                  final currentPayloadVersion = int.tryParse(payload['version']?.toString() ?? '1') ?? 1;
+                  if (currentPayloadVersion < serverVersion) {
+                    payload['version'] = serverVersion;
+                    nextEntry.payload = payload;
+                    await nextEntry.save();
+                  }
+                }
+              }
+            }
+          }
+
           // If the entry created an entity (e.g. customer/order) and had a temporary ID, map it to server ID
           if (entry.entityId != null && entry.entityId!.startsWith('local_')) {
             dynamic serverId;
@@ -200,6 +232,9 @@ class SyncService {
                         if (responseData['created_at'] != null) {
                           cachedJson['created_at'] = responseData['created_at'];
                         }
+                        if (responseData['version'] != null) {
+                          cachedJson['version'] = responseData['version'];
+                        }
                       }
                     }
                     cachedJson['pending_sync'] = false;
@@ -211,6 +246,18 @@ class SyncService {
                 } catch (_) {}
               }
             }
+          } else if (entry.operationType == 'UPDATE_ORDER') {
+            try {
+              final localBox = await Hive.openBox<String>('local_orders');
+              if (result is Map) {
+                final responseData = result['data'] ?? result;
+                if (responseData is Map) {
+                  final Map<String, dynamic> castedJson = Map<String, dynamic>.from(responseData);
+                  castedJson['pending_sync'] = false;
+                  await localBox.put(entry.entityId!, jsonEncode(castedJson));
+                }
+              }
+            } catch (_) {}
           }
         } on DioException catch (e) {
           final statusCode = e.response?.statusCode;
@@ -222,11 +269,38 @@ class SyncService {
             await entry.save();
             break; // Pause syncing loop
           } else if (statusCode == 409) {
-            // Idempotency Conflict / already processing
-            entry.status = 'PENDING';
-            entry.errorInformation = 'ئەم کردەوەیە ئێستا لە سێرڤەردا لە پرۆسەدایە...';
-            await entry.save();
-            break; // Pause syncing loop
+            final responseData = e.response?.data;
+            bool isVersionConflict = false;
+            if (responseData is Map) {
+              isVersionConflict = responseData['error'] == 'CONFLICT_VERSION';
+            } else if (responseData is String) {
+              try {
+                final decoded = jsonDecode(responseData);
+                if (decoded is Map && decoded['error'] == 'CONFLICT_VERSION') {
+                  isVersionConflict = true;
+                }
+              } catch (_) {}
+            }
+
+            if (isVersionConflict) {
+              // G) FAILURE STATES: For version conflicts, mark as FAILED (recoverable), retryCount=999 (do not auto-retry)
+              // and expose structured information for UI conflict handling.
+              entry.status = 'FAILED';
+              entry.retryCount = 999;
+              entry.errorInformation = jsonEncode({
+                'type': 'CONFLICT_VERSION',
+                'message': responseData is Map ? (responseData['message'] ?? '') : 'Version conflict',
+                'current_version': responseData is Map ? responseData['current_version'] : null,
+                'conflict_data': responseData is Map ? responseData['conflict_data'] : null,
+              });
+              await entry.save();
+            } else {
+              // Idempotency Conflict / already processing
+              entry.status = 'PENDING';
+              entry.errorInformation = 'ئەم کردەوەیە ئێستا لە سێرڤەردا لە پرۆسەدایە...';
+              await entry.save();
+              break; // Pause syncing loop
+            }
           } else if (statusCode == 422 || statusCode == 400) {
             // Validation/Client errors: inherently invalid request
             // Mark as FAILED and set retry count to max to prevent infinite retry loops

@@ -23,4 +23,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (\App\Exceptions\ConcurrencyConflictException $e, Request $request) {
+            $order = $e->getOrder();
+            return response()->json([
+                'error' => 'CONFLICT_VERSION',
+                'message' => $e->getMessage(),
+                'current_version' => $order->version,
+                'conflict_data' => [
+                    'order_id' => $order->id,
+                    'version' => $order->version,
+                    'total_amount' => $order->total_amount,
+                    'subtotal' => $order->subtotal,
+                ]
+            ], 409);
+        });
     })->create();

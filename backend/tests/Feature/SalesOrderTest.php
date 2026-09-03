@@ -1185,5 +1185,110 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(15000, $order->total_amount);
         $this->assertEquals(-5000, $order->total_profit); // -4000 raw profit - 1000 discount = -5000
     }
+
+    /** @test */
+    public function it_rejects_stale_version_updates_with_409_conflict()
+    {
+        // 1. Create a shared sales order with version 1
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => 'shared-conflict-test',
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+        $order = SalesOrder::latest('id')->first();
+        $this->assertEquals(1, $order->version);
+
+        // 2. Client A updates with version 1 -> Successful
+        $updatePayloadA = [
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 3,
+                ]
+            ]
+        ];
+        $response = $this->actingAs($this->salesman)->putJson("/api/v1/orders/{$order->id}", $updatePayloadA);
+        $response->assertStatus(200);
+
+        $order->refresh();
+        $this->assertEquals(2, $order->version); // version incremented to 2
+
+        // 3. Client B attempts update using stale version 1 -> Triggers Concurrency Conflict (409)
+        $updatePayloadB = [
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 4,
+                ]
+            ]
+        ];
+        $response = $this->actingAs($this->salesman)->putJson("/api/v1/orders/{$order->id}", $updatePayloadB);
+        $response->assertStatus(409);
+        $response->assertJsonStructure([
+            'error',
+            'message',
+            'current_version',
+            'conflict_data' => [
+                'order_id',
+                'version',
+                'total_amount',
+                'subtotal'
+            ]
+        ]);
+        $response->assertJson([
+            'error' => 'CONFLICT_VERSION',
+            'current_version' => 2
+        ]);
+    }
+
+    /** @test */
+    public function it_allows_correct_version_update_and_increments_version()
+    {
+        // 1. Create shared sales order
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'shared_key' => 'shared-success-test',
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
+        $response->assertStatus(201);
+        $order = SalesOrder::latest('id')->first();
+
+        // 2. Update with version 1
+        $updatePayload = [
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 5,
+                ]
+            ]
+        ];
+        $response = $this->actingAs($this->salesman)->putJson("/api/v1/orders/{$order->id}", $updatePayload);
+        $response->assertStatus(200);
+
+        $order->refresh();
+        $this->assertEquals(2, $order->version);
+    }
 }
 

@@ -58,14 +58,26 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
           .toList();
 
       // Update local cache: clear server-cached entries (keys not starting with 'local_')
+      // Only delete if there is no pending/failed/syncing operation in the sync queue
       final keysToDelete = localBox.keys
-          .where((k) => !k.toString().startsWith('local_'))
+          .where((k) {
+            final keyStr = k.toString();
+            if (keyStr.startsWith('local_')) return false;
+            final hasPendingOp = syncBox.values.any(
+              (entry) =>
+                  entry.entityId == keyStr &&
+                  (entry.status == 'PENDING' ||
+                      entry.status == 'FAILED' ||
+                      entry.status == 'SYNCING'),
+            );
+            return !hasPendingOp;
+          })
           .toList();
       for (final key in keysToDelete) {
         await localBox.delete(key);
       }
 
-      // Write new online orders
+      // Write new online orders, preserving those that have pending mutations in the sync queue
       for (var i = 0; i < data.length; i++) {
         final order = onlineOrders[i];
         final rawJson = data[i];
@@ -73,8 +85,41 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
           final Map<String, dynamic> castedJson = Map<String, dynamic>.from(
             rawJson,
           );
-          await localBox.put(order.id.toString(), jsonEncode(castedJson));
+          // Only overwrite if it is NOT pending/syncing/failed in the sync queue
+          final hasPendingOp = syncBox.values.any(
+            (entry) =>
+                entry.entityId == order.id.toString() &&
+                (entry.status == 'PENDING' ||
+                    entry.status == 'FAILED' ||
+                    entry.status == 'SYNCING'),
+          );
+          if (!hasPendingOp) {
+            await localBox.put(order.id.toString(), jsonEncode(castedJson));
+          }
         }
+      }
+
+      // Replace online orders with their local optimistic versions if they are pending sync
+      final List<OrderModel> finalOnlineOrders = [];
+      for (final order in onlineOrders) {
+        final hasPendingOp = syncBox.values.any(
+          (entry) =>
+              entry.entityId == order.id.toString() &&
+              (entry.status == 'PENDING' ||
+                  entry.status == 'FAILED' ||
+                  entry.status == 'SYNCING'),
+        );
+        if (hasPendingOp) {
+          final localJsonStr = localBox.get(order.id.toString());
+          if (localJsonStr != null) {
+            try {
+              final Map<String, dynamic> localJson = jsonDecode(localJsonStr);
+              finalOnlineOrders.add(OrderModel.fromJson(localJson));
+              continue;
+            } catch (_) {}
+          }
+        }
+        finalOnlineOrders.add(order);
       }
 
       // Read remaining local optimistic orders
@@ -100,7 +145,7 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
                 ? int.tryParse(mappedServerIdStr)
                 : null;
 
-            final alreadySynced = onlineOrders.any(
+            final alreadySynced = finalOnlineOrders.any(
               (o) =>
                   (o.sharedKey != null &&
                       localOrder.sharedKey != null &&
@@ -147,7 +192,7 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
       }
 
       // Merge and return
-      return [...onlineOrders, ...remainingLocalOrders];
+      return [...finalOnlineOrders, ...remainingLocalOrders];
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',

@@ -791,14 +791,7 @@ class SalesOrderService
             // Concurrent edit validation (optimistic locking / stale client check)
             $clientVersion = isset($data['version']) ? (int) $data['version'] : null;
             if ($clientVersion !== null && $order->version !== $clientVersion) {
-                throw ValidationException::withMessages([
-                    'version' => 'هەڵەی هاوکاتی: داتاکانی ئەم پسوڵەیە پێشتر لەلایەن ئامێرێکی ترەوە دەستکاری کراون. تکایە پسوڵەکە نوێ بکەرەوە.',
-                    'conflict_data' => [
-                        'current_version' => $order->version,
-                        'order_id' => $order->id,
-                        'total_amount' => $order->total_amount,
-                    ]
-                ]);
+                throw new \App\Exceptions\ConcurrencyConflictException($order);
             }
 
             // Lock customer row
