@@ -161,7 +161,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (err, stack) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -512,8 +512,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
       // Find if selected role is warehouse
       bool isWarehouseSelected = false;
-      if (_selectedRoleId != null && rolesList.isNotEmpty) {
-        final matched = rolesList.firstWhere(
+      final roles = widget.roles ?? [];
+      if (_selectedRoleId != null && roles.isNotEmpty) {
+        final matched = roles.firstWhere(
           (r) => r['id'] == _selectedRoleId,
           orElse: () => null,
         );
@@ -695,7 +696,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 DropdownButtonFormField<int>(
-                  value: _selectedRoleId,
+                  initialValue: _selectedRoleId,
                   decoration: InputDecoration(
                     labelText: 'ڕۆڵی بەکارهێنەر',
                     prefixIcon: const Icon(Icons.badge_outlined),
@@ -729,8 +730,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       decimal: true,
                     ),
                     validator: (val) {
-                      if (val == null || val.isEmpty)
+                      if (val == null || val.isEmpty) {
                         return 'تکایە ڕێژەی کۆمسیۆن دیاری بکە';
+                      }
                       final parsed = double.tryParse(val);
                       if (parsed == null || parsed < 0 || parsed > 100) {
                         return 'ڕێژەیەکی دروست بنووسە لەنێوان 0 بۆ 100';
@@ -745,7 +747,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   warehousesAsync.when(
                     data: (warehouses) {
                       return DropdownButtonFormField<int>(
-                        value: _selectedWarehouseId,
+                        initialValue: _selectedWarehouseId,
                         decoration: InputDecoration(
                           labelText: 'کۆگای دیاریکراو',
                           prefixIcon: const Icon(Icons.warehouse_outlined),
@@ -877,7 +879,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ),
                   value: _isActive,
                   onChanged: (val) => setState(() => _isActive = val),
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
