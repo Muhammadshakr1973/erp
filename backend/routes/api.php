@@ -29,6 +29,8 @@ Route::prefix('v1')->group(function () {
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:60,1'])->group(function () {
 
+        Broadcast::routes();
+
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         

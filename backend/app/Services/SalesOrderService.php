@@ -173,6 +173,10 @@ class SalesOrderService
             app(NotificationService::class)->notifyNewOrderCreated($order, $user);
         }
 
+        if ($order->shared_key) {
+            event(new \App\Events\SalesOrderUpdated($order, 'create'));
+        }
+
         $order->wasRecentlyCreated = true;
         return $order;
     }
@@ -481,6 +485,10 @@ class SalesOrderService
             if ($newStatus === SalesOrder::STATUS_READY) {
                 app(NotificationService::class)->notifyOrderReadyForDelivery($updatedOrder, $user);
             }
+        }
+
+        if ($updatedOrder->shared_key) {
+            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
         }
 
         return $updatedOrder;
@@ -886,5 +894,11 @@ class SalesOrderService
 
             return $order;
         });
+
+        if ($updatedOrder->shared_key) {
+            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        }
+
+        return $updatedOrder;
     }
 }

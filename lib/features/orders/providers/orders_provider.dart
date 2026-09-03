@@ -242,6 +242,81 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
 ) async {
   final api = ref.watch(apiClientProvider);
   final localBox = ref.watch(localOrdersBoxProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  // If orderId is a real server ID (not a local temporary one)
+  final parsedId = int.tryParse(orderId);
+  if (parsedId != null && parsedId > 0) {
+    // Subscribe to Pusher channel when this provider is active
+    pusher.subscribeToOrder(parsedId, (eventData) {
+      debugPrint("Realtime update for order $orderId: $eventData");
+
+      // Check for pending local mutations before applying realtime update
+      final syncBox = ref.read(syncQueueBoxProvider);
+      final hasPendingOp = syncBox.values.any(
+        (entry) =>
+            entry.entityId == orderId &&
+            (entry.status == 'PENDING' ||
+                entry.status == 'FAILED' ||
+                entry.status == 'SYNCING'),
+      );
+      if (hasPendingOp) {
+        debugPrint("Preserving still-valid pending offline mutations. Skipping realtime update overwrite.");
+        return;
+      }
+
+      final eventVersion = int.tryParse(eventData['version']?.toString() ?? '') ?? 0;
+
+      // Read current local authoritative order from cache to do version comparison
+      final cachedStr = localBox.get(orderId);
+      if (cachedStr != null) {
+        try {
+          final Map<String, dynamic> cachedJson = jsonDecode(cachedStr);
+          final currentVersion = int.tryParse(cachedJson['version']?.toString() ?? '1') ?? 1;
+
+          // Version Comparison Logic:
+          // Ignore older versions (preventing race conditions)
+          if (eventVersion < currentVersion) {
+            debugPrint("Ignoring stale realtime update (event version $eventVersion < current version $currentVersion)");
+            return;
+          }
+
+          // Equal version is a duplicate/no-op
+          if (eventVersion == currentVersion) {
+            debugPrint("Realtime update version is equal to current version ($eventVersion). No-op.");
+            return;
+          }
+
+          // Check if it's the next expected version (currentVersion + 1)
+          if (eventVersion == currentVersion + 1) {
+            debugPrint("Accepting next expected version $eventVersion");
+            if (eventData['authoritative_signal'] == 'refetch') {
+              ref.invalidateSelf();
+              ref.invalidate(ordersListProvider);
+            }
+          } else {
+            // Version skipped (eventVersion > currentVersion + 1)
+            // Trigger a full server refetch to heal state.
+            debugPrint("Version skipped (event version $eventVersion > expected ${currentVersion + 1}). Invalidating self to refetch.");
+            ref.invalidateSelf();
+            ref.invalidate(ordersListProvider);
+          }
+        } catch (e) {
+          ref.invalidateSelf();
+          ref.invalidate(ordersListProvider);
+        }
+      } else {
+        // No local cache yet, refetch
+        ref.invalidateSelf();
+        ref.invalidate(ordersListProvider);
+      }
+    });
+
+    // Unsubscribe when provider is disposed to clean subscription lifecycle (PRV-001)
+    ref.onDispose(() {
+      pusher.unsubscribeFromOrder(parsedId);
+    });
+  }
 
   try {
     final response = await api.client.get('/orders/$orderId');
