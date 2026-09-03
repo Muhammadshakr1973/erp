@@ -45,7 +45,8 @@ class UserController extends Controller
                 'max:50',
                 Rule::unique('users')->whereNull('deleted_at')
             ],
-            'is_active' => 'nullable|boolean'
+            'is_active' => 'nullable|boolean',
+            'warehouse_id' => 'nullable|exists:warehouses,id'
         ]);
 
         $user = User::create([
@@ -56,6 +57,7 @@ class UserController extends Controller
             'commission_rate' => $validated['commission_rate'] ?? 0,
             'barcode' => $validated['barcode'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
+            'warehouse_id' => $validated['warehouse_id'] ?? null,
         ]);
 
         return response()->json([
@@ -109,11 +111,20 @@ class UserController extends Controller
             'name' => $validated['name'],
             'phone' => $validated['phone'],
             'role_id' => $validated['role_id'],
-            'commission_rate' => $validated['commission_rate'] ?? 0,
-            'barcode' => $validated['barcode'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
-            'warehouse_id' => $validated['warehouse_id'] ?? null,
         ];
+
+        if (array_key_exists('commission_rate', $validated)) {
+            $updateData['commission_rate'] = $validated['commission_rate'] ?? 0;
+        }
+        if (array_key_exists('barcode', $validated)) {
+            $updateData['barcode'] = $validated['barcode'];
+        }
+        if (array_key_exists('is_active', $validated)) {
+            $updateData['is_active'] = $validated['is_active'] ?? true;
+        }
+        if (array_key_exists('warehouse_id', $validated)) {
+            $updateData['warehouse_id'] = $validated['warehouse_id'];
+        }
 
         if (!empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);

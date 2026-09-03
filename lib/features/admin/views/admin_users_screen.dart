@@ -15,6 +15,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../shared/providers/warehouse_provider.dart';
 import 'providers/user_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
@@ -411,6 +412,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   late final TextEditingController _barcodeController;
 
   int? _selectedRoleId;
+  int? _selectedWarehouseId;
   bool _isActive = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -458,6 +460,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     }
 
     _isActive = widget.user?.isActive ?? true;
+    _selectedWarehouseId = widget.user?.warehouseId;
   }
 
   @override
@@ -507,6 +510,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           double.tryParse(_commissionRateController.text) ?? 0.0;
       final barcode = _barcodeController.text.trim();
 
+      // Find if selected role is warehouse
+      bool isWarehouseSelected = false;
+      if (_selectedRoleId != null && rolesList.isNotEmpty) {
+        final matched = rolesList.firstWhere(
+          (r) => r['id'] == _selectedRoleId,
+          orElse: () => null,
+        );
+        if (matched != null &&
+            matched['name'].toString().toLowerCase() == 'warehouse') {
+          isWarehouseSelected = true;
+        }
+      }
+
+      final warehouseId = isWarehouseSelected ? _selectedWarehouseId : null;
+
       if (widget.user == null) {
         // Add
         await ref
@@ -519,6 +537,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               commissionRate: commissionRate,
               barcode: barcode,
               isActive: _isActive,
+              warehouseId: warehouseId,
             );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -538,6 +557,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               commissionRate: commissionRate,
               barcode: barcode,
               isActive: _isActive,
+              warehouseId: warehouseId,
             );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -575,6 +595,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         isSalesmanSelected = true;
       }
     }
+
+    // Find if selected role is warehouse
+    bool isWarehouseSelected = false;
+    if (_selectedRoleId != null && rolesList.isNotEmpty) {
+      final matched = rolesList.firstWhere(
+        (r) => r['id'] == _selectedRoleId,
+        orElse: () => null,
+      );
+      if (matched != null &&
+          matched['name'].toString().toLowerCase() == 'warehouse') {
+        isWarehouseSelected = true;
+      }
+    }
+
+    final warehousesAsync = ref.watch(warehouseListProvider);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -702,6 +737,53 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                if (isWarehouseSelected) ...[
+                  warehousesAsync.when(
+                    data: (warehouses) {
+                      return DropdownButtonFormField<int>(
+                        value: _selectedWarehouseId,
+                        decoration: InputDecoration(
+                          labelText: 'کۆگای دیاریکراو',
+                          prefixIcon: const Icon(Icons.warehouse_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: warehouses.map((w) {
+                          return DropdownMenuItem<int>(
+                            value: w.id,
+                            child: Text(
+                              w.name,
+                              style: const TextStyle(fontFamily: 'Rudaw'),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedWarehouseId = val;
+                          });
+                        },
+                        validator: (val) =>
+                            val == null ? 'تکایە کۆگایەک دیاری بکە' : null,
+                      );
+                    },
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (err, _) => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'کێشە لە بارکردنی کۆگاکان: $err',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],

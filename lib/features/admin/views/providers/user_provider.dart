@@ -61,6 +61,7 @@ class UserActions {
     double? commissionRate,
     String? barcode,
     bool? isActive,
+    int? warehouseId,
   }) async {
     try {
       await api.client.post(
@@ -73,6 +74,7 @@ class UserActions {
           if (commissionRate != null) 'commission_rate': commissionRate,
           if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
           if (isActive != null) 'is_active': isActive,
+          if (warehouseId != null) 'warehouse_id': warehouseId,
         },
       );
       ref.invalidate(userAdminProvider);
@@ -90,6 +92,7 @@ class UserActions {
     double? commissionRate,
     String? barcode,
     bool? isActive,
+    int? warehouseId,
   }) async {
     try {
       await api.client.put(
@@ -102,6 +105,7 @@ class UserActions {
           if (commissionRate != null) 'commission_rate': commissionRate,
           if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
           if (isActive != null) 'is_active': isActive,
+          'warehouse_id': warehouseId,
         },
       );
       ref.invalidate(userAdminProvider);
