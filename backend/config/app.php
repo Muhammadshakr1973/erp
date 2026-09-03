@@ -123,4 +123,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Reorder Quantity Fallback
+    |--------------------------------------------------------------------------
+    |
+    | When calculating reorder quantities for products with min_stock_level
+    | equal to zero or null, this fallback value will be used.
+    |
+    */
+    'default_reorder_quantity' => (int) env('DEFAULT_REORDER_QUANTITY', 0),
+
 ];

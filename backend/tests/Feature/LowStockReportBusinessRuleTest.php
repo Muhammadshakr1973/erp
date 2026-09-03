@@ -208,4 +208,87 @@ class LowStockReportBusinessRuleTest extends TestCase
         $this->assertEquals($scopedCount, $report['summary']['total_low_stock_items']);
         $this->assertEquals(1, $scopedCount);
     }
+
+    /**
+     * Requirement: configurable reorder quantity when min_stock_level is zero/null
+     */
+    public function test_reorder_quantity_fallback_behavior(): void
+    {
+        // Setup: min_stock_level is 0, quantity is 0 (is considered low stock: 0 <= 0)
+        WarehouseStock::create([
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 0,
+            'min_stock_level' => 0,
+        ]);
+
+        // Scenario 1: Default fallback configured as 0
+        config(['app.default_reorder_quantity' => 0]);
+        $report = $this->reportService->getLowStockReport([]);
+        $this->assertEquals(0, $report['items'][0]['suggested_reorder']);
+
+        // Scenario 2: Default fallback configured as 35
+        config(['app.default_reorder_quantity' => 35]);
+        $report = $this->reportService->getLowStockReport([]);
+        $this->assertEquals(35, $report['items'][0]['suggested_reorder']);
+    }
+
+    /**
+     * Requirement: effect of reserved stock on low-stock reporting available quantity and suggested reorder
+     */
+    public function test_reserved_stock_affects_reorder_quantity(): void
+    {
+        // min_stock_level is 10, physical quantity is 8 (already below threshold)
+        // 5 units are reserved, meaning only 3 are available.
+        // reorder quantity should be: min_stock_level - available = 10 - 3 = 7.
+        WarehouseStock::create([
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 8,
+            'reserved_quantity' => 5,
+            'min_stock_level' => 10,
+        ]);
+
+        $report = $this->reportService->getLowStockReport([]);
+        $this->assertCount(1, $report['items']);
+        $this->assertEquals(3, $report['items'][0]['available_quantity']);
+        $this->assertEquals(7, $report['items'][0]['suggested_reorder']);
+    }
+
+    /**
+     * Requirement: independent behavior per warehouse (DEC-009)
+     */
+    public function test_independent_behavior_per_warehouse(): void
+    {
+        $warehouse2 = Warehouse::create([
+            'name' => 'Secondary Warehouse',
+            'is_main' => false,
+            'is_active' => true,
+        ]);
+
+        // Warehouse 1: quantity 8, min 10 -> LOW STOCK (suggested reorder = 2)
+        WarehouseStock::create([
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 8,
+            'min_stock_level' => 10,
+        ]);
+
+        // Warehouse 2: quantity 8, min 5 -> NOT LOW STOCK
+        WarehouseStock::create([
+            'warehouse_id' => $warehouse2->id,
+            'product_id' => $this->product->id,
+            'quantity' => 8,
+            'min_stock_level' => 5,
+        ]);
+
+        // Fetch overall low-stock report
+        $reportAll = $this->reportService->getLowStockReport([]);
+        $this->assertCount(1, $reportAll['items']);
+        $this->assertEquals($this->warehouse->id, $reportAll['items'][0]['warehouse_id']);
+
+        // Fetch low-stock report filtered for Warehouse 2
+        $reportW2 = $this->reportService->getLowStockReport(['warehouse_id' => $warehouse2->id]);
+        $this->assertCount(0, $reportW2['items']);
+    }
 }

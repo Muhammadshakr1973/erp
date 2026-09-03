@@ -610,7 +610,8 @@ class ReportService
             $reserved = (int) $ws->reserved_quantity;
             $available = max(0, $quantity - $reserved);
             $minLevel = (int) $ws->min_stock_level;
-            $reorderQty = max(0, ($minLevel > 0 ? $minLevel : 50) - $available);
+            $defaultReorderFallback = config('app.default_reorder_quantity', 0);
+            $reorderQty = max(0, ($minLevel > 0 ? $minLevel : $defaultReorderFallback) - $available);
 
             return [
                 'warehouse_id'       => $ws->warehouse_id,
