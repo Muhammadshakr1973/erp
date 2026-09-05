@@ -259,12 +259,17 @@ class OrderDetailScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'داشکاندنی بەردەوامی کڕیار (${order.permanentDiscountPercent.toStringAsFixed(1)}%)',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.danger,
+                      Expanded(
+                        child: Text(
+                          'داشکاندنی بەردەوامی کڕیار (${order.permanentDiscountPercent.toStringAsFixed(1)}%)',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.danger,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '- ${Formatters.currency(order.permanentDiscountAmount)}',
                         style: AppTextStyles.bodyBold.copyWith(
@@ -280,14 +285,19 @@ class OrderDetailScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        order.discountType == 'FIXED'
-                            ? 'داشکاندنی پسوڵە (بڕی دیاریکراو)'
-                            : 'داشکاندنی پسوڵە (${order.discountPercent}%)',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.danger,
+                      Expanded(
+                        child: Text(
+                          order.discountType == 'FIXED'
+                              ? 'داشکاندنی پسوڵە (بڕی دیاریکراو)'
+                              : 'داشکاندنی پسوڵە (${order.discountPercent}%)',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.danger,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '- ${Formatters.currency(order.discountAmount)}',
                         style: AppTextStyles.bodyBold.copyWith(

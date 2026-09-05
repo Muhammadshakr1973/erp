@@ -166,16 +166,23 @@ class AdminDeliveryTripsScreen extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  Text(
-                                    trip.tripNumber.isNotEmpty ? trip.tripNumber : 'گەشت #${trip.id}',
-                                    style: AppTextStyles.bodyBold,
-                                  ),
-                                ],
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
+                                    const SizedBox(width: AppSpacing.xs),
+                                    Expanded(
+                                      child: Text(
+                                        trip.tripNumber.isNotEmpty ? trip.tripNumber : 'گەشت #${trip.id}',
+                                        style: AppTextStyles.bodyBold,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: AppSpacing.sm),
                               StatusBadge(
                                 label: _getStatusLabel(trip.status),
                                 type: _getStatusBadgeType(trip.status),
@@ -188,12 +195,21 @@ class AdminDeliveryTripsScreen extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.person_outline, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(driverDisplayName, style: AppTextStyles.bodyMedium),
-                                ],
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        driverDisplayName, 
+                                        style: AppTextStyles.bodyMedium,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               if (trip.tripDate.isNotEmpty)
                                 Row(

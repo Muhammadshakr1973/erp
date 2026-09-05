@@ -87,10 +87,15 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                customerName,
-                                style: AppTextStyles.bodyBold,
+                              Expanded(
+                                child: Text(
+                                  customerName,
+                                  style: AppTextStyles.bodyBold,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
+                              const SizedBox(width: AppSpacing.sm),
                               StatusBadge(
                                 label: _getOrderStatusLabel(tripOrder.status),
                                 type: _getOrderStatusBadgeType(tripOrder.status),
@@ -106,9 +111,13 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                 color: Colors.grey,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                'پسوڵەی ژمارە ${order?.orderNumber ?? 'نادیار'}',
-                                style: AppTextStyles.caption,
+                              Expanded(
+                                child: Text(
+                                  'پسوڵەی ژمارە ${order?.orderNumber ?? 'نادیار'}',
+                                  style: AppTextStyles.caption,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),

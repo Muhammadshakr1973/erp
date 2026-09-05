@@ -190,20 +190,27 @@ class _SalesReturnsListScreenState
                               mainAxisAlignment:
                                   MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.assignment_return_outlined,
-                                      size: 18,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: AppSpacing.xs),
-                                    Text(
-                                      returnNumber,
-                                      style: AppTextStyles.bodyBold,
-                                    ),
-                                  ],
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.assignment_return_outlined,
+                                        size: 18,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Expanded(
+                                        child: Text(
+                                          returnNumber,
+                                          style: AppTextStyles.bodyBold,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: AppSpacing.sm),
                                 StatusBadge(
                                   label: badgeLabel,
                                   type: badgeType,

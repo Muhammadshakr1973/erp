@@ -172,9 +172,13 @@ class AdminOrdersScreen extends ConsumerWidget {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Text(
-                                    'پسوڵەی #${order.orderNumber} • مەندوب: $salesmanName',
-                                    style: AppTextStyles.caption,
+                                  Flexible(
+                                    child: Text(
+                                      'پسوڵەی #${order.orderNumber} • مەندوب: $salesmanName',
+                                      style: AppTextStyles.caption,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   if (order.pendingSync) ...[
                                     const SizedBox(width: 4),
