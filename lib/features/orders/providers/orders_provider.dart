@@ -836,3 +836,135 @@ final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((ref) as
       .toList();
 });
 
+class AdminOrderFilterState {
+  final String searchQuery;
+  final int? customerId;
+  final int? salesmanId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const AdminOrderFilterState({
+    this.searchQuery = '',
+    this.customerId,
+    this.salesmanId,
+    this.startDate,
+    this.endDate,
+  });
+
+  bool get hasActiveFilters =>
+      searchQuery.trim().isNotEmpty ||
+      customerId != null ||
+      salesmanId != null ||
+      startDate != null ||
+      endDate != null;
+
+  int get activeFilterCount {
+    int count = 0;
+    if (searchQuery.trim().isNotEmpty) count++;
+    if (customerId != null) count++;
+    if (salesmanId != null) count++;
+    if (startDate != null || endDate != null) count++;
+    return count;
+  }
+
+  AdminOrderFilterState copyWith({
+    String? searchQuery,
+    int? customerId,
+    int? salesmanId,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool clearCustomer = false,
+    bool clearSalesman = false,
+    bool clearDates = false,
+    bool clearSearch = false,
+  }) {
+    return AdminOrderFilterState(
+      searchQuery: clearSearch ? '' : (searchQuery ?? this.searchQuery),
+      customerId: clearCustomer ? null : (customerId ?? this.customerId),
+      salesmanId: clearSalesman ? null : (salesmanId ?? this.salesmanId),
+      startDate: clearDates ? null : (startDate ?? this.startDate),
+      endDate: clearDates ? null : (endDate ?? this.endDate),
+    );
+  }
+}
+
+final adminOrderFilterProvider =
+    StateProvider<AdminOrderFilterState>((ref) => const AdminOrderFilterState());
+
+List<OrderModel> applyAdminOrderFilters({
+  required List<OrderModel> orders,
+  required String tabFilter,
+  required AdminOrderFilterState filterState,
+}) {
+  List<OrderModel> result = orders;
+
+  // 1. Tab filter
+  if (tabFilter == 'لە گەیاندن') {
+    result = result
+        .where((o) => o.status == 'IN_DELIVERY' || o.status == 'CONFIRMED')
+        .toList();
+  } else if (tabFilter == 'گەیشتووە') {
+    result = result.where((o) => o.status == 'DELIVERED').toList();
+  }
+
+  // 2. Customer filter
+  if (filterState.customerId != null) {
+    result = result.where((o) => o.customerId == filterState.customerId).toList();
+  }
+
+  // 3. Salesman filter
+  if (filterState.salesmanId != null) {
+    result = result.where((o) => o.salesmanId == filterState.salesmanId).toList();
+  }
+
+  // 4. Start date filter
+  if (filterState.startDate != null) {
+    final startDay = DateTime(
+      filterState.startDate!.year,
+      filterState.startDate!.month,
+      filterState.startDate!.day,
+    );
+    result = result.where((o) {
+      final parsed = DateTime.tryParse(o.createdAt);
+      if (parsed == null) return true;
+      final orderDay = DateTime(parsed.year, parsed.month, parsed.day);
+      return !orderDay.isBefore(startDay);
+    }).toList();
+  }
+
+  // 5. End date filter
+  if (filterState.endDate != null) {
+    final endDay = DateTime(
+      filterState.endDate!.year,
+      filterState.endDate!.month,
+      filterState.endDate!.day,
+    );
+    result = result.where((o) {
+      final parsed = DateTime.tryParse(o.createdAt);
+      if (parsed == null) return true;
+      final orderDay = DateTime(parsed.year, parsed.month, parsed.day);
+      return !orderDay.isAfter(endDay);
+    }).toList();
+  }
+
+  // 6. Search query filter
+  if (filterState.searchQuery.trim().isNotEmpty) {
+    final q = filterState.searchQuery.trim().toLowerCase();
+    result = result.where((o) {
+      final orderNum = o.orderNumber.toLowerCase();
+      final customerName = o.customer is Map && o.customer['name'] != null
+          ? o.customer['name'].toString().toLowerCase()
+          : '';
+      final salesmanName = o.salesman is Map && o.salesman['name'] != null
+          ? o.salesman['name'].toString().toLowerCase()
+          : '';
+      return orderNum.contains(q) ||
+          customerName.contains(q) ||
+          salesmanName.contains(q);
+    }).toList();
+  }
+
+  return result;
+}
+
+
