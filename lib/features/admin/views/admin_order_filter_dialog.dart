@@ -203,7 +203,7 @@ class _AdminOrderFilterDialogState
                   return AppDropdownFormField<int?>(
                     value: _selectedSalesmanId,
                     labelText: 'مەندوب / فرۆشیار',
-                    prefixIcon: AppIcons.users,
+                    prefixIcon: AppIcons.customers,
                     items: [
                       const DropdownMenuItem<int?>(
                         value: null,

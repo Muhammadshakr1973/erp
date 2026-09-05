@@ -9,14 +9,13 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../shared/providers/customer_provider.dart';
 import 'admin_order_filter_dialog.dart';
 import 'providers/user_provider.dart';
 
 class AdminOrdersScreen extends ConsumerWidget {
-  const AdminOrdersScreen({Key? key}) : super(key: key);
+  const AdminOrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -165,7 +164,11 @@ class AdminOrdersScreen extends ConsumerWidget {
             const SizedBox(width: AppSpacing.xs),
             const Text(
               'فلتەرەکان:',
-              style: AppTextStyles.captionBold,
+              style: TextStyle(
+                fontFamily: AppTextStyles.fontFamily,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(width: AppSpacing.xs),
             if (filterState.searchQuery.trim().isNotEmpty) ...[
