@@ -345,7 +345,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                           showDialog(
                             context: context,
                             builder: (context) =>
-                                ProductDetailsDialog(product: product),
+                                ProductFormDialog(product: product),
                           );
                         },
                         onLongPress: () =>

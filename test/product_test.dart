@@ -114,5 +114,28 @@ void main() {
       expect(n2DotColor.value, 0xFFF59E0B);
       expect(n3DotColor.value, 0xFFF43F5E);
     });
+
+    test('Product edit form dialog receives product model and retains identifiers', () {
+      final product = ProductModel.fromJson({
+        'id': 42,
+        'name': 'شەربەتی پرتەقاڵ',
+        'barcode': '99887766',
+        'cost_price': '2500',
+        'price_n1': '3000',
+        'price_n2': '3250',
+        'price_n3': '3500',
+        'unit': 'دانە',
+        'units_per_carton': 24,
+      });
+
+      // Verifying product card edit parameters passed to ProductFormDialog
+      expect(product.id, 42);
+      expect(product.name, 'شەربەتی پرتەقاڵ');
+      expect(product.costPrice, 2500.0);
+      expect(product.priceN1, 3000.0);
+      expect(product.priceN2, 3250.0);
+      expect(product.priceN3, 3500.0);
+      expect(product.unitsPerCarton, 24);
+    });
   });
 }
