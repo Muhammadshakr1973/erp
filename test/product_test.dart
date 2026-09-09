@@ -35,7 +35,7 @@ void main() {
       expect(product.supplier?['name'], 'کۆمپانیای ئاراس');
       expect(product.sku, 'SKU-001');
 
-      // Column 2 verification (Name, Barcode, Unit packaging)
+      // Column 2 verification (Name, Barcode, Unit packaging, Stock badge)
       expect(product.name, 'پەنیر');
       expect(product.barcode, '123456789');
       expect(product.unit, 'کارتۆن');
@@ -47,7 +47,7 @@ void main() {
       expect(product.priceN2, 1400.0);
       expect(product.priceN3, 1300.0);
 
-      // Stock badge aggregation verification
+      // Stock badge aggregation verification (rendered under barcode & unit in Column 2)
       int totalStock = 0;
       for (var stock in product.stocks) {
         totalStock += (stock['quantity'] as int?) ?? 0;

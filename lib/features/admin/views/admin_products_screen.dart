@@ -430,7 +430,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            // ستونی دووەم: ناوی کاڵا، بارکۆد
+                            // ستونی دووەم: ناوی کاڵا، بارکۆد، یەکە، ستۆک
                             Expanded(
                               flex: 4,
                               child: Column(
@@ -471,115 +471,105 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isLowStock
+                                          ? AppColors.danger
+                                              .withValues(alpha: 0.15)
+                                          : AppColors.success
+                                              .withValues(alpha: 0.15),
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isLowStock
+                                            ? AppColors.danger
+                                            : AppColors.success,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'ستۆک: $totalStock',
+                                      style: TextStyle(
+                                        color: isLowStock
+                                            ? AppColors.danger
+                                            : AppColors.success,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            // ستونی سێیەم: تێچوو، N1، N2، N3 وە ستۆک لە خوارەوەی چەپ بەشێوەی badge
+                            // ستونی سێیەم: تێچوو، N1، N2، N3
                             Expanded(
                               flex: 3,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // تێچوو وەک Pill Badge پەمەیی/سوور
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3.5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: theme.brightness == Brightness.dark
-                                              ? const Color(0xFFE11D48).withValues(alpha: 0.15)
-                                              : const Color(0xFFFFECEF),
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(
-                                            color: theme.brightness == Brightness.dark
-                                                ? const Color(0xFFE11D48).withValues(alpha: 0.35)
-                                                : const Color(0xFFFFD1D8),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            'تێچوو: ${Formatters.currency(product.costPrice)}',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.brightness == Brightness.dark
-                                                  ? const Color(0xFFFDA4AF)
-                                                  : const Color(0xFFE11D48),
-                                              fontFamily: 'Rudaw',
-                                            ),
-                                            maxLines: 1,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // ڕیزەکانی N1, N2, N3 بە خاڵی ڕەنگاوڕەنگ و ژمارەی تۆخ
-                                      _buildPriceTierRow(
-                                        label: 'N1',
-                                        price: product.priceN1,
-                                        dotColor: const Color(0xFF10B981),
-                                        theme: theme,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      _buildPriceTierRow(
-                                        label: 'N2',
-                                        price: product.priceN2,
-                                        dotColor: const Color(0xFFF59E0B),
-                                        theme: theme,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      _buildPriceTierRow(
-                                        label: 'N3',
-                                        price: product.priceN3,
-                                        dotColor: const Color(0xFFF43F5E),
-                                        theme: theme,
-                                      ),
-                                    ],
-                                  ),
-                                  Align(
-                                    alignment: Alignment.bottomLeft,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isLowStock
-                                            ? AppColors.danger
-                                                .withValues(alpha: 0.15)
-                                            : AppColors.success
-                                                .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: isLowStock
-                                              ? AppColors.danger
-                                              : AppColors.success,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'ستۆک: $totalStock',
-                                        style: TextStyle(
-                                          color: isLowStock
-                                              ? AppColors.danger
-                                              : AppColors.success,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Rudaw',
-                                        ),
+                                  // تێچوو وەک Pill Badge پەمەیی/سوور
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.brightness == Brightness.dark
+                                          ? const Color(0xFFE11D48).withValues(alpha: 0.15)
+                                          : const Color(0xFFFFECEF),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: theme.brightness == Brightness.dark
+                                            ? const Color(0xFFE11D48).withValues(alpha: 0.35)
+                                            : const Color(0xFFFFD1D8),
+                                        width: 1,
                                       ),
                                     ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'تێچوو: ${Formatters.currency(product.costPrice)}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.brightness == Brightness.dark
+                                              ? const Color(0xFFFDA4AF)
+                                              : const Color(0xFFE11D48),
+                                          fontFamily: 'Rudaw',
+                                        ),
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // ڕیزەکانی N1, N2, N3 بە خاڵی ڕەنگاوڕەنگ و ژمارەی تۆخ
+                                  _buildPriceTierRow(
+                                    label: 'N1',
+                                    price: product.priceN1,
+                                    dotColor: const Color(0xFF10B981),
+                                    theme: theme,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  _buildPriceTierRow(
+                                    label: 'N2',
+                                    price: product.priceN2,
+                                    dotColor: const Color(0xFFF59E0B),
+                                    theme: theme,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  _buildPriceTierRow(
+                                    label: 'N3',
+                                    price: product.priceN3,
+                                    dotColor: const Color(0xFFF43F5E),
+                                    theme: theme,
                                   ),
                                 ],
                               ),
