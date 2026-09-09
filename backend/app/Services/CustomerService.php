@@ -94,7 +94,7 @@ class CustomerService
             $data['route_id'] = $defaultRoute->id;
         }
         $customer->update($data);
-        return $customer;
+        return $customer->fresh();
     }
 
     public function deleteCustomer(Customer $customer): bool

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
 import '../api_client.dart';
+import '../../features/shared/providers/customer_provider.dart';
 import 'sync_queue_entry.dart';
 
 final syncQueueBoxProvider = Provider<Box<SyncQueueEntry>>((ref) {
@@ -258,6 +259,14 @@ class SyncService {
                 }
               }
             } catch (_) {}
+          } else if (entry.operationType == 'UPDATE_CUSTOMER' ||
+              entry.operationType == 'CREATE_CUSTOMER') {
+            ref.invalidate(customerListProvider);
+            ref.invalidate(filteredCustomerListProvider);
+            final cId = int.tryParse(entry.entityId ?? '');
+            if (cId != null) {
+              ref.invalidate(singleCustomerProvider(cId));
+            }
           }
         } on DioException catch (e) {
           final statusCode = e.response?.statusCode;

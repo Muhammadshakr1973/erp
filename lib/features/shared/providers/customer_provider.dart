@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
@@ -149,7 +150,7 @@ class CustomerActions {
 
   CustomerActions(this.api, this.syncService, this.ref);
 
-  Future<void> addCustomer({
+  Future<Customer> addCustomer({
     required String name,
     String? phone,
     String? phone2,
@@ -161,29 +162,62 @@ class CustomerActions {
     double? latitude,
     double? longitude,
   }) async {
-    final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+    final payload = {
+      'name': name,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+      if (routeId != null) 'route_id': routeId,
+      if (priceType != null) 'price_type': priceType,
+      if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    };
 
-    await syncService.enqueueOperation(
-      entityId: localId,
-      operationType: 'CREATE_CUSTOMER',
-      payload: {
-        'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
-        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-        if (address != null && address.isNotEmpty) 'address': address,
-        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-        if (routeId != null) 'route_id': routeId,
-        if (priceType != null) 'price_type': priceType,
-        if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
-      },
-    );
+    Customer? createdCustomer;
+
+    try {
+      final response = await api.client.post('/customers', data: payload);
+      final resData = response.data;
+      if (resData is Map && resData['data'] is Map) {
+        createdCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+      }
+    } catch (e) {
+      if (e is DioException && _isNetworkError(e)) {
+        final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+        await syncService.enqueueOperation(
+          entityId: localId,
+          operationType: 'CREATE_CUSTOMER',
+          payload: payload,
+        );
+      } else {
+        throw Exception(api.parseError(e));
+      }
+    }
 
     ref.invalidate(customerListProvider);
+    ref.invalidate(filteredCustomerListProvider);
+
+    if (createdCustomer != null) {
+      return createdCustomer;
+    }
+
+    return Customer(
+      id: 0,
+      name: name,
+      phone: phone,
+      phone2: phone2,
+      address: address,
+      imageUrl: imageUrl,
+      routeId: routeId,
+      priceType: priceType,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
-  Future<void> updateCustomer(
+  Future<Customer> updateCustomer(
     int id, {
     required String name,
     String? phone,
@@ -196,31 +230,68 @@ class CustomerActions {
     double? latitude,
     double? longitude,
   }) async {
-    await syncService.enqueueOperation(
-      entityId: id.toString(),
-      operationType: 'UPDATE_CUSTOMER',
-      payload: {
-        'name': name,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
-        if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
-        if (address != null && address.isNotEmpty) 'address': address,
-        if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
-        if (routeId != null) 'route_id': routeId,
-        if (priceType != null) 'price_type': priceType,
-        if (isActive != null) 'is_active': isActive,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
-      },
-    );
+    final payload = {
+      'name': name,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
+      if (routeId != null) 'route_id': routeId,
+      if (priceType != null) 'price_type': priceType,
+      if (isActive != null) 'is_active': isActive,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    };
+
+    Customer? updatedCustomer;
+
+    try {
+      final response = await api.client.put('/customers/$id', data: payload);
+      final resData = response.data;
+      if (resData is Map && resData['data'] is Map) {
+        updatedCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+      }
+    } catch (e) {
+      if (e is DioException && _isNetworkError(e)) {
+        await syncService.enqueueOperation(
+          entityId: id.toString(),
+          operationType: 'UPDATE_CUSTOMER',
+          payload: payload,
+        );
+      } else {
+        throw Exception(api.parseError(e));
+      }
+    }
 
     ref.invalidate(customerListProvider);
+    ref.invalidate(filteredCustomerListProvider);
     ref.invalidate(singleCustomerProvider(id));
+
+    if (updatedCustomer != null) {
+      return updatedCustomer;
+    }
+
+    return Customer(
+      id: id,
+      name: name,
+      phone: phone,
+      phone2: phone2,
+      address: address,
+      imageUrl: imageUrl,
+      routeId: routeId,
+      priceType: priceType,
+      isActive: isActive ?? true,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
   Future<void> deleteCustomer(int id) async {
     try {
       await api.client.delete('/customers/$id');
       ref.invalidate(customerListProvider);
+      ref.invalidate(filteredCustomerListProvider);
+      ref.invalidate(singleCustomerProvider(id));
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -246,6 +317,7 @@ class CustomerActions {
         ref.invalidate(singleCustomerProvider(id));
         ref.invalidate(customerReconciliationProvider(id));
         ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
 
         return result;
       } else {
@@ -254,5 +326,12 @@ class CustomerActions {
     } catch (e) {
       throw Exception(api.parseError(e));
     }
+  }
+
+  bool _isNetworkError(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError;
   }
 }

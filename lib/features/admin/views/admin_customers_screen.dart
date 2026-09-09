@@ -60,6 +60,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
       if (success == true) {
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(customerListProvider);
+        if (customer != null) {
+          ref.invalidate(singleCustomerProvider(customer.id));
+        }
       }
     });
   }

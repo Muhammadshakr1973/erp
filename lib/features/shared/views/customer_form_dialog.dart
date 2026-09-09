@@ -147,6 +147,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
 
       if (mounted) {
         ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
         if (widget.customer != null) {
           ref.invalidate(singleCustomerProvider(widget.customer!.id));
         }

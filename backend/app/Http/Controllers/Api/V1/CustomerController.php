@@ -62,6 +62,7 @@ class CustomerController extends Controller
         }
 
         $customer = $this->customerService->updateCustomer($customer, $request->validated());
+        $customer->load('route');
         
         return response()->json([
             'message' => 'زانیاری کڕیار بەسەرکەوتوویی نوێکرایەوە',
