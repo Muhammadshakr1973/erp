@@ -64,6 +64,49 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
+  Widget _buildPriceTierRow({
+    required String label,
+    required double price,
+    required Color dotColor,
+    required ThemeData theme,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      textDirection: TextDirection.ltr,
+      children: [
+        Text(
+          Formatters.number(price),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface,
+            fontFamily: 'Rudaw',
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            fontFamily: 'Rudaw',
+          ),
+        ),
+        const SizedBox(width: 5),
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: dotColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -444,55 +487,62 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'تێچوو: ${Formatters.currency(product.costPrice)}',
-                                        style:
-                                            AppTextStyles.caption.copyWith(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant
-                                              .withValues(alpha: 0.7),
+                                      // تێچوو وەک Pill Badge پەمەیی/سوور
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3.5,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        decoration: BoxDecoration(
+                                          color: theme.brightness == Brightness.dark
+                                              ? const Color(0xFFE11D48).withValues(alpha: 0.15)
+                                              : const Color(0xFFFFECEF),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: theme.brightness == Brightness.dark
+                                                ? const Color(0xFFE11D48).withValues(alpha: 0.35)
+                                                : const Color(0xFFFFD1D8),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            'تێچوو: ${Formatters.currency(product.costPrice)}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.brightness == Brightness.dark
+                                                  ? const Color(0xFFFDA4AF)
+                                                  : const Color(0xFFE11D48),
+                                              fontFamily: 'Rudaw',
+                                            ),
+                                            maxLines: 1,
+                                          ),
+                                        ),
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        'N1: ${Formatters.currency(product.priceN1)}',
-                                        style: AppTextStyles.bodyBold
-                                            .copyWith(
-                                          fontSize: 12,
-                                          color: isLowStock
-                                              ? AppColors.danger
-                                              : AppColors.success,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      const SizedBox(height: 8),
+                                      // ڕیزەکانی N1, N2, N3 بە خاڵی ڕەنگاوڕەنگ و ژمارەی تۆخ
+                                      _buildPriceTierRow(
+                                        label: 'N1',
+                                        price: product.priceN1,
+                                        dotColor: const Color(0xFF10B981),
+                                        theme: theme,
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        'N2: ${Formatters.currency(product.priceN2)}',
-                                        style:
-                                            AppTextStyles.caption.copyWith(
-                                          fontSize: 10,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      const SizedBox(height: 4),
+                                      _buildPriceTierRow(
+                                        label: 'N2',
+                                        price: product.priceN2,
+                                        dotColor: const Color(0xFFF59E0B),
+                                        theme: theme,
                                       ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        'N3: ${Formatters.currency(product.priceN3)}',
-                                        style:
-                                            AppTextStyles.caption.copyWith(
-                                          fontSize: 10,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      const SizedBox(height: 4),
+                                      _buildPriceTierRow(
+                                        label: 'N3',
+                                        price: product.priceN3,
+                                        dotColor: const Color(0xFFF43F5E),
+                                        theme: theme,
                                       ),
                                     ],
                                   ),

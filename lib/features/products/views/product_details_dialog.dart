@@ -200,32 +200,70 @@ class ProductDetailsDialog extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
-                    _buildDetailRowWithColor(
-                      context,
-                      'تێچوو (کۆست):',
-                      '${Formatters.currency(product.costPrice)}',
-                      Colors.grey,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'تێچوو (کۆست):',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.brightness == Brightness.dark
+                                ? const Color(0xFFE11D48).withValues(alpha: 0.15)
+                                : const Color(0xFFFFECEF),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: theme.brightness == Brightness.dark
+                                  ? const Color(0xFFE11D48).withValues(alpha: 0.35)
+                                  : const Color(0xFFFFD1D8),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            Formatters.currency(product.costPrice),
+                            style: TextStyle(
+                              color: theme.brightness == Brightness.dark
+                                  ? const Color(0xFFFDA4AF)
+                                  : const Color(0xFFE11D48),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              fontFamily: 'Rudaw',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی کڕیاری گەورە (N1):',
-                      '${Formatters.currency(product.priceN1)}',
-                      AppColors.success,
+                      Formatters.currency(product.priceN1),
+                      const Color(0xFF10B981),
+                      dotColor: const Color(0xFF10B981),
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی کڕیاری ناوەند (N2):',
-                      '${Formatters.currency(product.priceN2)}',
-                      theme.colorScheme.primary,
+                      Formatters.currency(product.priceN2),
+                      const Color(0xFFF59E0B),
+                      dotColor: const Color(0xFFF59E0B),
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithColor(
                       context,
                       'نرخی تاکفرۆش/ئاسایی (N3):',
-                      '${Formatters.currency(product.priceN3)}',
-                      Colors.orange,
+                      Formatters.currency(product.priceN3),
+                      const Color(0xFFF43F5E),
+                      dotColor: const Color(0xFFF43F5E),
                     ),
                     const Divider(height: 16),
                     _buildDetailRowWithBadge(
@@ -292,17 +330,34 @@ class ProductDetailsDialog extends ConsumerWidget {
     BuildContext context,
     String label,
     String value,
-    Color color,
-  ) {
+    Color color, {
+    Color? dotColor,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Rudaw',
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dotColor != null) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Rudaw',
+              ),
+            ),
+          ],
         ),
         Text(
           value,

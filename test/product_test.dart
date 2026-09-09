@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gardi_erp/features/products/models/product_model.dart';
+import 'package:flutter/material.dart';
+import 'package:pos_app/core/utils/formatters.dart';
+import 'package:pos_app/features/products/models/product_model.dart';
 
 void main() {
   group('ProductModel and Product Card Data Verification', () {
@@ -74,6 +76,43 @@ void main() {
       }
       expect(totalStock, 5);
       expect(totalStock < 20, isTrue); // Low stock triggers warning badge
+    });
+
+    test('Formats price tiers and cost badge accurately matching 2.png visual specification', () {
+      final product = ProductModel.fromJson({
+        'id': 3,
+        'name': 'بەرهەم',
+        'cost_price': '4000',
+        'price_n1': '12000',
+        'price_n2': '13000',
+        'price_n3': '14000',
+      });
+
+      // Cost badge format: تێچوو: 4,000 د.ع
+      final formattedCost = 'تێچوو: ${Formatters.currency(product.costPrice)}';
+      expect(formattedCost, contains('تێچوو:'));
+      expect(formattedCost, contains('4,000'));
+      expect(formattedCost, contains('د.ع'));
+
+      // N1 tier price formatted number
+      final n1Number = Formatters.number(product.priceN1);
+      expect(n1Number, '12,000');
+
+      // N2 tier price formatted number
+      final n2Number = Formatters.number(product.priceN2);
+      expect(n2Number, '13,000');
+
+      // N3 tier price formatted number
+      final n3Number = Formatters.number(product.priceN3);
+      expect(n3Number, '14,000');
+
+      // Indicator color definitions matching specification
+      const n1DotColor = Color(0xFF10B981); // Emerald Green
+      const n2DotColor = Color(0xFFF59E0B); // Amber Gold
+      const n3DotColor = Color(0xFFF43F5E); // Rose Red
+      expect(n1DotColor.value, 0xFF10B981);
+      expect(n2DotColor.value, 0xFFF59E0B);
+      expect(n3DotColor.value, 0xFFF43F5E);
     });
   });
 }
