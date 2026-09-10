@@ -26,7 +26,7 @@ class AppButton extends StatelessWidget {
     this.size = AppButtonSize.md,
     this.isLoading = false,
     this.icon,
-    this.width = double.infinity,
+    this.width,
   }) : super(key: key);
 
   @override

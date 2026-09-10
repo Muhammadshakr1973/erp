@@ -383,7 +383,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   error: (_, __) => const Text('هەڵە لە بارکردنی کڕیاران'),
                   data: (customers) {
                     return DropdownButtonFormField<int>(
-                      value: _selectedCustomer?.id,
+                      value: customers.any((c) => c.id == _selectedCustomer?.id)
+                          ? _selectedCustomer?.id
+                          : null,
                       decoration: const InputDecoration(
                         labelText: 'دیاریکردنی کڕیار',
                         prefixIcon: Icon(Icons.person_outline),
@@ -637,7 +639,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${Formatters.currency(unitPrice)}', style: AppTextStyles.price),
+              Expanded(
+                child: Text(
+                  Formatters.currency(unitPrice),
+                  style: AppTextStyles.price,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
               Text(
                 product.unit ?? 'دانە',
                 style: AppTextStyles.caption.copyWith(color: Colors.grey),
@@ -835,6 +844,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppButton(
+                  width: double.infinity,
                   text: 'تەواوکردنی پسوڵە',
                   isLoading: _isSubmitting,
                   onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
@@ -896,13 +906,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ],
               ),
             ),
-            AppButton(
-              text: 'بینین و تەواوکردن',
-              onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
-                  ? () {
-                      _showMobileCartBottomSheet(allProducts, warehousesAsync);
-                    }
-                  : null,
+            SizedBox(
+              width: 160,
+              child: AppButton(
+                width: 160,
+                text: 'بینین و تەواوکردن',
+                onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
+                    ? () {
+                        _showMobileCartBottomSheet(allProducts, warehousesAsync);
+                      }
+                    : null,
+              ),
             ),
           ],
         ),
@@ -1089,6 +1103,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppButton(
+                    width: double.infinity,
                     text: 'پشتڕاستکردنەوە و ناردن',
                     isLoading: _isSubmitting,
                     onPressed: (!warehousesAsync.hasError && _cart.isNotEmpty)
