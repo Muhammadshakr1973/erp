@@ -13,6 +13,11 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
+import '../../shared/models/customer.dart';
+import '../../shared/views/customer_form_dialog.dart';
+import '../../shared/providers/customer_provider.dart';
+import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_button.dart';
 import 'salesman_my_commissions_screen.dart';
 
 class SalesmanDashboardScreen extends ConsumerWidget {
@@ -148,14 +153,26 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   context,
                   'وەرگرتنی پارە',
                   AppIcons.customerDebt,
-                  () {},
+                  () async {
+                    final selectedCustomer = await CustomerSelectionDialog.show(
+                      context,
+                    );
+                    if (selectedCustomer != null && context.mounted) {
+                      _showPaymentDialog(context, ref, selectedCustomer);
+                    }
+                  },
                 ),
                 _buildActionCard(context, 'داواکاری کاڵا', AppIcons.add, () {}),
                 _buildActionCard(
                   context,
                   'کڕیاری نوێ',
                   AppIcons.customers,
-                  () {},
+                  () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const CustomerFormDialog(),
+                    );
+                  },
                 ),
               ],
             ),
@@ -287,6 +304,119 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               Icon(Icons.refresh, color: textColor, size: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showPaymentDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Customer customer,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+    bool isPaying = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('تۆمارکردنی پارەدان', style: AppTextStyles.h2),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'کڕیار: ${customer.name}',
+                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppTextField(
+                    controller: amountController,
+                    labelText: 'بڕی پارە (د.ع)',
+                    prefixIcon: Icons.money,
+                    keyboardType: TextInputType.number,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'تکایە بڕی پارە بنووسە';
+                      }
+                      if (int.tryParse(val) == null) {
+                        return 'بڕی پارە نادروستە';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppTextField(
+                    controller: notesController,
+                    labelText: 'تێبینی',
+                    prefixIcon: Icons.note,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'پاشگەزبوونەوە',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              AppButton(
+                text: 'تۆمارکردن',
+                isLoading: isPaying,
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    setStateDialog(() => isPaying = true);
+                    try {
+                      final syncService = ref.read(syncServiceProvider);
+                      await syncService.enqueueOperation(
+                        entityId: 'local_payment_${DateTime.now().microsecondsSinceEpoch}',
+                        operationType: 'CREATE_PAYMENT',
+                        payload: {
+                          'customer_id': customer.id,
+                          'amount': int.parse(amountController.text),
+                          'notes': notesController.text,
+                          'payment_method': 'CASH',
+                        },
+                      );
+
+                      ref.invalidate(customerListProvider);
+                      
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'داواکاری پارەدانەکە بە سەرکەوتوویی خرایە ڕیزی سینکەوە',
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('هەڵە ڕوویدا: $e'),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                      }
+                    } finally {
+                      setStateDialog(() => isPaying = false);
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

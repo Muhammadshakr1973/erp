@@ -11,15 +11,17 @@ import '../../shared/models/commission_model.dart';
 import '../../admin/views/providers/commission_provider.dart';
 
 final myCommissionsProvider =
-    FutureProvider.family<List<CommissionModel>, Map<String, dynamic>>((
+    FutureProvider.family<List<CommissionModel>, String?>((
       ref,
-      filters,
+      status,
     ) async {
       final api = ref.watch(apiClientProvider);
       try {
         final response = await api.client.get(
           '/commissions/my-commissions',
-          queryParameters: filters,
+          queryParameters: {
+            if (status != null && status != 'ALL') 'status': status,
+          },
         );
         if (response.statusCode == 200) {
           final resData = response.data['data'];
@@ -249,11 +251,7 @@ class _SalesmanMyCommissionsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final filters = {
-      if (_selectedStatus != null && _selectedStatus != 'ALL')
-        'status': _selectedStatus,
-    };
-    final commissionsAsync = ref.watch(myCommissionsProvider(filters));
+    final commissionsAsync = ref.watch(myCommissionsProvider(_selectedStatus));
 
     return Scaffold(
       appBar: AppBar(

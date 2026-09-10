@@ -147,6 +147,12 @@ class User extends Authenticatable
             return true;
         }
 
+        if ($this->isSalesman()) {
+            if (in_array($permission, ['customers.view', 'customers.manage', 'orders.create'])) {
+                return true;
+            }
+        }
+
         $permissions = $this->role?->permissions;
         
         // In Laravel casts, $permissions might be an array or JSON string depending on db connection/driver, but here it is cast as array
