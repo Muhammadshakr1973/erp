@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_button.dart';
-import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/permission_guard.dart';
@@ -46,14 +45,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   double? _searchFieldWidth;
   bool _isSubmitting = false;
-
-  @override
-  void dispose() {
-    _notesController.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -110,6 +101,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void dispose() {
     _notesController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -393,10 +385,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               Expanded(
                 child: customersAsync.when(
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const Text('هەڵە لە بارکردنی کڕیاران'),
+                  error: (error, stackTrace) => const Text('هەڵە لە بارکردنی کڕیاران'),
                   data: (customers) {
                     return DropdownButtonFormField<int>(
-                      value: customers.any((c) => c.id == _selectedCustomer?.id)
+                      key: ValueKey(_selectedCustomer?.id),
+                      initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
                           ? _selectedCustomer?.id
                           : null,
                       decoration: const InputDecoration(
@@ -507,7 +500,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       : warehouses.first.id);
 
               return DropdownButtonFormField<int>(
-                value: warehouses.any((w) => w.id == selectedId)
+                key: ValueKey(selectedId),
+                initialValue: warehouses.any((w) => w.id == selectedId)
                     ? selectedId
                     : warehouses.first.id,
                 decoration: const InputDecoration(
@@ -730,7 +724,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
                     itemCount: options.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final product = options.elementAt(index);
                       final unitPrice = _getProductUnitPrice(product);
@@ -1144,7 +1138,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   children: [
                     const Text('کۆ کۆتایی:', style: AppTextStyles.bodyLarge),
                     Text(
-                      '${Formatters.currency(totalAmount)}',
+                      Formatters.currency(totalAmount),
                       style: AppTextStyles.priceLarge,
                     ),
                   ],
@@ -1207,7 +1201,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     style: AppTextStyles.caption,
                   ),
                   Text(
-                    '${Formatters.currency(totalAmount)}',
+                    Formatters.currency(totalAmount),
                     style: AppTextStyles.price,
                   ),
                 ],
@@ -1279,7 +1273,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: _cart.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final productId = _cart.keys.elementAt(index);
                         final qty = _cart[productId]!;
@@ -1403,7 +1397,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     children: [
                       const Text('کۆی گشتی:', style: AppTextStyles.bodyLarge),
                       Text(
-                        '${Formatters.currency(totalAmount)}',
+                        Formatters.currency(totalAmount),
                         style: AppTextStyles.priceLarge,
                       ),
                     ],
