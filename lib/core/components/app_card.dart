@@ -33,17 +33,17 @@ class AppCard extends StatelessWidget {
         borderRadius: AppRadius.radiusLg,
         boxShadow: isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
-      child: hasTap
-          ? Material(
-              color: Colors.transparent,
-              child: InkWell(
+      child: Material(
+        color: Colors.transparent,
+        child: hasTap
+            ? InkWell(
                 onTap: onTap,
                 onLongPress: onLongPress,
                 borderRadius: AppRadius.radiusLg,
                 child: content,
-              ),
-            )
-          : content,
+              )
+            : content,
+      ),
     );
   }
 }
