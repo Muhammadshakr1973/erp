@@ -1,9 +1,7 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'network/api_constants.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient();
@@ -12,15 +10,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 class ApiClient {
   late final Dio _dio;
 
-  static String get baseUrl {
-    // Allows injecting production URL during build: flutter build apk --dart-define=API_URL=https://api.gardierp.com/api/v1
-    const String envUrl = String.fromEnvironment('API_URL', defaultValue: '');
-    if (envUrl.isNotEmpty) return envUrl;
-    
-    if (kIsWeb) return 'http://127.0.0.1:8000/api/v1';
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000/api/v1';
-    return 'http://127.0.0.1:8000/api/v1';
-  }
+  static String get baseUrl => ApiConstants.baseUrl;
 
   ApiClient() {
     _dio = Dio(

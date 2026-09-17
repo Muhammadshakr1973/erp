@@ -67,8 +67,8 @@ class PusherService {
       // Load the key/cluster dynamically from the backend for production safety
       await _fetchPusherConfig();
       
-      final apiKey = _serverKey ?? const String.fromEnvironment('PUSHER_APP_KEY', defaultValue: 'gardi-pusher-key');
-      final cluster = _serverCluster ?? const String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: 'mt1');
+      final apiKey = _serverKey ?? const String.fromEnvironment('PUSHER_APP_KEY', defaultValue: 'aee37adafc0a3d8a1e04');
+      final cluster = _serverCluster ?? const String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: 'ap2');
 
       debugPrint("Initializing Pusher with key: $apiKey, cluster: $cluster");
 

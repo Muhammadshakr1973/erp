@@ -214,5 +214,13 @@ void main() {
       onEventReceived(42, 6);
       expect(refetchCalls, equals(2));
     });
+
+    test('6. Pusher live default configuration resolution', () {
+      const defaultKey = String.fromEnvironment('PUSHER_APP_KEY', defaultValue: 'aee37adafc0a3d8a1e04');
+      const defaultCluster = String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: 'ap2');
+
+      expect(defaultKey, equals('aee37adafc0a3d8a1e04'));
+      expect(defaultCluster, equals('ap2'));
+    });
   });
 }

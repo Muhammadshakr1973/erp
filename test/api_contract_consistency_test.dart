@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_app/core/network/api_constants.dart';
+import 'package:pos_app/core/api_client.dart';
 import 'package:pos_app/features/shared/models/report_models.dart';
 import 'package:pos_app/features/orders/models/order_model.dart';
 import 'package:pos_app/features/shared/models/customer.dart';
@@ -300,6 +302,14 @@ void main() {
       expect(req.supplierName, equals('Darya Co'));
       expect(req.requiredQuantity, equals(100));
       expect(req.isUrgent, isTrue);
+    });
+
+    test('Live Production Base URL & Endpoint Contract', () {
+      expect(ApiConstants.baseUrl, equals('https://pos.gardi.click/api/v1'));
+      expect(ApiClient.baseUrl, equals('https://pos.gardi.click/api/v1'));
+      expect('${ApiConstants.baseUrl}${ApiConstants.login}', equals('https://pos.gardi.click/api/v1/auth/login'));
+      expect('${ApiConstants.baseUrl}${ApiConstants.orders}', equals('https://pos.gardi.click/api/v1/orders'));
+      expect('${ApiConstants.baseUrl}${ApiConstants.customers}', equals('https://pos.gardi.click/api/v1/customers'));
     });
   });
 }
