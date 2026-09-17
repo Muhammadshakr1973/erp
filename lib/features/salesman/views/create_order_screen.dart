@@ -43,7 +43,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   double _discountValue = 0.0;
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  double? _searchFieldWidth;
   bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -159,13 +169,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           .firstOrNull;
       if (matched != null) {
         _addToCart(matched.id);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${matched.name} بەکارهێنرا بۆ سەبەتە'),
+            content: Text('${matched.name} زیادکرا بۆ سەبەتە'),
+            backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
         );
       } else {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode'),
@@ -298,7 +311,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    final productsAsync = ref.watch(filteredProductsProvider);
+    final productsAsync = ref.watch(productsListProvider);
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
 
@@ -534,128 +547,422 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     AsyncValue<List<ProductModel>> productsAsync,
     List<ProductModel> allProducts,
   ) {
+    final theme = Theme.of(context);
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: AppTextField(
-            controller: _searchController,
-            hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
-            prefixIcon: AppIcons.search,
-            onChanged: (query) {
-              ref.read(productSearchProvider.notifier).search(query);
-            },
+          child: _buildProductAutocompleteInput(
+            allProducts,
+            productsAsync.isLoading,
           ),
         ),
+        if (productsAsync.isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: LinearProgressIndicator(),
+          ),
         Expanded(
-          child: productsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('هەڵە: $err')),
-            data: (products) {
-              if (products.isEmpty) {
-                return const Center(child: Text('هیچ کاڵایەک نەدۆزرایەوە'));
-              }
-              return GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 180,
-                  mainAxisSpacing: AppSpacing.md,
-                  crossAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 0.72,
-                ),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  final qtyInCart = _cart[product.id] ?? 0;
-                  final unitPrice = _getProductUnitPrice(product);
-
-                  return _buildProductCard(product, unitPrice, qtyInCart);
-                },
-              );
-            },
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      size: 48,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text(
+                    'گەڕان بەپێی ناوی کاڵا یان باڕکۆد',
+                    style: AppTextStyles.h3,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Text(
+                      'لە ڕێگەی ئینپوتی سەرەوە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProductCard(
-    ProductModel product,
-    double unitPrice,
-    int qtyInCart,
+  Widget _buildProductAutocompleteInput(
+    List<ProductModel> allProducts,
+    bool isLoading,
   ) {
     final theme = Theme.of(context);
 
-    return AppCard(
-      onTap: () => _addToCart(product.id),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.inventory_2_outlined,
-                      size: 40,
-                      color: Colors.grey,
+    return RawAutocomplete<ProductModel>(
+      textEditingController: _searchController,
+      focusNode: _searchFocusNode,
+      displayStringForOption: (ProductModel option) => option.name,
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        final query = textEditingValue.text.trim().toLowerCase();
+        if (query.isEmpty) {
+          return const Iterable<ProductModel>.empty();
+        }
+
+        final matches = allProducts.where((p) {
+          final nameMatches = p.name.toLowerCase().contains(query);
+          final barcodeMatches = p.barcode.toLowerCase().contains(query);
+          final skuMatches =
+              p.sku != null && p.sku!.toLowerCase().contains(query);
+          return nameMatches || barcodeMatches || skuMatches;
+        }).toList();
+
+        // Sort: exact barcode first, startsWith barcode/name next, then alphabetical
+        matches.sort((a, b) {
+          final aExactBarcode = a.barcode.toLowerCase() == query;
+          final bExactBarcode = b.barcode.toLowerCase() == query;
+          if (aExactBarcode && !bExactBarcode) return -1;
+          if (!aExactBarcode && bExactBarcode) return 1;
+
+          final aBarcodeStarts = a.barcode.toLowerCase().startsWith(query);
+          final bBarcodeStarts = b.barcode.toLowerCase().startsWith(query);
+          if (aBarcodeStarts && !bBarcodeStarts) return -1;
+          if (!aBarcodeStarts && bBarcodeStarts) return 1;
+
+          final aNameStarts = a.name.toLowerCase().startsWith(query);
+          final bNameStarts = b.name.toLowerCase().startsWith(query);
+          if (aNameStarts && !bNameStarts) return -1;
+          if (!aNameStarts && bNameStarts) return 1;
+
+          return a.name.compareTo(b.name);
+        });
+
+        return matches;
+      },
+      onSelected: (ProductModel selection) {
+        _handleProductSelected(selection);
+      },
+      fieldViewBuilder: (
+        BuildContext context,
+        TextEditingController textEditingController,
+        FocusNode focusNode,
+        VoidCallback onFieldSubmitted,
+      ) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            _searchFieldWidth = constraints.maxWidth;
+
+            return AppTextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
+              prefixIcon: AppIcons.search,
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (textEditingController.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'سڕینەوەی دەق',
+                      onPressed: () {
+                        textEditingController.clear();
+                        focusNode.requestFocus();
+                        setState(() {});
+                      },
                     ),
+                  IconButton(
+                    icon: const Icon(AppIcons.scan),
+                    tooltip: 'سکانی باڕکۆد',
+                    onPressed: () => _scanBarcode(allProducts),
+                  ),
+                ],
+              ),
+              onChanged: (_) {
+                setState(() {});
+              },
+              onFieldSubmitted: (_) {
+                _handleBarcodeOrSearchSubmit(
+                  textEditingController,
+                  focusNode,
+                  allProducts,
+                );
+              },
+            );
+          },
+        );
+      },
+      optionsViewBuilder: (
+        BuildContext context,
+        AutocompleteOnSelected<ProductModel> onSelected,
+        Iterable<ProductModel> options,
+      ) {
+        return Align(
+          alignment: AlignmentDirectional.topStart,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6.0),
+            child: Material(
+              elevation: 8,
+              shadowColor: Colors.black.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              clipBehavior: Clip.antiAlias,
+              color: theme.colorScheme.surface,
+              child: SizedBox(
+                width: _searchFieldWidth ?? 450,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 340),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final product = options.elementAt(index);
+                      final unitPrice = _getProductUnitPrice(product);
+                      final qtyInCart = _cart[product.id] ?? 0;
+
+                      return InkWell(
+                        onTap: () => onSelected(product),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primaryContainer
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: theme.colorScheme.primary,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            product.name,
+                                            style: AppTextStyles.bodyBold,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (qtyInCart > 0) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '$qtyInCart لە سەبەتەدا',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        if (product.barcode.isNotEmpty) ...[
+                                          const Icon(
+                                            Icons.qr_code,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            product.barcode,
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                        ],
+                                        if (product.sku != null &&
+                                            product.sku!.isNotEmpty) ...[
+                                          Text(
+                                            'SKU: ${product.sku}',
+                                            style: AppTextStyles.caption,
+                                          ),
+                                          const SizedBox(width: 10),
+                                        ],
+                                        Text(
+                                          'یەکە: ${product.unit ?? "دانە"}',
+                                          style: AppTextStyles.caption,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    Formatters.currency(unitPrice),
+                                    style: AppTextStyles.price,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.add,
+                                          size: 14,
+                                          color: AppColors.primary,
+                                        ),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          'زیادکردن',
+                                          style: TextStyle(
+                                            color: AppColors.primary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                if (qtyInCart > 0)
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: CircleAvatar(
-                      radius: 12,
-                      backgroundColor: theme.colorScheme.primary,
-                      child: Text(
-                        '$qtyInCart',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            product.name,
-            style: AppTextStyles.bodyBold,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  Formatters.currency(unitPrice),
-                  style: AppTextStyles.price,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                product.unit ?? 'دانە',
-                style: AppTextStyles.caption.copyWith(color: Colors.grey),
-              ),
-            ],
-          ),
-        ],
+        );
+      },
+    );
+  }
+
+  void _handleProductSelected(ProductModel selection) {
+    _addToCart(selection.id);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${selection.name} زیادکرا بۆ سەبەتە'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 1),
       ),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchController.clear();
+      _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _handleBarcodeOrSearchSubmit(
+    TextEditingController controller,
+    FocusNode focusNode,
+    List<ProductModel> allProducts,
+  ) {
+    final query = controller.text.trim();
+    if (query.isEmpty) return;
+
+    final lowerQuery = query.toLowerCase();
+
+    // 1. Exact barcode match
+    ProductModel? match = allProducts
+        .where((p) => p.barcode.toLowerCase() == lowerQuery)
+        .firstOrNull;
+
+    // 2. Exact SKU match
+    match ??= allProducts
+        .where((p) => p.sku != null && p.sku!.toLowerCase() == lowerQuery)
+        .firstOrNull;
+
+    // 3. Exact name match
+    match ??= allProducts
+        .where((p) => p.name.toLowerCase() == lowerQuery)
+        .firstOrNull;
+
+    // 4. Barcode starts with query
+    match ??= allProducts
+        .where((p) => p.barcode.toLowerCase().startsWith(lowerQuery))
+        .firstOrNull;
+
+    // 5. Name contains query
+    match ??= allProducts
+        .where((p) => p.name.toLowerCase().contains(lowerQuery))
+        .firstOrNull;
+
+    if (match != null) {
+      _addToCart(match.id);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${match.name} زیادکرا بۆ سەبەتە'),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      controller.clear();
+      focusNode.requestFocus();
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('هیچ کاڵایەک نەدۆزرایەوە بە: $query'),
+          backgroundColor: AppColors.danger,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _buildCartPanel(

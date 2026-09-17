@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_app/core/components/app_button.dart';
+import 'package:pos_app/features/products/models/product_model.dart';
 
 void main() {
   group('Create Order - Calculations & Pricing Rules', () {
@@ -48,6 +49,107 @@ void main() {
           : null;
 
       expect(resolvedValue, isNull, reason: 'Must safely fallback to null instead of throwing Dropdown mismatch assertion.');
+    });
+  });
+
+  group('Create Order - Product Autocomplete & Barcode Search', () {
+    final sampleProducts = [
+      ProductModel(
+        id: 1,
+        name: 'شامپۆ کلیر (Clear Shampoo)',
+        barcode: '8690506001234',
+        sku: 'SH-001',
+        costPrice: 2000,
+        priceN1: 3000,
+        priceN2: 3500,
+        priceN3: 4000,
+        unitsPerCarton: 12,
+      ),
+      ProductModel(
+        id: 2,
+        name: 'سابوونی دۆڤ (Dove Soap)',
+        barcode: '8690506005678',
+        sku: 'SP-002',
+        costPrice: 1000,
+        priceN1: 1500,
+        priceN2: 1750,
+        priceN3: 2000,
+        unitsPerCarton: 24,
+      ),
+      ProductModel(
+        id: 3,
+        name: 'مەعجونی کۆلگەیت (Colgate Toothpaste)',
+        barcode: '6901234567890',
+        sku: 'TP-003',
+        costPrice: 1200,
+        priceN1: 1800,
+        priceN2: 2000,
+        priceN3: 2200,
+        unitsPerCarton: 12,
+      ),
+    ];
+
+    test('Finds product by exact barcode', () {
+      const query = '8690506001234';
+      final matches = sampleProducts.where((p) {
+        final nameMatches = p.name.toLowerCase().contains(query);
+        final barcodeMatches = p.barcode.toLowerCase().contains(query);
+        final skuMatches = p.sku != null && p.sku!.toLowerCase().contains(query);
+        return nameMatches || barcodeMatches || skuMatches;
+      }).toList();
+
+      expect(matches.length, equals(1));
+      expect(matches.first.id, equals(1));
+      expect(matches.first.name, contains('شامپۆ کلیر'));
+    });
+
+    test('Finds product by partial name in Kurdish or English', () {
+      const query = 'دۆڤ';
+      final matches = sampleProducts.where((p) {
+        final nameMatches = p.name.toLowerCase().contains(query);
+        final barcodeMatches = p.barcode.toLowerCase().contains(query);
+        final skuMatches = p.sku != null && p.sku!.toLowerCase().contains(query);
+        return nameMatches || barcodeMatches || skuMatches;
+      }).toList();
+
+      expect(matches.length, equals(1));
+      expect(matches.first.id, equals(2));
+      expect(matches.first.name, contains('سابوونی دۆڤ'));
+    });
+
+    test('Finds product by SKU', () {
+      const query = 'tp-003';
+      final matches = sampleProducts.where((p) {
+        final nameMatches = p.name.toLowerCase().contains(query);
+        final barcodeMatches = p.barcode.toLowerCase().contains(query);
+        final skuMatches = p.sku != null && p.sku!.toLowerCase().contains(query);
+        return nameMatches || barcodeMatches || skuMatches;
+      }).toList();
+
+      expect(matches.length, equals(1));
+      expect(matches.first.id, equals(3));
+      expect(matches.first.barcode, equals('6901234567890'));
+    });
+
+    test('Sorts exact barcode match to first priority', () {
+      const query = '8690506005678';
+      final matches = sampleProducts.where((p) {
+        final nameMatches = p.name.toLowerCase().contains(query);
+        final barcodeMatches = p.barcode.toLowerCase().contains(query);
+        final skuMatches = p.sku != null && p.sku!.toLowerCase().contains(query);
+        return nameMatches || barcodeMatches || skuMatches;
+      }).toList();
+
+      matches.sort((a, b) {
+        final aExact = a.barcode == query;
+        final bExact = b.barcode == query;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        return 0;
+      });
+
+      expect(matches.first.barcode, equals(query));
+      expect(matches.first.id, equals(2));
     });
   });
 
