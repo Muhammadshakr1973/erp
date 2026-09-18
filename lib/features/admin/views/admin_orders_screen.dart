@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
+import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -264,7 +265,22 @@ class AdminOrdersScreen extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(ordersListProvider),
       child: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('هەڵەیەک ڕوویدا: $error')),
+        error: (error, stack) => LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: ErrorState(
+                  title: 'هەڵەیەک ڕوویدا',
+                  message: Formatters.cleanError(error),
+                  retryText: 'دووبارە هەوڵبدەرەوە',
+                  onRetry: () => ref.invalidate(ordersListProvider),
+                ),
+              ),
+            ),
+          ),
+        ),
         data: (orders) {
           final filteredOrders = applyAdminOrderFilters(
             orders: orders,

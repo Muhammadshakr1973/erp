@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
+import '../../../../core/components/error_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -191,12 +192,12 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                 ),
               ),
               error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    'هەڵەیەک ڕوویدا: $err',
-                    style: const TextStyle(color: AppColors.danger),
-                  ),
+                child: ErrorState(
+                  title: 'هەڵەیەک ڕوویدا',
+                  message: Formatters.cleanError(err),
+                  retryText: 'دووبارە هەوڵبدەرەوە',
+                  onRetry: () =>
+                      ref.invalidate(profitReportProvider(_filters)),
                 ),
               ),
               data: (data) => Column(

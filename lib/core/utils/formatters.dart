@@ -18,4 +18,16 @@ class Formatters {
   static String dateTime(DateTime date) {
     return DateFormat('yyyy/MM/dd HH:mm').format(date);
   }
+
+  static String cleanError(dynamic error) {
+    if (error == null) return 'هەڵەیەکی نادیار ڕوویدا';
+    var msg = error.toString().trim();
+    while (msg.startsWith('Exception: ')) {
+      msg = msg.substring(11).trim();
+    }
+    if (msg.startsWith('FormatException: ')) {
+      msg = msg.substring(17).trim();
+    }
+    return msg;
+  }
 }

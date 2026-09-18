@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/components/app_card.dart';
 import '../../../../core/components/app_button.dart';
+import '../../../../core/components/error_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -369,7 +370,15 @@ class _PaymentsHistoryReportScreenState
                 child: reportAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
+                  error: (e, st) => Center(
+                    child: ErrorState(
+                      title: 'هەڵەیەک ڕوویدا',
+                      message: Formatters.cleanError(e),
+                      retryText: 'دووبارە هەوڵبدەرەوە',
+                      onRetry: () =>
+                          ref.invalidate(paymentsHistoryReportProvider),
+                    ),
+                  ),
                   data: (payments) {
                     if (payments.isEmpty) {
                       return const Center(

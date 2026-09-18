@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
@@ -79,11 +80,24 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
           Expanded(
             child: customersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text(
-                  'هەڵەیەک ڕوویدا: $error',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.danger,
+              error: (error, stack) => LayoutBuilder(
+                builder: (context, constraints) => RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(customerListProvider),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Center(
+                        child: ErrorState(
+                          title: 'هەڵەیەک ڕوویدا',
+                          message: Formatters.cleanError(error),
+                          retryText: 'دووبارە هەوڵبدەرەوە',
+                          onRetry: () => ref.invalidate(customerListProvider),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -97,78 +111,97 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                     .toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(child: Text('هیچ کڕیارێک نەدۆزرایەوە.'));
+                  return LayoutBuilder(
+                    builder: (context, constraints) => RefreshIndicator(
+                      onRefresh: () async =>
+                          ref.invalidate(customerListProvider),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: const Center(
+                            child: Text('هیچ کڕیارێک نەدۆزرایەوە.'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
                 }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenHorizontal,
-                  ),
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final customer = filtered[index];
-                    final bool isVisited = false; // Add real logic here later
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(customerListProvider),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                    ),
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) {
+                      final customer = filtered[index];
+                      final bool isVisited = false; // Add real logic here later
 
-                    return AppCard(
-                      onTap: () {
-                        context.push('/customer/${customer.id}');
-                      },
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: isVisited
-                                ? AppColors.success.withValues(alpha: 0.1)
-                                : theme.colorScheme.primaryContainer,
-                            child: Icon(
-                              AppIcons.customer,
-                              color: isVisited
-                                  ? AppColors.success
-                                  : theme.colorScheme.primary,
+                      return AppCard(
+                        onTap: () {
+                          context.push('/customer/${customer.id}');
+                        },
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: isVisited
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : theme.colorScheme.primaryContainer,
+                              child: Icon(
+                                AppIcons.customer,
+                                color: isVisited
+                                    ? AppColors.success
+                                    : theme.colorScheme.primary,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    customer.name,
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    customer.phone ?? 'بێ ژمارە',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  customer.name,
-                                  style: AppTextStyles.bodyBold,
+                                StatusBadge(
+                                  label: isVisited ? 'سەردانکراوە' : 'چاوەڕێ',
+                                  type: isVisited
+                                      ? StatusBadgeType.success
+                                      : StatusBadgeType.neutral,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  customer.phone ?? 'بێ ژمارە',
-                                  style: AppTextStyles.caption,
+                                  'قەرز: ${Formatters.currency(customer.balance)}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: customer.balance > 0
+                                        ? AppColors.danger
+                                        : AppColors.success,
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              StatusBadge(
-                                label: isVisited ? 'سەردانکراوە' : 'چاوەڕێ',
-                                type: isVisited
-                                    ? StatusBadgeType.success
-                                    : StatusBadgeType.neutral,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'قەرز: ${Formatters.currency(customer.balance)}',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: customer.balance > 0
-                                      ? AppColors.danger
-                                      : AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),

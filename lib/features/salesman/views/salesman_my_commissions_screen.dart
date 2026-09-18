@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/components/app_card.dart';
+import '../../../../core/components/error_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -304,7 +305,14 @@ class _SalesmanMyCommissionsScreenState
             Expanded(
               child: commissionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
+                error: (e, st) => Center(
+                  child: ErrorState(
+                    title: 'هەڵەیەک ڕوویدا',
+                    message: Formatters.cleanError(e),
+                    retryText: 'دووبارە هەوڵبدەرەوە',
+                    onRetry: () => ref.invalidate(myCommissionsProvider),
+                  ),
+                ),
                 data: (commissions) {
                   if (commissions.isEmpty) {
                     return const Center(

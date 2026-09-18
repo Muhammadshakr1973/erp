@@ -1,3 +1,4 @@
+import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import 'dart:math';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -190,20 +192,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             child: usersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'هەڵەیەک ڕوویدا: $err',
-                      style: AppTextStyles.bodyMedium,
-                    ),
-                  ],
+                child: ErrorState(
+                  title: 'هەڵەیەک ڕوویدا',
+                  message: Formatters.cleanError(err),
+                  retryText: 'دووبارە هەوڵبدەرەوە',
+                  onRetry: () => ref.invalidate(usersListProvider),
                 ),
               ),
               data: (data) {
