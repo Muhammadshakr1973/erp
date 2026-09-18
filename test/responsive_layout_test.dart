@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gardi_erp/core/components/responsive_shell.dart';
 
 void main() {
   group('Responsive Layout Breakpoint & Scroll Tests', () {
@@ -11,6 +12,38 @@ void main() {
       expect(mobileWidth < 700, isTrue);
       expect(tabletWidth < 700, isFalse);
       expect(desktopWidth < 700, isFalse);
+    });
+
+    testWidgets('ResponsiveShell NavigationRail does not overflow in constrained height desktop/tablet viewport', (WidgetTester tester) async {
+      // Set constrained height desktop size (1024x500) where 8 destinations would otherwise overflow
+      tester.binding.window.physicalSizeTestValue = const Size(1024, 500);
+      tester.binding.window.devicePixelRatioTestValue = 1.0;
+      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ResponsiveShell(
+            currentIndex: 0,
+            onDestinationSelected: (_) {},
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home), label: 'سەرەکی'),
+              NavigationDestination(icon: Icon(Icons.receipt), label: 'پسوڵەکان'),
+              NavigationDestination(icon: Icon(Icons.people), label: 'کڕیارەکان'),
+              NavigationDestination(icon: Icon(Icons.alt_route), label: 'ڕاوتەکان'),
+              NavigationDestination(icon: Icon(Icons.store), label: 'کۆمپانیا'),
+              NavigationDestination(icon: Icon(Icons.inventory_2), label: 'کاڵاکان'),
+              NavigationDestination(icon: Icon(Icons.bar_chart), label: 'ڕاپۆرت'),
+              NavigationDestination(icon: Icon(Icons.group), label: 'بەکارهێنەران'),
+            ],
+            body: const Center(child: Text('Dashboard Content')),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Dashboard Content'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Scrollable report layout does not overflow in constrained mobile viewport', (WidgetTester tester) async {

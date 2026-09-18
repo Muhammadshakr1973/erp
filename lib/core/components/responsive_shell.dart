@@ -35,17 +35,30 @@ class ResponsiveShell extends StatelessWidget {
           return Scaffold(
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: currentIndex,
-                  onDestinationSelected: onDestinationSelected,
-                  labelType: NavigationRailLabelType.all,
-                  destinations: destinations.map((d) {
-                    return NavigationRailDestination(
-                      icon: d.icon,
-                      selectedIcon: d.selectedIcon ?? d.icon,
-                      label: Text(d.label),
+                LayoutBuilder(
+                  builder: (context, railConstraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: railConstraints.maxHeight,
+                        ),
+                        child: IntrinsicHeight(
+                          child: NavigationRail(
+                            selectedIndex: currentIndex,
+                            onDestinationSelected: onDestinationSelected,
+                            labelType: NavigationRailLabelType.all,
+                            destinations: destinations.map((d) {
+                              return NavigationRailDestination(
+                                icon: d.icon,
+                                selectedIcon: d.selectedIcon ?? d.icon,
+                                label: Text(d.label),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
                     );
-                  }).toList(),
+                  },
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
                 Expanded(child: body),
