@@ -107,5 +107,82 @@ void main() {
       expect(find.text('Filters'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('ResponsiveShell on mobile displays only primary items and more (...) item', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      int selected = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              return ResponsiveShell(
+                currentIndex: selected,
+                onDestinationSelected: (idx) {
+                  setState(() {
+                    selected = idx;
+                  });
+                },
+                mobilePrimaryIndices: const [0, 2, 4],
+                destinations: const [
+                  NavigationDestination(icon: Icon(Icons.home), label: 'سەرەکی'),
+                  NavigationDestination(icon: Icon(Icons.receipt), label: 'پسوڵەکان'),
+                  NavigationDestination(icon: Icon(Icons.people), label: 'کڕیارەکان'),
+                  NavigationDestination(icon: Icon(Icons.alt_route), label: 'ڕاوتەکان'),
+                  NavigationDestination(icon: Icon(Icons.store), label: 'کۆمپانیا'),
+                  NavigationDestination(icon: Icon(Icons.inventory_2), label: 'کاڵاکان'),
+                  NavigationDestination(icon: Icon(Icons.bar_chart), label: 'ڕاپۆرت'),
+                  NavigationDestination(icon: Icon(Icons.group), label: 'بەکارهێنەران'),
+                ],
+                body: Center(child: Text('Current Screen: $selected')),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Verify primary items and more (...) item are visible
+      expect(find.text('سەرەکی'), findsOneWidget);
+      expect(find.text('کڕیارەکان'), findsOneWidget);
+      expect(find.text('کۆمپانیا'), findsOneWidget);
+      expect(find.text('...'), findsOneWidget);
+
+      // Verify secondary items are NOT directly on the bottom bar
+      expect(find.text('پسوڵەکان'), findsNothing);
+      expect(find.text('ڕاوتەکان'), findsNothing);
+      expect(find.text('کاڵاکان'), findsNothing);
+      expect(find.text('ڕاپۆرت'), findsNothing);
+      expect(find.text('بەکارهێنەران'), findsNothing);
+
+      // Tap on 'کڕیارەکان'
+      await tester.tap(find.text('کڕیارەکان'));
+      await tester.pumpAndSettle();
+      expect(selected, equals(2));
+
+      // Tap on '...' to open more bottom sheet
+      await tester.tap(find.text('...'));
+      await tester.pumpAndSettle();
+
+      // Verify bottom sheet title and secondary items are shown
+      expect(find.text('بەشەکانی تر'), findsOneWidget);
+      expect(find.text('پسوڵەکان'), findsOneWidget);
+      expect(find.text('کاڵاکان'), findsOneWidget);
+      expect(find.text('ڕاپۆرت'), findsOneWidget);
+
+      // Tap on 'ڕاپۆرت' in bottom sheet
+      await tester.tap(find.text('ڕاپۆرت'));
+      await tester.pumpAndSettle();
+
+      expect(selected, equals(6));
+      expect(find.text('Current Screen: 6'), findsOneWidget);
+    });
   });
 }

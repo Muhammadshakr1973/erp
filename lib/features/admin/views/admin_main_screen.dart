@@ -42,6 +42,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
           _currentIndex = index;
         });
       },
+      mobilePrimaryIndices: const [0, 2, 4],
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(_screens.length, (index) {
