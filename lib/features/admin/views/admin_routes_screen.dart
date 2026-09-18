@@ -98,44 +98,99 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                   (sum, r) => sum + r.salesmen.length,
                 );
 
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        'کۆی ڕاوتەکان',
-                        '$totalRoutes',
-                        Icons.alt_route,
-                        theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _buildStatCard(
-                        'ڕاوتی چالاک',
-                        '$activeRoutes',
-                        Icons.check_circle_outline,
-                        AppColors.success,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _buildStatCard(
-                        'کۆی کڕیارەکان',
-                        '$totalCustomers',
-                        Icons.storefront,
-                        AppColors.info,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _buildStatCard(
-                        'مەندوبە دابەشکراوەکان',
-                        '$totalSalesmenAssigned',
-                        Icons.badge_outlined,
-                        AppColors.warning,
-                      ),
-                    ),
-                  ],
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 720;
+                    if (isCompact) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'کۆی ڕاوتەکان',
+                                  '$totalRoutes',
+                                  Icons.alt_route,
+                                  theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'ڕاوتی چالاک',
+                                  '$activeRoutes',
+                                  Icons.check_circle_outline,
+                                  AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'کۆی کڕیارەکان',
+                                  '$totalCustomers',
+                                  Icons.storefront,
+                                  AppColors.info,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'مەندوبە دابەشکراوەکان',
+                                  '$totalSalesmenAssigned',
+                                  Icons.badge_outlined,
+                                  AppColors.warning,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'کۆی ڕاوتەکان',
+                            '$totalRoutes',
+                            Icons.alt_route,
+                            theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _buildStatCard(
+                            'ڕاوتی چالاک',
+                            '$activeRoutes',
+                            Icons.check_circle_outline,
+                            AppColors.success,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _buildStatCard(
+                            'کۆی کڕیارەکان',
+                            '$totalCustomers',
+                            Icons.storefront,
+                            AppColors.info,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _buildStatCard(
+                            'مەندوبە دابەشکراوەکان',
+                            '$totalSalesmenAssigned',
+                            Icons.badge_outlined,
+                            AppColors.warning,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
               orElse: () => const SizedBox.shrink(),
@@ -414,37 +469,49 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
     Color color,
   ) {
     return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontFamily: 'Rudaw',
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                    fontFamily: 'Rudaw',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Rudaw',
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Rudaw',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

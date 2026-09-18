@@ -175,30 +175,37 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: theme.colorScheme.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
         width: MediaQuery.of(context).size.width > 600 ? 550 : double.infinity,
-        height: 550,
+        height: 520,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'دیاریکردنی ناونیشان لەسەر نەخشە',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Rudaw',
+                  const Icon(Icons.map_outlined, color: Colors.blue, size: 22),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'دیاریکردنی ناونیشان لەسەر نەخشە',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Rudaw',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    visualDensity: VisualDensity.compact,
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -207,7 +214,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             const Divider(height: 1),
             // Manual coordinate fields
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   Expanded(
@@ -217,24 +224,25 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         decimal: true,
                       ),
                       decoration: InputDecoration(
-                        labelText: 'پانی (Latitude)',
+                        labelText: 'پانی (Lat)',
+                        isDense: true,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                          horizontal: 10,
+                          vertical: 8,
                         ),
                         prefixIcon: const Icon(
                           Icons.location_on_outlined,
                           size: 18,
                         ),
                       ),
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 13),
                       onChanged: _onManualCoordinateChange,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _lngController,
@@ -242,20 +250,21 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         decimal: true,
                       ),
                       decoration: InputDecoration(
-                        labelText: 'درێژی (Longitude)',
+                        labelText: 'درێژی (Lon)',
+                        isDense: true,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                          horizontal: 10,
+                          vertical: 8,
                         ),
                         prefixIcon: const Icon(
                           Icons.location_on_outlined,
                           size: 18,
                         ),
                       ),
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 13),
                       onChanged: _onManualCoordinateChange,
                     ),
                   ),
@@ -321,7 +330,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             ),
             const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -332,7 +341,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       style: TextStyle(fontFamily: 'Rudaw'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -341,8 +350,8 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                        horizontal: 20,
+                        vertical: 10,
                       ),
                     ),
                     onPressed: () {
