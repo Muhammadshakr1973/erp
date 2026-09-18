@@ -381,7 +381,9 @@ class _StockMovementsReportScreenState
     );
   }
 
-  Widget _buildWarehouseDropdown(AsyncValue warehousesAsync) {
+  Widget _buildWarehouseDropdown(
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
+  ) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedWarehouseId,
       decoration: const InputDecoration(
@@ -390,15 +392,15 @@ class _StockMovementsReportScreenState
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت کۆگاکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
         ...warehousesAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (w) => DropdownMenuItem(value: w.id, child: Text(w.name)),
+                (w) => DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedWarehouseId = val),

@@ -828,46 +828,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    Formatters.currency(unitPrice),
-                                    style: AppTextStyles.price,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.add,
-                                          size: 14,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          'زیادکردن',
-                                          style: TextStyle(
-                                            color: AppColors.primary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                Formatters.currency(unitPrice),
+                                style: AppTextStyles.price,
                               ),
                             ],
                           ),

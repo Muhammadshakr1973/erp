@@ -87,13 +87,15 @@ class _SupplierDebtsReportScreenState
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت کۆمپانیاکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆمپانیاکان')),
         ...suppliersAsync.when(
           data: (suppliers) => suppliers
-              .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+              .map<DropdownMenuItem<int?>>(
+                (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+              )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedSupplierId = val),

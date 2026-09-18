@@ -599,12 +599,12 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                     prefixIcon: Icon(Icons.alt_route),
                   ),
                   items: [
-                    const DropdownMenuItem<int>(
+                    const DropdownMenuItem<int?>(
                       value: null,
                       child: Text('گەڕەک دیاری نەکراوە'),
                     ),
                     ...routes.map(
-                      (route) => DropdownMenuItem<int>(
+                      (route) => DropdownMenuItem<int?>(
                         value: route.id,
                         child: Text(route.name),
                       ),

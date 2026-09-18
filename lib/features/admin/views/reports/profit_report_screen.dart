@@ -7,6 +7,8 @@ import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/models/user_model.dart';
+import '../../../shared/models/customer.dart';
 import '../../../shared/providers/customer_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/reports_provider.dart';
@@ -415,7 +417,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
     );
   }
 
-  Widget _buildSalesmanDropdown(AsyncValue salesmenAsync) {
+  Widget _buildSalesmanDropdown(AsyncValue<List<UserModel>> salesmenAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedSalesmanId,
       decoration: const InputDecoration(
@@ -424,22 +426,22 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت مەندوبەکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
         ...salesmenAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
+                (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedSalesmanId = val),
     );
   }
 
-  Widget _buildCustomerDropdown(AsyncValue customersAsync) {
+  Widget _buildCustomerDropdown(AsyncValue<List<Customer>> customersAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedCustomerId,
       decoration: const InputDecoration(
@@ -448,15 +450,15 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت کڕیارەکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
         ...customersAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                (c) => DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),

@@ -179,8 +179,8 @@ class _SalesmanCommissionsReportScreenState
                         labelText: 'مەندوب',
                         border: OutlineInputBorder(),
                       ),
-                      items: salesmen.map((s) {
-                        return DropdownMenuItem(
+                      items: salesmen.map<DropdownMenuItem<int>>((s) {
+                        return DropdownMenuItem<int>(
                           value: s.id,
                           child: Text('${s.name} (${s.commissionRate ?? 0}%)'),
                         );
@@ -1064,12 +1064,12 @@ class _SalesmanCommissionsReportScreenState
                             ),
                           ),
                           items: [
-                            const DropdownMenuItem(
+                            const DropdownMenuItem<int?>(
                               value: null,
                               child: Text('گشت مەندوبەکان'),
                             ),
-                            ...salesmen.map(
-                              (s) => DropdownMenuItem(
+                            ...salesmen.map<DropdownMenuItem<int?>>(
+                              (s) => DropdownMenuItem<int?>(
                                 value: s.id,
                                 child: Text(s.name),
                               ),

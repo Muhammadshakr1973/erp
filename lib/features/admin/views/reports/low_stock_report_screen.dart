@@ -75,21 +75,21 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                         ),
                       ),
                       items: [
-                        const DropdownMenuItem(
+                        const DropdownMenuItem<int?>(
                           value: null,
                           child: Text('گشت کۆگاکان'),
                         ),
                         ...warehousesAsync.when(
                           data: (list) => list
                               .map<DropdownMenuItem<int?>>(
-                                (w) => DropdownMenuItem(
+                                (w) => DropdownMenuItem<int?>(
                                   value: w.id,
                                   child: Text(w.name),
                                 ),
                               )
                               .toList(),
-                          loading: () => [],
-                          error: (_, _) => [],
+                          loading: () => const <DropdownMenuItem<int?>>[],
+                          error: (_, _) => const <DropdownMenuItem<int?>>[],
                         ),
                       ],
                       onChanged: (val) {

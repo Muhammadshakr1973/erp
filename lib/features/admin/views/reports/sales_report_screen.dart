@@ -7,6 +7,9 @@ import '../../../../core/components/app_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/models/user_model.dart';
+import '../../../shared/models/customer.dart';
+import '../../../shared/models/route_model.dart';
 import '../../../shared/providers/customer_provider.dart';
 import '../../../shared/providers/route_provider.dart';
 import '../../../shared/providers/warehouse_provider.dart';
@@ -537,7 +540,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
     );
   }
 
-  Widget _buildSalesmanDropdown(AsyncValue salesmenAsync) {
+  Widget _buildSalesmanDropdown(AsyncValue<List<UserModel>> salesmenAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedSalesmanId,
       decoration: const InputDecoration(
@@ -546,22 +549,22 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت مەندوبەکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
         ...salesmenAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
+                (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedSalesmanId = val),
     );
   }
 
-  Widget _buildCustomerDropdown(AsyncValue customersAsync) {
+  Widget _buildCustomerDropdown(AsyncValue<List<Customer>> customersAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedCustomerId,
       decoration: const InputDecoration(
@@ -570,22 +573,22 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت کڕیارەکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
         ...customersAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                (c) => DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );
   }
 
-  Widget _buildRouteDropdown(AsyncValue routesAsync) {
+  Widget _buildRouteDropdown(AsyncValue<List<RouteModel>> routesAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedRouteId,
       decoration: const InputDecoration(
@@ -594,22 +597,24 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت ڕێگاکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت ڕێگاکان')),
         ...routesAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (r) => DropdownMenuItem(value: r.id, child: Text(r.name)),
+                (r) => DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedRouteId = val),
     );
   }
 
-  Widget _buildWarehouseDropdown(AsyncValue warehousesAsync) {
+  Widget _buildWarehouseDropdown(
+    AsyncValue<List<WarehouseModel>> warehousesAsync,
+  ) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedWarehouseId,
       decoration: const InputDecoration(
@@ -618,15 +623,15 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('گشت کۆگاکان')),
+        const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
         ...warehousesAsync.when(
           data: (list) => list
               .map<DropdownMenuItem<int?>>(
-                (w) => DropdownMenuItem(value: w.id, child: Text(w.name)),
+                (w) => DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
               )
               .toList(),
-          loading: () => [],
-          error: (_, _) => [],
+          loading: () => const <DropdownMenuItem<int?>>[],
+          error: (_, _) => const <DropdownMenuItem<int?>>[],
         ),
       ],
       onChanged: (val) => setState(() => _selectedWarehouseId = val),
