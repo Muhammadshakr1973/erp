@@ -79,15 +79,30 @@ class _CustomerDebtsReportScreenState
   Widget _buildCustomerDropdown(AsyncValue<List<Customer>> customersAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedCustomerId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'کڕیار',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت کڕیارەکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final s in customersAsync.valueOrNull ?? <Customer>[])
-          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+          DropdownMenuItem<int?>(
+            value: s.id,
+            child: Text(
+              s.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );
@@ -96,16 +111,29 @@ class _CustomerDebtsReportScreenState
   Widget _buildEntryTypeDropdown() {
     return DropdownButtonFormField<String?>(
       initialValue: _selectedEntryType,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'جۆری جوڵە',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: const [
-        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-        DropdownMenuItem(value: 'PAYMENT', child: Text('پارەدان')),
-        DropdownMenuItem(value: 'SALE', child: Text('فرۆشتن')),
-        DropdownMenuItem(value: 'ADJUSTMENT', child: Text('ڕاستکردنەوە')),
+        DropdownMenuItem(
+          value: 'ALL',
+          child: Text('گشتی', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'PAYMENT',
+          child: Text('پارەدان', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'SALE',
+          child: Text('فرۆشتن', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'ADJUSTMENT',
+          child: Text('ڕاستکردنەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
       onChanged: (val) => setState(() => _selectedEntryType = val),
     );

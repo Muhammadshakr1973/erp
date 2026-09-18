@@ -89,30 +89,60 @@ class _PaymentsHistoryReportScreenState
     if (_paymentType == 'customer') {
       return DropdownButtonFormField<int?>(
         initialValue: _selectedPartyId,
+        isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'کڕیار',
           border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         ),
         items: [
-          const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
+          const DropdownMenuItem<int?>(
+            value: null,
+            child: Text(
+              'گشت کڕیارەکان',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           for (final s in customersAsync.valueOrNull ?? <Customer>[])
-            DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+            DropdownMenuItem<int?>(
+              value: s.id,
+              child: Text(
+                s.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
         ],
         onChanged: (val) => setState(() => _selectedPartyId = val),
       );
     } else {
       return DropdownButtonFormField<int?>(
         initialValue: _selectedPartyId,
+        isExpanded: true,
         decoration: const InputDecoration(
           labelText: 'دابینکەر / کۆمپانیا',
           border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         ),
         items: [
-          const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆمپانیاکان')),
+          const DropdownMenuItem<int?>(
+            value: null,
+            child: Text(
+              'گشت کۆمپانیاکان',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           for (final s in suppliersAsync.valueOrNull ?? <SupplierModel>[])
-            DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+            DropdownMenuItem<int?>(
+              value: s.id,
+              child: Text(
+                s.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
         ],
         onChanged: (val) => setState(() => _selectedPartyId = val),
       );

@@ -386,15 +386,30 @@ class _StockMovementsReportScreenState
   ) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedWarehouseId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'کۆگا',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت کۆگاکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final w in warehousesAsync.valueOrNull ?? <WarehouseModel>[])
-          DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
+          DropdownMenuItem<int?>(
+            value: w.id,
+            child: Text(
+              w.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedWarehouseId = val),
     );
@@ -403,28 +418,41 @@ class _StockMovementsReportScreenState
   Widget _buildTypeDropdown() {
     return DropdownButtonFormField<String?>(
       initialValue: _selectedType,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'جۆری جوڵە',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: const [
-        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-        DropdownMenuItem(value: 'PURCHASE', child: Text('کڕین (Purchase)')),
-        DropdownMenuItem(value: 'SALE', child: Text('فرۆشتن (Sale)')),
+        DropdownMenuItem(
+          value: 'ALL',
+          child: Text('گشتی', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'PURCHASE',
+          child: Text('کڕین (Purchase)', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'SALE',
+          child: Text('فرۆشتن (Sale)', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
         DropdownMenuItem(
           value: 'TRANSFER_IN',
-          child: Text('گواستنەوە بۆ ناوەوە'),
+          child: Text('گواستنەوە بۆ ناوەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: 'TRANSFER_OUT',
-          child: Text('گواستنەوە بۆ دەرەوە'),
+          child: Text('گواستنەوە بۆ دەرەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
         DropdownMenuItem(
           value: 'ADJUSTMENT',
-          child: Text('ڕێکخستن (Adjustment)'),
+          child: Text('ڕێکخستن (Adjustment)', maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
-        DropdownMenuItem(value: 'RETURN', child: Text('گەڕانەوە (Return)')),
+        DropdownMenuItem(
+          value: 'RETURN',
+          child: Text('گەڕانەوە (Return)', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
       onChanged: (val) => setState(() => _selectedType = val),
     );

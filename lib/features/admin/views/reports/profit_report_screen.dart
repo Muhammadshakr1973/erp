@@ -420,15 +420,30 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   Widget _buildSalesmanDropdown(AsyncValue<List<UserModel>> salesmenAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedSalesmanId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'مەندوب',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت مەندوبەکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final s in salesmenAsync.valueOrNull ?? <UserModel>[])
-          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+          DropdownMenuItem<int?>(
+            value: s.id,
+            child: Text(
+              s.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedSalesmanId = val),
     );
@@ -437,15 +452,30 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   Widget _buildCustomerDropdown(AsyncValue<List<Customer>> customersAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedCustomerId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'کڕیار',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت کڕیارەکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final c in customersAsync.valueOrNull ?? <Customer>[])
-          DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
+          DropdownMenuItem<int?>(
+            value: c.id,
+            child: Text(
+              c.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );

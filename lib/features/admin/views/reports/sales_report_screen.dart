@@ -145,6 +145,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                     builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 700;
                       if (isMobile) {
+                        final isNarrow = constraints.maxWidth < 360;
                         return Column(
                           children: [
                             Row(
@@ -159,19 +160,24 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             const SizedBox(height: AppSpacing.sm),
                             _buildCustomerDropdown(customersAsync),
                             const SizedBox(height: AppSpacing.sm),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildRouteDropdown(routesAsync),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: _buildWarehouseDropdown(
-                                    warehousesAsync,
+                            if (isNarrow) ...[
+                              _buildRouteDropdown(routesAsync),
+                              const SizedBox(height: AppSpacing.sm),
+                              _buildWarehouseDropdown(warehousesAsync),
+                            ] else
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildRouteDropdown(routesAsync),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: _buildWarehouseDropdown(
+                                      warehousesAsync,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             const SizedBox(height: AppSpacing.sm),
                             _buildStatusDropdown(),
                             const SizedBox(height: AppSpacing.md),
@@ -511,12 +517,14 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         decoration: const InputDecoration(
           labelText: 'لە بەرواری',
           border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         ),
         child: Text(
           _startDate != null
               ? _startDate!.toIso8601String().split('T').first
               : 'دیارینەکراوە',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -529,12 +537,14 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         decoration: const InputDecoration(
           labelText: 'تا بەرواری',
           border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         ),
         child: Text(
           _endDate != null
               ? _endDate!.toIso8601String().split('T').first
               : 'دیارینەکراوە',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -543,15 +553,30 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   Widget _buildSalesmanDropdown(AsyncValue<List<UserModel>> salesmenAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedSalesmanId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'مەندوب',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت مەندوبەکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final s in salesmenAsync.valueOrNull ?? <UserModel>[])
-          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+          DropdownMenuItem<int?>(
+            value: s.id,
+            child: Text(
+              s.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedSalesmanId = val),
     );
@@ -560,15 +585,30 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   Widget _buildCustomerDropdown(AsyncValue<List<Customer>> customersAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedCustomerId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'کڕیار',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت کڕیارەکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final c in customersAsync.valueOrNull ?? <Customer>[])
-          DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
+          DropdownMenuItem<int?>(
+            value: c.id,
+            child: Text(
+              c.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );
@@ -577,15 +617,30 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   Widget _buildRouteDropdown(AsyncValue<List<RouteModel>> routesAsync) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedRouteId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'ڕێگا (هێڵ)',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت ڕێگاکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت ڕێگاکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final r in routesAsync.valueOrNull ?? <RouteModel>[])
-          DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
+          DropdownMenuItem<int?>(
+            value: r.id,
+            child: Text(
+              r.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedRouteId = val),
     );
@@ -596,15 +651,30 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   ) {
     return DropdownButtonFormField<int?>(
       initialValue: _selectedWarehouseId,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'کۆگا',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
+        const DropdownMenuItem<int?>(
+          value: null,
+          child: Text(
+            'گشت کۆگاکان',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         for (final w in warehousesAsync.valueOrNull ?? <WarehouseModel>[])
-          DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
+          DropdownMenuItem<int?>(
+            value: w.id,
+            child: Text(
+              w.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: (val) => setState(() => _selectedWarehouseId = val),
     );
@@ -613,18 +683,37 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   Widget _buildStatusDropdown() {
     return DropdownButtonFormField<String?>(
       initialValue: _selectedStatus,
+      isExpanded: true,
       decoration: const InputDecoration(
         labelText: 'دۆخی پسوڵە',
         border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       ),
       items: const [
-        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-        DropdownMenuItem(value: 'DELIVERED', child: Text('گەیەندراوە')),
-        DropdownMenuItem(value: 'CONFIRMED', child: Text('پەسەندکراوە')),
-        DropdownMenuItem(value: 'IN_DELIVERY', child: Text('لە گەیاندندایە')),
-        DropdownMenuItem(value: 'PACKING', child: Text('لە پێچانەوەدایە')),
-        DropdownMenuItem(value: 'CANCELLED', child: Text('هەڵوەشاوەتەوە')),
+        DropdownMenuItem(
+          value: 'ALL',
+          child: Text('گشتی', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'DELIVERED',
+          child: Text('گەیەندراوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'CONFIRMED',
+          child: Text('پەسەندکراوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'IN_DELIVERY',
+          child: Text('لە گەیاندندایە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'PACKING',
+          child: Text('لە پێچانەوەدایە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        DropdownMenuItem(
+          value: 'CANCELLED',
+          child: Text('هەڵوەشاوەتەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
       onChanged: (val) => setState(() => _selectedStatus = val),
     );
