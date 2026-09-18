@@ -82,23 +82,23 @@ class User extends Authenticatable
 
     public function isOwner(): bool
     {
-        return $this->role?->name === Role::OWNER;
+        return strtolower($this->role?->name ?? '') === Role::OWNER;
     }
     public function isAdmin(): bool
     {
-        return in_array($this->role?->name, [Role::OWNER, Role::ADMIN]);
+        return in_array(strtolower($this->role?->name ?? ''), [Role::OWNER, Role::ADMIN]);
     }
     public function isSalesman(): bool
     {
-        return $this->role?->name === Role::SALESMAN;
+        return strtolower($this->role?->name ?? '') === Role::SALESMAN;
     }
     public function isWarehouse(): bool
     {
-        return $this->role?->name === Role::WAREHOUSE;
+        return in_array(strtolower($this->role?->name ?? ''), [Role::WAREHOUSE, 'packer']);
     }
     public function isDriver(): bool
     {
-        return $this->role?->name === Role::DRIVER;
+        return strtolower($this->role?->name ?? '') === Role::DRIVER;
     }
 
     public function getAssignedRouteIds(): array
@@ -148,14 +148,54 @@ class User extends Authenticatable
         }
 
         if ($this->isSalesman()) {
-            if (in_array($permission, ['customers.view', 'customers.manage', 'orders.create'])) {
+            if (in_array($permission, [
+                'orders.create',
+                'orders.view',
+                'customers.view',
+                'customers.manage',
+                'products.view',
+                'commissions.view',
+                'suppliers.view',
+            ])) {
+                return true;
+            }
+        }
+
+        if ($this->isWarehouse()) {
+            if (in_array($permission, [
+                'stock.view',
+                'stock.pack',
+                'stock.reconcile',
+                'stock.transfer',
+                'stock.adjust',
+                'purchases.receive',
+                'orders.view',
+            ])) {
+                return true;
+            }
+        }
+
+        if ($this->isDriver()) {
+            if (in_array($permission, [
+                'delivery.view',
+                'delivery.update',
+                'delivery.confirm',
+                'orders.view',
+            ])) {
                 return true;
             }
         }
 
         $permissions = $this->role?->permissions;
-        
-        // In Laravel casts, $permissions might be an array or JSON string depending on db connection/driver, but here it is cast as array
+
+        if (is_string($permissions)) {
+            $decoded = json_decode($permissions, true);
+            while (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            $permissions = is_array($decoded) ? $decoded : [];
+        }
+
         if (!is_array($permissions)) {
             return false;
         }

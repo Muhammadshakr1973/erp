@@ -24,6 +24,21 @@ class Role extends Model
     public const WAREHOUSE = 'warehouse';
     public const DRIVER = 'driver';
 
+    public function getPermissionsAttribute($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            while (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
+    }
+
     protected static function booted()
     {
         static::creating(function ($role) {

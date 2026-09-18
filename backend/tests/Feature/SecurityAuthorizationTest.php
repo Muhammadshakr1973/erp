@@ -678,4 +678,65 @@ class SecurityAuthorizationTest extends TestCase
             ])
             ->assertStatus(422);
     }
+
+    /**
+     * Test that warehouse staff can successfully view orders to pack and stock list.
+     */
+    public function test_warehouse_user_can_access_orders_to_pack_and_stock(): void
+    {
+        $warehouseRole = Role::create([
+            'name' => 'warehouse',
+            'display_name' => 'Warehouse Staff',
+            'permissions' => ['stock.view', 'stock.pack']
+        ]);
+
+        $warehouse = \App\Models\Warehouse::create([
+            'name' => 'Erbil Warehouse',
+            'is_main' => true,
+            'is_active' => true,
+        ]);
+
+        $warehouseUser = User::create([
+            'name' => 'Packer User',
+            'phone' => '07705555555',
+            'password' => bcrypt('password'),
+            'role_id' => $warehouseRole->id,
+            'warehouse_id' => $warehouse->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($warehouseUser)
+            ->getJson('/api/v1/warehouse/orders-to-pack')
+            ->assertStatus(200)
+            ->assertJsonStructure(['message', 'data']);
+
+        $this->actingAs($warehouseUser)
+            ->getJson('/api/v1/warehouse/stock')
+            ->assertStatus(200)
+            ->assertJsonStructure(['message', 'data']);
+    }
+
+    /**
+     * Test that warehouse user permissions resolve correctly even if stored as JSON string or empty.
+     */
+    public function test_warehouse_fallback_permissions_resolve_without_explicit_role_array(): void
+    {
+        $warehouseRole = Role::create([
+            'name' => 'warehouse',
+            'display_name' => 'Warehouse Staff',
+            'permissions' => []
+        ]);
+
+        $user = User::create([
+            'name' => 'Warehouse Staff 2',
+            'phone' => '07706666666',
+            'password' => bcrypt('password'),
+            'role_id' => $warehouseRole->id,
+            'is_active' => true,
+        ]);
+
+        $this->assertTrue($user->hasPermission('stock.view'));
+        $this->assertTrue($user->hasPermission('stock.pack'));
+        $this->assertFalse($user->hasPermission('users.manage'));
+    }
 }
