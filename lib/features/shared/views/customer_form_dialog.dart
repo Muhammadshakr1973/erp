@@ -88,7 +88,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Future<void> _submit() async {
@@ -551,7 +551,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _priceType,
+            initialValue: _priceType,
             decoration: const InputDecoration(
               labelText: 'جۆری نرخ',
               border: OutlineInputBorder(),
@@ -585,8 +585,8 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           ref
               .watch(routeListProvider)
               .when(
-                data: (routes) => DropdownButtonFormField<int>(
-                  value: _routeId != null && routes.any((r) => r.id == _routeId)
+                data: (routes) => DropdownButtonFormField<int?>(
+                  initialValue: _routeId != null && routes.any((r) => r.id == _routeId)
                       ? _routeId
                       : null,
                   decoration: const InputDecoration(
@@ -860,11 +860,15 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       : AppColors.danger;
 
                   String entryTypeLabel = entry.entryType;
-                  if (entryTypeLabel == 'PAYMENT') entryTypeLabel = 'پارەدان';
-                  if (entryTypeLabel == 'SALE') entryTypeLabel = 'فرۆشتن';
-                  if (entryTypeLabel == 'RETURN') entryTypeLabel = 'گەڕانەوە';
-                  if (entryTypeLabel == 'ADJUSTMENT')
+                  if (entryTypeLabel == 'PAYMENT') {
+                    entryTypeLabel = 'پارەدان';
+                  } else if (entryTypeLabel == 'SALE') {
+                    entryTypeLabel = 'فرۆشتن';
+                  } else if (entryTypeLabel == 'RETURN') {
+                    entryTypeLabel = 'گەڕانەوە';
+                  } else if (entryTypeLabel == 'ADJUSTMENT') {
                     entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
+                  }
 
                   return ListTile(
                     title: Text(

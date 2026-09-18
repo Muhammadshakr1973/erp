@@ -68,8 +68,8 @@ void main() {
 
     test('Route dropdown items map correctly to List<DropdownMenuItem<int?>>', () {
       final routes = [
-        RouteModel(id: 5, name: 'ڕێگای ١', code: 'R1'),
-        RouteModel(id: 6, name: 'ڕێگای ٢', code: 'R2'),
+        RouteModel(id: 5, name: 'ڕێگای ١'),
+        RouteModel(id: 6, name: 'ڕێگای ٢'),
       ];
 
       final items = <DropdownMenuItem<int?>>[
