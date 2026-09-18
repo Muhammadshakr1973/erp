@@ -75,6 +75,7 @@ Route::prefix('v1')->group(function () {
         // Customers (Fine-grained: view vs manage)
         Route::get('/customers', [CustomerController::class, 'index'])->middleware('permission:customers.view');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:customers.view');
+        Route::get('/customers/{customer}/ledger', [CustomerController::class, 'ledger'])->middleware('permission:customers.view');
         Route::post('/customers', [CustomerController::class, 'store'])->middleware(['permission:customers.manage', 'idempotent']);
         Route::put('/customers/{customer}', [CustomerController::class, 'update'])->middleware(['permission:customers.manage', 'idempotent']);
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('permission:customers.manage');

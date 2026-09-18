@@ -86,6 +86,38 @@ class CustomerController extends Controller
         ], 200);
     }
 
+    public function ledger(Request $request, Customer $customer): JsonResponse
+    {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $query = $customer->ledger()
+            ->with(['customer:id,name', 'creator:id,name'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        if ($request->filled('entry_type') && $request->entry_type !== 'ALL') {
+            $query->where('entry_type', $request->entry_type);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        return response()->json([
+            'message' => 'مێژووی قەرز و پارەدانی کڕیار',
+            'data' => $query->get()
+        ], 200);
+    }
+
     public function reconcile(Request $request, Customer $customer): JsonResponse
     {
         if (!$request->user()->hasCustomerAccess($customer)) {

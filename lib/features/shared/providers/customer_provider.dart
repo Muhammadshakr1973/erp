@@ -5,6 +5,7 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/models/paginated_response.dart';
 import '../models/customer.dart';
+import '../models/customer_ledger_model.dart';
 import '../models/customer_reconciliation_model.dart';
 
 class CustomerFilters {
@@ -132,6 +133,38 @@ final customerReconciliationProvider =
           );
         }
         throw Exception('Failed to fetch reconciliation report');
+      } catch (e) {
+        throw Exception(api.parseError(e));
+      }
+    });
+
+final customerLedgerProvider =
+    FutureProvider.family<List<CustomerLedgerModel>, Map<String, dynamic>>((
+      ref,
+      filters,
+    ) async {
+      final api = ref.watch(apiClientProvider);
+      final customerId = filters['customer_id'];
+      try {
+        final response = await api.client.get(
+          '/customers/$customerId/ledger',
+          queryParameters: filters,
+        );
+        if (response.statusCode == 200) {
+          final resData = response.data;
+          if (resData is! Map || resData['data'] is! List) {
+            throw FormatException(
+              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed customer ledger response payload)',
+            );
+          }
+          final List data = resData['data'] as List;
+          return data
+              .map((json) => CustomerLedgerModel.fromJson(json))
+              .toList();
+        }
+        throw Exception(
+          'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        );
       } catch (e) {
         throw Exception(api.parseError(e));
       }

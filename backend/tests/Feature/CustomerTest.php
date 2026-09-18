@@ -115,4 +115,46 @@ class CustomerTest extends TestCase
         $res2->assertStatus(200);
         $res2->assertHeader('X-Cache-Lookup', 'HIT');
     }
+
+    /** @test */
+    public function it_can_view_customer_ledger()
+    {
+        $customer = Customer::create([
+            'name' => 'Ledger Customer',
+            'phone' => '07507778899',
+            'current_balance' => 50000,
+        ]);
+
+        $customer->ledger()->create([
+            'entry_type' => 'SALE',
+            'type' => 'debit',
+            'debit' => 50000,
+            'credit' => 0,
+            'amount' => 50000,
+            'balance_before' => 0,
+            'balance_after' => 50000,
+            'description' => 'Test invoice debit',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson('/api/v1/customers/' . $customer->id . '/ledger');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'message',
+            'data' => [
+                '*' => [
+                    'id',
+                    'customer_id',
+                    'entry_type',
+                    'debit',
+                    'credit',
+                    'amount',
+                    'balance_before',
+                    'balance_after',
+                ]
+            ]
+        ]);
+        $this->assertCount(1, $response->json('data'));
+    }
 }

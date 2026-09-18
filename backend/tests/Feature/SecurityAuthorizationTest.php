@@ -88,9 +88,17 @@ class SecurityAuthorizationTest extends TestCase
             ->getJson("/api/v1/customers/{$assignedCustomer->id}")
             ->assertStatus(200);
 
+        $this->actingAs($salesman)
+            ->getJson("/api/v1/customers/{$assignedCustomer->id}/ledger")
+            ->assertStatus(200);
+
         // Blocked Customer Access (IDOR Prevention)
         $this->actingAs($salesman)
             ->getJson("/api/v1/customers/{$unassignedCustomer->id}")
+            ->assertStatus(403);
+
+        $this->actingAs($salesman)
+            ->getJson("/api/v1/customers/{$unassignedCustomer->id}/ledger")
             ->assertStatus(403);
     }
 

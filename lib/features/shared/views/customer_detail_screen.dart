@@ -265,7 +265,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
                       ref.invalidate(singleCustomerProvider(customer.id));
                       ref.invalidate(
-                        customerDebtsReportProvider(_ledgerFilters),
+                        customerLedgerProvider(_ledgerFilters),
                       );
                       ref.invalidate(customerListProvider);
                       
@@ -699,7 +699,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   Widget _buildLedgerTab(BuildContext context, Customer customer) {
-    final ledgerAsync = ref.watch(customerDebtsReportProvider(_ledgerFilters));
+    final ledgerAsync = ref.watch(customerLedgerProvider(_ledgerFilters));
 
     return Column(
       children: [
@@ -929,7 +929,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   message: Formatters.cleanError(e),
                   retryText: 'دووبارە هەوڵبدەرەوە',
                   onRetry: () =>
-                      ref.invalidate(customerDebtsReportProvider(_ledgerFilters)),
+                      ref.invalidate(customerLedgerProvider(_ledgerFilters)),
                 ),
               ),
             ),
