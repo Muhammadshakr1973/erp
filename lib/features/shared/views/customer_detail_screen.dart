@@ -713,117 +713,143 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              children: [
-                Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 600;
+
+                final entryTypeDropdown = DropdownButtonFormField<String?>(
+                  initialValue: _ledgerEntryType,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'جۆری جوڵە',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 12,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ALL',
+                      child: Text('گشتی', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'PAYMENT',
+                      child: Text('پارەدان', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'SALE',
+                      child: Text('فرۆشتن', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'RETURN',
+                      child: Text('گەڕانەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ADJUSTMENT',
+                      child: Text('ڕاستکردنەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                  onChanged: (val) =>
+                      setState(() => _ledgerEntryType = val),
+                );
+
+                final startDatePicker = InkWell(
+                  onTap: () => _selectLedgerDate(context, true),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'لە بەرواری',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: Text(
+                      _ledgerStartDate != null
+                          ? _ledgerStartDate!
+                                .toIso8601String()
+                                .split('T')
+                                .first
+                          : 'دیارینەکراوە',
+                      style: AppTextStyles.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                );
+
+                final endDatePicker = InkWell(
+                  onTap: () => _selectLedgerDate(context, false),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'تا بەرواری',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: Text(
+                      _ledgerEndDate != null
+                          ? _ledgerEndDate!
+                                .toIso8601String()
+                                .split('T')
+                                .first
+                          : 'دیارینەکراوە',
+                      style: AppTextStyles.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                );
+
+                return Column(
                   children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        initialValue: _ledgerEntryType,
-                        decoration: const InputDecoration(
-                          labelText: 'جۆری جوڵە',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-                          DropdownMenuItem(
-                            value: 'PAYMENT',
-                            child: Text('پارەدان'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'SALE',
-                            child: Text('فرۆشتن'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'RETURN',
-                            child: Text('گەڕانەوە'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'ADJUSTMENT',
-                            child: Text('ڕاستکردنەوە'),
-                          ),
+                    if (isMobile) ...[
+                      entryTypeDropdown,
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(child: startDatePicker),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: endDatePicker),
                         ],
-                        onChanged: (val) =>
-                            setState(() => _ledgerEntryType = val),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectLedgerDate(context, true),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'لە بەرواری',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                          child: Text(
-                            _ledgerStartDate != null
-                                ? _ledgerStartDate!
-                                      .toIso8601String()
-                                      .split('T')
-                                      .first
-                                : 'دیارینەکراوە',
-                            style: AppTextStyles.caption,
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(child: entryTypeDropdown),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: startDatePicker),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: endDatePicker),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: _clearLedgerFilters,
+                          child: const Text(
+                            'پاککردنەوە',
+                            style: TextStyle(color: AppColors.danger),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectLedgerDate(context, false),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'تا بەرواری',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                          child: Text(
-                            _ledgerEndDate != null
-                                ? _ledgerEndDate!
-                                      .toIso8601String()
-                                      .split('T')
-                                      .first
-                                : 'دیارینەکراوە',
-                            style: AppTextStyles.caption,
+                        SizedBox(
+                          width: 120,
+                          child: AppButton(
+                            text: 'فلتەر',
+                            onPressed: _applyLedgerFilters,
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: _clearLedgerFilters,
-                      child: const Text(
-                        'پاککردنەوە',
-                        style: TextStyle(color: AppColors.danger),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 120,
-                      child: AppButton(
-                        text: 'فلتەر',
-                        onPressed: _applyLedgerFilters,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -895,7 +921,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('کێشە هەیە: $e')),
+            error: (e, st) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: ErrorState(
+                  title: 'هەڵەیەک ڕوویدا',
+                  message: Formatters.cleanError(e),
+                  retryText: 'دووبارە هەوڵبدەرەوە',
+                  onRetry: () =>
+                      ref.invalidate(customerDebtsReportProvider(_ledgerFilters)),
+                ),
+              ),
+            ),
           ),
         ),
       ],
