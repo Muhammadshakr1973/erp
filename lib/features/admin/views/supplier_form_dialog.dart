@@ -221,8 +221,11 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                     height: 400,
                     child: TabBarView(
                       children: [
-                        SingleChildScrollView(
-                          child: _buildProfileFormFields(context),
+                        Form(
+                          key: _formKey,
+                          child: SingleChildScrollView(
+                            child: _buildProfileFormFields(context),
+                          ),
                         ),
                         SingleChildScrollView(child: _buildDebtForm(context)),
                         _buildLedgerHistory(context),
@@ -299,11 +302,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   }
 
   Widget _buildProfileFormFields(BuildContext context) {
-    return Form(
-      key: widget.supplier == null ? null : _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           const SizedBox(height: AppSpacing.sm),
           AppTextField(
             controller: _nameController,
@@ -355,8 +356,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
             ),
           ],
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildDebtForm(BuildContext context) {
