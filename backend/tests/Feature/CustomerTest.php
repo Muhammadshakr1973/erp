@@ -157,4 +157,24 @@ class CustomerTest extends TestCase
         ]);
         $this->assertCount(1, $response->json('data'));
     }
+
+    /** @test */
+    public function it_can_create_a_customer_with_image_url()
+    {
+        $payload = [
+            'name' => 'Customer With Image',
+            'phone' => '07507654321',
+            'price_tier' => 'RETAIL',
+            'image_url' => 'https://example.com/customer.jpg'
+        ];
+
+        $response = $this->actingAs($this->admin)->postJson('/api/v1/customers', $payload);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('customers', [
+            'name' => 'Customer With Image',
+            'image_url' => 'https://example.com/customer.jpg',
+        ]);
+    }
 }
+
