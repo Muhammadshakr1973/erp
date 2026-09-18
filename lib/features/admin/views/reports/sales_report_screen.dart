@@ -550,15 +550,8 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       ),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
-        ...salesmenAsync.when(
-          data: (list) => list
-              .map<DropdownMenuItem<int?>>(
-                (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-              )
-              .toList(),
-          loading: () => const <DropdownMenuItem<int?>>[],
-          error: (_, _) => const <DropdownMenuItem<int?>>[],
-        ),
+        for (final s in salesmenAsync.valueOrNull ?? <UserModel>[])
+          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
       ],
       onChanged: (val) => setState(() => _selectedSalesmanId = val),
     );
@@ -574,15 +567,8 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       ),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
-        ...customersAsync.when(
-          data: (list) => list
-              .map<DropdownMenuItem<int?>>(
-                (c) => DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
-              )
-              .toList(),
-          loading: () => const <DropdownMenuItem<int?>>[],
-          error: (_, _) => const <DropdownMenuItem<int?>>[],
-        ),
+        for (final c in customersAsync.valueOrNull ?? <Customer>[])
+          DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );
@@ -598,15 +584,8 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       ),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('گشت ڕێگاکان')),
-        ...routesAsync.when(
-          data: (list) => list
-              .map<DropdownMenuItem<int?>>(
-                (r) => DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
-              )
-              .toList(),
-          loading: () => const <DropdownMenuItem<int?>>[],
-          error: (_, _) => const <DropdownMenuItem<int?>>[],
-        ),
+        for (final r in routesAsync.valueOrNull ?? <RouteModel>[])
+          DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
       ],
       onChanged: (val) => setState(() => _selectedRouteId = val),
     );
@@ -624,15 +603,8 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       ),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
-        ...warehousesAsync.when(
-          data: (list) => list
-              .map<DropdownMenuItem<int?>>(
-                (w) => DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
-              )
-              .toList(),
-          loading: () => const <DropdownMenuItem<int?>>[],
-          error: (_, _) => const <DropdownMenuItem<int?>>[],
-        ),
+        for (final w in warehousesAsync.valueOrNull ?? <WarehouseModel>[])
+          DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
       ],
       onChanged: (val) => setState(() => _selectedWarehouseId = val),
     );

@@ -16,9 +16,8 @@ void main() {
 
       final items = <DropdownMenuItem<int?>>[
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆگاکان')),
-        ...warehouses.map<DropdownMenuItem<int?>>(
-          (w) => DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
-        ),
+        for (final w in warehouses)
+          DropdownMenuItem<int?>(value: w.id, child: Text(w.name)),
       ];
 
       expect(items.length, 3);
@@ -37,9 +36,8 @@ void main() {
 
       final items = <DropdownMenuItem<int?>>[
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
-        ...customers.map<DropdownMenuItem<int?>>(
-          (c) => DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
-        ),
+        for (final c in customers)
+          DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
       ];
 
       expect(items.length, 3);
@@ -57,9 +55,8 @@ void main() {
 
       final items = <DropdownMenuItem<int?>>[
         const DropdownMenuItem<int?>(value: null, child: Text('گشت مەندوبەکان')),
-        ...salesmen.map<DropdownMenuItem<int?>>(
-          (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-        ),
+        for (final s in salesmen)
+          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
       ];
 
       expect(items.length, 3);
@@ -77,9 +74,8 @@ void main() {
 
       final items = <DropdownMenuItem<int?>>[
         const DropdownMenuItem<int?>(value: null, child: Text('گشت ڕێگاکان')),
-        ...routes.map<DropdownMenuItem<int?>>(
-          (r) => DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
-        ),
+        for (final r in routes)
+          DropdownMenuItem<int?>(value: r.id, child: Text(r.name)),
       ];
 
       expect(items.length, 3);
@@ -97,9 +93,8 @@ void main() {
 
       final items = <DropdownMenuItem<int?>>[
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆمپانیاکان')),
-        ...suppliers.map<DropdownMenuItem<int?>>(
-          (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-        ),
+        for (final s in suppliers)
+          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
       ];
 
       expect(items.length, 3);

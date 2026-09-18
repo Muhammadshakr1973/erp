@@ -179,12 +179,13 @@ class _SalesmanCommissionsReportScreenState
                         labelText: 'مەندوب',
                         border: OutlineInputBorder(),
                       ),
-                      items: salesmen.map<DropdownMenuItem<int>>((s) {
-                        return DropdownMenuItem<int>(
-                          value: s.id,
-                          child: Text('${s.name} (${s.commissionRate ?? 0}%)'),
-                        );
-                      }).toList(),
+                      items: [
+                        for (final s in salesmen)
+                          DropdownMenuItem<int>(
+                            value: s.id,
+                            child: Text('${s.name} (${s.commissionRate ?? 0}%)'),
+                          ),
+                      ],
                       onChanged: (val) {
                         setDialogState(() {
                           dialogSalesmanId = val;
@@ -1068,12 +1069,11 @@ class _SalesmanCommissionsReportScreenState
                               value: null,
                               child: Text('گشت مەندوبەکان'),
                             ),
-                            ...salesmen.map<DropdownMenuItem<int?>>(
-                              (s) => DropdownMenuItem<int?>(
+                            for (final s in salesmen)
+                              DropdownMenuItem<int?>(
                                 value: s.id,
                                 child: Text(s.name),
                               ),
-                            ),
                           ],
                           onChanged: (val) =>
                               setState(() => _selectedSalesmanId = val),

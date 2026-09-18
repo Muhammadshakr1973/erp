@@ -86,15 +86,8 @@ class _CustomerDebtsReportScreenState
       ),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارکان')),
-        ...customersAsync.when(
-          data: (customers) => customers
-              .map<DropdownMenuItem<int?>>(
-                (s) => DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-              )
-              .toList(),
-          loading: () => const <DropdownMenuItem<int?>>[],
-          error: (_, _) => const <DropdownMenuItem<int?>>[],
-        ),
+        for (final s in customersAsync.valueOrNull ?? <Customer>[])
+          DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
       ],
       onChanged: (val) => setState(() => _selectedCustomerId = val),
     );

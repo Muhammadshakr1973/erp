@@ -79,18 +79,11 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                           value: null,
                           child: Text('گشت کۆگاکان'),
                         ),
-                        ...warehousesAsync.when(
-                          data: (list) => list
-                              .map<DropdownMenuItem<int?>>(
-                                (w) => DropdownMenuItem<int?>(
-                                  value: w.id,
-                                  child: Text(w.name),
-                                ),
-                              )
-                              .toList(),
-                          loading: () => const <DropdownMenuItem<int?>>[],
-                          error: (_, _) => const <DropdownMenuItem<int?>>[],
-                        ),
+                        for (final w in warehousesAsync.valueOrNull ?? <WarehouseModel>[])
+                          DropdownMenuItem<int?>(
+                            value: w.id,
+                            child: Text(w.name),
+                          ),
                       ],
                       onChanged: (val) {
                         setState(() => _selectedWarehouseId = val);

@@ -96,16 +96,8 @@ class _PaymentsHistoryReportScreenState
         ),
         items: [
           const DropdownMenuItem<int?>(value: null, child: Text('گشت کڕیارەکان')),
-          ...customersAsync.when(
-            data: (customers) => customers
-                .map<DropdownMenuItem<int?>>(
-                  (s) =>
-                      DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-                )
-                .toList(),
-            loading: () => const <DropdownMenuItem<int?>>[],
-            error: (_, _) => const <DropdownMenuItem<int?>>[],
-          ),
+          for (final s in customersAsync.valueOrNull ?? <Customer>[])
+            DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
         ],
         onChanged: (val) => setState(() => _selectedPartyId = val),
       );
@@ -119,16 +111,8 @@ class _PaymentsHistoryReportScreenState
         ),
         items: [
           const DropdownMenuItem<int?>(value: null, child: Text('گشت کۆمپانیاکان')),
-          ...suppliersAsync.when(
-            data: (suppliers) => suppliers
-                .map<DropdownMenuItem<int?>>(
-                  (s) =>
-                      DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
-                )
-                .toList(),
-            loading: () => const <DropdownMenuItem<int?>>[],
-            error: (_, _) => const <DropdownMenuItem<int?>>[],
-          ),
+          for (final s in suppliersAsync.valueOrNull ?? <SupplierModel>[])
+            DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
         ],
         onChanged: (val) => setState(() => _selectedPartyId = val),
       );
