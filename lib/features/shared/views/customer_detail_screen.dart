@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -88,13 +89,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'نەتوانرا شوێنی ئێستات دیاری بکرێت: $e',
-              style: const TextStyle(fontFamily: 'Rudaw'),
-            ),
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'نەتوانرا شوێنی ئێستات دیاری بکرێت: $e',
+          type: SnackbarType.error,
         );
       }
     } finally {
@@ -271,21 +269,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       
                       if (context.mounted) {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'داواکاری پارەدانەکە بە سەرکەوتوویی خرایە ڕیزی سینکەوە',
-                            ),
-                          ),
+                        AppSnackbar.show(
+                          context,
+                          message: 'داواکاری پارەدانەکە بە سەرکەوتوویی خرایە ڕیزی سینکەوە',
+                          type: SnackbarType.success,
                         );
                       }
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('هەڵە ڕوویدا: $e'),
-                            backgroundColor: AppColors.danger,
-                          ),
+                        AppSnackbar.show(
+                          context,
+                          message: 'هەڵە ڕوویدا: $e',
+                          type: SnackbarType.error,
                         );
                       }
                     } finally {
@@ -423,23 +418,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                                       .read(customerActionsProvider)
                                       .deleteCustomer(customer.id);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'کڕیار بە سەرکەوتوویی سڕایەوە',
-                                        ),
-                                        backgroundColor: AppColors.success,
-                                      ),
+                                    AppSnackbar.show(
+                                      context,
+                                      message: 'کڕیار بە سەرکەوتوویی سڕایەوە',
+                                      type: SnackbarType.success,
                                     );
                                     Navigator.pop(context);
                                   }
                                 } catch (e) {
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('هەڵە لە سڕینەوە: $e'),
-                                        backgroundColor: AppColors.danger,
-                                      ),
+                                    AppSnackbar.show(
+                                      context,
+                                      message: 'هەڵە لە سڕینەوە: $e',
+                                      type: SnackbarType.error,
                                     );
                                   }
                                 }

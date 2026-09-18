@@ -4,6 +4,7 @@ import 'package:pos_app/core/utils/formatters.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -57,20 +58,18 @@ class _SupplierReconciliationDialogState
             .read(supplierActionsProvider)
             .fixSupplierBalance(widget.supplier.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('باڵانس بە سەرکەوتوویی ڕاستکرایەوە'),
-              backgroundColor: AppColors.success,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'باڵانس بە سەرکەوتوویی ڕاستکرایەوە',
+            type: SnackbarType.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('هەڵە ڕوویدا: $e'),
-              backgroundColor: AppColors.danger,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'هەڵە ڕوویدا: $e',
+            type: SnackbarType.error,
           );
         }
       } finally {

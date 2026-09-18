@@ -9,6 +9,7 @@ import 'dart:math';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
@@ -534,8 +535,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               warehouseId: warehouseId,
             );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('بەکارهێنەر بە سەرکەوتوویی زیادکرا')),
+          AppSnackbar.show(
+            context,
+            message: 'بەکارهێنەر بە سەرکەوتوویی زیادکرا',
+            type: SnackbarType.success,
           );
         }
       } else {
@@ -554,18 +557,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               warehouseId: warehouseId,
             );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('زانیاری بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە'),
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'زانیاری بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە',
+            type: SnackbarType.success,
           );
         }
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('هەڵە: $e')));
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە: $e',
+          type: SnackbarType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

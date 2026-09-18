@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -207,29 +208,26 @@ class _CustomerReconciliationDialogState
         if (!mounted) return;
 
         if (result.isConsistent) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە'),
-              backgroundColor: AppColors.success,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'بالانسی کڕیار بە سەرکەوتوویی ڕاستکرایەوە',
+            type: SnackbarType.success,
           );
           Navigator.pop(context);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('سێرڤەر نەیتوانی بالانسەکە ڕاستبکاتەوە (پێویستت بە دەسەڵاتی بەڕێوەبەر هەیە)'),
-              backgroundColor: AppColors.warning,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'سێرڤەر نەیتوانی بالانسەکە ڕاستبکاتەوە (پێویستت بە دەسەڵاتی بەڕێوەبەر هەیە)',
+            type: SnackbarType.warning,
           );
         }
       } catch (e) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('هەڵە لە ڕاستکردنەوە: $e'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە لە ڕاستکردنەوە: $e',
+          type: SnackbarType.error,
         );
       } finally {
         if (mounted) setState(() => _isFixing = false);

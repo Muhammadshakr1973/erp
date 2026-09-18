@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
@@ -161,21 +162,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           .firstOrNull;
       if (matched != null) {
         _addToCart(matched.id);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${matched.name} زیادکرا بۆ سەبەتە'),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 2),
-          ),
+        AppSnackbar.show(
+          context,
+          message: '${matched.name} زیادکرا بۆ سەبەتە',
+          type: SnackbarType.success,
         );
       } else {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
+          type: SnackbarType.error,
         );
       }
     });
@@ -186,42 +182,38 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackbar.show(
+        context,
+        message: 'هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)',
+        type: SnackbarType.error,
       );
       return;
     }
 
     final warehouses = warehousesAsync.asData!.value;
     if (warehouses.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('هیچ کۆگایەک بەردەست نییە بۆ دروستکردنی پسوڵە'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackbar.show(
+        context,
+        message: 'هیچ کۆگایەک بەردەست نییە بۆ دروستکردنی پسوڵە',
+        type: SnackbarType.error,
       );
       return;
     }
 
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تکایە سەرەتا کڕیارێک هەڵبژێرە'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackbar.show(
+        context,
+        message: 'تکایە سەرەتا کڕیارێک هەڵبژێرە',
+        type: SnackbarType.warning,
       );
       return;
     }
 
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackbar.show(
+        context,
+        message: 'سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە',
+        type: SnackbarType.warning,
       );
       return;
     }
@@ -266,25 +258,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.existingOrder != null
-                  ? 'پسوڵەکە بە سەرکەوتوویی نوێکرایەوە'
-                  : 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
-            ),
-            backgroundColor: AppColors.success,
-          ),
+        AppSnackbar.show(
+          context,
+          message: widget.existingOrder != null
+              ? 'پسوڵەکە بە سەرکەوتوویی نوێکرایەوە'
+              : 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
+          type: SnackbarType.success,
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('هەڵە لە تۆمارکردنی پسوڵە: $e'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە لە تۆمارکردنی پسوڵە: $e',
+          type: SnackbarType.error,
         );
       }
     } finally {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -118,11 +119,10 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('کێشە لە پاشەکەوتکردن: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'کێشە لە پاشەکەوتکردن: $e',
+          type: SnackbarType.error,
         );
       }
     } finally {
@@ -138,9 +138,11 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
     final amountText = _paymentAmountController.text.trim();
     final amount = int.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(
+      AppSnackbar.show(
         context,
-      ).showSnackBar(const SnackBar(content: Text('تکایە بڕێکی دروست بنووسە')));
+        message: 'تکایە بڕێکی دروست بنووسە',
+        type: SnackbarType.warning,
+      );
       return;
     }
 
@@ -157,18 +159,19 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('قەرزەکە بە سەرکەوتوویی کەمکرایەوە')),
+        AppSnackbar.show(
+          context,
+          message: 'قەرزەکە بە سەرکەوتوویی کەمکرایەوە',
+          type: SnackbarType.success,
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('کێشە لە نوێکردنەوەی قەرز: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'کێشە لە نوێکردنەوەی قەرز: $e',
+          type: SnackbarType.error,
         );
       }
     } finally {

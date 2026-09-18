@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_button.dart';
+import 'app_snackbar.dart';
 
 class CameraBarcodeScanner extends StatefulWidget {
   final Function(String barcode) onScan;
@@ -82,17 +83,11 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
     widget.onScan(cleanBarcode);
     Navigator.of(context).pop();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $cleanBarcode',
-          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    AppSnackbar.show(
+      context,
+      message: 'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $cleanBarcode',
+      type: SnackbarType.success,
+      duration: const Duration(seconds: 2),
     );
   }
 

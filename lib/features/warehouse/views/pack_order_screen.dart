@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
@@ -38,13 +39,10 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     try {
       await ref.read(warehouseActionsProvider).packItem(item.id, value);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              value ? 'کاڵاکە پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
-            ),
-            backgroundColor: value ? AppColors.success : Colors.grey,
-          ),
+        AppSnackbar.show(
+          context,
+          message: value ? 'کاڵاکە پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
+          type: value ? SnackbarType.success : SnackbarType.info,
         );
       }
     } catch (e) {
@@ -107,11 +105,10 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     try {
       await ref.read(warehouseActionsProvider).markOrderReady(order.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('پسوڵەکە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا'),
-            backgroundColor: AppColors.success,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەکە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا',
+          type: SnackbarType.success,
         );
         Navigator.pop(context);
       }
@@ -153,17 +150,19 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
       if (item != null) {
         if (item.isPacked) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ئەم کاڵایە پێشتر پاکەتکراوە')),
+          AppSnackbar.show(
+            context,
+            message: 'ئەم کاڵایە پێشتر پاکەتکراوە',
+            type: SnackbarType.info,
           );
         } else {
           _togglePack(item, true);
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە'),
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە',
+          type: SnackbarType.warning,
         );
       }
     });

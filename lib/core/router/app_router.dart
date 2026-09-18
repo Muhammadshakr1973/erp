@@ -47,10 +47,13 @@ String _getDashboardForRole(String role) {
   return '/login';
 }
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final transitionNotifier = ref.watch(routerTransitionProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     refreshListenable: transitionNotifier,
     redirect: (context, state) {

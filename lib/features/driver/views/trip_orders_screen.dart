@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -296,21 +297,19 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
             notes: notes.isNotEmpty ? notes : null,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('پسوڵەکە بە سەرکەوتوویی بە گەیەنراو تۆمارکرا'),
-            backgroundColor: AppColors.success,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەکە بە سەرکەوتوویی بە گەیەنراو تۆمارکرا',
+          type: SnackbarType.success,
         );
       }
       ref.invalidate(tripDetailProvider(int.parse(widget.tripId)));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('شکست لێتۆمارکردن: ${e.toString()}'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'شکست لە تۆمارکردن: ${e.toString()}',
+          type: SnackbarType.error,
         );
       }
     } finally {
@@ -405,21 +404,19 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
             notes: notes.isNotEmpty ? notes : null,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('شکستی پسوڵەکە بە سەرکەوتوویی تۆمارکرا'),
-            backgroundColor: AppColors.warning,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'شکستی پسوڵەکە بە سەرکەوتوویی تۆمارکرا',
+          type: SnackbarType.warning,
         );
       }
       ref.invalidate(tripDetailProvider(int.parse(widget.tripId)));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('شکست لە تۆمارکردن: ${e.toString()}'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackbar.show(
+          context,
+          message: 'شکست لە تۆمارکردن: ${e.toString()}',
+          type: SnackbarType.error,
         );
       }
     } finally {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_dialog.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -83,14 +84,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       try {
         await ref.read(supplierActionsProvider).deleteSupplier(supplier.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('کۆمپانیا بە سەرکەوتوویی سڕایەوە')),
+          AppSnackbar.show(
+            context,
+            message: 'کۆمپانیا بە سەرکەوتوویی سڕایەوە',
+            type: SnackbarType.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('کێشە لە سڕینەوە: $e')));
+          AppSnackbar.show(
+            context,
+            message: 'کێشە لە سڕینەوە: $e',
+            type: SnackbarType.error,
+          );
         }
       }
     }
@@ -155,19 +161,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           _selectedRequirementIds.clear();
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین',
-              ),
-              backgroundColor: AppColors.success,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین',
+            type: SnackbarType.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          AppSnackbar.show(
+            context,
+            message: e.toString().replaceAll('Exception: ', ''),
+            type: SnackbarType.error,
           );
         }
       } finally {
@@ -191,23 +196,21 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('پسوڵەی کڕین پەسەند دەکرێت...')),
-      );
       try {
         await ref.read(purchaseActionsProvider).confirmPurchaseOrder(order.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('پسوڵەی کڕین بەسەرکەوتوویی پەسەندکرا'),
-              backgroundColor: AppColors.success,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'پسوڵەی کڕین بەسەرکەوتوویی پەسەندکرا',
+            type: SnackbarType.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          AppSnackbar.show(
+            context,
+            message: e.toString().replaceAll('Exception: ', ''),
+            type: SnackbarType.error,
           );
         }
       }
@@ -224,13 +227,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'کرداری وەرگرتنی پسوڵەی کڕین جێبەجێکرا',
-          ),
-          backgroundColor: AppColors.success,
-        ),
+      AppSnackbar.show(
+        context,
+        message: 'کرداری وەرگرتنی پسوڵەی کڕین جێبەجێکرا',
+        type: SnackbarType.success,
       );
     }
   }
@@ -247,23 +247,21 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('پسوڵەی کڕین هەڵدەوەشێنرێتەوە...')),
-      );
       try {
         await ref.read(purchaseActionsProvider).cancelPurchaseOrder(order.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('پسوڵەی کڕین بەسەرکەوتوویی هەڵوەشێنرایەوە'),
-              backgroundColor: AppColors.success,
-            ),
+          AppSnackbar.show(
+            context,
+            message: 'پسوڵەی کڕین بەسەرکەوتوویی هەڵوەشێنرایەوە',
+            type: SnackbarType.success,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+          AppSnackbar.show(
+            context,
+            message: e.toString().replaceAll('Exception: ', ''),
+            type: SnackbarType.error,
           );
         }
       }
@@ -1107,8 +1105,10 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        AppSnackbar.show(
+          context,
+          message: e.toString().replaceAll('Exception: ', ''),
+          type: SnackbarType.error,
         );
       }
     } finally {
@@ -1151,8 +1151,10 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        AppSnackbar.show(
+          context,
+          message: e.toString().replaceAll('Exception: ', ''),
+          type: SnackbarType.error,
         );
       }
     } finally {

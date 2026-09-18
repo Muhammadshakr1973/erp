@@ -7,6 +7,7 @@ import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_pagination.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -130,20 +131,18 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                 ref.invalidate(filteredCustomerListProvider);
                 ref.invalidate(customerListProvider);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('کڕیار بە سەرکەوتوویی سڕایەوە'),
-                      backgroundColor: AppColors.success,
-                    ),
+                  AppSnackbar.show(
+                    context,
+                    message: 'کڕیار بە سەرکەوتوویی سڕایەوە',
+                    type: SnackbarType.success,
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('هەڵە لە سڕینەوە: $e'),
-                      backgroundColor: AppColors.danger,
-                    ),
+                  AppSnackbar.show(
+                    context,
+                    message: 'هەڵە لە سڕینەوە: $e',
+                    type: SnackbarType.error,
                   );
                 }
               }
