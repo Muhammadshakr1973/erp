@@ -905,9 +905,10 @@ class _SalesmanCommissionsReportScreenState
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // KPI Summary Cards
             summaryAsync.when(
@@ -922,106 +923,79 @@ class _SalesmanCommissionsReportScreenState
                   builder: (context, constraints) {
                     final isMobile = constraints.maxWidth < 700;
 
-                    final cards = [
-                      Expanded(
-                        child: AppCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'هەژمارکراو (چاوەڕوانکراو)',
-                                style: AppTextStyles.caption,
+                    Widget buildKpiCard(
+                      String title,
+                      dynamic amount,
+                      dynamic count,
+                      Color color,
+                    ) {
+                      return AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: AppTextStyles.caption,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatCurrency(amount ?? 0),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: color,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _formatCurrency(calculated['amount'] ?? 0),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.warning,
-                                ),
-                                textDirection: TextDirection.ltr,
-                              ),
-                              Text(
-                                '${calculated['count'] ?? 0} کۆمسیۆن',
-                                style: AppTextStyles.caption,
-                              ),
-                            ],
-                          ),
+                              textDirection: TextDirection.ltr,
+                            ),
+                            Text(
+                              '${count ?? 0} کۆمسیۆن',
+                              style: AppTextStyles.caption,
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: AppCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'پەسەندکراو (ئامادەی پارەدان)',
-                                style: AppTextStyles.caption,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _formatCurrency(approved['amount'] ?? 0),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.info,
-                                ),
-                                textDirection: TextDirection.ltr,
-                              ),
-                              Text(
-                                '${approved['count'] ?? 0} کۆمسیۆن',
-                                style: AppTextStyles.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: AppCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'دراو (تەواوبوو)',
-                                style: AppTextStyles.caption,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _formatCurrency(paid['amount'] ?? 0),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.success,
-                                ),
-                                textDirection: TextDirection.ltr,
-                              ),
-                              Text(
-                                '${paid['count'] ?? 0} کۆمسیۆن',
-                                style: AppTextStyles.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ];
-
-                    if (isMobile) {
-                      return Column(
-                        children: cards
-                            .map(
-                              (c) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: c,
-                              ),
-                            )
-                            .toList(),
                       );
                     }
 
-                    return Row(children: cards);
+                    final cardCalculated = buildKpiCard(
+                      'هەژمارکراو (چاوەڕوانکراو)',
+                      calculated['amount'],
+                      calculated['count'],
+                      AppColors.warning,
+                    );
+                    final cardApproved = buildKpiCard(
+                      'پەسەندکراو (ئامادەی پارەدان)',
+                      approved['amount'],
+                      approved['count'],
+                      AppColors.info,
+                    );
+                    final cardPaid = buildKpiCard(
+                      'دراو (تەواوبوو)',
+                      paid['amount'],
+                      paid['count'],
+                      AppColors.success,
+                    );
+
+                    if (isMobile) {
+                      return Column(
+                        children: [
+                          cardCalculated,
+                          const SizedBox(height: AppSpacing.sm),
+                          cardApproved,
+                          const SizedBox(height: AppSpacing.sm),
+                          cardPaid,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: cardCalculated),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: cardApproved),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: cardPaid),
+                      ],
+                    );
                   },
                 );
               },
@@ -1207,143 +1181,151 @@ class _SalesmanCommissionsReportScreenState
             const SizedBox(height: AppSpacing.md),
 
             // Results List / Table
-            Expanded(
-              child: AppCard(
-                child: commissionsAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(child: Text('هەڵەیەک ڕوویدا: $e')),
-                  data: (commissions) {
-                    if (commissions.isEmpty) {
-                      return const Center(
+            AppCard(
+              child: commissionsAsync.when(
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (e, st) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text('هەڵەیەک ڕوویدا: $e'),
+                  ),
+                ),
+                data: (commissions) {
+                  if (commissions.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
                         child: Text(
                           'هیچ کۆمسیۆنێک نەدۆزرایەوە',
                           style: AppTextStyles.h3,
                         ),
-                      );
-                    }
-
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: DataTable(
-                          headingTextStyle: AppTextStyles.bodyBold,
-                          dataTextStyle: AppTextStyles.bodyMedium,
-                          columns: const [
-                            DataColumn(label: Text('#')),
-                            DataColumn(label: Text('مەندوب')),
-                            DataColumn(label: Text('ماوە')),
-                            DataColumn(label: Text('کۆی فرۆشتن')),
-                            DataColumn(label: Text('کۆی قازانج')),
-                            DataColumn(label: Text('ڕێژە')),
-                            DataColumn(label: Text('بڕی کۆمسیۆن')),
-                            DataColumn(label: Text('دۆخ')),
-                            DataColumn(label: Text('کردارەکان')),
-                          ],
-                          rows: commissions.map((c) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text('#${c.id}')),
-                                DataCell(Text(c.salesmanName)),
-                                DataCell(
-                                  Text('${c.periodFrom} / ${c.periodTo}'),
-                                ),
-                                DataCell(
-                                  Text(
-                                    _formatCurrency(c.totalSales),
-                                    textDirection: TextDirection.ltr,
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    _formatCurrency(c.totalProfit),
-                                    style: const TextStyle(
-                                      color: AppColors.success,
-                                    ),
-                                    textDirection: TextDirection.ltr,
-                                  ),
-                                ),
-                                DataCell(Text('${c.commissionRate}%')),
-                                DataCell(
-                                  Text(
-                                    _formatCurrency(c.commissionAmount),
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textDirection: TextDirection.ltr,
-                                  ),
-                                ),
-                                DataCell(_buildStatusChip(c.status)),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.visibility,
-                                          size: 20,
-                                          color: AppColors.primary,
-                                        ),
-                                        tooltip: 'بینینی وردەکاری پسوڵەکان',
-                                        onPressed: () =>
-                                            _showDetailsDialog(context, c),
-                                      ),
-                                      if (c.status == 'calculated') ...[
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.check_circle_outline,
-                                            size: 20,
-                                            color: AppColors.info,
-                                          ),
-                                          tooltip: 'پەسەندکردن',
-                                          onPressed: () =>
-                                              _openApproveDialog(context, c),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.cancel_outlined,
-                                            size: 20,
-                                            color: AppColors.danger,
-                                          ),
-                                          tooltip: 'هەڵوەشاندنەوە',
-                                          onPressed: () =>
-                                              _openCancelDialog(context, c),
-                                        ),
-                                      ],
-                                      if (c.status == 'approved') ...[
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.payment,
-                                            size: 20,
-                                            color: AppColors.success,
-                                          ),
-                                          tooltip: 'تۆمارکردنی پارەدان',
-                                          onPressed: () =>
-                                              _openPayDialog(context, c),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.cancel_outlined,
-                                            size: 20,
-                                            color: AppColors.danger,
-                                          ),
-                                          tooltip: 'هەڵوەشاندنەوە',
-                                          onPressed: () =>
-                                              _openCancelDialog(context, c),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
                       ),
                     );
-                  },
-                ),
+                  }
+
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingTextStyle: AppTextStyles.bodyBold,
+                      dataTextStyle: AppTextStyles.bodyMedium,
+                      columns: const [
+                        DataColumn(label: Text('#')),
+                        DataColumn(label: Text('مەندوب')),
+                        DataColumn(label: Text('ماوە')),
+                        DataColumn(label: Text('کۆی فرۆشتن')),
+                        DataColumn(label: Text('کۆی قازانج')),
+                        DataColumn(label: Text('ڕێژە')),
+                        DataColumn(label: Text('بڕی کۆمسیۆن')),
+                        DataColumn(label: Text('دۆخ')),
+                        DataColumn(label: Text('کردارەکان')),
+                      ],
+                      rows: commissions.map((c) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text('#${c.id}')),
+                            DataCell(Text(c.salesmanName)),
+                            DataCell(
+                              Text('${c.periodFrom} / ${c.periodTo}'),
+                            ),
+                            DataCell(
+                              Text(
+                                _formatCurrency(c.totalSales),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                _formatCurrency(c.totalProfit),
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            DataCell(Text('${c.commissionRate}%')),
+                            DataCell(
+                              Text(
+                                _formatCurrency(c.commissionAmount),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                            ),
+                            DataCell(_buildStatusChip(c.status)),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.visibility,
+                                      size: 20,
+                                      color: AppColors.primary,
+                                    ),
+                                    tooltip: 'بینینی وردەکاری پسوڵەکان',
+                                    onPressed: () =>
+                                        _showDetailsDialog(context, c),
+                                  ),
+                                  if (c.status == 'calculated') ...[
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.check_circle_outline,
+                                        size: 20,
+                                        color: AppColors.info,
+                                      ),
+                                      tooltip: 'پەسەندکردن',
+                                      onPressed: () =>
+                                          _openApproveDialog(context, c),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.cancel_outlined,
+                                        size: 20,
+                                        color: AppColors.danger,
+                                      ),
+                                      tooltip: 'هەڵوەشاندنەوە',
+                                      onPressed: () =>
+                                          _openCancelDialog(context, c),
+                                    ),
+                                  ],
+                                  if (c.status == 'approved') ...[
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.payment,
+                                        size: 20,
+                                        color: AppColors.success,
+                                      ),
+                                      tooltip: 'تۆمارکردنی پارەدان',
+                                      onPressed: () =>
+                                          _openPayDialog(context, c),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.cancel_outlined,
+                                        size: 20,
+                                        color: AppColors.danger,
+                                      ),
+                                      tooltip: 'هەڵوەشاندنەوە',
+                                      onPressed: () =>
+                                          _openCancelDialog(context, c),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
