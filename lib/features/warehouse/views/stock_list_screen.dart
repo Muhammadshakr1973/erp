@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
+import '../../../core/components/empty_state.dart';
+import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
@@ -11,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../models/warehouse_stock_model.dart';
 import '../providers/warehouse_provider.dart';
 
@@ -404,34 +407,19 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
             Expanded(
               child: stocksAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(
-                  child: SingleChildScrollView(
+                error: (err, stack) => LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: theme.colorScheme.error,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: Center(
+                        child: ErrorState(
+                          title: 'کێشەیەک ڕوویدا لە بارکردنی ستۆکەکان',
+                          message: Formatters.cleanError(err),
+                          retryText: 'دووبارە هەوڵبدەرەوە',
+                          onRetry: () => ref.invalidate(warehouseStocksProvider),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        const Text('کێشەیەک ڕوویدا لە بارکردنی ستۆکەکان'),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          err.toString().replaceAll('Exception: ', ''),
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        ElevatedButton.icon(
-                          onPressed: () =>
-                              ref.invalidate(warehouseStocksProvider),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('دووبارە هەوڵبدەرەوە'),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -448,28 +436,22 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                   }).toList();
 
                   if (filtered.isEmpty) {
-                    return Center(
-                      child: SingleChildScrollView(
+                    return LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.inventory_2_outlined,
-                              size: 80,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              _searchQuery.isNotEmpty
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Center(
+                            child: EmptyState(
+                              title: _searchQuery.isNotEmpty
                                   ? 'هیچ کاڵایەک نەدۆزرایەوە بۆ گەڕانەکەت'
                                   : 'هیچ ستۆکێک لە کۆگادا تۆمار نەکراوە',
-                              style: AppTextStyles.bodyBold.copyWith(
-                                color: Colors.grey.shade600,
-                              ),
+                              message: _searchQuery.isNotEmpty
+                                  ? 'تکایە بە وشەیەکی تر بگەڕێ.'
+                                  : 'هێشتا هیچ ستۆکێک تۆمار نەکراوە.',
+                              icon: Icons.inventory_2_outlined,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     );

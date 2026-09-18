@@ -97,5 +97,24 @@ void main() {
     expect(find.textContaining('ستۆک: 15'), findsOneWidget);
     expect(find.textContaining('کۆگای سەرەکی • حجزکراو: 2'), findsOneWidget);
   });
+
+  testWidgets('OrdersToPackScreen shows error state and handles retry', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ordersToPackProvider.overrideWith((ref) => throw Exception('پەیوەندی بە سێرڤەرەوە پچڕا.')),
+        ],
+        child: const MaterialApp(
+          home: OrdersToPackScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('کێشەیەک ڕوویدا لە بارکردنی پسوڵەکان'), findsOneWidget);
+    expect(find.text('پەیوەندی بە سێرڤەرەوە پچڕا.'), findsOneWidget);
+    expect(find.text('دووبارە هەوڵبدەرەوە'), findsOneWidget);
+  });
 }
 

@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/components/empty_state.dart';
+import '../../../core/components/error_state.dart';
 import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../models/warehouse_order_model.dart';
 import '../providers/warehouse_provider.dart';
 
@@ -210,23 +213,20 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       ),
       body: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: theme.colorScheme.error,
+        error: (err, stack) => LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: ErrorState(
+                  title: 'هەڵەیەک ڕوویدا لە بارکردنی پسوڵە',
+                  message: Formatters.cleanError(err),
+                  retryText: 'دووبارە هەوڵبدەرەوە',
+                  onRetry: () => ref.invalidate(ordersToPackProvider),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              const Text('هەڵەیەک ڕوویدا لە بارکردنی پسوڵە'),
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(ordersToPackProvider),
-                child: const Text('دووبارە هەوڵبدەرەوە'),
-              ),
-            ],
+            ),
           ),
         ),
         data: (orders) {
@@ -243,33 +243,12 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.check_circle_outline,
-                      size: 80,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'پسوڵەکە نەدۆزرایەوە',
-                      style: AppTextStyles.bodyBold.copyWith(
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Text(
-                      'پێدەچێت ئەم پسوڵەیە پێشتر ئامادەکرابێت یان گوازرابێتەوە.',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.caption,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('گەڕانەوە بۆ لای پسوڵەکان'),
-                    ),
-                  ],
+                child: EmptyState(
+                  title: 'پسوڵەکە نەدۆزرایەوە',
+                  message: 'پێدەچێت ئەم پسوڵەیە پێشتر ئامادەکرابێت یان گوازرابێتەوە.',
+                  icon: Icons.check_circle_outline,
+                  buttonText: 'گەڕانەوە بۆ لای پسوڵەکان',
+                  onAction: () => Navigator.pop(context),
                 ),
               ),
             );
