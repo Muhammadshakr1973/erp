@@ -62,7 +62,7 @@ class _SalesmanCommissionsReportScreenState
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -1195,8 +1195,10 @@ class _SalesmanCommissionsReportScreenState
                     title: 'هەڵەیەک ڕوویدا',
                     message: Formatters.cleanError(e),
                     retryText: 'دووبارە هەوڵبدەرەوە',
-                    onRetry: () =>
-                        ref.invalidate(salesmanCommissionsReportProvider(_filters)),
+                    onRetry: () {
+                      ref.invalidate(commissionsListProvider(_filters));
+                      ref.invalidate(commissionSummaryProvider(_filters));
+                    },
                   ),
                 ),
                 data: (commissions) {

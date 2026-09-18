@@ -196,7 +196,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   title: 'هەڵەیەک ڕوویدا',
                   message: Formatters.cleanError(err),
                   retryText: 'دووبارە هەوڵبدەرەوە',
-                  onRetry: () => ref.invalidate(usersListProvider),
+                  onRetry: () => ref.invalidate(userAdminProvider),
                 ),
               ),
               data: (data) {
