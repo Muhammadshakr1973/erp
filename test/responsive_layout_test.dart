@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gardi_erp/core/components/responsive_shell.dart';
+import 'package:pos_app/core/components/responsive_shell.dart';
+import 'package:pos_app/core/theme/app_breakpoints.dart';
 
 void main() {
   group('Responsive Layout Breakpoint & Scroll Tests', () {
-    test('Mobile breakpoint accurately classifies narrow screen widths (< 700)', () {
+    test('Mobile breakpoint accurately classifies narrow screen widths (< 768)', () {
       const mobileWidth = 375.0;
-      const tabletWidth = 720.0;
+      const tabletWidth = 800.0;
       const desktopWidth = 1200.0;
 
-      expect(mobileWidth < 700, isTrue);
-      expect(tabletWidth < 700, isFalse);
-      expect(desktopWidth < 700, isFalse);
+      expect(AppBreakpoints.isMobile(mobileWidth), isTrue);
+      expect(AppBreakpoints.isTablet(tabletWidth), isTrue);
+      expect(AppBreakpoints.isDesktop(desktopWidth), isTrue);
     });
 
     testWidgets('ResponsiveShell NavigationRail does not overflow in constrained height desktop/tablet viewport', (WidgetTester tester) async {
       // Set constrained height desktop size (1024x500) where 8 destinations would otherwise overflow
-      tester.binding.window.physicalSizeTestValue = const Size(1024, 500);
-      tester.binding.window.devicePixelRatioTestValue = 1.0;
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.view.physicalSize = const Size(1024, 500);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
       await tester.pumpWidget(
         MaterialApp(
@@ -48,9 +52,12 @@ void main() {
 
     testWidgets('Scrollable report layout does not overflow in constrained mobile viewport', (WidgetTester tester) async {
       // Build a widget with a constrained mobile size (360x600)
-      tester.binding.window.physicalSizeTestValue = const Size(360, 600);
-      tester.binding.window.devicePixelRatioTestValue = 1.0;
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+      tester.view.physicalSize = const Size(360, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
       await tester.pumpWidget(
         MaterialApp(
