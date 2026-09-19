@@ -780,32 +780,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 4),
-                                    Row(
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        if (product.barcode.isNotEmpty) ...[
-                                          const Icon(
-                                            Icons.qr_code,
-                                            size: 14,
-                                            color: Colors.grey,
+                                        if (product.barcode.isNotEmpty)
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.qr_code,
+                                                size: 14,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                product.barcode,
+                                                style: AppTextStyles.caption.copyWith(
+                                                  fontFamily: 'monospace',
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            product.barcode,
-                                            style: AppTextStyles.caption
-                                                .copyWith(
-                                              fontFamily: 'monospace',
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                        ],
                                         if (product.sku != null &&
-                                            product.sku!.isNotEmpty) ...[
+                                            product.sku!.isNotEmpty)
                                           Text(
                                             'SKU: ${product.sku}',
                                             style: AppTextStyles.caption,
                                           ),
-                                          const SizedBox(width: 10),
-                                        ],
                                         Text(
                                           'یەکە: ${product.unit ?? "دانە"}',
                                           style: AppTextStyles.caption,
