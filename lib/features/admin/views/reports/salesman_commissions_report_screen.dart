@@ -921,84 +921,82 @@ class _SalesmanCommissionsReportScreenState
                     summary['approved'] as Map<String, dynamic>? ?? {};
                 final paid = summary['paid'] as Map<String, dynamic>? ?? {};
 
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isMobile = constraints.maxWidth < 700;
-
-                    Widget buildKpiCard(
-                      String title,
-                      dynamic amount,
-                      dynamic count,
-                      Color color,
-                    ) {
-                      return AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: AppTextStyles.caption,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatCurrency(amount ?? 0),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: color,
-                              ),
-                              textDirection: TextDirection.ltr,
-                            ),
-                            Text(
-                              '${count ?? 0} کۆمسیۆن',
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final cardCalculated = buildKpiCard(
-                      'هەژمارکراو (چاوەڕوانکراو)',
-                      calculated['amount'],
-                      calculated['count'],
-                      AppColors.warning,
-                    );
-                    final cardApproved = buildKpiCard(
-                      'پەسەندکراو (ئامادەی پارەدان)',
-                      approved['amount'],
-                      approved['count'],
-                      AppColors.info,
-                    );
-                    final cardPaid = buildKpiCard(
-                      'دراو (تەواوبوو)',
-                      paid['amount'],
-                      paid['count'],
-                      AppColors.success,
-                    );
-
-                    if (isMobile) {
-                      return Column(
-                        children: [
-                          cardCalculated,
-                          const SizedBox(height: AppSpacing.sm),
-                          cardApproved,
-                          const SizedBox(height: AppSpacing.sm),
-                          cardPaid,
-                        ],
-                      );
-                    }
-
-                    return Row(
+                Widget buildKpiCard(
+                  String title,
+                  dynamic amount,
+                  dynamic count,
+                  Color color,
+                ) {
+                  return AppCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: cardCalculated),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(child: cardApproved),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(child: cardPaid),
+                        Text(
+                          title,
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(amount ?? 0),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${count ?? 0} کۆمسیۆن',
+                          style: AppTextStyles.caption.copyWith(
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
-                    );
-                  },
+                    ),
+                  );
+                }
+
+                final cardCalculated = buildKpiCard(
+                  'چاوەڕوانکراو',
+                  calculated['amount'],
+                  calculated['count'],
+                  AppColors.warning,
+                );
+                final cardApproved = buildKpiCard(
+                  'ئامادەی پارەدان',
+                  approved['amount'],
+                  approved['count'],
+                  AppColors.info,
+                );
+                final cardPaid = buildKpiCard(
+                  'تەواوبوو',
+                  paid['amount'],
+                  paid['count'],
+                  AppColors.success,
+                );
+
+                return Row(
+                  children: [
+                    Expanded(child: cardCalculated),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(child: cardApproved),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(child: cardPaid),
+                  ],
                 );
               },
               loading: () => const SizedBox.shrink(),
