@@ -47,7 +47,8 @@ class UserController extends Controller
                 Rule::unique('users')->whereNull('deleted_at')
             ],
             'is_active' => 'nullable|boolean',
-            'warehouse_id' => 'nullable|exists:warehouses,id'
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'image_url' => 'nullable|string|max:2048'
         ]);
 
         $user = User::create([
@@ -60,6 +61,7 @@ class UserController extends Controller
             'barcode' => $validated['barcode'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
             'warehouse_id' => $validated['warehouse_id'] ?? null,
+            'image_url' => $validated['image_url'] ?? null,
         ]);
 
         return response()->json([
@@ -107,7 +109,8 @@ class UserController extends Controller
                 Rule::unique('users')->ignore($id)->whereNull('deleted_at')
             ],
             'is_active' => 'nullable|boolean',
-            'warehouse_id' => 'nullable|exists:warehouses,id'
+            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'image_url' => 'nullable|string|max:2048'
         ]);
 
         $updateData = [
@@ -130,6 +133,9 @@ class UserController extends Controller
         }
         if (array_key_exists('warehouse_id', $validated)) {
             $updateData['warehouse_id'] = $validated['warehouse_id'];
+        }
+        if (array_key_exists('image_url', $validated)) {
+            $updateData['image_url'] = $validated['image_url'];
         }
 
         if (!empty($validated['password'])) {

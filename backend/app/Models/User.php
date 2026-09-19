@@ -24,7 +24,8 @@ class User extends Authenticatable
         'barcode',
         'is_active',
         'last_login_at',
-        'warehouse_id'
+        'warehouse_id',
+        'image_url'
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [

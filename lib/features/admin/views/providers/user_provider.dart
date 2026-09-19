@@ -63,6 +63,7 @@ class UserActions {
     String? barcode,
     bool? isActive,
     int? warehouseId,
+    String? imageUrl,
   }) async {
     try {
       await api.client.post(
@@ -77,6 +78,7 @@ class UserActions {
           if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
           if (isActive != null) 'is_active': isActive,
           if (warehouseId != null) 'warehouse_id': warehouseId,
+          if (imageUrl != null) 'image_url': imageUrl,
         },
       );
       ref.invalidate(userAdminProvider);
@@ -96,6 +98,7 @@ class UserActions {
     String? barcode,
     bool? isActive,
     int? warehouseId,
+    String? imageUrl,
   }) async {
     try {
       await api.client.put(
@@ -110,6 +113,7 @@ class UserActions {
           if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
           if (isActive != null) 'is_active': isActive,
           'warehouse_id': warehouseId,
+          'image_url': imageUrl,
         },
       );
       ref.invalidate(userAdminProvider);

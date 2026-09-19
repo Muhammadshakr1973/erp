@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -27,14 +27,14 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 50,
+                CustomerAvatar(
+                  imageUrl: user?.imageUrl,
+                  size: 100,
+                  borderRadius: 32,
+                  placeholderIcon: AppIcons.profile,
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Icon(
-                    AppIcons.profile,
-                    size: 50,
-                    color: theme.colorScheme.primary,
-                  ),
+                  iconColor: theme.colorScheme.primary,
+                  iconSize: 50,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(user?.name ?? 'ناوی بەکارهێنەر', style: AppTextStyles.h2),

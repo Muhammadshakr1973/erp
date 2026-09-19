@@ -10,6 +10,7 @@ class UserModel {
   final bool? isActive;
   final int? warehouseId;
   final List<String>? permissions;
+  final String? imageUrl;
 
   UserModel({
     required this.id,
@@ -23,6 +24,7 @@ class UserModel {
     this.isActive,
     this.warehouseId,
     this.permissions,
+    this.imageUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class UserModel {
           : (json['is_active'] == 1),
       warehouseId: json['warehouse_id'],
       permissions: parsedPermissions,
+      imageUrl: json['image_url'],
     );
   }
 
@@ -88,6 +91,7 @@ class UserModel {
       'is_active': isActive,
       'warehouse_id': warehouseId,
       'permissions': permissions,
+      'image_url': imageUrl,
     };
   }
 

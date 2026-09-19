@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
@@ -56,12 +57,24 @@ class AdminDashboardScreen extends ConsumerWidget {
               context.push('/notifications');
             },
           ),
-          IconButton(
-            icon: const Icon(AppIcons.profile),
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               context.push('/profile');
             },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: CustomerAvatar(
+                imageUrl: user?.imageUrl,
+                size: 34,
+                borderRadius: 10,
+                placeholderIcon: AppIcons.profile,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                iconColor: theme.colorScheme.primary,
+                iconSize: 20,
+              ),
+            ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(

@@ -12,6 +12,7 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -265,23 +266,19 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: roleColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              user.role.toLowerCase() == 'salesman'
-                                  ? Icons.badge_outlined
-                                  : user.role.toLowerCase() == 'admin' ||
-                                        user.role.toLowerCase() == 'owner'
-                                  ? Icons.admin_panel_settings_outlined
-                                  : Icons.person_outline,
-                              color: roleColor,
-                              size: 26,
-                            ),
+                          CustomerAvatar(
+                            imageUrl: user.imageUrl,
+                            size: 48,
+                            borderRadius: 14,
+                            placeholderIcon: user.role.toLowerCase() == 'salesman'
+                                ? Icons.badge_outlined
+                                : user.role.toLowerCase() == 'admin' ||
+                                      user.role.toLowerCase() == 'owner'
+                                ? Icons.admin_panel_settings_outlined
+                                : Icons.person_outline,
+                            backgroundColor: roleColor.withValues(alpha: 0.1),
+                            iconColor: roleColor,
+                            iconSize: 26,
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
@@ -436,6 +433,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   late final TextEditingController _commissionRateController;
   late final TextEditingController _fixedSalaryController;
   late final TextEditingController _barcodeController;
+  late final TextEditingController _imageUrlController;
 
   int? _selectedRoleId;
   int? _selectedWarehouseId;
@@ -471,6 +469,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           : '0',
     );
     _barcodeController = TextEditingController(text: widget.user?.barcode);
+    _imageUrlController = TextEditingController(text: widget.user?.imageUrl);
+    _imageUrlController.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     _selectedRoleId = widget.user?.roleId;
     if (_selectedRoleId == null &&
@@ -502,6 +504,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     _commissionRateController.dispose();
     _fixedSalaryController.dispose();
     _barcodeController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -561,6 +564,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       final fixedSalary =
           int.tryParse(_fixedSalaryController.text.trim()) ?? 0;
       final barcode = _barcodeController.text.trim();
+      final imageUrl = _imageUrlController.text.trim();
 
       final warehouseId = isWarehouseSelected ? _selectedWarehouseId : null;
 
@@ -578,6 +582,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               barcode: barcode,
               isActive: _isActive,
               warehouseId: warehouseId,
+              imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
             );
         if (mounted) {
           AppSnackbar.show(
@@ -601,6 +606,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               barcode: barcode,
               isActive: _isActive,
               warehouseId: warehouseId,
+              imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
             );
         if (mounted) {
           AppSnackbar.show(
@@ -697,6 +703,19 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ],
                 ),
                 const Divider(height: 24),
+
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                    child: CustomerAvatar(
+                      imageUrl: _imageUrlController.text.trim(),
+                      size: 72,
+                      borderRadius: 20,
+                      placeholderIcon: Icons.person_outline,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
 
                 AppTextField(
                   controller: _nameController,
@@ -967,6 +986,14 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       const SizedBox(width: 8),
                     ],
                   ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                AppTextField(
+                  controller: _imageUrlController,
+                  labelText: 'بەستەری وێنەی بەکارهێنەر (ئارەزوومەندانە)',
+                  hintText: 'https://example.com/avatar.jpg',
+                  prefixIcon: Icons.image_outlined,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
