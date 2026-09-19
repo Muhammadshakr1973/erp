@@ -41,7 +41,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   @override
@@ -95,7 +95,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                                 _isFilterExpanded
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
-                                color: AppColors.textSecondary,
+                                color: AppColors.textSecondaryLight,
                               ),
                             ],
                           ),
@@ -153,7 +153,7 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.4),
+                            color: AppColors.borderLight.withValues(alpha: 0.4),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -166,8 +166,8 @@ class _LowStockReportScreenState extends ConsumerState<LowStockReportScreen> {
                                 _selectedWarehouseId != null
                                     ? 'فلتەری کۆگا دیاریکراوە'
                                     : 'گشت کۆگاکان',
-                                style: AppTextStyles.bodySecondary.copyWith(
-                                  fontSize: 12,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondaryLight,
                                 ),
                               ),
                             ),

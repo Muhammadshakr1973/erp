@@ -69,7 +69,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -145,7 +145,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                                     _isFilterExpanded
                                         ? Icons.keyboard_arrow_up
                                         : Icons.keyboard_arrow_down,
-                                    color: AppColors.textSecondary,
+                                    color: AppColors.textSecondaryLight,
                                   ),
                                 ],
                               ),
@@ -202,7 +202,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                             decoration: BoxDecoration(
                               color: Theme.of(context).cardColor,
                               border: Border.all(
-                                color: AppColors.border.withValues(alpha: 0.4),
+                                color: AppColors.borderLight.withValues(alpha: 0.4),
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -213,8 +213,8 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                                 Expanded(
                                   child: Text(
                                     '${_startDate?.toIso8601String().split('T').first ?? ''}  بۆ  ${_endDate?.toIso8601String().split('T').first ?? ''}',
-                                    style: AppTextStyles.bodySecondary.copyWith(
-                                      fontSize: 12,
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondaryLight,
                                     ),
                                   ),
                                 ),

@@ -135,7 +135,7 @@ class _StockMovementsReportScreenState
                                 _isFilterExpanded
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
-                                color: AppColors.textSecondary,
+                                color: AppColors.textSecondaryLight,
                               ),
                             ],
                           ),
@@ -192,7 +192,7 @@ class _StockMovementsReportScreenState
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.4),
+                            color: AppColors.borderLight.withValues(alpha: 0.4),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -203,8 +203,8 @@ class _StockMovementsReportScreenState
                             Expanded(
                               child: Text(
                                 '${_startDate?.toIso8601String().split('T').first ?? ''}  بۆ  ${_endDate?.toIso8601String().split('T').first ?? ''}',
-                                style: AppTextStyles.bodySecondary.copyWith(
-                                  fontSize: 12,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondaryLight,
                                 ),
                               ),
                             ),

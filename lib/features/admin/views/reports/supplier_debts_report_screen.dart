@@ -57,7 +57,7 @@ class _SupplierDebtsReportScreenState
   }
 
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -198,7 +198,7 @@ class _SupplierDebtsReportScreenState
                                 _isFilterExpanded
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
-                                color: AppColors.textSecondary,
+                                color: AppColors.textSecondaryLight,
                               ),
                             ],
                           ),
@@ -255,7 +255,7 @@ class _SupplierDebtsReportScreenState
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.4),
+                            color: AppColors.borderLight.withValues(alpha: 0.4),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -268,8 +268,8 @@ class _SupplierDebtsReportScreenState
                                 _startDate != null || _endDate != null || _selectedSupplierId != null
                                     ? 'فلتەری چالاک هەیە (${_startDate?.toIso8601String().split('T').first ?? 'دەستپێک'} بۆ ${_endDate?.toIso8601String().split('T').first ?? 'کۆتایی'})'
                                     : 'گشت کۆمپانیاکان و بەروارەکان',
-                                style: AppTextStyles.bodySecondary.copyWith(
-                                  fontSize: 12,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondaryLight,
                                 ),
                               ),
                             ),
@@ -410,12 +410,15 @@ class _SupplierDebtsReportScreenState
                                 : AppColors.danger;
 
                             String entryTypeLabel = entry.entryType;
-                            if (entryTypeLabel == 'PAYMENT')
+                            if (entryTypeLabel == 'PAYMENT') {
                               entryTypeLabel = 'پارەدان';
-                            if (entryTypeLabel == 'PURCHASE')
+                            }
+                            if (entryTypeLabel == 'PURCHASE') {
                               entryTypeLabel = 'کڕین';
-                            if (entryTypeLabel == 'ADJUSTMENT')
+                            }
+                            if (entryTypeLabel == 'ADJUSTMENT') {
                               entryTypeLabel = 'ڕاستکردنەوە/قەرزی سەرەتا';
+                            }
 
                             return DataRow(
                               cells: [

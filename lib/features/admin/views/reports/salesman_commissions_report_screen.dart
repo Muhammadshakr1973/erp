@@ -66,23 +66,6 @@ class _SalesmanCommissionsReportScreenState
     return Formatters.currency(amount);
   }
 
-  String _getRoleDisplayName(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return 'بەڕێوەبەر';
-      case 'salesman':
-        return 'مەندوب';
-      case 'warehouse':
-        return 'کۆگادار';
-      case 'driver':
-        return 'شۆفێر';
-      case 'owner':
-        return 'خاوەن کار';
-      default:
-        return role;
-    }
-  }
-
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
@@ -1057,7 +1040,7 @@ class _SalesmanCommissionsReportScreenState
                                 _isFilterExpanded
                                     ? Icons.keyboard_arrow_up
                                     : Icons.keyboard_arrow_down,
-                                color: AppColors.textSecondary,
+                                color: AppColors.textSecondaryLight,
                               ),
                             ],
                           ),
@@ -1114,7 +1097,7 @@ class _SalesmanCommissionsReportScreenState
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.4),
+                            color: AppColors.borderLight.withValues(alpha: 0.4),
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -1130,8 +1113,8 @@ class _SalesmanCommissionsReportScreenState
                                         _selectedStatus != null
                                     ? 'فلتەری تایبەت چالاکە'
                                     : 'گشت مەندوبەکان، دۆخەکان و بەروارەکان',
-                                style: AppTextStyles.bodySecondary.copyWith(
-                                  fontSize: 12,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondaryLight,
                                 ),
                               ),
                             ),
