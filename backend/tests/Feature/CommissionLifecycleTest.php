@@ -884,4 +884,94 @@ class CommissionLifecycleTest extends TestCase
         $this->assertEquals(0, $commission->total_sales);
         $this->assertEquals(0, $commission->total_profit);
     }
+
+    /**
+     * Test driver with fixed salary (no percentage) can have commission/salary calculated and paid.
+     */
+    public function test_driver_with_fixed_salary_can_be_calculated_and_paid(): void
+    {
+        $this->actingAs($this->admin);
+
+        $driverRole = Role::firstOrCreate(
+            ['name' => 'driver'],
+            ['display_name' => 'Driver', 'permissions' => ['delivery.view'], 'is_system' => true]
+        );
+
+        $driver = User::create([
+            'name'            => 'Driver Kak Ahmed',
+            'phone'           => '07509988776',
+            'password'        => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role_id'         => $driverRole->id,
+            'commission_rate' => 0.00,
+            'fixed_salary'    => 500000, // 500,000 IQD fixed salary
+            'is_active'       => true,
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $driver->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+            'notes'       => 'Monthly fixed salary for driver',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::findOrFail($commissionId);
+        $this->assertEquals(500000, $commission->fixed_amount);
+        $this->assertEquals(500000, $commission->commission_amount);
+        $this->assertEquals(0, $commission->commission_rate);
+        $this->assertEquals(0, $commission->total_sales);
+        $this->assertEquals(0, $commission->total_profit);
+        $this->assertEquals(SalesmanCommission::STATUS_CALCULATED, $commission->status);
+
+        // Approve
+        $this->postJson("/api/v1/commissions/{$commissionId}/approve")->assertStatus(200);
+        $commission->refresh();
+        $this->assertEquals(SalesmanCommission::STATUS_APPROVED, $commission->status);
+
+        // Pay
+        $this->postJson("/api/v1/commissions/{$commissionId}/pay", [
+            'payment_method' => 'cash',
+        ])->assertStatus(200);
+        $commission->refresh();
+        $this->assertEquals(SalesmanCommission::STATUS_PAID, $commission->status);
+    }
+
+    /**
+     * Test warehouse and admin staff with fixed salary can have salary calculated.
+     */
+    public function test_warehouse_and_admin_staff_with_fixed_salary(): void
+    {
+        $this->actingAs($this->admin);
+
+        $warehouseRole = Role::firstOrCreate(
+            ['name' => 'warehouse'],
+            ['display_name' => 'Warehouse Keeper', 'permissions' => ['warehouse.manage'], 'is_system' => true]
+        );
+
+        $warehouseKeeper = User::create([
+            'name'            => 'Warehouse Staff Botan',
+            'phone'           => '07507766554',
+            'password'        => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role_id'         => $warehouseRole->id,
+            'commission_rate' => 0.00,
+            'fixed_salary'    => 450000,
+            'is_active'       => true,
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $warehouseKeeper->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::findOrFail($commissionId);
+        $this->assertEquals(450000, $commission->fixed_amount);
+        $this->assertEquals(450000, $commission->commission_amount);
+        $this->assertEquals(0, $commission->commission_rate);
+    }
 }

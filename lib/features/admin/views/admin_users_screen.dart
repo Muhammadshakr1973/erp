@@ -334,6 +334,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                         ),
                                     ],
                                   ),
+                                ] else if ((user.fixedSalary ?? 0) > 0) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'مووچەی سابت: ${Formatters.currency(user.fixedSalary ?? 0)}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
                                 ],
                               ],
                             ),
@@ -528,13 +538,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       final name = _nameController.text.trim();
       final phone = _phoneController.text.trim();
       final password = _passwordController.text;
-      final commissionRate =
-          double.tryParse(_commissionRateController.text) ?? 0.0;
-      final fixedSalary =
-          int.tryParse(_fixedSalaryController.text.trim()) ?? 0;
-      final barcode = _barcodeController.text.trim();
 
-      // Find if selected role is warehouse
+      // Find if selected role is salesman or warehouse
+      bool isSalesmanSelected = false;
       bool isWarehouseSelected = false;
       final roles = widget.roles ?? [];
       if (_selectedRoleId != null && roles.isNotEmpty) {
@@ -542,11 +548,19 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           (r) => r['id'] == _selectedRoleId,
           orElse: () => null,
         );
-        if (matched != null &&
-            matched['name'].toString().toLowerCase() == 'warehouse') {
-          isWarehouseSelected = true;
+        if (matched != null) {
+          final rName = matched['name'].toString().toLowerCase();
+          if (rName == 'salesman') isSalesmanSelected = true;
+          if (rName == 'warehouse') isWarehouseSelected = true;
         }
       }
+
+      final commissionRate = isSalesmanSelected
+          ? (double.tryParse(_commissionRateController.text) ?? 0.0)
+          : 0.0;
+      final fixedSalary =
+          int.tryParse(_fixedSalaryController.text.trim()) ?? 0;
+      final barcode = _barcodeController.text.trim();
 
       final warehouseId = isWarehouseSelected ? _selectedWarehouseId : null;
 
@@ -805,6 +819,24 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ] else ...[
+                  AppTextField(
+                    controller: _fixedSalaryController,
+                    labelText: 'مووچەی سابتی مانگانە (د.ع)',
+                    prefixIcon: Icons.attach_money_outlined,
+                    keyboardType: TextInputType.number,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'تکایە بڕ بنووسە (یان ٠)';
+                      }
+                      final parsed = int.tryParse(val.trim());
+                      if (parsed == null || parsed < 0) {
+                        return 'ژمارەی دروست بنووسە';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],

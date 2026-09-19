@@ -65,6 +65,23 @@ class _SalesmanCommissionsReportScreenState
     return Formatters.currency(amount);
   }
 
+  String _getRoleDisplayName(String role) {
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'بەڕێوەبەر';
+      case 'salesman':
+        return 'مەندوب';
+      case 'warehouse':
+        return 'کۆگادار';
+      case 'driver':
+        return 'شۆفێر';
+      case 'owner':
+        return 'خاوەن کار';
+      default:
+        return role;
+    }
+  }
+
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
@@ -164,7 +181,7 @@ class _SalesmanCommissionsReportScreenState
               children: [
                 Icon(Icons.calculate, color: AppColors.primary),
                 SizedBox(width: 8),
-                Text('هەژمارکردنی کۆمسیۆنی مەندوب', style: AppTextStyles.h3),
+                Text('هەژمارکردنی کۆمسیۆن / شایستە', style: AppTextStyles.h3),
               ],
             ),
             content: SizedBox(
@@ -177,14 +194,18 @@ class _SalesmanCommissionsReportScreenState
                     DropdownButtonFormField<int>(
                       initialValue: dialogSalesmanId,
                       decoration: const InputDecoration(
-                        labelText: 'مەندوب',
+                        labelText: 'کارمەند / مەندوب',
                         border: OutlineInputBorder(),
                       ),
                       items: [
                         for (final s in salesmen)
                           DropdownMenuItem<int>(
                             value: s.id,
-                            child: Text('${s.name} (${s.commissionRate ?? 0}%)'),
+                            child: Text(
+                              s.role.toLowerCase() == 'salesman'
+                                  ? '${s.name} (مەندوب - ${s.commissionRate ?? 0}%)'
+                                  : '${s.name} (${_getRoleDisplayName(s.role)} - سابت: ${_formatCurrency(s.fixedSalary ?? 0)})',
+                            ),
                           ),
                       ],
                       onChanged: (val) {
@@ -1032,7 +1053,7 @@ class _SalesmanCommissionsReportScreenState
                         data: (salesmen) => DropdownButtonFormField<int?>(
                           initialValue: _selectedSalesmanId,
                           decoration: const InputDecoration(
-                            labelText: 'مەندوب',
+                            labelText: 'کارمەند / مەندوب',
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 10,
@@ -1042,12 +1063,16 @@ class _SalesmanCommissionsReportScreenState
                           items: [
                             const DropdownMenuItem<int?>(
                               value: null,
-                              child: Text('گشت مەندوبەکان'),
+                              child: Text('گشت کارمەندان و مەندوبەکان'),
                             ),
                             for (final s in salesmen)
                               DropdownMenuItem<int?>(
                                 value: s.id,
-                                child: Text(s.name),
+                                child: Text(
+                                  s.role.toLowerCase() == 'salesman'
+                                      ? '${s.name} (مەندوب)'
+                                      : '${s.name} (${_getRoleDisplayName(s.role)})',
+                                ),
                               ),
                           ],
                           onChanged: (val) =>

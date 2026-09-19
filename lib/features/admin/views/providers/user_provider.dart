@@ -39,7 +39,15 @@ final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
   final userData = await ref.watch(userAdminProvider.future);
   final List<UserModel> allUsers =
       (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
-  return allUsers.where((u) => u.role.toLowerCase() == 'salesman').toList();
+  return allUsers.where((u) {
+    final role = u.role.toLowerCase();
+    return role == 'salesman' ||
+        role == 'driver' ||
+        role == 'warehouse' ||
+        role == 'admin' ||
+        (u.fixedSalary != null && u.fixedSalary! > 0) ||
+        (u.commissionRate != null && u.commissionRate! > 0);
+  }).toList();
 });
 
 final userActionsProvider = Provider<UserActions>((ref) {
