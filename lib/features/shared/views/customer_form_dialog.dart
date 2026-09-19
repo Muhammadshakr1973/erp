@@ -420,6 +420,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Widget _buildProfileFormFields(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
