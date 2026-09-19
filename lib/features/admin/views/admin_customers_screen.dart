@@ -299,8 +299,8 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: crossAxisCount,
                                 crossAxisSpacing: AppSpacing.md,
-                                mainAxisSpacing: AppSpacing.md,
-                                mainAxisExtent: 170,
+                                mainAxisSpacing: AppSpacing.sm,
+                                mainAxisExtent: 82,
                               ),
                           itemBuilder: (context, index) {
                             final customer = customers[index];
@@ -454,145 +454,147 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     return AppCard(
       onTap: () => _showAddCustomerDialog(context, customer),
       onLongPress: () => _showDeleteCustomerDialog(context, customer),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            // Profile image or initials
-            CustomerAvatar(
-              imageUrl: customer.imageUrl,
-              size: 54,
-              borderRadius: 16,
-            ),
-            const SizedBox(width: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      child: Row(
+        children: [
+          // Profile image or initials
+          CustomerAvatar(
+            imageUrl: customer.imageUrl,
+            size: 48,
+            borderRadius: 14,
+          ),
+          const SizedBox(width: AppSpacing.sm),
 
-            // Middle section: details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          customer.name,
-                          style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (!customer.isActive) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'ناچالاک',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade700,
-                              fontFamily: 'Rudaw',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    customer.phone ?? 'مۆبایل نییە',
-                    style: AppTextStyles.caption.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      // Route badge
-                      Icon(
-                        Icons.alt_route,
-                        size: 12,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          customer.route?.name ?? 'گەڕەک دیارینەکراوە',
-                          style: AppTextStyles.caption.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.8),
-                            fontSize: 11,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-
-            // Left section: Price type & balance
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          // Middle section: details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Price tier badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tierColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    priceTierLabel,
-                    style: AppTextStyles.caption.copyWith(
-                      color: tierColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        customer.name,
+                        style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    if (!customer.isActive) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'ناچالاک',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.grey.shade700,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  customer.phone ?? 'مۆبایل نییە',
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 11,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-
-                // Balance badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: hasDebt
-                        ? AppColors.danger.withValues(alpha: 0.1)
-                        : AppColors.success.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    hasDebt ? formatCurrency(customer.balance) : 'بێ قەرز',
-                    style: AppTextStyles.bodyBold.copyWith(
-                      color: hasDebt ? AppColors.danger : AppColors.success,
-                      fontSize: 11,
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    // Route badge
+                    Icon(
+                      Icons.alt_route,
+                      size: 11,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        customer.route?.name ?? 'گەڕەک دیارینەکراوە',
+                        style: AppTextStyles.caption.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.8),
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+
+          // Left section: Price type & balance
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Price tier badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 7,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: tierColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  priceTierLabel,
+                  style: AppTextStyles.caption.copyWith(
+                    color: tierColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // Balance badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 7,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: hasDebt
+                      ? AppColors.danger.withValues(alpha: 0.1)
+                      : AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  hasDebt ? formatCurrency(customer.balance) : 'بێ قەرز',
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: hasDebt ? AppColors.danger : AppColors.success,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
