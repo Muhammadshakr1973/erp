@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../network/api_constants.dart';
 
 class Formatters {
   static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
@@ -62,5 +63,11 @@ class Formatters {
     }
 
     return trimmed;
+  }
+
+  static String proxyImageUrl(String url) {
+    final direct = directImageUrl(url);
+    if (direct.isEmpty) return '';
+    return '${ApiConstants.baseUrl}/proxy-image?url=${Uri.encodeComponent(direct)}';
   }
 }

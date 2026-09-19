@@ -7,6 +7,7 @@ import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -149,40 +150,16 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                         },
                         child: Row(
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                color: isVisited
-                                    ? AppColors.success.withValues(alpha: 0.1)
-                                    : theme.colorScheme.primaryContainer,
-                                child: customer.imageUrl != null &&
-                                        customer.imageUrl!.trim().isNotEmpty
-                                    ? Image.network(
-                                        Formatters.directImageUrl(
-                                          customer.imageUrl!,
-                                        ),
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          return Icon(
-                                            AppIcons.customer,
-                                            color: isVisited
-                                                ? AppColors.success
-                                                : theme.colorScheme.primary,
-                                            size: 20,
-                                          );
-                                        },
-                                      )
-                                    : Icon(
-                                        AppIcons.customer,
-                                        color: isVisited
-                                            ? AppColors.success
-                                            : theme.colorScheme.primary,
-                                        size: 20,
-                                      ),
-                              ),
+                            CustomerAvatar(
+                              imageUrl: customer.imageUrl,
+                              size: 40,
+                              borderRadius: 20,
+                              iconSize: 20,
+                              placeholderIcon: AppIcons.customer,
+                              backgroundColor: isVisited
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : null,
+                              iconColor: isVisited ? AppColors.success : null,
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(

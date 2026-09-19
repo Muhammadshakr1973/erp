@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_pagination.dart';
 import '../../../core/components/app_snackbar.dart';
@@ -458,30 +459,10 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
         child: Row(
           children: [
             // Profile image or initials
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 54,
-                height: 54,
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                child: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        Formatters.directImageUrl(customer.imageUrl!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.person,
-                            color: theme.colorScheme.primary,
-                            size: 28,
-                          );
-                        },
-                      )
-                    : Icon(
-                        Icons.person,
-                        color: theme.colorScheme.primary,
-                        size: 28,
-                      ),
-              ),
+            CustomerAvatar(
+              imageUrl: customer.imageUrl,
+              size: 54,
+              borderRadius: 16,
             ),
             const SizedBox(width: AppSpacing.md),
 

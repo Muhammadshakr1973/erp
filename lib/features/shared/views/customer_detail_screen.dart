@@ -13,6 +13,7 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -503,30 +504,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: Container(
-                width: 80,
-                height: 80,
-                color: theme.colorScheme.primaryContainer,
-                child: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        Formatters.directImageUrl(customer.imageUrl!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            AppIcons.customer,
-                            size: 40,
-                            color: theme.colorScheme.primary,
-                          );
-                        },
-                      )
-                    : Icon(
-                        AppIcons.customer,
-                        size: 40,
-                        color: theme.colorScheme.primary,
-                      ),
-              ),
+            child: CustomerAvatar(
+              imageUrl: customer.imageUrl,
+              size: 80,
+              borderRadius: 40,
+              iconSize: 40,
+              placeholderIcon: AppIcons.customer,
             ),
           ),
           const SizedBox(height: AppSpacing.md),

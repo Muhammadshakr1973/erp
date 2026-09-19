@@ -25,6 +25,7 @@ Route::prefix('v1')->group(function () {
 
     // ئەوانەی پێویستیان بە تۆکن نییە (Public)
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::get('/proxy-image', [CustomerController::class, 'proxyImage']);
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:60,1'])->group(function () {

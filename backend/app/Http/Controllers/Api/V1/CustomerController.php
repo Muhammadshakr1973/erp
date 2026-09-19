@@ -145,4 +145,45 @@ class CustomerController extends Controller
             'data' => $reconciliation
         ], 200);
     }
+
+    public function proxyImage(Request $request)
+    {
+        $url = $request->query('url');
+        if (!$url || !filter_var($url, FILTER_VALIDATE_URL)) {
+            return response()->json(['error' => 'Invalid URL'], 400);
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (!in_array(strtolower($scheme), ['http', 'https'])) {
+            return response()->json(['error' => 'Invalid scheme'], 400);
+        }
+
+        try {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+            $content = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+
+            if ($httpCode >= 200 && $httpCode < 300 && $content) {
+                return response($content, 200, [
+                    'Content-Type' => $contentType ?: 'image/jpeg',
+                    'Cache-Control' => 'public, max-age=86400',
+                    'Access-Control-Allow-Origin' => '*',
+                ]);
+            }
+
+            return response()->json(['error' => 'Failed to fetch image', 'status' => $httpCode], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

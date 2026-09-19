@@ -565,44 +565,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  color: theme.colorScheme.primaryContainer,
-                  child: _imageUrlController.text.trim().isNotEmpty
-                      ? Image.network(
-                          Formatters.directImageUrl(_imageUrlController.text),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              color: theme.colorScheme.primary,
-                              size: 28,
-                            );
-                          },
-                        )
-                      : Icon(
-                          Icons.person,
-                          color: theme.colorScheme.primary,
-                          size: 28,
-                        ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: AppTextField(
-                  controller: _imageUrlController,
-                  labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
-                  hintText: 'https://example.com/image.jpg',
-                  prefixIcon: Icons.image_outlined,
-                ),
-              ),
-            ],
+          AppTextField(
+            controller: _imageUrlController,
+            labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
+            hintText: 'https://example.com/image.jpg',
+            prefixIcon: Icons.image_outlined,
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
