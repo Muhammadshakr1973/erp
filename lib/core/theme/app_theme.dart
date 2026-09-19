@@ -39,7 +39,7 @@ class AppTheme {
           color: AppColors.textPrimaryLight,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surfaceLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -47,7 +47,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.borderLight, width: 1),
         ),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -68,7 +68,7 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      tabBarTheme: const TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondaryLight,
         indicatorColor: AppColors.primary,
@@ -153,7 +153,7 @@ class AppTheme {
           color: AppColors.textPrimaryDark,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surfaceDark,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -161,7 +161,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.borderDark, width: 1),
         ),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surfaceDark,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -182,7 +182,7 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      tabBarTheme: const TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.primaryDark,
         unselectedLabelColor: AppColors.textSecondaryDark,
         indicatorColor: AppColors.primaryDark,
