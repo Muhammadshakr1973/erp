@@ -946,9 +946,11 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
               children: [
                 const Icon(Icons.badge, color: AppColors.info),
                 const SizedBox(width: 8),
-                Text(
-                  'دیاریکردنی مەندوب بۆ ڕاوتی ${widget.route.name}',
-                  style: AppTextStyles.h2,
+                Expanded(
+                  child: Text(
+                    'دیاریکردنی مەندوب بۆ ڕاوتی ${widget.route.name}',
+                    style: AppTextStyles.h2,
+                  ),
                 ),
               ],
             ),
