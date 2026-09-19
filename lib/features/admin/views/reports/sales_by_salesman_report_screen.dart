@@ -110,59 +110,50 @@ class _SalesBySalesmanReportScreenState
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.tune,
-                                size: 20,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'فلتەرکردنی ڕاپۆرت',
-                                style: AppTextStyles.h3,
-                              ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                _isFilterExpanded
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                color: AppColors.textSecondaryLight,
-                              ),
-                            ],
+                          const Icon(
+                            Icons.tune,
+                            size: 20,
+                            color: AppColors.primary,
                           ),
-                          Row(
-                            children: [
-                              TextButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _isFilterExpanded = !_isFilterExpanded;
-                                  });
-                                },
-                                icon: Icon(
-                                  _isFilterExpanded ? Icons.close : Icons.filter_alt_outlined,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                                label: Text(
-                                  _isFilterExpanded ? 'داخستن' : 'فلتەرکردن',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'فلتەرکردنی ڕاپۆرت',
+                              style: AppTextStyles.h3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _clearFilters,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'پاککردنەوە',
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
-                              TextButton(
-                                onPressed: _clearFilters,
-                                child: const Text(
-                                  'پاککردنەوە',
-                                  style: TextStyle(color: AppColors.danger),
-                                ),
-                              ),
-                            ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              _isFilterExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: AppColors.primary,
+                              size: 18,
+                            ),
                           ),
                         ],
                       ),
@@ -191,8 +182,6 @@ class _SalesBySalesmanReportScreenState
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
@@ -200,12 +189,16 @@ class _SalesBySalesmanReportScreenState
                                 style: AppTextStyles.caption.copyWith(
                                   color: AppColors.textSecondaryLight,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'دەستکاریکردنی فلتەر',
+                                  'دەستکاریکردن',
                                   style: TextStyle(
                                     color: AppColors.primary,
                                     fontSize: 12,
@@ -310,13 +303,14 @@ class _SalesBySalesmanReportScreenState
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
+        final spacing = isMobile ? AppSpacing.sm : AppSpacing.md;
         final cardWidth = isMobile
-            ? (constraints.maxWidth - AppSpacing.sm) / 2
-            : (constraints.maxWidth - 3 * AppSpacing.md) / 4;
+            ? (constraints.maxWidth - spacing) / 2
+            : (constraints.maxWidth - 3 * spacing) / 4;
 
         return Wrap(
-          spacing: AppSpacing.md,
-          runSpacing: AppSpacing.md,
+          spacing: spacing,
+          runSpacing: spacing,
           children: [
             _buildKpiCard(
               'کۆی فرۆشتن',
@@ -360,15 +354,21 @@ class _SalesBySalesmanReportScreenState
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondaryLight,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: AppTextStyles.h3.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                style: AppTextStyles.h3.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+                textDirection: TextDirection.ltr,
               ),
-              textDirection: TextDirection.ltr,
             ),
           ],
         ),
