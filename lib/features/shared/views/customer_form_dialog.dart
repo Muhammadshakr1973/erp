@@ -13,6 +13,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../models/customer.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import 'map_picker_dialog.dart';
@@ -607,35 +608,42 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           ref
               .watch(routeListProvider)
               .when(
-                data: (routes) => DropdownButtonFormField<int?>(
-                  initialValue: _routeId != null && routes.any((r) => r.id == _routeId)
-                      ? _routeId
-                      : null,
-                  decoration: const InputDecoration(
-                    labelText: 'گەڕەک / ڕاوت',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                    prefixIcon: Icon(Icons.alt_route),
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('گەڕەک دیاری نەکراوە'),
-                    ),
-                    ...routes.map(
-                      (route) => DropdownMenuItem<int?>(
-                        value: route.id,
-                        child: Text(route.name),
+                data: (routes) {
+                  final currentUser = ref.watch(authProvider).user;
+                  final filteredRoutes = currentUser != null && !currentUser.isAdmin
+                      ? routes.where((r) => r.salesmen.any((s) => s.salesmanId == currentUser.id)).toList()
+                      : routes;
+
+                  return DropdownButtonFormField<int?>(
+                    initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
+                        ? _routeId
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'گەڕەک / ڕاوت',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
                       ),
+                      prefixIcon: Icon(Icons.alt_route),
                     ),
-                  ],
-                  onChanged: (val) {
-                    setState(() => _routeId = val);
-                  },
-                ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('گەڕەک دیاری نەکراوە'),
+                      ),
+                      ...filteredRoutes.map(
+                        (route) => DropdownMenuItem<int?>(
+                          value: route.id,
+                          child: Text(route.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setState(() => _routeId = val);
+                    },
+                  );
+                },
                 loading: () => const Center(
                   child: SizedBox(
                     width: 24,
