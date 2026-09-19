@@ -618,12 +618,19 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     }
 
     final warehousesAsync = ref.watch(warehouseListProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 600;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 40,
+        vertical: 24,
+      ),
       child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        width: isMobile ? double.infinity : 500,
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -641,11 +648,13 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       size: 28,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      isEditing
-                          ? 'نوێکردنەوەی بەکارهێنەر'
-                          : 'تۆمارکردنی بەکارهێنەری نوێ',
-                      style: AppTextStyles.h2,
+                    Expanded(
+                      child: Text(
+                        isEditing
+                            ? 'نوێکردنەوەی بەکارهێنەر'
+                            : 'تۆمارکردنی بەکارهێنەری نوێ',
+                        style: AppTextStyles.h2,
+                      ),
                     ),
                   ],
                 ),
@@ -880,6 +889,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: const Text(
                     'باری بەکارهێنەر (چالاک بێت؟)',
                     style: TextStyle(fontFamily: 'Rudaw'),
@@ -894,17 +904,16 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
                       child: const Text(
                         'پاشگەزبوونەوە',
                         style: TextStyle(fontFamily: 'Rudaw'),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    SizedBox(
-                      width: 140,
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
                       child: AppButton(
-                        text: isEditing ? 'پاشکەوتکردن' : 'تۆمارکردن',
+                        text: isEditing ? 'پاشەکەوتکردن' : 'تۆمارکردن',
                         isLoading: _isLoading,
                         onPressed: _save,
                       ),

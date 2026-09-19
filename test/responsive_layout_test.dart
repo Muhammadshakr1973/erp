@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pos_app/core/components/app_button.dart';
 import 'package:pos_app/core/components/responsive_shell.dart';
 import 'package:pos_app/core/theme/app_breakpoints.dart';
+import 'package:pos_app/core/theme/app_spacing.dart';
 
 void main() {
   group('Responsive Layout Breakpoint & Scroll Tests', () {
@@ -249,6 +251,71 @@ void main() {
       expect(find.text(phone), findsOneWidget);
       expect(find.text(address), findsOneWidget);
       expect(find.text('$phone • $address'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('User form dialog action buttons and switch row do not overflow on constrained mobile viewport (360x640)', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final bool isMobile = AppBreakpoints.isMobile(360);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 16 : 40,
+                vertical: 24,
+              ),
+              child: Container(
+                width: isMobile ? double.infinity : 500,
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('باری بەکارهێنەر (چالاک بێت؟)'),
+                      value: true,
+                      onChanged: (_) {},
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text('پاشگەزبوونەوە'),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Flexible(
+                          child: AppButton(
+                            text: 'پاشەکەوتکردن',
+                            onPressed: () {},
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('پاشگەزبوونەوە'), findsOneWidget);
+      expect(find.text('پاشەکەوتکردن'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
