@@ -14,8 +14,23 @@ class StoreCustomerRequest extends FormRequest
 
     public function rules(): array
     {
+        $user = $this->user();
+        $isSalesman = $user && $user->isSalesman();
+
         return [
-            'route_id'     => ['nullable', 'integer', 'exists:routes,id'],
+            'route_id'     => [
+                $isSalesman ? 'required' : 'nullable',
+                'integer',
+                'exists:routes,id',
+                function ($attribute, $value, $fail) use ($user, $isSalesman) {
+                    if ($isSalesman) {
+                        $assignedRoutes = $user->getAssignedRouteIds();
+                        if (!in_array($value, $assignedRoutes)) {
+                            $fail('تۆ ناتوانیت کڕیار بۆ ئەم گەڕەکە دروست بکەیت، چونکە لە دەرەوەی ڕاوتی خۆتە.');
+                        }
+                    }
+                }
+            ],
             'name'         => ['required', 'string', 'max:255'],
             'image_url'    => ['nullable', 'string', 'max:2048'],
             'phone'        => ['nullable', 'string', 'max:20', \Illuminate\Validation\Rule::unique('customers')->whereNull('deleted_at')],

@@ -12,14 +12,21 @@ use Illuminate\Http\Request;
 
 class RouteController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $routes = Route::withCount('customers')
+        $user = $request->user();
+        $query = Route::withCount('customers')
             ->with(['salesmen' => function ($query) {
                 $query->where('is_active', true)->with('salesman:id,name,phone');
             }])
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if ($user && $user->isSalesman()) {
+            $assignedRouteIds = $user->getAssignedRouteIds();
+            $query->whereIn('id', $assignedRouteIds);
+        }
+
+        $routes = $query->get();
 
         return response()->json([
             'data' => $routes

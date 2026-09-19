@@ -17,8 +17,23 @@ class UpdateCustomerRequest extends FormRequest
         // وەرگرتنی ئایدی کڕیارەکە لە URLـەکەوە بۆ ئەوەی ڕێگە بە هەمان ژمارە مۆبایل بداتەوە لەکاتی ئەپدەیت
         $customerId = $this->route('customer');
 
+        $user = $this->user();
+        $isSalesman = $user && $user->isSalesman();
+
         return [
-            'route_id'   => ['nullable', 'integer', 'exists:routes,id'],
+            'route_id'   => [
+                $isSalesman ? 'required' : 'nullable',
+                'integer',
+                'exists:routes,id',
+                function ($attribute, $value, $fail) use ($user, $isSalesman) {
+                    if ($isSalesman) {
+                        $assignedRoutes = $user->getAssignedRouteIds();
+                        if (!in_array($value, $assignedRoutes)) {
+                            $fail('تۆ ناتوانیت کڕیار بۆ ئەم گەڕەکە بگوازیتەوە، چونکە لە دەرەوەی ڕاوتی خۆتە.');
+                        }
+                    }
+                }
+            ],
             'name'       => ['required', 'string', 'max:255'],
             'image_url'  => ['nullable', 'string', 'max:2048'],
             'phone'      => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)->whereNull('deleted_at')],

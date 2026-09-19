@@ -15,11 +15,23 @@ class CustomerService
     {
         $query = Customer::with('route');
 
-        // ئەگەر بەکارهێنەر مەندوب بوو، تەنها کڕیارەکانی ئەو گەڕەکانە دەبینێت کە بۆی دانراون
-        // تێبینی: دەبێت فەنکشنی (isSalesman) لە مۆدێلی User هەبێت
-        if ($user->role->name === 'salesman') {
-            $routeIds = $user->routeSalesmen()->where('is_active', true)->pluck('route_id');
-            $query->whereIn('route_id', $routeIds);
+        // ئەگەر بەکارهێنەر مەندوب بوو، تەنها کڕیارەکانی ئەو گەڕەکانە دەبینێت کە بۆی دانراون یان بەڕاستەوخۆ بۆی تەرخانکراون
+        if ($user->isSalesman()) {
+            $routeIds = $user->getAssignedRouteIds();
+            $directCustomerIds = \DB::table('customer_assignments')
+                ->where('salesman_id', $user->id)
+                ->where('assigned_from', '<=', now()->toDateString())
+                ->where(function ($q) {
+                    $q->whereNull('assigned_until')
+                      ->orWhere('assigned_until', '>=', now()->toDateString());
+                })
+                ->pluck('customer_id')
+                ->toArray();
+
+            $query->where(function ($q) use ($routeIds, $directCustomerIds) {
+                $q->whereIn('route_id', $routeIds)
+                  ->orWhereIn('id', $directCustomerIds);
+            });
         }
 
         // فلتەرکردن بەپێی گەڕەک ئەگەر نێردرابوو

@@ -716,7 +716,10 @@ class SalesOrderService
         $hasRouteAssignment = DB::table('route_salesmen')
             ->where('route_id', $customer->route_id)
             ->where('salesman_id', $user->id)
-            ->where('work_date', now()->toDateString())
+            ->where(function ($q) {
+                $q->where('is_active', true)
+                  ->orWhere('work_date', now()->toDateString());
+            })
             ->exists();
 
         if ($hasRouteAssignment) {
