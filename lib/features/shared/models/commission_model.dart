@@ -49,6 +49,7 @@ class CommissionModel {
   final int totalSales;
   final int totalProfit;
   final double commissionRate;
+  final int fixedAmount;
   final int commissionAmount;
   final String status;
   final String? calculatedByName;
@@ -74,6 +75,7 @@ class CommissionModel {
     required this.totalSales,
     required this.totalProfit,
     required this.commissionRate,
+    this.fixedAmount = 0,
     required this.commissionAmount,
     required this.status,
     this.calculatedByName,
@@ -110,6 +112,7 @@ class CommissionModel {
           (json['total_profit'] ?? json['profit_amount'] as num?)?.toInt() ?? 0,
       commissionRate:
           double.tryParse(json['commission_rate']?.toString() ?? '0') ?? 0.0,
+      fixedAmount: (json['fixed_amount'] as num?)?.toInt() ?? 0,
       commissionAmount: (json['commission_amount'] as num?)?.toInt() ?? 0,
       status: (json['status'] as String?)?.toLowerCase() ?? 'calculated',
       calculatedByName: calculator?['name'],

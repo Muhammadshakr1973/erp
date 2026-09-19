@@ -249,7 +249,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: AppSpacing.md,
                     mainAxisSpacing: AppSpacing.sm,
-                    mainAxisExtent: 84,
+                    mainAxisExtent: 92,
                   ),
                   itemCount: filteredUsers.length,
                   itemBuilder: (context, index) {
@@ -308,18 +308,31 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (user.role.toLowerCase() == 'salesman' &&
-                                    user.commissionRate != null) ...[
+                                if (user.role.toLowerCase() == 'salesman') ...[
                                   const SizedBox(height: 2),
-                                  Text(
-                                    'کۆمسیۆن: ${user.commissionRate}%',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      if ((user.fixedSalary ?? 0) > 0)
+                                        Text(
+                                          'سابت: ${Formatters.currency(user.fixedSalary ?? 0)}',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      if (user.commissionRate != null &&
+                                          user.commissionRate! > 0)
+                                        Text(
+                                          'کۆمسیۆن: ${user.commissionRate}%',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ],
@@ -411,6 +424,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   late final TextEditingController _phoneController;
   late final TextEditingController _passwordController;
   late final TextEditingController _commissionRateController;
+  late final TextEditingController _fixedSalaryController;
   late final TextEditingController _barcodeController;
 
   int? _selectedRoleId;
@@ -440,6 +454,11 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       text: widget.user?.commissionRate != null
           ? widget.user!.commissionRate!.toString()
           : '0.0',
+    );
+    _fixedSalaryController = TextEditingController(
+      text: widget.user?.fixedSalary != null
+          ? widget.user!.fixedSalary!.toString()
+          : '0',
     );
     _barcodeController = TextEditingController(text: widget.user?.barcode);
 
@@ -471,6 +490,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     _phoneController.dispose();
     _passwordController.dispose();
     _commissionRateController.dispose();
+    _fixedSalaryController.dispose();
     _barcodeController.dispose();
     super.dispose();
   }
@@ -510,6 +530,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       final password = _passwordController.text;
       final commissionRate =
           double.tryParse(_commissionRateController.text) ?? 0.0;
+      final fixedSalary =
+          int.tryParse(_fixedSalaryController.text.trim()) ?? 0;
       final barcode = _barcodeController.text.trim();
 
       // Find if selected role is warehouse
@@ -538,6 +560,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               password: password,
               roleId: _selectedRoleId!,
               commissionRate: commissionRate,
+              fixedSalary: fixedSalary,
               barcode: barcode,
               isActive: _isActive,
               warehouseId: warehouseId,
@@ -560,6 +583,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               password: password.isNotEmpty ? password : null,
               roleId: _selectedRoleId!,
               commissionRate: commissionRate,
+              fixedSalary: fixedSalary,
               barcode: barcode,
               isActive: _isActive,
               warehouseId: warehouseId,
@@ -738,23 +762,49 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 if (isSalesmanSelected) ...[
-                  AppTextField(
-                    controller: _commissionRateController,
-                    labelText: 'ڕێژەی کۆمسیۆن (%)',
-                    prefixIcon: Icons.percent_outlined,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'تکایە ڕێژەی کۆمسیۆن دیاری بکە';
-                      }
-                      final parsed = double.tryParse(val);
-                      if (parsed == null || parsed < 0 || parsed > 100) {
-                        return 'ڕێژەیەکی دروست بنووسە لەنێوان 0 بۆ 100';
-                      }
-                      return null;
-                    },
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          controller: _fixedSalaryController,
+                          labelText: 'مووچەی سابتی مانگانە (د.ع)',
+                          prefixIcon: Icons.attach_money_outlined,
+                          keyboardType: TextInputType.number,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'تکایە بڕ بنووسە (یان ٠)';
+                            }
+                            final parsed = int.tryParse(val.trim());
+                            if (parsed == null || parsed < 0) {
+                              return 'ژمارەی دروست بنووسە';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppTextField(
+                          controller: _commissionRateController,
+                          labelText: 'ڕێژەی کۆمسیۆن (%)',
+                          prefixIcon: Icons.percent_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'تکایە ڕێژە دیاری بکە (یان ٠)';
+                            }
+                            final parsed = double.tryParse(val.trim());
+                            if (parsed == null || parsed < 0 || parsed > 100) {
+                              return 'لەنێوان 0 بۆ 100 بێت';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],

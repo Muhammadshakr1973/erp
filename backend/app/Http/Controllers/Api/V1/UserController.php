@@ -39,6 +39,7 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
+            'fixed_salary' => 'nullable|integer|min:0',
             'barcode' => [
                 'nullable',
                 'string',
@@ -55,6 +56,7 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
             'role_id' => $validated['role_id'],
             'commission_rate' => $validated['commission_rate'] ?? 0,
+            'fixed_salary' => $validated['fixed_salary'] ?? 0,
             'barcode' => $validated['barcode'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
             'warehouse_id' => $validated['warehouse_id'] ?? null,
@@ -97,6 +99,7 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
+            'fixed_salary' => 'nullable|integer|min:0',
             'barcode' => [
                 'nullable',
                 'string',
@@ -115,6 +118,9 @@ class UserController extends Controller
 
         if (array_key_exists('commission_rate', $validated)) {
             $updateData['commission_rate'] = $validated['commission_rate'] ?? 0;
+        }
+        if (array_key_exists('fixed_salary', $validated)) {
+            $updateData['fixed_salary'] = $validated['fixed_salary'] ?? 0;
         }
         if (array_key_exists('barcode', $validated)) {
             $updateData['barcode'] = $validated['barcode'];

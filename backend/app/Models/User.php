@@ -20,6 +20,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'commission_rate',
+        'fixed_salary',
         'barcode',
         'is_active',
         'last_login_at',
@@ -28,6 +29,7 @@ class User extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
         'commission_rate' => 'decimal:2',
+        'fixed_salary' => 'integer',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
         'password' => 'hashed',

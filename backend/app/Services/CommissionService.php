@@ -63,6 +63,7 @@ class CommissionService
         }
 
         $rate = (float) ($salesman->commission_rate ?? 0);
+        $fixedSalary = (int) ($salesman->fixed_salary ?? 0);
 
         $orders = SalesOrder::with(['customer:id,name,phone', 'items'])
             ->where('salesman_id', $salesman->id)
@@ -106,7 +107,8 @@ class CommissionService
             ];
         }
 
-        $estimatedCommission = (int) round(($totalProfit * $rate) / 100);
+        $percentageCommission = (int) round(($totalProfit * $rate) / 100);
+        $estimatedCommission = $fixedSalary + $percentageCommission;
 
         return [
             'salesman' => [
@@ -114,6 +116,7 @@ class CommissionService
                 'name'            => $salesman->name,
                 'phone'           => $salesman->phone,
                 'commission_rate' => $rate,
+                'fixed_salary'    => $fixedSalary,
             ],
             'period_from'          => $periodFrom,
             'period_to'            => $periodTo,
@@ -121,6 +124,9 @@ class CommissionService
             'total_sales'          => $totalSales,
             'total_profit'         => $totalProfit,
             'commission_rate'      => $rate,
+            'fixed_amount'         => $fixedSalary,
+            'fixed_salary'         => $fixedSalary,
+            'percentage_commission'=> $percentageCommission,
             'estimated_commission' => $estimatedCommission,
             'orders'               => $orderItems,
         ];
@@ -192,15 +198,17 @@ class CommissionService
                 ->lockForUpdate()
                 ->get();
 
-            if ($orders->isEmpty()) {
+            $fixedSalary = (int) ($salesman->fixed_salary ?? 0);
+            $rate = (float) ($salesman->commission_rate ?? 0);
+
+            if ($orders->isEmpty() && $fixedSalary <= 0) {
                 throw ValidationException::withMessages([
-                    'orders' => 'هیچ پسوڵەیەکی گەیندراوی شایستە بۆ ئەم مەندوبە لەم ماوەیەدا نییە.',
+                    'orders' => 'هیچ پسوڵەیەکی گەیندراوی شایستە یان مووچە/بڕی سابتی دیاریکراو بۆ ئەم مەندوبە لەم ماوەیەدا نییە.',
                 ]);
             }
 
             $totalSales = 0;
             $totalProfit = 0;
-            $rate = (float) ($salesman->commission_rate ?? 0);
 
             $orderDetailsToCreate = [];
 
@@ -222,7 +230,8 @@ class CommissionService
                 ];
             }
 
-            $commissionAmount = (int) round(($totalProfit * $rate) / 100);
+            $percentageCommission = (int) round(($totalProfit * $rate) / 100);
+            $commissionAmount = $fixedSalary + $percentageCommission;
 
             // ١. تۆمارکردنی خشتەی سەرەکی کۆمسیۆن
             $commission = SalesmanCommission::create([
@@ -233,6 +242,7 @@ class CommissionService
                 'profit_amount'     => $totalProfit,
                 'total_profit'      => $totalProfit,
                 'commission_rate'   => $rate,
+                'fixed_amount'      => $fixedSalary,
                 'commission_amount' => $commissionAmount,
                 'status'            => SalesmanCommission::STATUS_CALCULATED,
                 'calculated_by'     => $user->id,
@@ -261,10 +271,11 @@ class CommissionService
                     'total_sales'       => $totalSales,
                     'total_profit'      => $totalProfit,
                     'commission_rate'   => $rate,
+                    'fixed_amount'      => $fixedSalary,
                     'commission_amount' => $commissionAmount,
                     'orders_count'      => $orders->count(),
                 ],
-                'description' => "کۆمسیۆنی مەندوب {$salesman->name} هەژمارکرا بە بڕی {$commissionAmount} د.ع بۆ ماوەی {$periodFrom} تا {$periodTo} لەسەر {$orders->count()} پسوڵە",
+                'description' => "کۆمسیۆنی مەندوب {$salesman->name} هەژمارکرا بە کۆی بڕی {$commissionAmount} د.ع (سابت: {$fixedSalary} + ڕێژەیی: {$percentageCommission}) بۆ ماوەی {$periodFrom} تا {$periodTo} لەسەر {$orders->count()} پسوڵە",
                 'user'        => $user,
             ]);
 

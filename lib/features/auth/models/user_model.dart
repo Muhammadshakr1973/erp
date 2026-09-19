@@ -5,6 +5,7 @@ class UserModel {
   final String role; // owner, admin, salesman, warehouse, driver
   final int? roleId;
   final double? commissionRate;
+  final int? fixedSalary;
   final String? barcode;
   final bool? isActive;
   final int? warehouseId;
@@ -17,6 +18,7 @@ class UserModel {
     required this.role,
     this.roleId,
     this.commissionRate,
+    this.fixedSalary,
     this.barcode,
     this.isActive,
     this.warehouseId,
@@ -51,6 +53,11 @@ class UserModel {
       commRate = double.tryParse(json['commission_rate'].toString());
     }
 
+    int? fixedSal;
+    if (json['fixed_salary'] != null) {
+      fixedSal = int.tryParse(json['fixed_salary'].toString());
+    }
+
     return UserModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -58,6 +65,7 @@ class UserModel {
       role: roleName,
       roleId: json['role_id'] ?? roleIdVal,
       commissionRate: commRate,
+      fixedSalary: fixedSal,
       barcode: json['barcode'],
       isActive: json['is_active'] is bool
           ? json['is_active']
@@ -75,6 +83,7 @@ class UserModel {
       'role': role,
       'role_id': roleId,
       'commission_rate': commissionRate,
+      'fixed_salary': fixedSalary,
       'barcode': barcode,
       'is_active': isActive,
       'warehouse_id': warehouseId,

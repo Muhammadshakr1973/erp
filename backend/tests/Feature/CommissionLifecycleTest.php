@@ -25,6 +25,7 @@ class CommissionLifecycleTest extends TestCase
     protected Customer $customer;
     protected Warehouse $warehouse;
     protected Product $product;
+    protected Role $salesmanRole;
 
     protected function setUp(): void
     {
@@ -37,7 +38,7 @@ class CommissionLifecycleTest extends TestCase
             'is_system'    => true,
         ]);
 
-        $salesmanRole = Role::create([
+        $this->salesmanRole = Role::create([
             'name'         => Role::SALESMAN,
             'display_name' => 'Salesman',
             'permissions'  => ['orders.create', 'customers.view'],
@@ -56,7 +57,7 @@ class CommissionLifecycleTest extends TestCase
             'name'            => 'Sales Rep A',
             'phone'           => '07502222222',
             'password'        => bcrypt('password123'),
-            'role_id'         => $salesmanRole->id,
+            'role_id'         => $this->salesmanRole->id,
             'commission_rate' => 5.00, // 5%
             'is_active'       => true,
         ]);
@@ -65,7 +66,7 @@ class CommissionLifecycleTest extends TestCase
             'name'            => 'Sales Rep B',
             'phone'           => '07503333333',
             'password'        => bcrypt('password123'),
-            'role_id'         => $salesmanRole->id,
+            'role_id'         => $this->salesmanRole->id,
             'commission_rate' => 7.50, // 7.5%
             'is_active'       => true,
         ]);
@@ -758,5 +759,129 @@ class CommissionLifecycleTest extends TestCase
         $paidCommissionAfter = SalesmanCommission::findOrFail($commissionId);
         $this->assertEquals($originalAmount, $paidCommissionAfter->commission_amount);
         $this->assertEquals(SalesmanCommission::STATUS_PAID, $paidCommissionAfter->status);
+    }
+
+    /**
+     * Test calculation for salesman with monthly fixed salary only (0% commission rate).
+     */
+    public function test_salesman_with_monthly_fixed_salary_only(): void
+    {
+        $this->actingAs($this->admin);
+
+        $fixedSalesman = User::create([
+            'name'            => 'Fixed Salesman',
+            'phone'           => '07501234599',
+            'password'        => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role_id'         => $this->salesmanRole->id,
+            'commission_rate' => 0.00,
+            'fixed_salary'    => 500000,
+            'is_active'       => true,
+        ]);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-FIXED-001',
+            'salesman_id'     => $fixedSalesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 1000000,
+            'total_cost'      => 600000,
+            'total_profit'    => 400000,
+            'delivered_at'    => '2026-08-15 10:00:00',
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $fixedSalesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::findOrFail($commissionId);
+        $this->assertEquals(500000, $commission->fixed_amount);
+        $this->assertEquals(500000, $commission->commission_amount);
+        $this->assertEquals(0.00, (float) $commission->commission_rate);
+    }
+
+    /**
+     * Test calculation for salesman with BOTH monthly fixed salary and commission rate.
+     */
+    public function test_salesman_with_both_fixed_salary_and_commission_rate(): void
+    {
+        $this->actingAs($this->admin);
+
+        $hybridSalesman = User::create([
+            'name'            => 'Hybrid Salesman',
+            'phone'           => '07501234598',
+            'password'        => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role_id'         => $this->salesmanRole->id,
+            'commission_rate' => 5.00,
+            'fixed_salary'    => 400000,
+            'is_active'       => true,
+        ]);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-HYBRID-001',
+            'salesman_id'     => $hybridSalesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'price_tier'      => 'RETAIL',
+            'total_amount'    => 500000,
+            'total_cost'      => 300000,
+            'total_profit'    => 200000,
+            'delivered_at'    => '2026-08-20 14:00:00',
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $hybridSalesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::findOrFail($commissionId);
+        // Fixed: 400,000 + 5% on 200,000 profit (10,000) = 410,000 IQD
+        $this->assertEquals(400000, $commission->fixed_amount);
+        $this->assertEquals(410000, $commission->commission_amount);
+        $this->assertEquals(5.00, (float) $commission->commission_rate);
+    }
+
+    /**
+     * Test salesman with fixed salary can be calculated even with zero delivered orders.
+     */
+    public function test_salesman_with_fixed_salary_calculated_without_orders(): void
+    {
+        $this->actingAs($this->admin);
+
+        $fixedSalesman = User::create([
+            'name'            => 'Fixed Only No Orders',
+            'phone'           => '07501234597',
+            'password'        => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role_id'         => $this->salesmanRole->id,
+            'commission_rate' => 0.00,
+            'fixed_salary'    => 350000,
+            'is_active'       => true,
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $fixedSalesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::findOrFail($commissionId);
+        $this->assertEquals(350000, $commission->fixed_amount);
+        $this->assertEquals(350000, $commission->commission_amount);
+        $this->assertEquals(0, $commission->total_sales);
+        $this->assertEquals(0, $commission->total_profit);
     }
 }
