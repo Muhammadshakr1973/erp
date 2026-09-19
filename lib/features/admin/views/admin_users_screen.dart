@@ -248,8 +248,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
-                    mainAxisExtent: 145,
+                    mainAxisSpacing: AppSpacing.sm,
+                    mainAxisExtent: 84,
                   ),
                   itemCount: filteredUsers.length,
                   itemBuilder: (context, index) {
@@ -259,121 +259,129 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     return AppCard(
                       onTap: () => _showUserFormDialog(context, user, roles),
                       onLongPress: () => _showDeleteUserDialog(context, user),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4.0,
-                          vertical: 4.0,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: roleColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                user.role.toLowerCase() == 'salesman'
-                                    ? Icons.badge_outlined
-                                    : user.role.toLowerCase() == 'admin' ||
-                                          user.role.toLowerCase() == 'owner'
-                                    ? Icons.admin_panel_settings_outlined
-                                    : Icons.person_outline,
-                                color: roleColor,
-                                size: 28,
-                              ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 8.0,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: roleColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    user.name,
-                                    style: AppTextStyles.bodyBold.copyWith(
-                                      fontSize: 15,
-                                    ),
+                            child: Icon(
+                              user.role.toLowerCase() == 'salesman'
+                                  ? Icons.badge_outlined
+                                  : user.role.toLowerCase() == 'admin' ||
+                                        user.role.toLowerCase() == 'owner'
+                                  ? Icons.admin_panel_settings_outlined
+                                  : Icons.person_outline,
+                              color: roleColor,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  user.name,
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    fontSize: 14,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'تەلەفۆن: ${user.phone}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (user.role.toLowerCase() == 'salesman' &&
+                                    user.commissionRate != null) ...[
                                   const SizedBox(height: 2),
                                   Text(
-                                    'تەلەفۆن: ${user.phone}',
+                                    'کۆمسیۆن: ${user.commissionRate}%',
                                     style: AppTextStyles.caption.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  if (user.role.toLowerCase() == 'salesman' &&
-                                      user.commissionRate != null) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'کۆمسیۆن: ${user.commissionRate}%',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
                                 ],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: roleColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: roleColor.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _getRoleDisplayName(user.role),
-                                    style: TextStyle(
-                                      color: roleColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                      fontFamily: 'Rudaw',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: (user.isActive ?? true)
-                                        ? Colors.green.withValues(alpha: 0.1)
-                                        : Colors.red.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    (user.isActive ?? true)
-                                        ? 'چالاک'
-                                        : 'ناچالاک',
-                                    style: TextStyle(
-                                      color: (user.isActive ?? true)
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Rudaw',
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: roleColor.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  _getRoleDisplayName(user.role),
+                                  style: TextStyle(
+                                    color: roleColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: (user.isActive ?? true)
+                                      ? Colors.green.withValues(alpha: 0.1)
+                                      : Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  (user.isActive ?? true)
+                                      ? 'چالاک'
+                                      : 'ناچالاک',
+                                  style: TextStyle(
+                                    color: (user.isActive ?? true)
+                                        ? Colors.green
+                                        : Colors.red,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     );
                   },
