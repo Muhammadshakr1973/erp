@@ -27,6 +27,7 @@ class _SalesmanCommissionsReportScreenState
   String? _selectedStatus;
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _isFilterExpanded = false;
 
   Map<String, dynamic> _filters = {};
 
@@ -181,7 +182,7 @@ class _SalesmanCommissionsReportScreenState
               children: [
                 Icon(Icons.calculate, color: AppColors.primary),
                 SizedBox(width: 8),
-                Text('هەژمارکردنی کۆمسیۆن / شایستە', style: AppTextStyles.h3),
+                Text('هەژمارکردنی کۆمسیۆنی مەندوب', style: AppTextStyles.h3),
               ],
             ),
             content: SizedBox(
@@ -194,18 +195,14 @@ class _SalesmanCommissionsReportScreenState
                     DropdownButtonFormField<int>(
                       initialValue: dialogSalesmanId,
                       decoration: const InputDecoration(
-                        labelText: 'کارمەند / مەندوب',
+                        labelText: 'مەندوب',
                         border: OutlineInputBorder(),
                       ),
                       items: [
                         for (final s in salesmen)
                           DropdownMenuItem<int>(
                             value: s.id,
-                            child: Text(
-                              s.role.toLowerCase() == 'salesman'
-                                  ? '${s.name} (مەندوب - ${s.commissionRate ?? 0}%)'
-                                  : '${s.name} (${_getRoleDisplayName(s.role)} - سابت: ${_formatCurrency(s.fixedSalary ?? 0)})',
-                            ),
+                            child: Text('${s.name} (${s.commissionRate ?? 0}%)'),
                           ),
                       ],
                       onChanged: (val) {
@@ -1031,176 +1028,305 @@ class _SalesmanCommissionsReportScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('فلتەرکردن', style: AppTextStyles.h3),
-                      TextButton(
-                        onPressed: _clearFilters,
-                        child: const Text(
-                          'پاککردنەوە',
-                          style: TextStyle(color: AppColors.danger),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isMobile = constraints.maxWidth < 650;
-
-                      final salesmanDropdown = salesmenAsync.when(
-                        data: (salesmen) => DropdownButtonFormField<int?>(
-                          initialValue: _selectedSalesmanId,
-                          decoration: const InputDecoration(
-                            labelText: 'کارمەند / مەندوب',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 10,
-                            ),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isFilterExpanded = !_isFilterExpanded;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.tune,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'فلتەرکردنی کۆمسیۆنەکان',
+                                style: AppTextStyles.h3,
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                _isFilterExpanded
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: AppColors.textSecondary,
+                              ),
+                            ],
                           ),
-                          items: [
-                            const DropdownMenuItem<int?>(
-                              value: null,
-                              child: Text('گشت کارمەندان و مەندوبەکان'),
-                            ),
-                            for (final s in salesmen)
-                              DropdownMenuItem<int?>(
-                                value: s.id,
-                                child: Text(
-                                  s.role.toLowerCase() == 'salesman'
-                                      ? '${s.name} (مەندوب)'
-                                      : '${s.name} (${_getRoleDisplayName(s.role)})',
+                          Row(
+                            children: [
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _isFilterExpanded = !_isFilterExpanded;
+                                  });
+                                },
+                                icon: Icon(
+                                  _isFilterExpanded ? Icons.close : Icons.filter_alt_outlined,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                label: Text(
+                                  _isFilterExpanded ? 'داخستن' : 'فلتەرکردن',
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                          ],
-                          onChanged: (val) =>
-                              setState(() => _selectedSalesmanId = val),
-                        ),
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, _) => const SizedBox.shrink(),
-                      );
-
-                      final statusDropdown = DropdownButtonFormField<String?>(
-                        initialValue: _selectedStatus,
-                        decoration: const InputDecoration(
-                          labelText: 'دۆخی کۆمسیۆن',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'ALL',
-                            child: Text('گشت دۆخەکان'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'calculated',
-                            child: Text('هەژمارکراو'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'approved',
-                            child: Text('پەسەندکراو'),
-                          ),
-                          DropdownMenuItem(value: 'paid', child: Text('دراوە')),
-                          DropdownMenuItem(
-                            value: 'cancelled',
-                            child: Text('هەڵوەشێنراوە'),
+                              TextButton(
+                                onPressed: _clearFilters,
+                                child: const Text(
+                                  'پاککردنەوە',
+                                  style: TextStyle(color: AppColors.danger),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                        onChanged: (val) =>
-                            setState(() => _selectedStatus = val),
-                      );
+                      ),
+                    ),
+                  ),
+                  if (!_isFilterExpanded) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isFilterExpanded = true;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          border: Border.all(
+                            color: AppColors.border.withValues(alpha: 0.4),
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _startDate != null ||
+                                        _endDate != null ||
+                                        _selectedSalesmanId != null ||
+                                        _selectedStatus != null
+                                    ? 'فلتەری تایبەت چالاکە'
+                                    : 'گشت مەندوبەکان، دۆخەکان و بەروارەکان',
+                                style: AppTextStyles.bodySecondary.copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const Row(
+                              children: [
+                                Text(
+                                  'دەستکاریکردنی فلتەر',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 650;
 
-                      final startPicker = InkWell(
-                        onTap: () => _selectDate(context, true),
-                        child: InputDecorator(
+                        final salesmanDropdown = salesmenAsync.when(
+                          data: (salesmen) => DropdownButtonFormField<int?>(
+                            initialValue: _selectedSalesmanId,
+                            decoration: const InputDecoration(
+                              labelText: 'مەندوب',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                            ),
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('گشت مەندوبەکان'),
+                              ),
+                              for (final s in salesmen)
+                                DropdownMenuItem<int?>(
+                                  value: s.id,
+                                  child: Text(s.name),
+                                ),
+                            ],
+                            onChanged: (val) =>
+                                setState(() => _selectedSalesmanId = val),
+                          ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
+                        );
+
+                        final statusDropdown = DropdownButtonFormField<String?>(
+                          initialValue: _selectedStatus,
                           decoration: const InputDecoration(
-                            labelText: 'لە بەرواری',
+                            labelText: 'دۆخی کۆمسیۆن',
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 10,
                             ),
                           ),
-                          child: Text(
-                            _startDate != null
-                                ? _startDate!.toIso8601String().split('T').first
-                                : 'دیارینەکراوە',
-                          ),
-                        ),
-                      );
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'ALL',
+                              child: Text('گشت دۆخەکان'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'calculated',
+                              child: Text('هەژمارکراو'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'approved',
+                              child: Text('پەسەندکراو'),
+                            ),
+                            DropdownMenuItem(value: 'paid', child: Text('دراوە')),
+                            DropdownMenuItem(
+                              value: 'cancelled',
+                              child: Text('هەڵوەشێنراوە'),
+                            ),
+                          ],
+                          onChanged: (val) =>
+                              setState(() => _selectedStatus = val),
+                        );
 
-                      final endPicker = InkWell(
-                        onTap: () => _selectDate(context, false),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'تا بەرواری',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 10,
+                        final startPicker = InkWell(
+                          onTap: () => _selectDate(context, true),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'لە بەرواری',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                            ),
+                            child: Text(
+                              _startDate != null
+                                  ? _startDate!.toIso8601String().split('T').first
+                                  : 'دیارینەکراوە',
                             ),
                           ),
-                          child: Text(
-                            _endDate != null
-                                ? _endDate!.toIso8601String().split('T').first
-                                : 'دیارینەکراوە',
-                          ),
-                        ),
-                      );
+                        );
 
-                      if (isMobile) {
+                        final endPicker = InkWell(
+                          onTap: () => _selectDate(context, false),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'تا بەرواری',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                            ),
+                            child: Text(
+                              _endDate != null
+                                  ? _endDate!.toIso8601String().split('T').first
+                                  : 'دیارینەکراوە',
+                            ),
+                          ),
+                        );
+
+                        if (isMobile) {
+                          return Column(
+                            children: [
+                              salesmanDropdown,
+                              const SizedBox(height: AppSpacing.sm),
+                              statusDropdown,
+                              const SizedBox(height: AppSpacing.sm),
+                              Row(
+                                children: [
+                                  Expanded(child: startPicker),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(child: endPicker),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              SizedBox(
+                                width: double.infinity,
+                                child: AppButton(
+                                  text: 'جێبەجێکردنی فلتەر',
+                                  icon: Icons.check,
+                                  onPressed: () {
+                                    _applyFilters();
+                                    setState(() {
+                                      _isFilterExpanded = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
                         return Column(
                           children: [
-                            salesmanDropdown,
-                            const SizedBox(height: AppSpacing.sm),
-                            statusDropdown,
-                            const SizedBox(height: AppSpacing.sm),
                             Row(
                               children: [
-                                Expanded(child: startPicker),
+                                Expanded(flex: 2, child: salesmanDropdown),
                                 const SizedBox(width: AppSpacing.sm),
-                                Expanded(child: endPicker),
+                                Expanded(flex: 2, child: statusDropdown),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(flex: 2, child: startPicker),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(flex: 2, child: endPicker),
                               ],
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             SizedBox(
                               width: double.infinity,
                               child: AppButton(
-                                text: 'جێبەجێکردن',
-                                onPressed: _applyFilters,
+                                text: 'جێبەجێکردنی فلتەر',
+                                icon: Icons.check,
+                                onPressed: () {
+                                  _applyFilters();
+                                  setState(() {
+                                    _isFilterExpanded = false;
+                                  });
+                                },
                               ),
                             ),
                           ],
                         );
-                      }
-
-                      return Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(flex: 2, child: salesmanDropdown),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(flex: 2, child: statusDropdown),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(flex: 2, child: startPicker),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(flex: 2, child: endPicker),
-                              const SizedBox(width: AppSpacing.sm),
-                              AppButton(
-                                text: 'فلتەر',
-                                onPressed: _applyFilters,
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),

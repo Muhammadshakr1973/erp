@@ -26,6 +26,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   int? _selectedSalesmanId;
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _isFilterExpanded = false;
 
   Map<String, dynamic> _filters = {};
 
@@ -107,79 +108,188 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Filter Section
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 700;
+
+                return AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('فلتەرکردنی ڕاپۆرت', style: AppTextStyles.h3),
-                      TextButton(
-                        onPressed: _clearFilters,
-                        child: const Text(
-                          'پاککردنەوە',
-                          style: TextStyle(color: AppColors.danger),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isFilterExpanded = !_isFilterExpanded;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.tune,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'فلتەرکردنی ڕاپۆرت',
+                                    style: AppTextStyles.h3,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    _isFilterExpanded
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isFilterExpanded = !_isFilterExpanded;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _isFilterExpanded ? Icons.close : Icons.filter_alt_outlined,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                    label: Text(
+                                      _isFilterExpanded ? 'داخستن' : 'فلتەرکردن',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _clearFilters,
+                                    child: const Text(
+                                      'پاککردنەوە',
+                                      style: TextStyle(color: AppColors.danger),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isMobile = constraints.maxWidth < 700;
-                      if (isMobile) {
-                        return Column(
-                          children: [
-                            Row(
+                      if (!_isFilterExpanded) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isFilterExpanded = true;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              border: Border.all(
+                                color: AppColors.border.withValues(alpha: 0.4),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(child: _buildStartDatePicker(context)),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(child: _buildEndDatePicker(context)),
+                                Expanded(
+                                  child: Text(
+                                    '${_startDate?.toIso8601String().split('T').first ?? ''}  بۆ  ${_endDate?.toIso8601String().split('T').first ?? ''}',
+                                    style: AppTextStyles.bodySecondary.copyWith(
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const Row(
+                                  children: [
+                                    Text(
+                                      'دەستکاریکردنی فلتەر',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Icon(
+                                      Icons.edit_outlined,
+                                      size: 14,
+                                      color: AppColors.primary,
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.sm),
-                            _buildSalesmanDropdown(salesmenAsync),
-                            const SizedBox(height: AppSpacing.sm),
-                            _buildCustomerDropdown(customersAsync),
-                            const SizedBox(height: AppSpacing.md),
-                            SizedBox(
-                              width: double.infinity,
-                              child: AppButton(
-                                text: 'جێبەجێکردنی فلتەر',
-                                onPressed: _applyFilters,
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: AppSpacing.md),
+                        if (isMobile) ...[
+                          Row(
+                            children: [
+                              Expanded(child: _buildStartDatePicker(context)),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(child: _buildEndDatePicker(context)),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          _buildSalesmanDropdown(salesmenAsync),
+                          const SizedBox(height: AppSpacing.sm),
+                          _buildCustomerDropdown(customersAsync),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(child: _buildStartDatePicker(context)),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(child: _buildEndDatePicker(context)),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: _buildSalesmanDropdown(salesmenAsync),
                               ),
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: _buildStartDatePicker(context)),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(child: _buildEndDatePicker(context)),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: _buildSalesmanDropdown(salesmenAsync),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: _buildCustomerDropdown(customersAsync),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: AppButton(
-                              text: 'جێبەجێکردن',
-                              onPressed: _applyFilters,
-                            ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: _buildCustomerDropdown(customersAsync),
+                              ),
+                            ],
                           ),
                         ],
-                      );
-                    },
+                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(
+                          width: double.infinity,
+                          child: AppButton(
+                            text: 'جێبەجێکردنی فلتەر',
+                            icon: Icons.check,
+                            onPressed: () {
+                              _applyFilters();
+                              setState(() {
+                                _isFilterExpanded = false;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.md),
 
