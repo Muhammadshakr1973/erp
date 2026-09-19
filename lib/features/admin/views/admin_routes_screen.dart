@@ -70,7 +70,12 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenHorizontal,
+          0,
+          AppSpacing.screenHorizontal,
+          AppSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -82,7 +87,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.sm),
 
             // Overview Stats
             routesAsync.maybeWhen(

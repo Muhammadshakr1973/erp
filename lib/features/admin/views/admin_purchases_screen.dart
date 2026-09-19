@@ -781,8 +781,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            mainAxisExtent: 130,
+            mainAxisSpacing: AppSpacing.sm,
+            mainAxisExtent: 82,
           ),
           itemBuilder: (context, index) =>
               _buildSupplierCard(context, suppliers[index]),
@@ -812,138 +812,148 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
       onLongPress: () => _deleteSupplier(context, supplier),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(
-                Icons.storefront,
-                color: theme.colorScheme.primary,
-                size: 28,
-              ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12.0,
+        vertical: 8.0,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          supplier.name,
-                          style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (canReconcile)
-                        IconButton(
-                          icon: const Icon(Icons.account_balance_wallet_outlined,
-                              size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) =>
-                                  SupplierReconciliationDialog(
-                                      supplier: supplier),
-                            );
-                          },
-                          tooltip: 'لێکترازانی دارایی',
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'کەسی پەیوەندی: ${supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty ? supplier.contactPerson : '-'}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.8,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: Icon(
+              Icons.storefront,
+              color: theme.colorScheme.primary,
+              size: 26,
             ),
-            const SizedBox(width: AppSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        supplier.name,
+                        style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    if (canReconcile)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 18,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) =>
+                                SupplierReconciliationDialog(
+                                    supplier: supplier),
+                          );
+                        },
+                        tooltip: 'لێکترازانی دارایی',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
                 Text(
-                  'کۆد: #${supplier.id}',
+                  'کەسی پەیوەندی: ${supplier.contactPerson != null && supplier.contactPerson!.isNotEmpty ? supplier.contactPerson : '-'}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
                   style: AppTextStyles.caption.copyWith(
                     color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.7,
+                      alpha: 0.8,
                     ),
                     fontSize: 11,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: hasDebt
-                        ? AppColors.danger.withValues(alpha: 0.1)
-                        : AppColors.success.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatCurrency(supplier.debt),
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: hasDebt ? AppColors.danger : AppColors.success,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: hasDebt ? AppColors.danger : AppColors.success,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          hasDebt ? 'قەرزدار' : 'پاکە',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'کۆد: #${supplier.id}',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.7,
+                  ),
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 7,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: hasDebt
+                      ? AppColors.danger.withValues(alpha: 0.1)
+                      : AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatCurrency(supplier.debt),
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: hasDebt ? AppColors.danger : AppColors.success,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: hasDebt ? AppColors.danger : AppColors.success,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        hasDebt ? 'قەرزدار' : 'پاکە',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Rudaw',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
