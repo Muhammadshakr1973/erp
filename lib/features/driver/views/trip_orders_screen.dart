@@ -199,8 +199,9 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   Widget _buildTripSummary(int total, int delivered, int pending, int failed) {
+    final theme = Theme.of(context);
     return Container(
-      color: Colors.white,
+      color: theme.brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white,
       padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,

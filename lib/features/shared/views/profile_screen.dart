@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -74,9 +75,9 @@ class ProfileScreen extends ConsumerWidget {
                     style: AppTextStyles.bodyBold,
                   ),
                   trailing: Switch(
-                    value: theme.brightness == Brightness.dark,
+                    value: ref.watch(themeModeProvider) == ThemeMode.dark,
                     onChanged: (val) {
-                      // Toggle Theme
+                      ref.read(themeModeProvider.notifier).toggleTheme();
                     },
                   ),
                 ),
