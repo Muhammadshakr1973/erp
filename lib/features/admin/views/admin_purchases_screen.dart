@@ -7,6 +7,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/permission_guard.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -775,6 +776,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           crossAxisCount = 2;
         }
 
+        final bool isMobileOrTablet = screenWidth < AppBreakpoints.desktopMin;
+
         return GridView.builder(
           padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
           itemCount: suppliers.length,
@@ -782,10 +785,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.sm,
-            mainAxisExtent: 82,
+            mainAxisExtent: isMobileOrTablet ? 98 : 82,
           ),
           itemBuilder: (context, index) =>
-              _buildSupplierCard(context, suppliers[index]),
+              _buildSupplierCard(
+                context,
+                suppliers[index],
+                isMobileOrTablet: isMobileOrTablet,
+              ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -802,12 +809,28 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     return Formatters.currency(amount);
   }
 
-  Widget _buildSupplierCard(BuildContext context, SupplierModel supplier) {
+  Widget _buildSupplierCard(
+    BuildContext context,
+    SupplierModel supplier, {
+    bool isMobileOrTablet = false,
+  }) {
     final theme = Theme.of(context);
     final bool hasDebt = supplier.debt > 0;
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final canReconcile = user?.hasPermission('users.manage') ?? false;
+
+    final String phoneText =
+        (supplier.phone != null && supplier.phone!.trim().isNotEmpty)
+            ? supplier.phone!.trim()
+            : 'مۆبایل نییە';
+    final String addressText =
+        (supplier.address != null && supplier.address!.trim().isNotEmpty)
+            ? supplier.address!.trim()
+            : 'ناونیشان نییە';
+
+    final bool isMobileOrTabletView = isMobileOrTablet ||
+        (MediaQuery.of(context).size.width < AppBreakpoints.desktopMin);
 
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
@@ -878,17 +901,43 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '${supplier.phone ?? 'مۆبایل نییە'} • ${supplier.address ?? 'ناونیشان نییە'}',
-                  style: AppTextStyles.caption.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.8,
+                if (isMobileOrTabletView) ...[
+                  Text(
+                    phoneText,
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
+                      fontSize: 11,
                     ),
-                    fontSize: 11,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    addressText,
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else ...[
+                  Text(
+                    '$phoneText • $addressText',
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),

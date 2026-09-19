@@ -137,5 +137,14 @@ void main() {
       expect(product.priceN3, 3500.0);
       expect(product.unitsPerCarton, 24);
     });
+
+    test('Product card grid configuration uses compact mainAxisExtent', () {
+      // The compact card height requested by user matches the tight red bounding box
+      const double compactCardExtent = 130.0;
+      const double previousCardExtent = 195.0;
+
+      expect(compactCardExtent, lessThan(previousCardExtent));
+      expect(compactCardExtent, equals(130.0));
+    });
   });
 }

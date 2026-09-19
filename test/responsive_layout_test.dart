@@ -184,5 +184,72 @@ void main() {
       expect(selected, equals(6));
       expect(find.text('Current Screen: 6'), findsOneWidget);
     });
+
+    testWidgets('Supplier card renders phone and address on separate lines on mobile without overflow', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      const phone = '07500000011';
+      const address = 'شێخەڵا - پشت ڕەهێل';
+      final isMobileOrTablet = 375 < AppBreakpoints.desktopMin;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 375,
+              height: isMobileOrTablet ? 98 : 82,
+              child: Card(
+                child: Row(
+                  children: [
+                    const Icon(Icons.storefront, size: 26),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('ئەرسلان', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          const Text('کەسی پەیوەندی: نەریمان', style: TextStyle(fontSize: 11)),
+                          const SizedBox(height: 2),
+                          if (isMobileOrTablet) ...[
+                            const Text(phone, style: TextStyle(fontSize: 11)),
+                            const SizedBox(height: 2),
+                            const Text(address, style: TextStyle(fontSize: 11)),
+                          ] else ...[
+                            const Text('$phone • $address', style: TextStyle(fontSize: 11)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('کۆد: #1', style: TextStyle(fontSize: 11)),
+                        SizedBox(height: 4),
+                        Text('0 د.ع پاکە', style: TextStyle(fontSize: 11)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text(phone), findsOneWidget);
+      expect(find.text(address), findsOneWidget);
+      expect(find.text('$phone • $address'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

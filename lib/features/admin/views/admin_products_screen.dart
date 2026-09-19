@@ -78,26 +78,26 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         Text(
           Formatters.number(price),
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: FontWeight.w800,
             color: theme.colorScheme.onSurface,
             fontFamily: 'Rudaw',
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 5),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             fontFamily: 'Rudaw',
           ),
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 4),
         Container(
-          width: 7,
-          height: 7,
+          width: 6.5,
+          height: 6.5,
           decoration: BoxDecoration(
             color: dotColor,
             shape: BoxShape.circle,
@@ -328,7 +328,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      mainAxisExtent: 195,
+                      mainAxisExtent: 130,
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
@@ -340,7 +340,10 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       final bool isLowStock = totalStock < 20;
 
                       return AppCard(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 9.0,
+                        ),
                         onTap: () {
                           showDialog(
                             context: context,
@@ -351,28 +354,29 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         onLongPress: () =>
                             _showDeleteDialog(context, ref, product),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // ستونی یەکەم: وێنە لە سەرەوە (top right)، پاشان (جۆر، کۆمپانیا، SKU) بەشێوەی ستونی
                             Expanded(
                               flex: 3,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Container(
-                                    width: 56,
-                                    height: 56,
+                                    width: 54,
+                                    height: 54,
                                     decoration: BoxDecoration(
                                       color: theme.colorScheme.primary.withValues(
                                         alpha: 0.1,
                                       ),
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: (product.imagePath != null &&
                                             product.imagePath!.isNotEmpty)
                                         ? ClipRRect(
                                             borderRadius:
-                                                BorderRadius.circular(14),
+                                                BorderRadius.circular(12),
                                             child: Image.network(
                                               product.imagePath!,
                                               fit: BoxFit.cover,
@@ -382,17 +386,17 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                                 Icons.inventory_2_outlined,
                                                 color: theme
                                                     .colorScheme.primary,
-                                                size: 26,
+                                                size: 24,
                                               ),
                                             ),
                                           )
                                         : Icon(
                                             Icons.inventory_2_outlined,
                                             color: theme.colorScheme.primary,
-                                            size: 26,
+                                            size: 24,
                                           ),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'جۆر: ${product.category?['name'] ?? '-'}',
                                     style: AppTextStyles.caption.copyWith(
@@ -435,17 +439,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               flex: 4,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     product.name,
                                     style: AppTextStyles.bodyBold.copyWith(
                                       fontSize: 14,
-                                      height: 1.3,
+                                      height: 1.25,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'بارکۆد: ${product.barcode}',
                                     style: AppTextStyles.caption.copyWith(
@@ -458,7 +463,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                   ),
                                   if (product.unit != null &&
                                       product.unit != 'دانە') ...[
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 2),
                                     Text(
                                       'یەکە: ${product.unit} = ${product.unitsPerCarton} دانە',
                                       style: AppTextStyles.caption.copyWith(
@@ -471,11 +476,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 5),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
-                                      vertical: 3,
+                                      vertical: 2.5,
                                     ),
                                     decoration: BoxDecoration(
                                       color: isLowStock
@@ -513,12 +518,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                               flex: 3,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // تێچوو وەک Pill Badge پەمەیی/سوور
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3.5,
+                                      horizontal: 7,
+                                      vertical: 2.5,
                                     ),
                                     decoration: BoxDecoration(
                                       color: theme.brightness == Brightness.dark
@@ -538,7 +544,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       child: Text(
                                         'تێچوو: ${Formatters.currency(product.costPrice)}',
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 10.5,
                                           fontWeight: FontWeight.bold,
                                           color: theme.brightness == Brightness.dark
                                               ? const Color(0xFFFDA4AF)
@@ -549,7 +555,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 5),
                                   // ڕیزەکانی N1, N2, N3 بە خاڵی ڕەنگاوڕەنگ و ژمارەی تۆخ
                                   _buildPriceTierRow(
                                     label: 'N1',
@@ -557,14 +563,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     dotColor: const Color(0xFF10B981),
                                     theme: theme,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2.5),
                                   _buildPriceTierRow(
                                     label: 'N2',
                                     price: product.priceN2,
                                     dotColor: const Color(0xFFF59E0B),
                                     theme: theme,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2.5),
                                   _buildPriceTierRow(
                                     label: 'N3',
                                     price: product.priceN3,
