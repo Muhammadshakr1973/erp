@@ -5,6 +5,7 @@ import '../../../../core/components/app_text_field.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/formatters.dart';
 import '../models/customer.dart';
 import '../providers/customer_provider.dart';
 
@@ -94,8 +95,49 @@ class _CustomerSelectionDialogState
                     itemBuilder: (context, index) {
                       final customer = filtered[index];
                       return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(customer.name.substring(0, 1)),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            child: customer.imageUrl != null &&
+                                    customer.imageUrl!.trim().isNotEmpty
+                                ? Image.network(
+                                    Formatters.directImageUrl(
+                                      customer.imageUrl!,
+                                    ),
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                      return Center(
+                                        child: Text(
+                                          customer.name.isNotEmpty
+                                              ? customer.name.substring(0, 1)
+                                              : '?',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Center(
+                                    child: Text(
+                                      customer.name.isNotEmpty
+                                          ? customer.name.substring(0, 1)
+                                          : '?',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                          ),
                         ),
                         title: Text(
                           customer.name,

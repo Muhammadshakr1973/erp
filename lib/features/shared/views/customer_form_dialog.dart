@@ -65,6 +65,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _imageUrlController = TextEditingController(
       text: widget.customer?.imageUrl,
     );
+    _imageUrlController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _initialDebtController = TextEditingController();
     _priceType = widget.customer?.priceType ?? 'N3';
     _routeId = widget.customer?.routeId;
@@ -284,9 +287,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     final childWidget = widget.customer == null
-        ? _buildProfileForm(context)
+        ? _buildProfileForm(context, keyboardHeight)
         : DefaultTabController(
             length: 3,
             child: Column(
@@ -322,10 +326,18 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         Form(
                           key: _formKey,
                           child: SingleChildScrollView(
-                            child: _buildProfileFormFields(context),
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: keyboardHeight),
+                              child: _buildProfileFormFields(context),
+                            ),
                           ),
                         ),
-                        SingleChildScrollView(child: _buildDebtForm(context)),
+                        SingleChildScrollView(
+                          child: Padding(
+                            padding: EdgeInsets.only(bottom: keyboardHeight),
+                            child: _buildDebtForm(context),
+                          ),
+                        ),
                         _buildLedgerHistory(context),
                       ],
                     ),
@@ -335,25 +347,30 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           );
 
-    return Dialog(
-      backgroundColor: theme.colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 24,
-        vertical: isMobile ? 16 : 24,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        viewInsets: MediaQuery.of(context).viewInsets.copyWith(bottom: 0),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: SizedBox(
-        width: isMobile ? double.infinity : 520,
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          child: childWidget,
+      child: Dialog(
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 12 : 24,
+          vertical: isMobile ? 16 : 24,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: SizedBox(
+          width: isMobile ? double.infinity : 520,
+          child: Padding(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            child: childWidget,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileForm(BuildContext context) {
+  Widget _buildProfileForm(BuildContext context, double keyboardHeight) {
     return Form(
       key: _formKey,
       child: Column(
@@ -373,7 +390,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           const SizedBox(height: AppSpacing.md),
           Flexible(
             child: SingleChildScrollView(
-              child: _buildProfileFormFields(context),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: keyboardHeight),
+                child: _buildProfileFormFields(context),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -544,11 +564,44 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            controller: _imageUrlController,
-            labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
-            hintText: 'https://example.com/image.jpg',
-            prefixIcon: Icons.image_outlined,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  color: theme.colorScheme.primaryContainer,
+                  child: _imageUrlController.text.trim().isNotEmpty
+                      ? Image.network(
+                          Formatters.directImageUrl(_imageUrlController.text),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              color: theme.colorScheme.primary,
+                              size: 28,
+                            );
+                          },
+                        )
+                      : Icon(
+                          Icons.person,
+                          color: theme.colorScheme.primary,
+                          size: 28,
+                        ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: AppTextField(
+                  controller: _imageUrlController,
+                  labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
+                  hintText: 'https://example.com/image.jpg',
+                  prefixIcon: Icons.image_outlined,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(

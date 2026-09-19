@@ -503,13 +503,29 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(
-                AppIcons.customer,
-                size: 40,
-                color: theme.colorScheme.primary,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(40),
+              child: Container(
+                width: 80,
+                height: 80,
+                color: theme.colorScheme.primaryContainer,
+                child: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        Formatters.directImageUrl(customer.imageUrl!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            AppIcons.customer,
+                            size: 40,
+                            color: theme.colorScheme.primary,
+                          );
+                        },
+                      )
+                    : Icon(
+                        AppIcons.customer,
+                        size: 40,
+                        color: theme.colorScheme.primary,
+                      ),
               ),
             ),
           ),

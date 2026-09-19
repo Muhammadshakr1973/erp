@@ -149,15 +149,39 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                         },
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              backgroundColor: isVisited
-                                  ? AppColors.success.withValues(alpha: 0.1)
-                                  : theme.colorScheme.primaryContainer,
-                              child: Icon(
-                                AppIcons.customer,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                width: 40,
+                                height: 40,
                                 color: isVisited
-                                    ? AppColors.success
-                                    : theme.colorScheme.primary,
+                                    ? AppColors.success.withValues(alpha: 0.1)
+                                    : theme.colorScheme.primaryContainer,
+                                child: customer.imageUrl != null &&
+                                        customer.imageUrl!.trim().isNotEmpty
+                                    ? Image.network(
+                                        Formatters.directImageUrl(
+                                          customer.imageUrl!,
+                                        ),
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Icon(
+                                            AppIcons.customer,
+                                            color: isVisited
+                                                ? AppColors.success
+                                                : theme.colorScheme.primary,
+                                            size: 20,
+                                          );
+                                        },
+                                      )
+                                    : Icon(
+                                        AppIcons.customer,
+                                        color: isVisited
+                                            ? AppColors.success
+                                            : theme.colorScheme.primary,
+                                        size: 20,
+                                      ),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.md),

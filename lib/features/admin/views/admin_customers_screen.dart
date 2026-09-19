@@ -458,27 +458,30 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
         child: Row(
           children: [
             // Profile image or initials
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 54,
+                height: 54,
                 color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                image:
-                    customer.imageUrl != null && customer.imageUrl!.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(customer.imageUrl!),
+                child: customer.imageUrl != null && customer.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        Formatters.directImageUrl(customer.imageUrl!),
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.person,
+                            color: theme.colorScheme.primary,
+                            size: 28,
+                          );
+                        },
                       )
-                    : null,
+                    : Icon(
+                        Icons.person,
+                        color: theme.colorScheme.primary,
+                        size: 28,
+                      ),
               ),
-              child: customer.imageUrl == null || customer.imageUrl!.isEmpty
-                  ? Icon(
-                      Icons.person,
-                      color: theme.colorScheme.primary,
-                      size: 28,
-                    )
-                  : null,
             ),
             const SizedBox(width: AppSpacing.md),
 

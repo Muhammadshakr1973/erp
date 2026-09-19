@@ -30,4 +30,37 @@ class Formatters {
     }
     return msg;
   }
+
+  static String directImageUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return '';
+
+    // Handle Google Drive and Google Share links
+    if (trimmed.contains('drive.google.com') || trimmed.contains('google.') || trimmed.contains('share.google')) {
+      final fileDRegExp = RegExp(r'/(?:file/d/|d/)([a-zA-Z0-9_-]+)');
+      final fileDMatch = fileDRegExp.firstMatch(trimmed);
+      if (fileDMatch != null && fileDMatch.groupCount >= 1) {
+        final fileId = fileDMatch.group(1);
+        return 'https://lh3.googleusercontent.com/d/$fileId';
+      }
+
+      final idRegExp = RegExp(r'[?&]id=([a-zA-Z0-9_-]+)');
+      final idMatch = idRegExp.firstMatch(trimmed);
+      if (idMatch != null && idMatch.groupCount >= 1) {
+        final fileId = idMatch.group(1);
+        return 'https://lh3.googleusercontent.com/d/$fileId';
+      }
+    }
+
+    // Handle Dropbox links
+    if (trimmed.contains('dropbox.com')) {
+      if (trimmed.endsWith('?dl=0')) {
+        return trimmed.replaceAll('?dl=0', '?raw=1');
+      } else if (!trimmed.contains('?')) {
+        return '$trimmed?raw=1';
+      }
+    }
+
+    return trimmed;
+  }
 }
