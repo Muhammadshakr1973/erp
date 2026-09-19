@@ -30,8 +30,10 @@ class AppColors {
 
   // Dark Mode colors
   static const Color primaryDark = Color(0xFF4A7FD4);
+  static const Color primaryContainerDark = Color(0xFF1E2D4A);
   static const Color backgroundDark = Color(0xFF0F1419);
   static const Color surfaceDark = Color(0xFF1A2332);
+  static const Color surfaceContainerDark = Color(0xFF243044);
   static const Color successDark = Color(0xFF34D399);
   static const Color warningDark = Color(0xFFFBBF24);
   static const Color dangerDark = Color(0xFFF87171);
