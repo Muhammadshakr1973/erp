@@ -332,75 +332,74 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       onTap: () => _showRouteForm(route),
       onLongPress: () => _confirmDelete(route),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: routeColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: routeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.alt_route,
+                    color: routeColor,
+                    size: 24,
+                  ),
                 ),
-                child: Icon(
-                  Icons.alt_route,
-                  color: routeColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      route.name,
-                      style: AppTextStyles.bodyBold.copyWith(
-                        fontSize: 15,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: route.isActive
-                            ? AppColors.success.withValues(
-                                alpha: 0.1,
-                              )
-                            : AppColors.danger.withValues(
-                                alpha: 0.1,
-                              ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        route.isActive ? 'چالاک' : 'ناچالاک',
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        route.name,
                         style: AppTextStyles.bodyBold.copyWith(
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
                           color: route.isActive
-                              ? AppColors.success
-                              : AppColors.danger,
-                          fontSize: 10,
+                              ? AppColors.success.withValues(
+                                  alpha: 0.1,
+                                )
+                              : AppColors.danger.withValues(
+                                  alpha: 0.1,
+                                ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          route.isActive ? 'چالاک' : 'ناچالاک',
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: route.isActive
+                                ? AppColors.success
+                                : AppColors.danger,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               InkWell(
                 onTap: () => _showRouteCustomers(route),
@@ -415,6 +414,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.storefront,
@@ -435,6 +435,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 6),
               InkWell(
                 onTap: () => _showManageSalesmen(route),
                 borderRadius: BorderRadius.circular(8),
@@ -448,6 +449,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.person_outline,
