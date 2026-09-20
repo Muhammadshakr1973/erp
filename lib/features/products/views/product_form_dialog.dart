@@ -432,54 +432,70 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _barcodeController,
-                                  labelText: 'بارکۆد',
-                                  hintText: 'بارکۆد',
-                                  suffixIcon: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.qr_code_scanner),
-                                        onPressed: () {
-                                          CameraBarcodeScanner.show(context, (
-                                            scanned,
-                                          ) {
-                                            setState(() {
-                                              _barcodeController.text = scanned;
-                                            });
-                                          });
-                                        },
-                                      ),
-                                      if (widget.product != null)
+                          Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Row(
+                              children: [
+                                // Right input (first child in RTL: Barcode)
+                                Expanded(
+                                  child: AppTextField(
+                                    controller: _barcodeController,
+                                    labelText: 'بارکۆد',
+                                    hintText: 'بارکۆد',
+                                    borderRadius: const BorderRadius.only(
+                                      topRight: Radius.circular(24),
+                                      bottomRight: Radius.circular(24),
+                                      topLeft: Radius.zero,
+                                      bottomLeft: Radius.zero,
+                                    ),
+                                    suffixIcon: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
                                         IconButton(
-                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
-                                          tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                          icon: const Icon(Icons.qr_code_scanner),
                                           onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => BarcodeGeneratorDialog(
-                                                product: widget.product,
-                                              ),
-                                            );
+                                            CameraBarcodeScanner.show(context, (
+                                              scanned,
+                                            ) {
+                                              setState(() {
+                                                _barcodeController.text = scanned;
+                                              });
+                                            });
                                           },
                                         ),
-                                    ],
+                                        if (widget.product != null)
+                                          IconButton(
+                                            icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                            tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => BarcodeGeneratorDialog(
+                                                  product: widget.product,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: AppTextField(
-                                  controller: _skuController,
-                                  labelText: 'SKU',
-                                  hintText: 'SKU',
+                                // Left input (second child in RTL: SKU)
+                                Expanded(
+                                  child: AppTextField(
+                                    controller: _skuController,
+                                    labelText: 'SKU',
+                                    hintText: 'SKU',
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(24),
+                                      bottomLeft: Radius.circular(24),
+                                      topRight: Radius.zero,
+                                      bottomRight: Radius.zero,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ] else ...[
                           Row(
