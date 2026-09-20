@@ -411,68 +411,140 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                         const SizedBox(height: AppSpacing.md),
 
                         // Basic Info
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: AppTextField(
-                                controller: _nameController,
-                                labelText: 'ناوی کاڵا',
-                                hintText: 'ناوی کاڵا',
-                                validator: (v) =>
-                                    v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              flex: 1,
-                              child: AppTextField(
-                                controller: _barcodeController,
-                                labelText: 'بارکۆد',
-                                hintText: 'بارکۆد',
-                                suffixIcon: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.qr_code_scanner),
-                                      onPressed: () {
-                                        CameraBarcodeScanner.show(context, (
-                                          scanned,
-                                        ) {
-                                          setState(() {
-                                            _barcodeController.text = scanned;
-                                          });
-                                        });
-                                      },
-                                    ),
-                                    if (widget.product != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
-                                        tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => BarcodeGeneratorDialog(
-                                              product: widget.product,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                  ],
+                        if (isMobile) ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _nameController,
+                                  labelText: 'ناوی کاڵا',
+                                  hintText: 'ناوی کاڵا',
+                                  validator: (v) =>
+                                      v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              flex: 1,
-                              child: AppTextField(
-                                controller: _skuController,
-                                labelText: 'SKU',
-                                hintText: 'SKU',
+                              const SizedBox(width: AppSpacing.sm),
+                              Switch(
+                                value: _isActive,
+                                onChanged: (v) => setState(() => _isActive = v),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _barcodeController,
+                                  labelText: 'بارکۆد',
+                                  hintText: 'بارکۆد',
+                                  suffixIcon: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.qr_code_scanner),
+                                        onPressed: () {
+                                          CameraBarcodeScanner.show(context, (
+                                            scanned,
+                                          ) {
+                                            setState(() {
+                                              _barcodeController.text = scanned;
+                                            });
+                                          });
+                                        },
+                                      ),
+                                      if (widget.product != null)
+                                        IconButton(
+                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                          tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => BarcodeGeneratorDialog(
+                                                product: widget.product,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: AppTextField(
+                                  controller: _skuController,
+                                  labelText: 'SKU',
+                                  hintText: 'SKU',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: AppTextField(
+                                  controller: _nameController,
+                                  labelText: 'ناوی کاڵا',
+                                  hintText: 'ناوی کاڵا',
+                                  validator: (v) =>
+                                      v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                flex: 1,
+                                child: AppTextField(
+                                  controller: _barcodeController,
+                                  labelText: 'بارکۆد',
+                                  hintText: 'بارکۆد',
+                                  suffixIcon: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.qr_code_scanner),
+                                        onPressed: () {
+                                          CameraBarcodeScanner.show(context, (
+                                            scanned,
+                                          ) {
+                                            setState(() {
+                                              _barcodeController.text = scanned;
+                                            });
+                                          });
+                                        },
+                                      ),
+                                      if (widget.product != null)
+                                        IconButton(
+                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                          tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => BarcodeGeneratorDialog(
+                                                product: widget.product,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                flex: 1,
+                                child: AppTextField(
+                                  controller: _skuController,
+                                  labelText: 'SKU',
+                                  hintText: 'SKU',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.md),
                         Container(
                           decoration: BoxDecoration(
@@ -1000,18 +1072,20 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            const SizedBox(width: AppSpacing.xs),
-                            Text('چالاکە', style: AppTextStyles.bodyBold),
-                            const SizedBox(width: AppSpacing.sm),
-                            Switch(
-                              value: _isActive,
-                              onChanged: (v) => setState(() => _isActive = v),
-                            ),
-                          ],
-                        ),
+                        if (!isMobile) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              const SizedBox(width: AppSpacing.xs),
+                              Text('چالاکە', style: AppTextStyles.bodyBold),
+                              const SizedBox(width: AppSpacing.sm),
+                              Switch(
+                                value: _isActive,
+                                onChanged: (v) => setState(() => _isActive = v),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
