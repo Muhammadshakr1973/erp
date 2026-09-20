@@ -104,7 +104,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Future<void> _fetchSpecialPricesForCustomer(int customerId) async {
     try {
       final prices = await ref
-          .read(customerNotifierProvider.notifier)
+          .read(customerActionsProvider)
           .fetchSpecialPrices(customerId);
       if (mounted) {
         setState(() {
@@ -287,8 +287,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (modalCtx, setDialogState) {
           return AlertDialog(
             title: Row(
               children: [
@@ -350,7 +350,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           setDialogState(() => isSaving = true);
                           try {
                             await ref
-                                .read(customerNotifierProvider.notifier)
+                                .read(customerActionsProvider)
                                 .deleteSpecialPrice(
                                   _selectedCustomer!.id,
                                   product.id,
@@ -358,8 +358,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             setState(() {
                               _customerSpecialPrices.remove(product.id);
                             });
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
                             if (mounted) {
-                              Navigator.pop(ctx);
                               AppSnackbar.show(
                                 context,
                                 message:
@@ -376,13 +378,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               );
                             }
                           } finally {
-                            if (mounted) setDialogState(() => isSaving = false);
+                            if (modalCtx.mounted) setDialogState(() => isSaving = false);
                           }
                         },
                   child: const Text('سڕینەوەی تایبەت'),
                 ),
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
                 child: const Text('پاشگەزبوونەوە'),
               ),
               ElevatedButton(
@@ -405,7 +407,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         setDialogState(() => isSaving = true);
                         try {
                           await ref
-                              .read(customerNotifierProvider.notifier)
+                              .read(customerActionsProvider)
                               .setSpecialPrice(
                                 _selectedCustomer!.id,
                                 product.id,
@@ -414,8 +416,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           setState(() {
                             _customerSpecialPrices[product.id] = parsed;
                           });
+                          if (dialogCtx.mounted) {
+                            Navigator.pop(dialogCtx);
+                          }
                           if (mounted) {
-                            Navigator.pop(ctx);
                             AppSnackbar.show(
                               context,
                               message:
@@ -432,7 +436,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             );
                           }
                         } finally {
-                          if (mounted) setDialogState(() => isSaving = false);
+                          if (modalCtx.mounted) setDialogState(() => isSaving = false);
                         }
                       },
                 child: isSaving
