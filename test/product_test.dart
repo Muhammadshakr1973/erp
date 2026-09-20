@@ -176,8 +176,8 @@ void main() {
       const aspectRatio = labelWidth / labelHeight;
       const borderRadius = 8.0;
       const borderWidth = 1.2;
-      const logoWidth = 175.0;
-      const logoHeight = 145.0;
+      const logoWidth = 190.0;
+      const logoHeight = 160.0;
 
       expect(labelWidth, 591.0);
       expect(labelHeight, 354.0);
@@ -185,8 +185,8 @@ void main() {
       expect(aspectRatio, closeTo(5.0 / 3.0, 0.01));
       expect(borderRadius, 8.0);
       expect(borderWidth, 1.2);
-      expect(logoWidth, 175.0);
-      expect(logoHeight, 145.0);
+      expect(logoWidth, 190.0);
+      expect(logoHeight, 160.0);
     });
   });
 }
