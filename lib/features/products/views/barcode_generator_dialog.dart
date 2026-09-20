@@ -41,7 +41,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     _nameController = TextEditingController(
       text: widget.product?.name.isNotEmpty == true
           ? widget.product!.name
-          : 'لاستیک باریک سپی',
+          : 'لاستیق باریك سپی',
     );
     final double? rawPrice = widget.product?.priceN1;
     _priceController = TextEditingController(
@@ -74,7 +74,8 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
-      final image = await boundary.toImage(pixelRatio: 3.0);
+      // Capture at pixelRatio: 1.0 to produce the exact 591 × 354 physical pixel size for 50x30mm at 300 DPI
+      final image = await boundary.toImage(pixelRatio: 1.0);
       final byteData = await image.toByteData(format: ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (e) {
@@ -266,55 +267,67 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'پێشبینینی لایبڵی چاپ (Print / Label Preview):',
+                    'پێشبینینی لایبڵی چاپ (50 × 30 mm | 300 DPI):',
                     style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    'ئایکۆن و د.ع سابتن',
-                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      '50 × 30 mm (5:3) • 591 × 354 px',
+                      style: TextStyle(
+                        fontFamily: 'Rudaw',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
 
-              // The Exact Printable Sticker / Label Canvas
+              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (591 × 354 px @ 300 DPI)
               Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: RepaintBoundary(
                     key: _repaintKey,
                     child: Container(
-                      width: 560,
-                      height: 320,
+                      width: 591,
+                      height: 354,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(color: Colors.black, width: 3.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.black87, width: 1.2),
                       ),
                       child: Directionality(
                         textDirection: TextDirection.ltr,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // ----------------- LEFT SECTION -----------------
+                            // ----------------- LEFT AREA (~40% width) -----------------
                             SizedBox(
-                              width: 185,
+                              width: 216,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Top: Fixed Gardi Logo (Buildings + Registered + GARDI text)
+                                  // Top: Fixed Proportional Gardi Logo
                                   const Padding(
                                     padding: EdgeInsets.only(top: 4),
                                     child: GardiLogoWidget(
-                                      width: 148,
-                                      height: 122,
+                                      width: 175,
+                                      height: 145,
                                       color: Color(0xFF1E293B),
                                     ),
                                   ),
 
-                                  // Bottom: Product Name in Bold Kurdish Rudaw Font
+                                  // Bottom: Product Name underneath logo in Bold Kurdish Rudaw Font
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 6, left: 4, right: 4),
                                     child: Directionality(
@@ -323,7 +336,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                         productName,
                                         style: const TextStyle(
                                           fontFamily: 'Rudaw',
-                                          fontSize: 20,
+                                          fontSize: 21,
                                           fontWeight: FontWeight.w900,
                                           color: Colors.black,
                                           height: 1.25,
@@ -338,22 +351,22 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               ),
                             ),
 
-                            // ----------------- VERTICAL DIVIDER -----------------
+                            // ----------------- THIN VERTICAL DIVIDER -----------------
                             Container(
-                              width: 3.5,
-                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                              color: Colors.black,
+                              width: 1.5,
+                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              color: Colors.black87,
                             ),
 
-                            // ----------------- RIGHT SECTION -----------------
+                            // ----------------- RIGHT AREA (~60% width) -----------------
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // 1D Barcode Bars
+                                  // Large Barcode
                                   Container(
-                                    height: 90,
+                                    height: 125,
                                     width: double.infinity,
                                     padding: const EdgeInsets.symmetric(horizontal: 4),
                                     child: CustomPaint(
@@ -364,40 +377,40 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                     ),
                                   ),
 
-                                  // Barcode Digits
+                                  // Barcode Number directly underneath barcode
                                   Text(
                                     barcodeText.isEmpty ? '07849564845' : barcodeText,
                                     style: const TextStyle(
                                       fontFamily: 'Rudaw',
-                                      fontSize: 25,
+                                      fontSize: 24,
                                       fontWeight: FontWeight.w900,
-                                      letterSpacing: 2.5,
+                                      letterSpacing: 2.2,
                                       color: Colors.black,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
 
-                                  // Black Price Box [ د.ع  |  1000 ]
+                                  // Prominent Retail Price: 1000 د.ع
                                   Container(
-                                    height: 82,
+                                    height: 78,
                                     width: double.infinity,
                                     decoration: BoxDecoration(
                                       color: Colors.black,
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                                     child: Directionality(
                                       textDirection: TextDirection.ltr,
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
-                                          // Currency Symbol "د.ع" (Fixed / سابت)
+                                          // Fixed Currency Symbol: "د.ع"
                                           const Text(
                                             'د.ع',
                                             style: TextStyle(
                                               fontFamily: 'Rudaw',
-                                              fontSize: 32,
+                                              fontSize: 28,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.white,
                                             ),
@@ -405,13 +418,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
 
                                           // Thin Vertical White Line
                                           Container(
-                                            width: 2.2,
-                                            height: 48,
+                                            width: 1.8,
+                                            height: 42,
                                             color: Colors.white,
-                                            margin: const EdgeInsets.symmetric(horizontal: 12),
+                                            margin: const EdgeInsets.symmetric(horizontal: 10),
                                           ),
 
-                                          // Large Price Digits (e.g. 1000)
+                                          // Large Bold Retail Price (1000)
                                           Expanded(
                                             child: FittedBox(
                                               fit: BoxFit.scaleDown,
@@ -420,10 +433,10 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                                 priceText,
                                                 style: const TextStyle(
                                                   fontFamily: 'Rudaw',
-                                                  fontSize: 52,
+                                                  fontSize: 50,
                                                   fontWeight: FontWeight.w900,
                                                   color: Colors.white,
-                                                  letterSpacing: 1.2,
+                                                  letterSpacing: 1.5,
                                                 ),
                                               ),
                                             ),

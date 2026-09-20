@@ -51,13 +51,29 @@ void printImage(Uint8List bytes) {
           font-weight: bold;
           color: #333;
         }
+        @page {
+          size: 50mm 30mm;
+          margin: 0;
+        }
         @media print {
-          body {
-            height: auto;
+          html, body {
+            width: 50mm;
+            height: 30mm;
+            margin: 0;
+            padding: 0;
           }
           .container {
             border: none;
             padding: 0;
+            margin: 0;
+            width: 50mm;
+            height: 30mm;
+          }
+          img {
+            width: 50mm;
+            height: 30mm;
+            margin: 0;
+            display: block;
           }
         }
       </style>

@@ -169,21 +169,24 @@ void main() {
       expect(productWithoutPrice.name, 'لاستیک باریک سپی');
     });
 
-    test('Barcode Label Sticker geometry matches 560x320 specifications', () {
-      // Label dimensions
-      const labelWidth = 560.0;
-      const labelHeight = 320.0;
-      const borderRadius = 26.0;
-      const borderWidth = 3.5;
-      const logoWidth = 148.0;
-      const logoHeight = 122.0;
+    test('Barcode Label Sticker geometry matches 50x30mm (591x354px) specifications', () {
+      // Physical dimensions: 50 mm x 30 mm at 300 DPI = 590.55 x 354.33 px -> 591 x 354
+      const labelWidth = 591.0;
+      const labelHeight = 354.0;
+      const aspectRatio = labelWidth / labelHeight;
+      const borderRadius = 8.0;
+      const borderWidth = 1.2;
+      const logoWidth = 175.0;
+      const logoHeight = 145.0;
 
-      expect(labelWidth, 560.0);
-      expect(labelHeight, 320.0);
-      expect(borderRadius, 26.0);
-      expect(borderWidth, 3.5);
-      expect(logoWidth, 148.0);
-      expect(logoHeight, 122.0);
+      expect(labelWidth, 591.0);
+      expect(labelHeight, 354.0);
+      // Verify exact 5:3 ratio with high precision
+      expect(aspectRatio, closeTo(5.0 / 3.0, 0.01));
+      expect(borderRadius, 8.0);
+      expect(borderWidth, 1.2);
+      expect(logoWidth, 175.0);
+      expect(logoHeight, 145.0);
     });
   });
 }
