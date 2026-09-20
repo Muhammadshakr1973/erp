@@ -1207,169 +1207,171 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 bottom:
                     MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('تەواوکردنی پسوڵە', style: AppTextStyles.h2),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _cart.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final productId = _cart.keys.elementAt(index);
-                        final qty = _cart[productId]!;
-                        final product = allProducts
-                            .where((p) => p.id == productId)
-                            .firstOrNull;
-                        final unitPrice = product != null
-                            ? _getProductUnitPrice(product)
-                            : 0.0;
-
-                        return ListTile(
-                          title: Text(product?.name ?? 'کاڵا'),
-                          subtitle: Text(
-                            '$qty ${product?.unit ?? "دانە"} x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.remove_circle_outline,
-                                  color: AppColors.danger,
-                                ),
-                                onPressed: () {
-                                  _removeFromCart(productId);
-                                  setModalState(() {});
-                                  setState(() {});
-                                },
-                              ),
-                              Text('$qty'),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle_outline,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: () {
-                                  _addToCart(productId);
-                                  setModalState(() {});
-                                  setState(() {});
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  if (permDiscountPercent > 0) ...[
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'داشکاندنی بەردەوامی کڕیار (${permDiscountPercent.toStringAsFixed(1)}%):',
-                          style: AppTextStyles.caption,
-                        ),
-                        Text(
-                          '-${Formatters.currency(permDiscountAmount)}',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                        const Text('تەواوکردنی پسوڵە', style: AppTextStyles.h2),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                  ],
-                  Row(
-                    children: [
-                      const Text('داشکاندن: '),
-                      const SizedBox(width: AppSpacing.sm),
-                      DropdownButton<String>(
-                        value: _discountType,
-                        items: const [
-                          DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)')),
-                          DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setModalState(() {
-                              _discountType = val;
-                              if (_discountType == 'PERCENT' && _discountValue > 100) {
-                                _discountValue = 100;
-                              }
-                            });
-                            setState(() {});
-                          }
+                    const Divider(),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: _cart.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final productId = _cart.keys.elementAt(index);
+                          final qty = _cart[productId]!;
+                          final product = allProducts
+                              .where((p) => p.id == productId)
+                              .firstOrNull;
+                          final unitPrice = product != null
+                              ? _getProductUnitPrice(product)
+                              : 0.0;
+
+                          return ListTile(
+                            title: Text(product?.name ?? 'کاڵا'),
+                            subtitle: Text(
+                              '$qty ${product?.unit ?? "دانە"} x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                    color: AppColors.danger,
+                                  ),
+                                  onPressed: () {
+                                    _removeFromCart(productId);
+                                    setModalState(() {});
+                                    setState(() {});
+                                  },
+                                ),
+                                Text('$qty'),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.add_circle_outline,
+                                    color: AppColors.primary,
+                                  ),
+                                  onPressed: () {
+                                    _addToCart(productId);
+                                    setModalState(() {});
+                                    setState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
                         },
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _discountValue.toString(),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (permDiscountPercent > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'داشکاندنی بەردەوامی کڕیار (${permDiscountPercent.toStringAsFixed(1)}%):',
+                            style: AppTextStyles.caption,
                           ),
+                          Text(
+                            '-${Formatters.currency(permDiscountAmount)}',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    Row(
+                      children: [
+                        const Text('داشکاندن: '),
+                        const SizedBox(width: AppSpacing.sm),
+                        DropdownButton<String>(
+                          value: _discountType,
+                          items: const [
+                            DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)')),
+                            DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)')),
+                          ],
                           onChanged: (val) {
-                            final parsed = double.tryParse(val) ?? 0.0;
-                            setModalState(() {
-                              _discountValue = parsed;
-                              if (_discountType == 'PERCENT' && _discountValue > 100) {
-                                _discountValue = 100;
-                              }
-                            });
-                            setState(() {});
+                            if (val != null) {
+                              setModalState(() {
+                                _discountType = val;
+                                if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                  _discountValue = 100;
+                                }
+                              });
+                              setState(() {});
+                            }
                           },
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  AppTextField(
-                    controller: _notesController,
-                    hintText: 'تێبینی (ئارەزوومەندانە)...',
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('کۆی گشتی:', style: AppTextStyles.bodyLarge),
-                      Text(
-                        Formatters.currency(totalAmount),
-                        style: AppTextStyles.priceLarge,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppButton(
-                    width: double.infinity,
-                    text: 'پشتڕاستکردنەوە و ناردن',
-                    isLoading: _isSubmitting,
-                    onPressed: (!warehousesAsync.hasError && _cart.isNotEmpty)
-                        ? () {
-                            Navigator.pop(context);
-                            _submitOrder(allProducts, warehousesAsync);
-                          }
-                        : null,
-                    size: AppButtonSize.lg,
-                  ),
-                ],
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: _discountValue.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                            ),
+                            onChanged: (val) {
+                              final parsed = double.tryParse(val) ?? 0.0;
+                              setModalState(() {
+                                _discountValue = parsed;
+                                if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                  _discountValue = 100;
+                                }
+                              });
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppTextField(
+                      controller: _notesController,
+                      hintText: 'تێبینی (ئارەزوومەندانە)...',
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('کۆی گشتی:', style: AppTextStyles.bodyLarge),
+                        Text(
+                          Formatters.currency(totalAmount),
+                          style: AppTextStyles.priceLarge,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AppButton(
+                      width: double.infinity,
+                      text: 'پشتڕاستکردنەوە و ناردن',
+                      isLoading: _isSubmitting,
+                      onPressed: (!warehousesAsync.hasError && _cart.isNotEmpty)
+                          ? () {
+                              Navigator.pop(context);
+                              _submitOrder(allProducts, warehousesAsync);
+                            }
+                          : null,
+                      size: AppButtonSize.lg,
+                    ),
+                  ],
+                ),
               ),
             );
           },

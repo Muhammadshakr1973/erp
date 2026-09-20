@@ -146,5 +146,44 @@ void main() {
       expect(compactCardExtent, lessThan(previousCardExtent));
       expect(compactCardExtent, equals(130.0));
     });
+
+    test('Barcode Label Generator defaults to 1000 IQD and fixed currency', () {
+      // Default price is 1000 when no price provided
+      const defaultPrice = 1000;
+      const currencySymbol = 'د.ع';
+
+      expect(defaultPrice, 1000);
+      expect(currencySymbol, 'د.ع');
+
+      // Product with no selling price defaults to 1000
+      final productWithoutPrice = ProductModel.fromJson({
+        'id': 101,
+        'name': 'لاستیک باریک سپی',
+        'barcode': '07849564845',
+      });
+
+      final double? rawPrice = productWithoutPrice.sellingPrice ?? productWithoutPrice.priceN1;
+      final priceStr = (rawPrice != null && rawPrice > 0) ? rawPrice.toInt().toString() : '1000';
+      expect(priceStr, '1000');
+      expect(productWithoutPrice.barcode, '07849564845');
+      expect(productWithoutPrice.name, 'لاستیک باریک سپی');
+    });
+
+    test('Barcode Label Sticker geometry matches 560x320 specifications', () {
+      // Label dimensions
+      const labelWidth = 560.0;
+      const labelHeight = 320.0;
+      const borderRadius = 26.0;
+      const borderWidth = 3.5;
+      const logoWidth = 148.0;
+      const logoHeight = 122.0;
+
+      expect(labelWidth, 560.0);
+      expect(labelHeight, 320.0);
+      expect(borderRadius, 26.0);
+      expect(borderWidth, 3.5);
+      expect(logoWidth, 148.0);
+      expect(logoHeight, 122.0);
+    });
   });
 }

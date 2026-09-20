@@ -1,10 +1,10 @@
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
@@ -29,26 +29,51 @@ class BarcodeGeneratorDialog extends StatefulWidget {
 }
 
 class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
-  final TextEditingController _barcodeController = TextEditingController();
+  late final TextEditingController _barcodeController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
   final GlobalKey _repaintKey = GlobalKey();
   bool _isCapturing = false;
 
   @override
   void initState() {
     super.initState();
-    _barcodeController.text = widget.product?.barcode ?? widget.initialBarcode ?? '202619001';
+    _barcodeController = TextEditingController(
+      text: widget.product?.barcode ?? widget.initialBarcode ?? '07849564845',
+    );
+    _nameController = TextEditingController(
+      text: widget.product?.name.isNotEmpty == true
+          ? widget.product!.name
+          : 'لاستیک باریک سپی',
+    );
+    final double? rawPrice = widget.product?.sellingPrice ?? widget.product?.priceN1;
+    _priceController = TextEditingController(
+      text: (rawPrice != null && rawPrice > 0)
+          ? rawPrice.toInt().toString()
+          : '1000',
+    );
   }
 
   @override
   void dispose() {
     _barcodeController.dispose();
+    _nameController.dispose();
+    _priceController.dispose();
     super.dispose();
+  }
+
+  void _generateRandomBarcode() {
+    final random = Random();
+    final suffix = List.generate(8, (_) => random.nextInt(10)).join();
+    setState(() {
+      _barcodeController.text = '078$suffix';
+    });
   }
 
   Future<Uint8List?> _captureImage() async {
     setState(() => _isCapturing = true);
     // Give a short frame delay to ensure UI updates before capturing
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 120));
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
@@ -68,10 +93,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
   void _handleDownload() async {
     final bytes = await _captureImage();
     if (bytes != null) {
-      final name = widget.product?.name ?? 'barcode';
+      final name = _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : (widget.product?.name ?? 'barcode');
       final cleanedName = name.replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_');
-      downloadBarcode(bytes, 'gardi_barcode_${cleanedName}_${_barcodeController.text}.png');
-      _showSnackbar('وێنەکە بە سەرکەوتوویی دابەزی');
+      final code = _barcodeController.text.trim();
+      downloadBarcode(bytes, 'gardi_label_${cleanedName}_$code.png');
+      _showSnackbar('وێنەی لایبڵەکە بە سەرکەوتوویی دابەزی');
     } else {
       _showSnackbar('کێشەیەک لە دروستکردنی وێنەکە ڕوویدا', isError: true);
     }
@@ -87,9 +115,9 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
   }
 
   void _handleShare() {
-    final text = _barcodeController.text;
+    final text = _barcodeController.text.trim();
     Clipboard.setData(ClipboardData(text: text));
-    _showSnackbar('بارکۆدی "$text" کۆپیکرا بۆ Clipboard بۆ شەیرکردن');
+    _showSnackbar('بارکۆدی "$text" کۆپیکرا بۆ Clipboard');
   }
 
   void _showSnackbar(String message, {bool isError = false}) {
@@ -111,13 +139,15 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final barcodeText = _barcodeController.text.trim().toUpperCase();
+    final productName = _nameController.text.trim().isEmpty ? 'ناوی کاڵا' : _nameController.text.trim();
+    final priceText = _priceController.text.trim().isEmpty ? '1000' : _priceController.text.trim();
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
-        width: 550,
+        width: 660,
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: SingleChildScrollView(
           child: Column(
@@ -128,196 +158,290 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('دروستکەری بارکۆد', style: AppTextStyles.h2),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'دروستکەری بارکۆد و لایبڵی کاڵا',
+                        style: TextStyle(fontFamily: 'Rudaw', fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                   IconButton(
                     icon: const Icon(Icons.close),
+                    tooltip: 'داخستن',
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // Product contextual banner if loaded
-              if (widget.product != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.product!.name,
-                              style: AppTextStyles.bodyBold,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'کۆمپانیا: ${widget.product!.supplier?['name'] ?? '-'} | جۆر: ${widget.product!.category?['name'] ?? '-'}',
-                              style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+              // Inputs Section (پۆپئەپ بۆ گۆڕانکاری لە ناو، نرخ، و کۆدی بارکۆد پێش وێنەکە)
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
                 ),
-                const SizedBox(height: AppSpacing.md),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Row 1: Product Name & Price
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product Name
+                        Expanded(
+                          flex: 3,
+                          child: AppTextField(
+                            controller: _nameController,
+                            labelText: 'ناوی کاڵا',
+                            hintText: 'ناوی کاڵا بنووسە...',
+                            prefixIcon: Icons.shopping_bag_outlined,
+                            onChanged: (value) => setState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
 
-              // Barcode Input
-              AppTextField(
-                controller: _barcodeController,
-                hintText: 'کۆدی بارکۆد بنووسە...',
-                labelText: 'کۆدی بارکۆد (تەنها پیت و ژمارە)',
-                prefixIcon: Icons.qr_code,
-                onChanged: (value) {
-                  setState(() {});
-                },
+                        // Price
+                        Expanded(
+                          flex: 2,
+                          child: AppTextField(
+                            controller: _priceController,
+                            labelText: 'نرخ (د.ع)',
+                            hintText: '1000',
+                            prefixIcon: Icons.payments_outlined,
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) => setState(() {}),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Row 2: Barcode Code & Random Generator Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppTextField(
+                            controller: _barcodeController,
+                            labelText: 'کۆدی بارکۆد',
+                            hintText: '07849564845',
+                            prefixIcon: Icons.barcode_reader,
+                            onChanged: (value) => setState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? AppColors.surfaceContainerHighDark : Colors.grey.shade200,
+                            foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: _generateRandomBarcode,
+                          icon: const Icon(Icons.autorenew, size: 18),
+                          label: const Text(
+                            'کۆدی نوێ',
+                            style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+
               const SizedBox(height: AppSpacing.lg),
 
-              // Printable label preview
-              Text(
-                'پێشبینینی لایبڵ (Print/Download Asset):',
-                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+              // Title for preview
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'پێشبینینی لایبڵی چاپ (Print / Label Preview):',
+                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'ئایکۆن و د.ع سابتن',
+                    style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xs),
 
-              // RepaintBoundary wrapping the generated printable asset
-              RepaintBoundary(
-                key: _repaintKey,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white, // Barcodes must always have high-contrast white background
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300, width: 1),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Label Brand Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'GARDI ERP',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF122D5A),
-                              letterSpacing: 1.2,
-                              fontFamily: 'Rudaw',
-                            ),
-                          ),
-                          Text(
-                            widget.product != null ? 'لایبڵی کاڵا' : 'بارکۆدی دەستکرد',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade600,
-                              fontFamily: 'Rudaw',
-                            ),
-                          ),
-                        ],
+              // The Exact Printable Sticker / Label Canvas
+              Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RepaintBoundary(
+                    key: _repaintKey,
+                    child: Container(
+                      width: 560,
+                      height: 320,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(color: Colors.black, width: 3.5),
                       ),
-                      const SizedBox(height: 12),
-                      const Divider(color: Colors.grey, height: 1, thickness: 0.8),
-                      const SizedBox(height: 16),
-
-                      // Product info on the label
-                      if (widget.product != null) ...[
-                        Text(
-                          widget.product!.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'Rudaw',
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        if (widget.product!.unit != null)
-                          Text(
-                            'یەکە: ${widget.product!.unit}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
-                              fontFamily: 'Rudaw',
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Barcode and QR code layout
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // 1D Barcode Column
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: 90,
-                                  width: double.infinity,
-                                  child: CustomPaint(
-                                    painter: Code39Painter(
-                                      data: barcodeText,
-                                      barColor: Colors.black,
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ----------------- LEFT SECTION -----------------
+                            SizedBox(
+                              width: 185,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Top: Fixed Gardi Logo (Buildings + Registered + GARDI text)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 4),
+                                    child: GardiLogoWidget(
+                                      width: 148,
+                                      height: 122,
+                                      color: Color(0xFF1E293B),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  barcodeText.isEmpty ? '---' : barcodeText,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 3.0,
-                                    color: Colors.black,
-                                    fontFamily: 'Rudaw',
+
+                                  // Bottom: Product Name in Bold Kurdish Rudaw Font
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 6, left: 4, right: 4),
+                                    child: Directionality(
+                                      textDirection: TextDirection.rtl,
+                                      child: Text(
+                                        productName,
+                                        style: const TextStyle(
+                                          fontFamily: 'Rudaw',
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.black,
+                                          height: 1.25,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(width: 16),
-
-                          // QR Code Column
-                          if (barcodeText.isNotEmpty) ...[
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300, width: 1),
-                                borderRadius: BorderRadius.circular(8),
+                                ],
                               ),
-                              child: QrImageView(
-                                data: barcodeText,
-                                version: QrVersions.auto,
-                                size: 100,
-                                gapless: false,
-                                foregroundColor: Colors.black,
+                            ),
+
+                            // ----------------- VERTICAL DIVIDER -----------------
+                            Container(
+                              width: 3.5,
+                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              color: Colors.black,
+                            ),
+
+                            // ----------------- RIGHT SECTION -----------------
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // 1D Barcode Bars
+                                  Container(
+                                    height: 90,
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: CustomPaint(
+                                      painter: Code39Painter(
+                                        data: barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                        barColor: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Barcode Digits
+                                  Text(
+                                    barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                    style: const TextStyle(
+                                      fontFamily: 'Rudaw',
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2.5,
+                                      color: Colors.black,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+
+                                  // Black Price Box [ د.ع  |  1000 ]
+                                  Container(
+                                    height: 82,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    child: Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          // Currency Symbol "د.ع" (Fixed / سابت)
+                                          const Text(
+                                            'د.ع',
+                                            style: TextStyle(
+                                              fontFamily: 'Rudaw',
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+
+                                          // Thin Vertical White Line
+                                          Container(
+                                            width: 2.2,
+                                            height: 48,
+                                            color: Colors.white,
+                                            margin: const EdgeInsets.symmetric(horizontal: 12),
+                                          ),
+
+                                          // Large Price Digits (e.g. 1000)
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerRight,
+                                              child: Text(
+                                                priceText,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Rudaw',
+                                                  fontSize: 52,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                  letterSpacing: 1.2,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -389,6 +513,157 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
         ),
       ),
     );
+  }
+}
+
+/// Dedicated vector widget rendering the exact GARDI corporate logo
+/// with 3 buildings, windows, entrance doors, baseline, ® trademark, and GARDI text.
+class GardiLogoWidget extends StatelessWidget {
+  final double width;
+  final double height;
+  final Color color;
+
+  const GardiLogoWidget({
+    super.key,
+    this.width = 150,
+    this.height = 125,
+    this.color = const Color(0xFF1E293B),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: CustomPaint(
+        painter: GardiLogoPainter(color: color),
+      ),
+    );
+  }
+}
+
+class GardiLogoPainter extends CustomPainter {
+  final Color color;
+
+  GardiLogoPainter({this.color = const Color(0xFF1E293B)});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    // Normalize coordinates to 100 x 100 viewBox
+    canvas.scale(size.width / 100.0, size.height / 100.0);
+
+    final buildingPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final cutoutPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // 1. Horizontal Ground Line / Baseline
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(8.0, 67.5, 84.0, 3.2),
+        const Radius.circular(0.8),
+      ),
+      buildingPaint,
+    );
+
+    // 2. Center Building (Tallest with Gable / Triangular Roof)
+    final centerPath = Path()
+      ..moveTo(38.5, 67.5)
+      ..lineTo(38.5, 24.0)
+      ..lineTo(50.0, 9.0)
+      ..lineTo(61.5, 24.0)
+      ..lineTo(61.5, 67.5)
+      ..close();
+    canvas.drawPath(centerPath, buildingPaint);
+
+    // Windows on Center Building (4 rows of 2 square windows)
+    const windowRows = [26.0, 34.5, 43.0, 51.5];
+    for (final y in windowRows) {
+      // Left window
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(42.5, y, 5.5, 5.8),
+          const Radius.circular(0.8),
+        ),
+        cutoutPaint,
+      );
+      // Right window
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(52.0, y, 5.5, 5.8),
+          const Radius.circular(0.8),
+        ),
+        cutoutPaint,
+      );
+    }
+
+    // Entrance Doors at bottom of center building
+    canvas.drawRect(const Rect.fromLTWH(45.5, 60.5, 3.8, 7.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(50.7, 60.5, 3.8, 7.0), cutoutPaint);
+
+    // 3. Left Building (Flat roof, 2 vertical slit windows)
+    canvas.drawRect(const Rect.fromLTWH(22.5, 28.0, 14.0, 39.5), buildingPaint);
+    canvas.drawRect(const Rect.fromLTWH(25.8, 32.0, 3.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(30.4, 32.0, 3.0, 32.0), cutoutPaint);
+
+    // 4. Right Building (Symmetrical to left building)
+    canvas.drawRect(const Rect.fromLTWH(63.5, 28.0, 14.0, 39.5), buildingPaint);
+    canvas.drawRect(const Rect.fromLTWH(66.6, 32.0, 3.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(71.2, 32.0, 3.0, 32.0), cutoutPaint);
+
+    // 5. Registered Trademark Symbol ®
+    final circleStroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawCircle(const Offset(86.5, 62.0), 4.6, circleStroke);
+
+    final textPainterR = TextPainter(
+      text: TextSpan(
+        text: 'R',
+        style: TextStyle(
+          fontSize: 5.6,
+          fontWeight: FontWeight.bold,
+          color: color,
+          fontFamily: 'Rudaw',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainterR.paint(
+      canvas,
+      Offset(86.5 - textPainterR.width / 2, 62.0 - textPainterR.height / 2),
+    );
+
+    // 6. Brand Name "GARDI"
+    final textPainterGardi = TextPainter(
+      text: TextSpan(
+        text: 'GARDI',
+        style: TextStyle(
+          fontSize: 18.5,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 4.0,
+          fontFamily: 'Rudaw',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainterGardi.paint(
+      canvas,
+      Offset(50.0 - textPainterGardi.width / 2, 74.5),
+    );
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant GardiLogoPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -505,9 +780,6 @@ class Code39Painter extends CustomPainter {
       currentX += width;
     }
   }
-
-  @override
-  void build(covariant CustomPainter oldDelegate) => true;
 
   @override
   bool shouldRepaint(covariant Code39Painter oldDelegate) {
