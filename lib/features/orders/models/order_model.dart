@@ -130,7 +130,7 @@ class OrderModel {
           double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
       totalProfit:
           double.tryParse(json['total_profit']?.toString() ?? '0') ?? 0.0,
-      status: (json['status'] ?? 'DRAFT').toString().toUpperCase(),
+      status: (json['status'] ?? 'PACKING').toString().toUpperCase(),
       notes: json['notes'],
       createdAt: json['created_at'] ?? '',
       customer: json['customer'],
@@ -144,9 +144,9 @@ class OrderModel {
   String get localizedStatus {
     switch (status) {
       case statusDraft:
-        return 'داڕشتن (Draft)';
+        return 'داڕشتن (کۆن)';
       case statusConfirmed:
-        return 'پشتڕاستکراوەتەوە';
+        return 'پشتڕاستکراوەتەوە (کۆن)';
       case statusPacking:
         return 'لە پاکەتکردندایە';
       case statusReady:
@@ -169,16 +169,16 @@ class OrderModel {
 
   List<String> get allowedNextStatuses {
     switch (status) {
-      case statusDraft:
-        return [statusConfirmed, statusCancelled];
-      case statusConfirmed:
-        return [statusPacking, statusCancelled];
       case statusPacking:
         return [statusReady, statusCancelled];
       case statusReady:
         return [statusInDelivery, statusCancelled];
       case statusInDelivery:
         return [statusDelivered, statusReady, statusCancelled];
+      case statusDraft:
+        return [statusPacking, statusCancelled];
+      case statusConfirmed:
+        return [statusPacking, statusReady, statusCancelled];
       case statusDelivered:
       case statusCancelled:
       default:

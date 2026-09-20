@@ -39,6 +39,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Customer? _selectedCustomer;
   int? _selectedWarehouseId;
   final Map<int, int> _cart = {}; // product_id -> quantity
+  Map<int, double> _customerSpecialPrices = {}; // product_id -> special unit price
   String _discountType = 'PERCENT';
   double _discountValue = 0.0;
   final TextEditingController _notesController = TextEditingController();
@@ -83,6 +84,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       setState(() {
         _selectedCustomer = match;
       });
+      _fetchSpecialPricesForCustomer(match.id);
     }
   }
 
@@ -91,11 +93,25 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final match = customers
         .where((c) => c.id == widget.preselectedCustomerId)
         .firstOrNull;
-    if (match != null) {
+    if (match != null && mounted) {
       setState(() {
         _selectedCustomer = match;
       });
+      _fetchSpecialPricesForCustomer(match.id);
     }
+  }
+
+  Future<void> _fetchSpecialPricesForCustomer(int customerId) async {
+    try {
+      final prices = await ref
+          .read(customerNotifierProvider.notifier)
+          .fetchSpecialPrices(customerId);
+      if (mounted) {
+        setState(() {
+          _customerSpecialPrices = prices;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -109,6 +125,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   double _getProductUnitPrice(ProductModel product) {
     if (_selectedCustomer == null) {
       return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+    }
+    // پشکنینی ئەوەی کە ئایا نرخی تایبەت بۆ ئەم کاڵایە هەیە بۆ ئەم کڕیارە
+    if (_customerSpecialPrices.containsKey(product.id)) {
+      return _customerSpecialPrices[product.id]!;
     }
     final tier = _selectedCustomer!.priceType?.toUpperCase() ?? 'N2';
     switch (tier) {
@@ -153,6 +173,284 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     });
+  }
+
+  Future<void> _confirmDeleteItem(int productId, String productName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
+        content: Text(
+          'ئایا دڵنیایت لە سڕینەوەی "$productName" لە پسوڵەکەدا؟',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('پاشگەزبوونەوە'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('سڕینەوە'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        _cart.remove(productId);
+      });
+      AppSnackbar.show(
+        context,
+        message: '$productName لە پسوڵەکە سڕایەوە',
+        type: SnackbarType.info,
+      );
+    }
+  }
+
+  Future<void> _editQuantityDialog(
+    int productId,
+    int currentQty,
+    String productName,
+  ) async {
+    final controller = TextEditingController(text: currentQty.toString());
+    final newQty = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('دەستکاری بڕی $productName', style: AppTextStyles.h3),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'بڕ (دانە)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('پاشگەزبوونەوە'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed != null && parsed > 0) {
+                Navigator.pop(context, parsed);
+              } else {
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('تەواو'),
+          ),
+        ],
+      ),
+    );
+
+    if (newQty != null && newQty > 0 && mounted) {
+      setState(() {
+        _cart[productId] = newQty;
+      });
+    }
+  }
+
+  Future<void> _showSpecialPriceDialog(ProductModel product) async {
+    if (_selectedCustomer == null) {
+      AppSnackbar.show(
+        context,
+        message: 'تکایە سەرەتا کڕیارێک هەڵبژێرە بۆ دانانی نرخی تایبەت',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    final hasSpecial = _customerSpecialPrices.containsKey(product.id);
+    final currentSpecial = _customerSpecialPrices[product.id];
+    final defaultPrice = _selectedCustomer!.priceType?.toUpperCase() == 'N1'
+        ? (product.priceN1 > 0 ? product.priceN1 : product.costPrice)
+        : (_selectedCustomer!.priceType?.toUpperCase() == 'N3'
+            ? (product.priceN3 > 0 ? product.priceN3 : product.costPrice)
+            : (product.priceN2 > 0 ? product.priceN2 : product.costPrice));
+
+    final controller = TextEditingController(
+      text: hasSpecial
+          ? currentSpecial!.toInt().toString()
+          : defaultPrice.toInt().toString(),
+    );
+
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.sell_outlined, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'دانانی نرخی تایبەت بۆ ${_selectedCustomer!.name}',
+                    style: AppTextStyles.h3,
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'کاڵا: ${product.name}',
+                    style: AppTextStyles.bodyBold,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'نرخی بنەڕەتی کڕیار (${_selectedCustomer!.priceType ?? 'N2'}): ${Formatters.currency(defaultPrice)}',
+                    style: AppTextStyles.caption,
+                  ),
+                  if (hasSpecial) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'نرخی تایبەتی ئێستا: ${Formatters.currency(currentSpecial!)}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'نرخی تایبەتی نوێ (دینار)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.monetization_on_outlined),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              if (hasSpecial)
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isSaving = true);
+                          try {
+                            await ref
+                                .read(customerNotifierProvider.notifier)
+                                .deleteSpecialPrice(
+                                  _selectedCustomer!.id,
+                                  product.id,
+                                );
+                            setState(() {
+                              _customerSpecialPrices.remove(product.id);
+                            });
+                            if (mounted) {
+                              Navigator.pop(ctx);
+                              AppSnackbar.show(
+                                context,
+                                message:
+                                    'نرخی تایبەت سڕایەوە و گەڕایەوە بۆ نرخی بنەڕەتی',
+                                type: SnackbarType.info,
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              AppSnackbar.show(
+                                context,
+                                message: 'هەڵە لە سڕینەوە: $e',
+                                type: SnackbarType.error,
+                              );
+                            }
+                          } finally {
+                            if (mounted) setDialogState(() => isSaving = false);
+                          }
+                        },
+                  child: const Text('سڕینەوەی تایبەت'),
+                ),
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                child: const Text('پاشگەزبوونەوە'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        final parsed = double.tryParse(controller.text.trim());
+                        if (parsed == null || parsed < 0) {
+                          AppSnackbar.show(
+                            context,
+                            message: 'تکایە نرخێکی دروست بنووسە',
+                            type: SnackbarType.warning,
+                          );
+                          return;
+                        }
+                        setDialogState(() => isSaving = true);
+                        try {
+                          await ref
+                              .read(customerNotifierProvider.notifier)
+                              .setSpecialPrice(
+                                _selectedCustomer!.id,
+                                product.id,
+                                parsed,
+                              );
+                          setState(() {
+                            _customerSpecialPrices[product.id] = parsed;
+                          });
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            AppSnackbar.show(
+                              context,
+                              message:
+                                  'نرخی تایبەت بە سەرکەوتوویی بۆ ئەم کڕیارە پاشەکەوتکرا (${Formatters.currency(parsed)})',
+                              type: SnackbarType.success,
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            AppSnackbar.show(
+                              context,
+                              message: 'هەڵە لە پاشەکەوتکردن: $e',
+                              type: SnackbarType.error,
+                            );
+                          }
+                        } finally {
+                          if (mounted) setDialogState(() => isSaving = false);
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('پاشەکەوتکردن'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _scanBarcode(List<ProductModel> products) {
@@ -235,6 +533,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final payload = {
       'customer_id': _selectedCustomer!.id,
       'warehouse_id': warehouseId,
+      'status': 'PACKING',
       'discount_type': _discountType,
       'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
       'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
@@ -399,11 +698,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         );
                       }).toList(),
                       onChanged: (val) {
+                        final found = customers
+                            .where((c) => c.id == val)
+                            .firstOrNull;
                         setState(() {
-                          _selectedCustomer = customers
-                              .where((c) => c.id == val)
-                              .firstOrNull;
+                          _selectedCustomer = found;
                         });
+                        if (found != null) {
+                          _fetchSpecialPricesForCustomer(found.id);
+                        }
                       },
                     );
                   },
@@ -971,44 +1274,154 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       final unitPrice = product != null
                           ? _getProductUnitPrice(product)
                           : 0.0;
+                      final isSpecialPrice =
+                          _customerSpecialPrices.containsKey(productId);
 
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: product != null
+                              ? () => _showSpecialPriceDialog(product)
+                              : null,
+                          onLongPress: () => _confirmDeleteItem(
+                            productId,
+                            product?.name ?? 'کاڵا',
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isSpecialPrice
+                                    ? AppColors.primary
+                                    : Theme.of(context)
+                                        .dividerColor
+                                        .withValues(alpha: 0.3),
+                                width: isSpecialPrice ? 1.5 : 1,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              color: isSpecialPrice
+                                  ? AppColors.primary.withValues(alpha: 0.05)
+                                  : null,
+                            ),
+                            child: Row(
                               children: [
-                                Text(
-                                  product?.name ?? 'کاڵا',
-                                  style: AppTextStyles.bodyBold,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              product?.name ?? 'کاڵا',
+                                              style: AppTextStyles.bodyBold,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (isSpecialPrice)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: const Text(
+                                                'نرخی تایبەت',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: isSpecialPrice
+                                                  ? AppColors.primary
+                                                  : null,
+                                              fontWeight: isSpecialPrice
+                                                  ? FontWeight.bold
+                                                  : null,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'کۆ: ${Formatters.currency(unitPrice * qty)}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'کلیک: دانانی نرخی تایبەت | دەستگرتن: سڕینەوە',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Theme.of(context).hintColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                Text(
-                                  '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
-                                  style: AppTextStyles.caption,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                        color: AppColors.danger,
+                                      ),
+                                      onPressed: () =>
+                                          _removeFromCart(productId),
+                                    ),
+                                    InkWell(
+                                      onTap: () => _editQuantityDialog(
+                                        productId,
+                                        qty,
+                                        product?.name ?? 'کاڵا',
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 4,
+                                        ),
+                                        child: Text(
+                                          '$qty',
+                                          style: AppTextStyles.bodyBold
+                                              .copyWith(
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.add_circle_outline,
+                                        color: AppColors.primary,
+                                      ),
+                                      onPressed: () => _addToCart(productId),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.remove_circle_outline,
-                                  color: AppColors.danger,
-                                ),
-                                onPressed: () => _removeFromCart(productId),
-                              ),
-                              Text('$qty', style: AppTextStyles.bodyBold),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle_outline,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: () => _addToCart(productId),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       );
                     },
                   ),
@@ -1239,38 +1652,151 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               ? _getProductUnitPrice(product)
                               : 0.0;
 
-                          return ListTile(
-                            title: Text(product?.name ?? 'کاڵا'),
-                            subtitle: Text(
-                              '$qty ${product?.unit ?? "دانە"} x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.remove_circle_outline,
-                                    color: AppColors.danger,
-                                  ),
-                                  onPressed: () {
-                                    _removeFromCart(productId);
-                                    setModalState(() {});
-                                    setState(() {});
-                                  },
+                          final isSpecialPrice =
+                              _customerSpecialPrices.containsKey(productId);
+
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: product != null
+                                  ? () async {
+                                      await _showSpecialPriceDialog(product);
+                                      setModalState(() {});
+                                      setState(() {});
+                                    }
+                                  : null,
+                              onLongPress: () async {
+                                await _confirmDeleteItem(
+                                  productId,
+                                  product?.name ?? 'کاڵا',
+                                );
+                                setModalState(() {});
+                                setState(() {});
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 6,
                                 ),
-                                Text('$qty'),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.add_circle_outline,
-                                    color: AppColors.primary,
-                                  ),
-                                  onPressed: () {
-                                    _addToCart(productId);
-                                    setModalState(() {});
-                                    setState(() {});
-                                  },
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  product?.name ?? 'کاڵا',
+                                                  style: AppTextStyles.bodyBold,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (isSpecialPrice)
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.primary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(4),
+                                                  ),
+                                                  child: const Text(
+                                                    'نرخی تایبەت',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$qty ${product?.unit ?? "دانە"} x ${Formatters.currency(unitPrice)} = ${Formatters.currency(qty * unitPrice)}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: isSpecialPrice
+                                                  ? AppColors.primary
+                                                  : null,
+                                              fontWeight: isSpecialPrice
+                                                  ? FontWeight.bold
+                                                  : null,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'کلیک: نرخی تایبەت | دەستگرتن: سڕینەوە',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Theme.of(context).hintColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.remove_circle_outline,
+                                            color: AppColors.danger,
+                                          ),
+                                          onPressed: () {
+                                            _removeFromCart(productId);
+                                            setModalState(() {});
+                                            setState(() {});
+                                          },
+                                        ),
+                                        InkWell(
+                                          onTap: () async {
+                                            await _editQuantityDialog(
+                                              productId,
+                                              qty,
+                                              product?.name ?? 'کاڵا',
+                                            );
+                                            setModalState(() {});
+                                            setState(() {});
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 2,
+                                            ),
+                                            child: Text(
+                                              '$qty',
+                                              style: AppTextStyles.bodyBold
+                                                  .copyWith(
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.add_circle_outline,
+                                            color: AppColors.primary,
+                                          ),
+                                          onPressed: () {
+                                            _addToCart(productId);
+                                            setModalState(() {});
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           );
                         },

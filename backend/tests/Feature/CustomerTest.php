@@ -176,5 +176,53 @@ class CustomerTest extends TestCase
             'image_url' => 'https://example.com/customer.jpg',
         ]);
     }
+
+    /** @test */
+    public function it_can_manage_customer_special_prices()
+    {
+        $customer = Customer::create([
+            'name' => 'Special Price Customer',
+            'phone' => '07509998877',
+            'price_type' => 'N2',
+            'current_balance' => 0,
+        ]);
+
+        $product = \App\Models\Product::create([
+            'name' => 'Special Prod',
+            'sku' => 'SP-01',
+            'cost_price' => 2000,
+            'price_n1' => 4000,
+            'price_n2' => 3500,
+            'price_n3' => 3000,
+        ]);
+
+        // 1. Set special price
+        $setResponse = $this->actingAs($this->admin)->postJson("/api/v1/customers/{$customer->id}/special-prices", [
+            'product_id' => $product->id,
+            'price' => 2800,
+        ]);
+        $setResponse->assertStatus(200);
+        $this->assertDatabaseHas('customer_special_prices', [
+            'customer_id' => $customer->id,
+            'product_id' => $product->id,
+            'price' => 2800,
+        ]);
+
+        // 2. Get special prices
+        $getResponse = $this->actingAs($this->admin)->getJson("/api/v1/customers/{$customer->id}/special-prices");
+        $getResponse->assertStatus(200);
+        $getResponse->assertJsonFragment([
+            'product_id' => $product->id,
+            'price' => 2800,
+        ]);
+
+        // 3. Delete special price
+        $delResponse = $this->actingAs($this->admin)->deleteJson("/api/v1/customers/{$customer->id}/special-prices/{$product->id}");
+        $delResponse->assertStatus(200);
+        $this->assertDatabaseMissing('customer_special_prices', [
+            'customer_id' => $customer->id,
+            'product_id' => $product->id,
+        ]);
+    }
 }
 

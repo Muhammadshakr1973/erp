@@ -69,8 +69,8 @@ class SalesOrder extends Model
             }
         });
     }
-    const STATUS_DRAFT = 'DRAFT';
-    const STATUS_CONFIRMED = 'CONFIRMED';
+    const STATUS_DRAFT = 'DRAFT'; // Deprecated - replaced by direct PACKING
+    const STATUS_CONFIRMED = 'CONFIRMED'; // Deprecated - replaced by direct PACKING
     const STATUS_PACKING = 'PACKING';
     const STATUS_READY = 'READY';
     const STATUS_IN_DELIVERY = 'IN_DELIVERY';
@@ -80,8 +80,6 @@ class SalesOrder extends Model
     public static function allStatuses(): array
     {
         return [
-            self::STATUS_DRAFT,
-            self::STATUS_CONFIRMED,
             self::STATUS_PACKING,
             self::STATUS_READY,
             self::STATUS_IN_DELIVERY,

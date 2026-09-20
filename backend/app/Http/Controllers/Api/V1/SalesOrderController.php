@@ -188,7 +188,7 @@ class SalesOrderController extends Controller
                 ], 403);
             }
         } elseif (in_array($status, ['PACKING', 'READY'])) {
-            if (!$user->hasPermission('stock.pack')) {
+            if (!$user->hasPermission('stock.pack') && !$user->hasPermission('orders.create')) {
                 return response()->json([
                     'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
                     'error' => 'Forbidden. Missing permission: stock.pack'

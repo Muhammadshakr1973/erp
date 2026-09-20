@@ -579,7 +579,7 @@ class OrderActions {
       intId: intId,
       data: data,
       ref: ref,
-      status: 'DRAFT',
+      status: data['status'] ?? 'PACKING',
     );
 
     await localBox.put(localId, jsonEncode(optimisticJson));
@@ -637,7 +637,7 @@ class OrderActions {
           intId: orderId,
           data: mergedData,
           ref: ref,
-          status: existingJson['status'] ?? 'DRAFT',
+          status: existingJson['status'] ?? 'PACKING',
           existingOrderNumber: existingJson['order_number'],
         );
 

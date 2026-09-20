@@ -361,6 +361,51 @@ class CustomerActions {
     }
   }
 
+  Future<Map<int, double>> fetchSpecialPrices(int customerId) async {
+    try {
+      final response = await api.client.get('/customers/$customerId/special-prices');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        final map = <int, double>{};
+        if (resData is Map && resData['data'] is List) {
+          for (final item in resData['data']) {
+            final productId = item['product_id'] as int?;
+            final price = double.tryParse(item['price']?.toString() ?? '0') ?? 0.0;
+            if (productId != null) {
+              map[productId] = price;
+            }
+          }
+        }
+        return map;
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  Future<void> setSpecialPrice(int customerId, int productId, double price) async {
+    try {
+      await api.client.post(
+        '/customers/$customerId/special-prices',
+        data: {
+          'product_id': productId,
+          'price': price.toInt(),
+        },
+      );
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> deleteSpecialPrice(int customerId, int productId) async {
+    try {
+      await api.client.delete('/customers/$customerId/special-prices/$productId');
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
   bool _isNetworkError(DioException e) {
     return e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||

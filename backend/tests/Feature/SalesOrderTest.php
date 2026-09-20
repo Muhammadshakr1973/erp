@@ -95,7 +95,7 @@ class SalesOrderTest extends TestCase
     }
 
     /** @test */
-    public function it_can_create_a_sales_order_and_transitions_it_to_confirmed_reserving_stock()
+    public function it_can_create_a_sales_order_and_transitions_it_to_packing_reserving_stock()
     {
         $payload = [
             'customer_id' => $this->customer->id,
@@ -116,12 +116,12 @@ class SalesOrderTest extends TestCase
         $response = $this->actingAs($this->salesman)
             ->postJson('/api/v1/orders', $payload);
 
-        $response->assertStatus(200); // Because it auto-confirmed and updated status, returning 200/201
+        $response->assertStatus(200);
 
-        // Assert order exists in database
+        // Assert order exists in database directly in PACKING status
         $order = SalesOrder::with('items')->first();
         $this->assertNotNull($order);
-        $this->assertEquals(SalesOrder::STATUS_CONFIRMED, $order->status);
+        $this->assertEquals(SalesOrder::STATUS_PACKING, $order->status);
         $this->assertEquals(37500, $order->subtotal); // 7500 * 5 = 37500
         $this->assertEquals(3750, $order->discount_amount); // 10% of 37500 = 3750
         $this->assertEquals(33750, $order->total_amount); // 37500 - 3750 = 33750
@@ -141,6 +141,43 @@ class SalesOrderTest extends TestCase
         $transaction = StockTransaction::where('type', 'RESERVE')->first();
         $this->assertNotNull($transaction);
         $this->assertEquals(5, $transaction->quantity_change);
+    }
+
+    /** @test */
+    public function it_applies_customer_special_price_when_available()
+    {
+        // Set special price for this customer and product
+        \App\Models\CustomerSpecialPrice::updateOrCreate(
+            ['customer_id' => $this->customer->id, 'product_id' => $this->product->id],
+            ['price' => 6000] // Base N2 price was 7500
+        );
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 0,
+            'shared_key' => 'test-special-price-key',
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/orders', $payload);
+
+        $response->assertStatus(200);
+
+        $order = SalesOrder::where('shared_key', 'test-special-price-key')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals(SalesOrder::STATUS_PACKING, $order->status);
+        $this->assertEquals(12000, $order->subtotal); // 6000 * 2 = 12000
+        $this->assertEquals(12000, $order->total_amount);
+        $this->assertEquals(2000, $order->total_profit); // (6000 - 5000) * 2 = 2000
     }
 
     /** @test */

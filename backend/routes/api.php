@@ -82,6 +82,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->middleware('permission:customers.manage');
         Route::get('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
         Route::post('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
+        Route::get('/customers/{customer}/special-prices', [CustomerController::class, 'getSpecialPrices'])->middleware('permission:customers.view');
+        Route::post('/customers/{customer}/special-prices', [CustomerController::class, 'setSpecialPrice'])->middleware('permission:orders.create');
+        Route::delete('/customers/{customer}/special-prices/{productId}', [CustomerController::class, 'deleteSpecialPrice'])->middleware('permission:orders.create');
         
         // Users (Admin only)
         Route::apiResource('users', UserController::class)->middleware('permission:users.manage');

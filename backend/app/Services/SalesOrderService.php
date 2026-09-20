@@ -16,13 +16,14 @@ use Illuminate\Validation\ValidationException;
 class SalesOrderService
 {
     protected array $validTransitions = [
-        SalesOrder::STATUS_DRAFT => [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_CANCELLED],
-        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_IN_DELIVERY => [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_DELIVERED => [],
         SalesOrder::STATUS_CANCELLED => [],
+        // Legacy fallbacks for historical database records
+        SalesOrder::STATUS_DRAFT => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_CANCELLED],
+        SalesOrder::STATUS_CONFIRMED => [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
     ];
     /**
      * دروستکردنی پسوڵەی فرۆشتن بە شێوەی تۆکمە و سەلامەت
@@ -58,7 +59,7 @@ class SalesOrderService
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە (ORD-XXXXXXXX)
             $orderNumber = 'ORD-' . strtoupper(Str::random(8));
 
-            // دروستکردنی پسوڵە لە سەرەتادا بە شێوەی DRAFT
+            // دروستکردنی پسوڵە ڕاستەوخۆ بە شێوەی PACKING بەپێی داواکاری سیستەم
             $order = SalesOrder::create([
                 'order_number' => $orderNumber,
                 'shared_key' => $data['shared_key'] ?? null,
@@ -67,7 +68,8 @@ class SalesOrderService
                 'salesman_id' => $user->id,
                 'warehouse_id' => $data['warehouse_id'],
                 'order_date' => now()->toDateString(),
-                'status' => SalesOrder::STATUS_DRAFT,
+                'status' => SalesOrder::STATUS_PACKING,
+                'confirmed_at' => now(),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $user->id,
                 'subtotal' => 0,
@@ -157,21 +159,15 @@ class SalesOrderService
                 'total_profit' => $netTotalProfit,
             ]);
 
-            // ئەگەر دۆخی تایبەت دیاری کرابوو وەک DRAFT ئەوا وەکو خۆی دەیهێڵینەوە، ئەگەرنا دەچێتە ڕەوتی CONFIRMED
-            $defaultStatus = isset($data['shared_key']) ? SalesOrder::STATUS_DRAFT : SalesOrder::STATUS_CONFIRMED;
-            $requestedStatus = $data['status'] ?? $defaultStatus;
-            if ($requestedStatus === SalesOrder::STATUS_DRAFT) {
-                return $order;
-            }
+            // حجزکردنی ستۆک لە کۆگا ڕاستەوخۆ بەهۆی دۆخی PACKING
+            $this->reserveStock($order, $user);
+            $this->logActivity($order, null, SalesOrder::STATUS_PACKING, $user);
 
-            // کاتێک پسوڵە بە سەرکەوتوویی دروستکرا، ڕاستەوخۆ دەیدەینە ڕەوتی پشتڕاستکردنەوە (CONFIRMED) بۆ حجزکردنی ستۆک
-            return $this->transitionTo($order, SalesOrder::STATUS_CONFIRMED, $user);
+            return $order;
         });
 
         // Notify new order created AFTER database commit (NOT-001)
-        if ($order->status !== SalesOrder::STATUS_DRAFT) {
-            app(NotificationService::class)->notifyNewOrderCreated($order, $user);
-        }
+        app(NotificationService::class)->notifyNewOrderCreated($order, $user);
 
         if ($order->shared_key) {
             event(new \App\Events\SalesOrderUpdated($order, 'create'));
@@ -187,9 +183,9 @@ class SalesOrderService
             return $this->updateSharedOrder($order, $data, $user);
         }
 
-        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+        if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])) {
             throw ValidationException::withMessages([
-                'status' => 'تەنها پسوڵەی DRAFT دەتوانرێت دەستکاری بکرێت.'
+                'status' => 'تەنها پسوڵەی PACKING دەتوانرێت دەستکاری بکرێت.'
             ]);
         }
 
@@ -198,6 +194,11 @@ class SalesOrderService
             $customer = Customer::lockForUpdate()->findOrFail($customerId);
 
             $this->checkCustomerAssignment($customer, $user);
+
+            // ئەگەر پێشتر لە PACKING بوو، ستۆکی حجزکراو ئازاد دەکەین پێش نوێکردنەوەی ئایتمەکان
+            if ($order->status === SalesOrder::STATUS_PACKING) {
+                $this->releaseStock($order, $user);
+            }
 
             // Update basic info
             $order->update([
@@ -283,11 +284,14 @@ class SalesOrderService
                 'total_profit' => $netTotalProfit,
             ]);
 
+            // ئەگەر لە دۆخی PACKING بوو، ستۆک بۆ ئایتمە نوێیەکان حجز دەکەینەوە
+            if ($order->status === SalesOrder::STATUS_PACKING) {
+                $this->reserveStock($order, $user);
+            }
+
             $requestedStatus = $data['status'] ?? $order->status;
-            if ($requestedStatus !== SalesOrder::STATUS_DRAFT) {
+            if ($requestedStatus !== $order->status && !in_array($requestedStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_PACKING])) {
                 $order = $this->transitionTo($order, $requestedStatus, $user);
-                app(NotificationService::class)->notifyNewOrderCreated($order, $user);
-                return $order;
             }
 
             return $order;
@@ -318,13 +322,13 @@ class SalesOrderService
             }
 
             // ٢. سەپاندنی دەسەڵاتەکان و مۆڵەتەکان بەپێی دۆخی نوێ لەناو خودی سێرڤسەکەدا بۆ پاراستنی هێمنیی سیستەمەکە
-            if (in_array($newStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])) {
-                if (!$user->hasPermission('orders.create')) {
+            if (in_array($newStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+                if (!$user->hasPermission('orders.create') && !$user->hasPermission('stock.pack')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
                     ]);
                 }
-            } elseif ($newStatus === SalesOrder::STATUS_PACKING || $newStatus === SalesOrder::STATUS_READY) {
+            } elseif ($newStatus === SalesOrder::STATUS_READY) {
                 if (!$user->hasPermission('stock.pack')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
@@ -375,11 +379,15 @@ class SalesOrderService
                     break;
 
                 case SalesOrder::STATUS_PACKING:
+                    if ($oldStatus === SalesOrder::STATUS_DRAFT) {
+                        $this->reserveStock($lockedOrder, $user);
+                        $lockedOrder->confirmed_at = now();
+                    }
                     break;
 
                 case SalesOrder::STATUS_READY:
-                    // If transitioning directly from CONFIRMED to READY, auto-mark all items as packed if none are already packed!
-                    if ($oldStatus === SalesOrder::STATUS_CONFIRMED) {
+                    // If transitioning directly to READY, auto-mark all items as packed if none are already packed!
+                    if (in_array($oldStatus, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
                         $hasPacked = $lockedOrder->items()->where('is_packed', true)->exists();
                         if (!$hasPacked) {
                             $lockedOrder->items()->update(['is_packed' => true]);
@@ -794,9 +802,9 @@ class SalesOrderService
             // Lock order for update to prevent concurrent race conditions
             $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
-            // Status consistency check: Shared order can only be edited while it is in DRAFT status
-            if ($order->status !== SalesOrder::STATUS_DRAFT) {
-                throw new \RuntimeException('ناتوانرێت دەستکاری پسوڵەی هاوبەش بکرێت چونکە پێشتر پەسەندکراوە یان لە پرۆسەدایە.');
+            // Status consistency check: Shared order can only be edited while it is in PACKING or DRAFT status
+            if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])) {
+                throw new \RuntimeException('ناتوانرێت دەستکاری پسوڵەی هاوبەش بکرێت چونکە پێشتر ئامادەکراوە یان لە پرۆسەدایە.');
             }
 
             // Concurrent edit validation (optimistic locking / stale client check)
@@ -808,6 +816,11 @@ class SalesOrderService
             // Lock customer row
             $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
             $this->checkCustomerAssignment($customer, $user);
+
+            // ئەگەر لە دۆخی PACKING بوو، ستۆک ئازاد دەکەین پێش سڕینەوەی ئایتمە کۆنەکان
+            if ($order->status === SalesOrder::STATUS_PACKING) {
+                $this->releaseStock($order, $user);
+            }
 
             // Clear old items
             $order->items()->forceDelete();
@@ -890,8 +903,13 @@ class SalesOrderService
                 'version' => $order->version + 1,
             ]);
 
+            // ئەگەر لە PACKING بوو، ستۆک بۆ ئایتمە نوێکراوەکان حجز دەکەینەوە
+            if ($order->status === SalesOrder::STATUS_PACKING) {
+                $this->reserveStock($order, $user);
+            }
+
             $requestedStatus = $data['status'] ?? $order->status;
-            if ($requestedStatus !== $order->status) {
+            if ($requestedStatus !== $order->status && !in_array($requestedStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_PACKING])) {
                 $order = $this->transitionTo($order, $requestedStatus, $user);
             }
 

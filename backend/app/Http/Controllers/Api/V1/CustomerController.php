@@ -186,4 +186,68 @@ class CustomerController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function getSpecialPrices(Request $request, Customer $customer): JsonResponse
+    {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $specialPrices = $customer->specialPrices()->with('product')->get();
+
+        return response()->json([
+            'data' => $specialPrices
+        ], 200);
+    }
+
+    public function setSpecialPrice(Request $request, Customer $customer): JsonResponse
+    {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'price' => 'required|integer|min:0',
+        ]);
+
+        $specialPrice = \App\Models\CustomerSpecialPrice::updateOrCreate(
+            [
+                'customer_id' => $customer->id,
+                'product_id' => $validated['product_id'],
+            ],
+            [
+                'price' => $validated['price'],
+                'created_by' => $request->user()->id,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'نرخی تایبەت بە سەرکەوتوویی تۆمارکرا',
+            'data' => $specialPrice->load('product'),
+        ], 200);
+    }
+
+    public function deleteSpecialPrice(Request $request, Customer $customer, $productId): JsonResponse
+    {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $deleted = $customer->specialPrices()->where('product_id', $productId)->delete();
+
+        return response()->json([
+            'message' => 'نرخی تایبەت بە سەرکەوتوویی سڕایەوە',
+            'deleted' => $deleted > 0,
+        ], 200);
+    }
 }
