@@ -71,7 +71,8 @@ void printImage(Uint8List bytes) {
           }
           img {
             width: 50mm;
-            height: 30mm;
+            height: auto;
+            max-height: 30mm;
             margin: 0;
             display: block;
           }

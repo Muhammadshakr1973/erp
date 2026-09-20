@@ -298,7 +298,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                     key: _repaintKey,
                     child: Container(
                       width: 420,
-                      height: 252,
+                      height: 212,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -317,17 +317,17 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Top: Fixed Proportional Gardi Logo (Moved slightly downward and moderately larger)
+                                  // Top: Fixed Proportional Gardi Logo (Aligned with the top of the barcode)
                                   const Padding(
-                                    padding: EdgeInsets.only(top: 18),
+                                    padding: EdgeInsets.only(top: 0),
                                     child: GardiLogoWidget(
                                       width: 135,
-                                      height: 118,
-                                      color: Color(0xFF1E293B),
+                                      height: 112,
+                                      color: Color(0xFF516982),
                                     ),
                                   ),
 
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
 
                                   // Bottom: Product Name (Bold, clear, and slightly larger, directly below logo)
                                   Expanded(
@@ -363,12 +363,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               width: 2.0,
                               margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                               color: Colors.black,
+                              height: double.infinity,
                             ),
 
                             // ----------------- RIGHT AREA (~62% width) -----------------
                             Expanded(
                               child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // 1. Proportional Barcode (Reduced height slightly so it does not dominate)
@@ -439,12 +440,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                             Expanded(
                                               child: FittedBox(
                                                 fit: BoxFit.scaleDown,
-                                                alignment: Alignment.centerRight,
+                                                alignment: Alignment.center,
                                                 child: Text(
                                                   priceText,
                                                   style: const TextStyle(
                                                     fontFamily: 'Rudaw',
-                                                    fontSize: 48,
+                                                    fontSize: 54,
                                                     fontWeight: FontWeight.w900,
                                                     color: Colors.white,
                                                     letterSpacing: 1.0,
@@ -549,7 +550,7 @@ class GardiLogoWidget extends StatelessWidget {
     super.key,
     this.width = 150,
     this.height = 125,
-    this.color = const Color(0xFF1E293B),
+    this.color = const Color(0xFF516982),
   });
 
   @override
@@ -567,7 +568,7 @@ class GardiLogoWidget extends StatelessWidget {
 class GardiLogoPainter extends CustomPainter {
   final Color color;
 
-  GardiLogoPainter({this.color = const Color(0xFF1E293B)});
+  GardiLogoPainter({this.color = const Color(0xFF516982)});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -602,8 +603,18 @@ class GardiLogoPainter extends CustomPainter {
       ..close();
     canvas.drawPath(centerPath, buildingPaint);
 
-    // Windows on Center Building (4 rows of 2 square windows)
-    const windowRows = [26.0, 34.5, 43.0, 51.5];
+    // Windows on Center Building (5 rows of windows matching 1.png)
+    // Row 1: single centered window at the top
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(47.25, 18.5, 5.5, 5.8),
+        const Radius.circular(0.8),
+      ),
+      cutoutPaint,
+    );
+
+    // Rows 2-5: each containing 2 windows
+    const windowRows = [27.0, 35.5, 44.0, 52.5];
     for (final y in windowRows) {
       // Left window
       canvas.drawRRect(
@@ -627,15 +638,17 @@ class GardiLogoPainter extends CustomPainter {
     canvas.drawRect(const Rect.fromLTWH(45.5, 60.5, 3.8, 7.0), cutoutPaint);
     canvas.drawRect(const Rect.fromLTWH(50.7, 60.5, 3.8, 7.0), cutoutPaint);
 
-    // 3. Left Building (Flat roof, 2 vertical slit windows)
+    // 3. Left Building (Flat roof, 3 vertical slit windows matching 1.png)
     canvas.drawRect(const Rect.fromLTWH(22.5, 28.0, 14.0, 39.5), buildingPaint);
-    canvas.drawRect(const Rect.fromLTWH(25.8, 32.0, 3.0, 32.0), cutoutPaint);
-    canvas.drawRect(const Rect.fromLTWH(30.4, 32.0, 3.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(24.5, 32.0, 2.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(28.5, 32.0, 2.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(32.5, 32.0, 2.0, 32.0), cutoutPaint);
 
-    // 4. Right Building (Symmetrical to left building)
+    // 4. Right Building (Symmetrical to left building with 3 vertical slit windows)
     canvas.drawRect(const Rect.fromLTWH(63.5, 28.0, 14.0, 39.5), buildingPaint);
-    canvas.drawRect(const Rect.fromLTWH(66.6, 32.0, 3.0, 32.0), cutoutPaint);
-    canvas.drawRect(const Rect.fromLTWH(71.2, 32.0, 3.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(65.5, 32.0, 2.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(69.5, 32.0, 2.0, 32.0), cutoutPaint);
+    canvas.drawRect(const Rect.fromLTWH(73.5, 32.0, 2.0, 32.0), cutoutPaint);
 
     // 5. Registered Trademark Symbol ®
     final circleStroke = Paint()
