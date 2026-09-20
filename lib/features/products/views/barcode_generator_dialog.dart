@@ -1,12 +1,9 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -46,7 +43,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
           ? widget.product!.name
           : 'لاستیک باریک سپی',
     );
-    final double? rawPrice = widget.product?.sellingPrice ?? widget.product?.priceN1;
+    final double? rawPrice = widget.product?.priceN1;
     _priceController = TextEditingController(
       text: (rawPrice != null && rawPrice > 0)
           ? rawPrice.toInt().toString()
@@ -163,7 +160,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 24),
@@ -243,7 +240,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                         const SizedBox(width: 10),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? AppColors.surfaceContainerHighDark : Colors.grey.shade200,
+                            backgroundColor: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade200,
                             foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

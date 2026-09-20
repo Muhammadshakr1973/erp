@@ -110,9 +110,9 @@ void main() {
       const n1DotColor = Color(0xFF10B981); // Emerald Green
       const n2DotColor = Color(0xFFF59E0B); // Amber Gold
       const n3DotColor = Color(0xFFF43F5E); // Rose Red
-      expect(n1DotColor.value, 0xFF10B981);
-      expect(n2DotColor.value, 0xFFF59E0B);
-      expect(n3DotColor.value, 0xFFF43F5E);
+      expect(n1DotColor.toARGB32(), 0xFF10B981);
+      expect(n2DotColor.toARGB32(), 0xFFF59E0B);
+      expect(n3DotColor.toARGB32(), 0xFFF43F5E);
     });
 
     test('Product edit form dialog receives product model and retains identifiers', () {
@@ -162,7 +162,7 @@ void main() {
         'barcode': '07849564845',
       });
 
-      final double? rawPrice = productWithoutPrice.sellingPrice ?? productWithoutPrice.priceN1;
+      final double? rawPrice = productWithoutPrice.priceN1;
       final priceStr = (rawPrice != null && rawPrice > 0) ? rawPrice.toInt().toString() : '1000';
       expect(priceStr, '1000');
       expect(productWithoutPrice.barcode, '07849564845');
