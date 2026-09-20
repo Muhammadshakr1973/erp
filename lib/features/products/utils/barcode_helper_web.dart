@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 // web implementation of barcode helper using dart:html
+import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
 
@@ -13,13 +14,14 @@ void saveAndDownloadImage(Uint8List bytes, String fileName) {
 }
 
 void printImage(Uint8List bytes) {
-  final blob = html.Blob([bytes], 'image/png');
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  final newWindow = html.window.open('', '_blank') as html.Window;
-  newWindow.document.write('''
+  final imageBlob = html.Blob([bytes], 'image/png');
+  final imageUrl = html.Url.createObjectUrlFromBlob(imageBlob);
+
+  final htmlContent = '''
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="utf-8">
       <title>چاپکردنی بارکۆد</title>
       <style>
         body {
@@ -49,14 +51,33 @@ void printImage(Uint8List bytes) {
           font-weight: bold;
           color: #333;
         }
+        @media print {
+          body {
+            height: auto;
+          }
+          .container {
+            border: none;
+            padding: 0;
+          }
+        }
       </style>
     </head>
     <body>
       <div class="container">
-        <img src="$url" onload="window.print();" />
+        <img src="$imageUrl" onload="window.print();" />
       </div>
     </body>
     </html>
-  ''');
-  newWindow.document.close();
+  ''';
+
+  final htmlBlob = html.Blob([htmlContent], 'text/html');
+  final htmlUrl = html.Url.createObjectUrlFromBlob(htmlBlob);
+  html.window.open(htmlUrl, '_blank');
+
+  // Revoke object URLs after delay to allow rendering and printing
+  Timer(const Duration(minutes: 2), () {
+    html.Url.revokeObjectUrl(htmlUrl);
+    html.Url.revokeObjectUrl(imageUrl);
+  });
 }
+
