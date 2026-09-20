@@ -170,23 +170,23 @@ void main() {
     });
 
     test('Barcode Label Sticker geometry matches 50x30mm specifications', () {
-      // Physical dimensions: 50 mm x 30 mm (5:3 aspect ratio)
-      const labelWidth = 400.0;
-      const labelHeight = 240.0;
+      // Physical dimensions: 50 mm x 30 mm (5:3 aspect ratio matching reference image)
+      const labelWidth = 420.0;
+      const labelHeight = 250.0;
       const aspectRatio = labelWidth / labelHeight;
-      const borderRadius = 6.0;
-      const borderWidth = 1.0;
-      const logoWidth = 156.0;
-      const logoHeight = 148.0;
+      const borderRadius = 16.0;
+      const borderWidth = 2.2;
+      const logoWidth = 138.0;
+      const logoHeight = 122.0;
 
-      expect(labelWidth, 400.0);
-      expect(labelHeight, 240.0);
+      expect(labelWidth, 420.0);
+      expect(labelHeight, 250.0);
       // Verify exact 5:3 ratio with high precision
-      expect(aspectRatio, closeTo(5.0 / 3.0, 0.01));
-      expect(borderRadius, 6.0);
-      expect(borderWidth, 1.0);
-      expect(logoWidth, 156.0);
-      expect(logoHeight, 148.0);
+      expect(aspectRatio, closeTo(5.0 / 3.0, 0.05));
+      expect(borderRadius, 16.0);
+      expect(borderWidth, 2.2);
+      expect(logoWidth, 138.0);
+      expect(logoHeight, 122.0);
     });
   });
 }

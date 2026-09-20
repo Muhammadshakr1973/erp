@@ -74,8 +74,8 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
-      // Capture at high resolution to produce the exact 591 × 354 physical pixel size for 50x30mm at 300 DPI
-      final image = await boundary.toImage(pixelRatio: 591.0 / 400.0);
+      // Capture at high resolution to produce the exact physical pixel size for 50x30mm at 300 DPI
+      final image = await boundary.toImage(pixelRatio: 591.0 / 420.0);
       final byteData = await image.toByteData(format: ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (e) {
@@ -290,20 +290,20 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
               ),
               const SizedBox(height: AppSpacing.xs),
 
-              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (400 × 240 px, 5:3 Ratio, No Empty Space)
+              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (Matching Reference Image 100%)
               Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: RepaintBoundary(
                     key: _repaintKey,
                     child: Container(
-                      width: 400,
-                      height: 240,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      width: 420,
+                      height: 250,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.black87, width: 1.0),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.black, width: 2.2),
                       ),
                       child: Directionality(
                         textDirection: TextDirection.ltr,
@@ -312,28 +312,31 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                           children: [
                             // ----------------- LEFT AREA (~42% width) -----------------
                             SizedBox(
-                              width: 162,
+                              width: 160,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // Top: Fixed Proportional Gardi Logo
-                                  const GardiLogoWidget(
-                                    width: 156,
-                                    height: 148,
-                                    color: Color(0xFF1E293B),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: GardiLogoWidget(
+                                      width: 138,
+                                      height: 122,
+                                      color: Color(0xFF1E293B),
+                                    ),
                                   ),
 
-                                  // Bottom: Product Name (Compact Kurdish text right at bottom edge)
+                                  // Bottom: Product Name (Single line / compact Kurdish text at bottom)
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                                    padding: const EdgeInsets.only(bottom: 2, left: 2, right: 2),
                                     child: Directionality(
                                       textDirection: TextDirection.rtl,
                                       child: Text(
                                         productName,
                                         style: const TextStyle(
                                           fontFamily: 'Rudaw',
-                                          fontSize: 19,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.w900,
                                           color: Colors.black,
                                           height: 1.15,
@@ -348,11 +351,11 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               ),
                             ),
 
-                            // ----------------- THIN VERTICAL DIVIDER -----------------
+                            // ----------------- SOLID VERTICAL BLACK DIVIDER -----------------
                             Container(
-                              width: 1.2,
-                              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              color: Colors.black87,
+                              width: 2.0,
+                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              color: Colors.black,
                             ),
 
                             // ----------------- RIGHT AREA (~58% width) -----------------
@@ -361,9 +364,9 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // 1. Proportional Barcode (Realistic height, no extra height at top)
+                                  // 1. Proportional Barcode (Clean height, matching reference image)
                                   Container(
-                                    height: 92,
+                                    height: 80,
                                     width: double.infinity,
                                     padding: const EdgeInsets.symmetric(horizontal: 2),
                                     child: CustomPaint(
@@ -379,23 +382,23 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                     barcodeText.isEmpty ? '07849564845' : barcodeText,
                                     style: const TextStyle(
                                       fontFamily: 'Rudaw',
-                                      fontSize: 20,
+                                      fontSize: 19,
                                       fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.8,
+                                      letterSpacing: 2.0,
                                       color: Colors.black,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
 
-                                  // 3. Retail Price Box: [ د.ع | 1000 ] directly underneath
+                                  // 3. Compact Retail Price Box (Tight vertical padding, no extra black bands)
                                   Container(
-                                    height: 86,
+                                    height: 62,
                                     width: double.infinity,
                                     decoration: BoxDecoration(
                                       color: Colors.black,
-                                      borderRadius: BorderRadius.circular(6),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                                     child: Directionality(
                                       textDirection: TextDirection.ltr,
                                       child: Row(
@@ -416,12 +419,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                           // Thin Vertical White Line
                                           Container(
                                             width: 1.8,
-                                            height: 44,
+                                            height: 38,
                                             color: Colors.white,
                                             margin: const EdgeInsets.symmetric(horizontal: 8),
                                           ),
 
-                                          // Large Bold Retail Price
+                                          // Large Bold Retail Price filling the box height
                                           Expanded(
                                             child: FittedBox(
                                               fit: BoxFit.scaleDown,
@@ -430,10 +433,10 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                                 priceText,
                                                 style: const TextStyle(
                                                   fontFamily: 'Rudaw',
-                                                  fontSize: 50,
+                                                  fontSize: 48,
                                                   fontWeight: FontWeight.w900,
                                                   color: Colors.white,
-                                                  letterSpacing: 1.2,
+                                                  letterSpacing: 1.0,
                                                 ),
                                               ),
                                             ),
