@@ -32,6 +32,37 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
   final GlobalKey _repaintKey = GlobalKey();
   bool _isCapturing = false;
 
+  String _toArabicIndicDigits(String input) {
+    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    String result = input;
+    for (int i = 0; i < 10; i++) {
+      result = result.replaceAll(englishDigits[i], arabicDigits[i]);
+    }
+    return result;
+  }
+
+  String _formatPriceToArabic(String input) {
+    final cleanInput = input.replaceAll(',', '').replaceAll(' ', '');
+    // Normalize Kurdish/Arabic digits to English digits for correct integer parsing
+    String normalized = cleanInput;
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    for (int i = 0; i < 10; i++) {
+      normalized = normalized.replaceAll(arabicDigits[i], englishDigits[i]);
+    }
+
+    final number = int.tryParse(normalized);
+    if (number == null) {
+      return _toArabicIndicDigits(input);
+    }
+    final formatted = number.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+    return _toArabicIndicDigits(formatted);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -46,8 +77,8 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     final double? rawPrice = widget.product?.priceN1;
     _priceController = TextEditingController(
       text: (rawPrice != null && rawPrice > 0)
-          ? rawPrice.toInt().toString()
-          : '1000',
+          ? _toArabicIndicDigits(rawPrice.toInt().toString())
+          : _toArabicIndicDigits('1000'),
     );
   }
 
@@ -138,7 +169,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     final isDark = theme.brightness == Brightness.dark;
     final barcodeText = _barcodeController.text.trim().toUpperCase();
     final productName = _nameController.text.trim().isEmpty ? 'ناوی کاڵا' : _nameController.text.trim();
-    final priceText = _priceController.text.trim().isEmpty ? '1000' : _priceController.text.trim();
+    final priceText = _priceController.text.trim().isEmpty ? '١٠٠٠' : _priceController.text.trim();
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -216,13 +247,68 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                           child: AppTextField(
                             controller: _priceController,
                             labelText: 'نرخ (د.ع)',
-                            hintText: '1000',
+                            hintText: '١٠٠٠',
                             prefixIcon: Icons.payments_outlined,
                             keyboardType: TextInputType.number,
-                            onChanged: (value) => setState(() {}),
+                            onChanged: (value) {
+                              final converted = _toArabicIndicDigits(value);
+                              if (converted != value) {
+                                _priceController.value = TextEditingValue(
+                                  text: converted,
+                                  selection: TextSelection.fromPosition(
+                                    TextPosition(offset: converted.length),
+                                  ),
+                                );
+                              }
+                              setState(() {});
+                            },
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Quick Price Chips Selector
+                    const Text(
+                      'دیاریکردنی خێرای نرخ:',
+                      style: TextStyle(
+                        fontFamily: 'Rudaw',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: ['250', '500', '750', '1000', '1500', '2000', '2500', '3000'].map((price) {
+                        final arabicPrice = _toArabicIndicDigits(price);
+                        final currentControllerTextClean = _toArabicIndicDigits(_priceController.text.replaceAll(',', '').replaceAll(' ', ''));
+                        final isSelected = currentControllerTextClean == arabicPrice;
+                        return ChoiceChip(
+                          showCheckmark: false,
+                          label: Text(
+                            arabicPrice,
+                            style: TextStyle(
+                              fontFamily: 'Rudaw',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: AppColors.primary,
+                          backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _priceController.text = arabicPrice;
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
@@ -317,19 +403,19 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Top: Fixed Proportional Gardi Logo (Aligned with the top of the barcode)
+                                  // Top: Fixed Proportional Gardi Logo (Black color, slightly larger and higher up)
                                   const Padding(
                                     padding: EdgeInsets.only(top: 0),
                                     child: GardiLogoWidget(
-                                      width: 135,
-                                      height: 112,
-                                      color: Color(0xFF516982),
+                                      width: 145,
+                                      height: 120,
+                                      color: Colors.black,
                                     ),
                                   ),
 
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 12),
 
-                                  // Bottom: Product Name (Bold, clear, and slightly larger, directly below logo)
+                                  // Bottom: Product Name (Slightly smaller and positioned lower)
                                   Expanded(
                                     child: Align(
                                       alignment: Alignment.topCenter,
@@ -341,7 +427,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                             productName,
                                             style: const TextStyle(
                                               fontFamily: 'Rudaw',
-                                              fontSize: 18,
+                                              fontSize: 15,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.black,
                                               height: 1.15,
@@ -422,7 +508,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                               'د.ع',
                                               style: TextStyle(
                                                 fontFamily: 'Rudaw',
-                                                fontSize: 19,
+                                                fontSize: 22,
                                                 fontWeight: FontWeight.w900,
                                                 color: Colors.white,
                                               ),
@@ -436,16 +522,16 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                               margin: const EdgeInsets.symmetric(horizontal: 10),
                                             ),
 
-                                            // Large Bold Retail Price filling the box height
+                                            // Large Bold Retail Price filling the box height (using Eastern Arabic numerals)
                                             Expanded(
                                               child: FittedBox(
                                                 fit: BoxFit.scaleDown,
                                                 alignment: Alignment.center,
                                                 child: Text(
-                                                  priceText,
+                                                  _formatPriceToArabic(priceText),
                                                   style: const TextStyle(
                                                     fontFamily: 'Rudaw',
-                                                    fontSize: 54,
+                                                    fontSize: 62,
                                                     fontWeight: FontWeight.w900,
                                                     color: Colors.white,
                                                     letterSpacing: 1.0,
@@ -471,65 +557,48 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Action Buttons Row
+              // Action Buttons Row (Print button removed, only Download and Copy/Share left)
               Row(
                 children: [
-                  // Print
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      onPressed: _isCapturing ? null : _handlePrint,
-                      icon: const Icon(Icons.print, size: 20),
-                      label: const Text(
-                        'پرێنتکردن',
-                        style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
                   // Download
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.success,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       onPressed: _isCapturing ? null : _handleDownload,
                       icon: const Icon(Icons.download, size: 20),
                       label: const Text(
                         'وێنە دابەزێنە',
-                        style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold),
+                        style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Copy/Share button
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade100,
+                        foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: _isCapturing ? null : _handleShare,
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text(
+                        'شەیرکردن / کۆپی',
+                        style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 12),
-
-              // Copy/Share button
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade100,
-                  foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                  side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                onPressed: _isCapturing ? null : _handleShare,
-                icon: const Icon(Icons.share, size: 18),
-                label: const Text(
-                  'شەیرکردن / کۆپیکردنی کۆد',
-                  style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold),
-                ),
               ),
             ],
           ),
