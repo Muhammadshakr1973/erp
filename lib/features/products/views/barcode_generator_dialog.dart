@@ -74,8 +74,8 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
-      // Capture at pixelRatio: 1.0 to produce the exact 591 × 354 physical pixel size for 50x30mm at 300 DPI
-      final image = await boundary.toImage(pixelRatio: 1.0);
+      // Capture at high resolution to produce the exact 591 × 354 physical pixel size for 50x30mm at 300 DPI
+      final image = await boundary.toImage(pixelRatio: 591.0 / 400.0);
       final byteData = await image.toByteData(format: ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (e) {
@@ -290,168 +290,162 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
               ),
               const SizedBox(height: AppSpacing.xs),
 
-              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (591 × 354 px @ 300 DPI)
+              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (400 × 240 px, 5:3 Ratio, No Empty Space)
               Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 460, maxHeight: 276),
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: RepaintBoundary(
-                      key: _repaintKey,
-                      child: Container(
-                        width: 591,
-                        height: 354,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.black87, width: 1.2),
-                        ),
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // ----------------- LEFT AREA (~40% width) -----------------
-                              SizedBox(
-                                width: 216,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // Top: Fixed Proportional Gardi Logo (Compact, no huge empty void)
-                                    const GardiLogoWidget(
-                                      width: 190,
-                                      height: 160,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    const SizedBox(height: 8),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RepaintBoundary(
+                    key: _repaintKey,
+                    child: Container(
+                      width: 400,
+                      height: 240,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.black87, width: 1.0),
+                      ),
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ----------------- LEFT AREA (~42% width) -----------------
+                            SizedBox(
+                              width: 162,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Top: Fixed Proportional Gardi Logo
+                                  const GardiLogoWidget(
+                                    width: 156,
+                                    height: 148,
+                                    color: Color(0xFF1E293B),
+                                  ),
 
-                                    // Product Name directly underneath logo (Compact Kurdish text)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                                      child: Directionality(
-                                        textDirection: TextDirection.rtl,
-                                        child: Text(
-                                          productName,
-                                          style: const TextStyle(
-                                            fontFamily: 'Rudaw',
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.black,
-                                            height: 1.2,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
+                                  // Bottom: Product Name (Compact Kurdish text right at bottom edge)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                                    child: Directionality(
+                                      textDirection: TextDirection.rtl,
+                                      child: Text(
+                                        productName,
+                                        style: const TextStyle(
+                                          fontFamily: 'Rudaw',
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.black,
+                                          height: 1.15,
                                         ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
+                            ),
 
-                              // ----------------- THIN VERTICAL DIVIDER -----------------
-                              Container(
-                                width: 1.5,
-                                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                                color: Colors.black87,
-                              ),
+                            // ----------------- THIN VERTICAL DIVIDER -----------------
+                            Container(
+                              width: 1.2,
+                              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              color: Colors.black87,
+                            ),
 
-                              // ----------------- RIGHT AREA (~60% width) -----------------
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // 1. Large Barcode occupying all top height (No empty space)
-                                    Expanded(
-                                      child: Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                                        child: CustomPaint(
-                                          painter: Code39Painter(
-                                            data: barcodeText.isEmpty ? '07849564845' : barcodeText,
-                                            barColor: Colors.black,
-                                          ),
-                                        ),
+                            // ----------------- RIGHT AREA (~58% width) -----------------
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // 1. Proportional Barcode (Realistic height, no extra height at top)
+                                  Container(
+                                    height: 92,
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                                    child: CustomPaint(
+                                      painter: Code39Painter(
+                                        data: barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                        barColor: Colors.black,
                                       ),
                                     ),
-                                    const SizedBox(height: 3),
+                                  ),
 
-                                    // 2. Barcode Number directly underneath barcode (Minimal 3px gap)
-                                    Text(
-                                      barcodeText.isEmpty ? '07849564845' : barcodeText,
-                                      style: const TextStyle(
-                                        fontFamily: 'Rudaw',
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 2.2,
-                                        color: Colors.black,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                  // 2. Barcode Number directly underneath barcode
+                                  Text(
+                                    barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                    style: const TextStyle(
+                                      fontFamily: 'Rudaw',
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.8,
+                                      color: Colors.black,
                                     ),
-                                    const SizedBox(height: 6),
+                                    textAlign: TextAlign.center,
+                                  ),
 
-                                    // 3. Prominent Retail Price Box: [ د.ع | 1000 ] directly underneath (No empty gap)
-                                    Container(
-                                      height: 86,
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                      child: Directionality(
-                                        textDirection: TextDirection.ltr,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment: CrossAxisAlignment.center,
-                                          children: [
-                                            // Fixed Currency Symbol: "د.ع"
-                                            const Text(
-                                              'د.ع',
-                                              style: TextStyle(
-                                                fontFamily: 'Rudaw',
-                                                fontSize: 28,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-
-                                            // Thin Vertical White Line
-                                            Container(
-                                              width: 1.8,
-                                              height: 48,
+                                  // 3. Retail Price Box: [ د.ع | 1000 ] directly underneath
+                                  Container(
+                                    height: 86,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    child: Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          // Fixed Currency Symbol: "د.ع"
+                                          const Text(
+                                            'د.ع',
+                                            style: TextStyle(
+                                              fontFamily: 'Rudaw',
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w900,
                                               color: Colors.white,
-                                              margin: const EdgeInsets.symmetric(horizontal: 10),
                                             ),
+                                          ),
 
-                                            // Large Bold Retail Price (1000)
-                                            Expanded(
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                alignment: Alignment.centerRight,
-                                                child: Text(
-                                                  priceText,
-                                                  style: const TextStyle(
-                                                    fontFamily: 'Rudaw',
-                                                    fontSize: 54,
-                                                    fontWeight: FontWeight.w900,
-                                                    color: Colors.white,
-                                                    letterSpacing: 1.5,
-                                                  ),
+                                          // Thin Vertical White Line
+                                          Container(
+                                            width: 1.8,
+                                            height: 44,
+                                            color: Colors.white,
+                                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                                          ),
+
+                                          // Large Bold Retail Price
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerRight,
+                                              child: Text(
+                                                priceText,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Rudaw',
+                                                  fontSize: 50,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.white,
+                                                  letterSpacing: 1.2,
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
