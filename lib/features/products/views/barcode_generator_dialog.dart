@@ -234,19 +234,23 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Row 1: Product Name & Price / Barcode Row
-                    if (isMobile) ...[
-                      AppTextField(
-                        controller: _nameController,
-                        labelText: 'ناوی کاڵا',
-                        hintText: 'ناوی کاڵا بنووسە...',
-                        prefixIcon: Icons.shopping_bag_outlined,
-                        onChanged: (value) => setState(() {}),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
+                    // Row 1: Product Name (Full width on both mobile and desktop)
+                    AppTextField(
+                      controller: _nameController,
+                      labelText: 'ناوی کاڵا',
+                      hintText: 'ناوی کاڵا بنووسە...',
+                      prefixIcon: Icons.shopping_bag_outlined,
+                      onChanged: (value) => setState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Row 2: Price and Barcode Code as a Segmented Input with 0 gap
+                    Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Right input (first child in RTL: Price)
                           Expanded(
                             child: AppTextField(
                               controller: _priceController,
@@ -254,6 +258,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               hintText: '١٠٠٠',
                               prefixIcon: Icons.payments_outlined,
                               keyboardType: TextInputType.number,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(24),
+                                bottomRight: Radius.circular(24),
+                                topLeft: Radius.zero,
+                                bottomLeft: Radius.zero,
+                              ),
                               onChanged: (value) {
                                 final converted = _toArabicIndicDigits(value);
                                 if (converted != value) {
@@ -268,61 +278,25 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          // Left input (second child in RTL: Barcode Code)
                           Expanded(
                             child: AppTextField(
                               controller: _barcodeController,
                               labelText: 'کۆدی بارکۆد',
                               hintText: '07849564845',
                               prefixIcon: Icons.barcode_reader,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                bottomLeft: Radius.circular(24),
+                                topRight: Radius.zero,
+                                bottomRight: Radius.zero,
+                              ),
                               onChanged: (value) => setState(() {}),
                             ),
                           ),
                         ],
                       ),
-                    ] else ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Product Name
-                          Expanded(
-                            flex: 3,
-                            child: AppTextField(
-                              controller: _nameController,
-                              labelText: 'ناوی کاڵا',
-                              hintText: 'ناوی کاڵا بنووسە...',
-                              prefixIcon: Icons.shopping_bag_outlined,
-                              onChanged: (value) => setState(() {}),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Price
-                          Expanded(
-                            flex: 2,
-                            child: AppTextField(
-                              controller: _priceController,
-                              labelText: 'نرخ (د.ع)',
-                              hintText: '١٠٠٠',
-                              prefixIcon: Icons.payments_outlined,
-                              keyboardType: TextInputType.number,
-                              onChanged: (value) {
-                                final converted = _toArabicIndicDigits(value);
-                                if (converted != value) {
-                                  _priceController.value = TextEditingValue(
-                                    text: converted,
-                                    selection: TextSelection.fromPosition(
-                                      TextPosition(offset: converted.length),
-                                    ),
-                                  );
-                                }
-                                setState(() {});
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                     const SizedBox(height: 8),
 
                     // Quick Price Chips Selector
@@ -367,18 +341,6 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Row 2: Barcode Code (Only for non-mobile)
-                    if (!isMobile) ...[
-                      AppTextField(
-                        controller: _barcodeController,
-                        labelText: 'کۆدی بارکۆد',
-                        hintText: '07849564845',
-                        prefixIcon: Icons.barcode_reader,
-                        onChanged: (value) => setState(() {}),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -567,55 +529,26 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
               const SizedBox(height: AppSpacing.lg),
 
               // Action Buttons Row (Print button removed, only Download and Copy/Share left)
-              if (isMobile) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: _isCapturing ? null : _handleDownload,
-                    icon: const Icon(Icons.download, size: 20),
-                    label: const Text(
-                      'وێنە دابەزێنە',
-                      style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade100,
-                      foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: _isCapturing ? null : _handleShare,
-                    icon: const Icon(Icons.share, size: 18),
-                    label: const Text(
-                      'شەیرکردن / کۆپی',
-                      style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Row(
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: Row(
                   children: [
-                    // Download
+                    // Download button (Right side in RTL)
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.success,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                              topLeft: Radius.zero,
+                              bottomLeft: Radius.zero,
+                            ),
+                          ),
                         ),
                         onPressed: _isCapturing ? null : _handleDownload,
                         icon: const Icon(Icons.download, size: 20),
@@ -625,9 +558,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-
-                    // Copy/Share button
+                    // Copy/Share button (Left side in RTL)
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
@@ -635,8 +566,18 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                           foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 0,
-                          side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          side: BorderSide(
+                            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                            width: 1.0,
+                          ),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                              topRight: Radius.zero,
+                              bottomRight: Radius.zero,
+                            ),
+                          ),
                         ),
                         onPressed: _isCapturing ? null : _handleShare,
                         icon: const Icon(Icons.share, size: 18),
@@ -648,7 +589,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                     ),
                   ],
                 ),
-              ],
+              ),
             ],
           ),
         ),

@@ -18,6 +18,7 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
+  final BorderRadius? borderRadius;
 
   const AppTextField({
     super.key,
@@ -35,11 +36,13 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.borderRadius,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final radius = borderRadius ?? BorderRadius.circular(24);
 
     return TextFormField(
       controller: controller,
@@ -83,26 +86,26 @@ class AppTextField extends StatelessWidget {
         filled: true,
         fillColor: theme.colorScheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
           borderSide: BorderSide(color: theme.colorScheme.outline, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
           borderSide: BorderSide(
             color: theme.colorScheme.outline.withValues(alpha: 0.6),
             width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
           borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
           borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
         ),
       ),
