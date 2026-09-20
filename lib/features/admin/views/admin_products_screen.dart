@@ -16,6 +16,7 @@ import '../../products/views/product_form_dialog.dart';
 import 'admin_categories_dialog.dart';
 import '../../products/views/product_details_dialog.dart';
 import '../../products/models/product_model.dart';
+import '../../products/views/barcode_generator_dialog.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   const AdminProductsScreen({super.key});
@@ -118,6 +119,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       appBar: AppBar(
         title: const Text('کاڵاکان و کۆگا', style: AppTextStyles.h2),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'دروستکردنی بارکۆد',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const BarcodeGeneratorDialog(),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.category),
             tooltip: 'بەڕێوەبردنی جۆرەکان',

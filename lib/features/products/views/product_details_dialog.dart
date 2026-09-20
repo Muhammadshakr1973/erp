@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../models/product_model.dart';
 import 'product_form_dialog.dart';
 import '../providers/products_provider.dart';
+import 'barcode_generator_dialog.dart';
 
 class ProductDetailsDialog extends ConsumerWidget {
   final ProductModel product;
@@ -166,10 +167,41 @@ class ProductDetailsDialog extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
-                    _buildDetailRow(
-                      context,
-                      'بارکۆد:',
-                      product.barcode.isEmpty ? 'بێ بارکۆد' : product.barcode,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'بارکۆد:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              product.barcode.isEmpty ? 'بێ بارکۆد' : product.barcode,
+                              style: const TextStyle(fontFamily: 'Rudaw'),
+                            ),
+                            if (product.barcode.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(Icons.qr_code_2, size: 20, color: AppColors.primary),
+                                tooltip: 'کردارەکانی بارکۆد',
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => BarcodeGeneratorDialog(product: product),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ),
                     const Divider(height: 16),
                     _buildDetailRow(context, 'SKU:', product.sku ?? 'بێ SKU'),

@@ -9,6 +9,8 @@ import 'today_customers_screen.dart';
 import 'salesman_orders_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
+final salesmanTabIndexProvider = StateProvider<int>((ref) => 0);
+
 class SalesmanMainScreen extends ConsumerStatefulWidget {
   const SalesmanMainScreen({super.key});
 
@@ -17,8 +19,6 @@ class SalesmanMainScreen extends ConsumerStatefulWidget {
 }
 
 class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
-  int _currentIndex = 0;
-
   final List<Widget> _screens = [
     const SalesmanDashboardScreen(),
     const TodayCustomersScreen(),
@@ -28,17 +28,17 @@ class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = ref.watch(salesmanTabIndexProvider);
+
     return ResponsiveShell(
-      currentIndex: _currentIndex,
+      currentIndex: currentIndex,
       onDestinationSelected: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
+        ref.read(salesmanTabIndexProvider.notifier).state = index;
       },
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: List.generate(_screens.length, (index) {
-          final isSelected = index == _currentIndex;
+          final isSelected = index == currentIndex;
           return Visibility(
             visible: isSelected,
             maintainState: true,

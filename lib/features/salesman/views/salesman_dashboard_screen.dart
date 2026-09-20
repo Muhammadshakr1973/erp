@@ -11,14 +11,17 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../../core/utils/formatters.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
 import 'salesman_my_commissions_screen.dart';
+import 'salesman_main_screen.dart';
 
 class SalesmanDashboardScreen extends ConsumerWidget {
   const SalesmanDashboardScreen({super.key});
@@ -29,6 +32,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final syncStatus = ref.watch(syncStatusProvider);
     final syncService = ref.read(syncServiceProvider);
+    final ordersAsync = ref.watch(ordersListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -183,58 +187,168 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('دوایین پسوڵەکان', style: AppTextStyles.h2),
-                TextButton(onPressed: () {}, child: const Text('هەمووی')),
+                TextButton(
+                  onPressed: () {
+                    ref.read(salesmanTabIndexProvider.notifier).state = 2; // Swaps to the orders tab
+                  },
+                  child: const Text('هەمووی'),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                return AppCard(
-                  onTap: () {
-                    context.push('/order/100${index + 1}');
-                  },
-                  child: Row(
-                    children: [
-                      AppIconButton(
-                        icon: AppIcons.order,
-                        backgroundColor: theme.colorScheme.primaryContainer,
+            ordersAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (err, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    'هەڵە لە بارکردنی پسوڵەکاندا هەیە: ${Formatters.cleanError(err)}',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                  ),
+                ),
+              ),
+              data: (orders) {
+                // Fetch the salesman's orders only (although server already filters by logged-in salesman, we keep a client-side filter for safety)
+                final salesmanOrders = orders
+                    .where((o) => o.salesmanId == user?.id)
+                    .toList();
+
+                if (salesmanOrders.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24.0),
+                      child: Text(
+                        'هیچ پسوڵەیەک نییە بۆ نیشاندان',
+                        style: AppTextStyles.caption,
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'مارکێتی ئەحمەد',
-                              style: AppTextStyles.bodyBold,
-                            ),
-                            Text(
-                              'پسوڵەی #100${index + 1}',
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    ),
+                  );
+                }
+
+                // Take top 3 recent orders
+                final recentOrders = salesmanOrders.take(3).toList();
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentOrders.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final order = recentOrders[index];
+                    final customerName = order.customer != null
+                        ? order.customer['name']
+                        : 'نەناسراو';
+
+                    String statusLabel = 'داڕشتن (Draft)';
+                    StatusBadgeType statusType = StatusBadgeType.warning;
+
+                    final normalizedStatus = order.status.toUpperCase();
+                    switch (normalizedStatus) {
+                      case 'DELIVERED':
+                        statusLabel = 'گەیشتووە';
+                        statusType = StatusBadgeType.success;
+                        break;
+                      case 'CONFIRMED':
+                        statusLabel = 'پشتڕاستکراوەتەوە';
+                        statusType = StatusBadgeType.info;
+                        break;
+                      case 'PACKING':
+                        statusLabel = 'لە پاکەتکردندایە';
+                        statusType = StatusBadgeType.info;
+                        break;
+                      case 'READY':
+                        statusLabel = 'ئامادەیە بۆ ناردن';
+                        statusType = StatusBadgeType.info;
+                        break;
+                      case 'IN_DELIVERY':
+                        statusLabel = 'لە ڕێگەی گەیاندندایە';
+                        statusType = StatusBadgeType.warning;
+                        break;
+                      case 'CANCELLED':
+                        statusLabel = 'هەڵوەشاوەتەوە';
+                        statusType = StatusBadgeType.danger;
+                        break;
+                      case 'DRAFT':
+                      default:
+                        statusLabel = 'داڕشتن (Draft)';
+                        statusType = StatusBadgeType.warning;
+                        break;
+                    }
+
+                    return AppCard(
+                      onTap: () {
+                        context.push('/order/${order.id}');
+                      },
+                      child: Row(
                         children: [
-                          Text('125,000 د.ع', style: AppTextStyles.price),
-                          const SizedBox(height: 4),
-                          StatusBadge(
-                            label: index == 0 ? 'DRAFT' : 'CONFIRMED',
-                            type: index == 0
-                                ? StatusBadgeType.warning
-                                : StatusBadgeType.success,
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                AppIcons.order,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  customerName,
+                                  style: AppTextStyles.bodyBold,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'پسوڵەی #${order.orderNumber}',
+                                        style: AppTextStyles.caption,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (order.pendingSync) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.sync,
+                                        size: 12,
+                                        color: Colors.orange,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${Formatters.currency(order.totalAmount)}',
+                                style: AppTextStyles.price,
+                              ),
+                              const SizedBox(height: 4),
+                              StatusBadge(label: statusLabel, type: statusType),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             ),

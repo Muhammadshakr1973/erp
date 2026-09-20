@@ -10,6 +10,8 @@ import '../models/product_model.dart';
 import '../providers/products_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/suppliers_provider.dart';
+import '../../../core/theme/app_colors.dart';
+import 'barcode_generator_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductModel? product;
@@ -428,17 +430,35 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 controller: _barcodeController,
                                 labelText: 'بارکۆد',
                                 hintText: 'بارکۆد',
-                                suffixIcon: IconButton(
-                                  icon: const Icon(Icons.qr_code_scanner),
-                                  onPressed: () {
-                                    CameraBarcodeScanner.show(context, (
-                                      scanned,
-                                    ) {
-                                      setState(() {
-                                        _barcodeController.text = scanned;
-                                      });
-                                    });
-                                  },
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.qr_code_scanner),
+                                      onPressed: () {
+                                        CameraBarcodeScanner.show(context, (
+                                          scanned,
+                                        ) {
+                                          setState(() {
+                                            _barcodeController.text = scanned;
+                                          });
+                                        });
+                                      },
+                                    ),
+                                    if (widget.product != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                        tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => BarcodeGeneratorDialog(
+                                              product: widget.product,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),
