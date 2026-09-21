@@ -24,6 +24,80 @@ final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) asy
   }
 });
 
+class WarehouseDashboardData {
+  final int? warehouseId;
+  final String warehouseName;
+  final int pendingPackingCount;
+  final int readyTodayCount;
+  final int lowStockCount;
+  final List<WarehouseOrderModel> recentOrders;
+  final List<WarehouseStockModel> lowStockItems;
+
+  WarehouseDashboardData({
+    this.warehouseId,
+    required this.warehouseName,
+    required this.pendingPackingCount,
+    required this.readyTodayCount,
+    required this.lowStockCount,
+    required this.recentOrders,
+    required this.lowStockItems,
+  });
+}
+
+final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) async {
+  final api = ref.watch(apiClientProvider);
+
+  try {
+    final response = await api.client.get('/warehouse/dashboard');
+    if (response.statusCode == 200 &&
+        response.data is Map &&
+        response.data['data'] is Map) {
+      final data = response.data['data'] as Map<String, dynamic>;
+      final recentOrdersList = (data['recent_orders'] as List? ?? [])
+          .map((j) => WarehouseOrderModel.fromJson(j as Map<String, dynamic>))
+          .toList();
+      final lowStockList = (data['low_stock_items'] as List? ?? [])
+          .map((j) => WarehouseStockModel.fromJson(j as Map<String, dynamic>))
+          .toList();
+
+      return WarehouseDashboardData(
+        warehouseId: data['warehouse_id'] as int?,
+        warehouseName: data['warehouse_name'] ?? 'کۆگای سەرەکی',
+        pendingPackingCount: (data['pending_packing_count'] as num?)?.toInt() ?? 0,
+        readyTodayCount: (data['ready_today_count'] as num?)?.toInt() ?? 0,
+        lowStockCount: (data['low_stock_count'] as num?)?.toInt() ?? 0,
+        recentOrders: recentOrdersList,
+        lowStockItems: lowStockList,
+      );
+    }
+  } catch (_) {
+    // Fallback if backend endpoint is not yet deployed on live hosting:
+    // aggregate directly from live orders and stock endpoints
+  }
+
+  try {
+    final orders = await ref.watch(ordersToPackProvider.future);
+    final stocks = await ref.watch(warehouseStocksProvider.future);
+
+    final lowStockItems =
+        stocks.where((s) => s.quantity <= s.minStockLevel).toList();
+    final warehouseName =
+        stocks.isNotEmpty ? stocks.first.warehouseName : 'کۆگای سەرەکی';
+
+    return WarehouseDashboardData(
+      warehouseId: stocks.isNotEmpty ? stocks.first.warehouseId : null,
+      warehouseName: warehouseName,
+      pendingPackingCount: orders.length,
+      readyTodayCount: 0,
+      lowStockCount: lowStockItems.length,
+      recentOrders: orders.take(5).toList(),
+      lowStockItems: lowStockItems.take(5).toList(),
+    );
+  } catch (e) {
+    throw Exception(api.parseError(e));
+  }
+});
+
 final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   try {

@@ -11,6 +11,7 @@ use App\Models\SalesOrderItem;
 use App\Services\SalesOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +22,78 @@ class WarehouseController extends Controller
     public function __construct(SalesOrderService $salesOrderService)
     {
         $this->salesOrderService = $salesOrderService;
+    }
+
+    public function dashboard(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $warehouseId = $user ? $user->warehouse_id : null;
+
+        $warehouseName = 'کۆگای سەرەکی';
+        if ($warehouseId) {
+            $warehouse = Warehouse::find($warehouseId);
+            if ($warehouse) {
+                $warehouseName = $warehouse->name;
+            }
+        } else {
+            $mainWarehouse = Warehouse::where('is_main', true)->first() ?? Warehouse::first();
+            if ($mainWarehouse) {
+                $warehouseName = $mainWarehouse->name;
+                $warehouseId = $mainWarehouse->id;
+            }
+        }
+
+        // 1. Pending packing count (orders in CONFIRMED or PACKING status)
+        $pendingQuery = SalesOrder::whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
+        if ($warehouseId) {
+            $pendingQuery->where('warehouse_id', $warehouseId);
+        }
+        $pendingPackingCount = $pendingQuery->count();
+
+        // 2. Ready orders today count (orders marked READY today)
+        $todayStart = Carbon::today()->startOfDay();
+        $readyQuery = SalesOrder::where('status', SalesOrder::STATUS_READY)
+            ->where('updated_at', '>=', $todayStart);
+        if ($warehouseId) {
+            $readyQuery->where('warehouse_id', $warehouseId);
+        }
+        $readyTodayCount = $readyQuery->count();
+
+        // 3. Low stock count (warehouse stock where quantity <= min_stock_level)
+        $stockQuery = WarehouseStock::query();
+        if ($warehouseId) {
+            $stockQuery->where('warehouse_id', $warehouseId);
+        }
+        $lowStockCount = $stockQuery->whereRaw('quantity <= min_stock_level')->count();
+
+        // 4. Recent orders to pack (up to 5)
+        $recentOrdersQuery = SalesOrder::with(['customer', 'items.product', 'warehouse'])
+            ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
+        if ($warehouseId) {
+            $recentOrdersQuery->where('warehouse_id', $warehouseId);
+        }
+        $recentOrders = $recentOrdersQuery->orderBy('id', 'desc')->take(5)->get();
+
+        // 5. Low stock items (up to 5)
+        $lowStockItemsQuery = WarehouseStock::with(['warehouse', 'product'])
+            ->whereRaw('quantity <= min_stock_level');
+        if ($warehouseId) {
+            $lowStockItemsQuery->where('warehouse_id', $warehouseId);
+        }
+        $lowStockItems = $lowStockItemsQuery->orderBy('quantity', 'asc')->take(5)->get();
+
+        return response()->json([
+            'message' => 'ئامارەکانی کۆگا',
+            'data' => [
+                'warehouse_id' => $warehouseId,
+                'warehouse_name' => $warehouseName,
+                'pending_packing_count' => $pendingPackingCount,
+                'ready_today_count' => $readyTodayCount,
+                'low_stock_count' => $lowStockCount,
+                'recent_orders' => $recentOrders,
+                'low_stock_items' => $lowStockItems,
+            ]
+        ], 200);
     }
 
     public function index(Request $request): JsonResponse

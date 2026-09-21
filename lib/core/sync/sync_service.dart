@@ -527,6 +527,28 @@ class SyncService {
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.connectionError;
   }
+
+  Future<void> clearFailedOperations() async {
+    final failedKeys = box.keys.where((k) {
+      final entry = box.get(k);
+      return entry?.status == 'FAILED';
+    }).toList();
+    for (final key in failedKeys) {
+      await box.delete(key);
+    }
+    ref.invalidate(syncStatusProvider);
+  }
+
+  Future<void> clearCompletedOperations() async {
+    final completedKeys = box.keys.where((k) {
+      final entry = box.get(k);
+      return entry?.status == 'COMPLETED';
+    }).toList();
+    for (final key in completedKeys) {
+      await box.delete(key);
+    }
+    ref.invalidate(syncStatusProvider);
+  }
 }
 
 // User-visible sync status

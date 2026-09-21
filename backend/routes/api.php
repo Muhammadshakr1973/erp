@@ -98,6 +98,7 @@ Route::prefix('v1')->group(function () {
         
         // Warehouses & Stock
         Route::get('/warehouses', [WarehouseController::class, 'index']);
+        Route::get('/warehouse/dashboard', [WarehouseController::class, 'dashboard'])->middleware('permission:stock.view');
         Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::get('/warehouses/{warehouseId}/stock/{productId}/reconcile', [WarehouseController::class, 'reconcileStock'])->middleware('permission:stock.view');
         

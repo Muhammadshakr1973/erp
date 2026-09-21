@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_app/features/warehouse/views/orders_to_pack_screen.dart';
 import 'package:pos_app/features/warehouse/views/stock_list_screen.dart';
+import 'package:pos_app/features/warehouse/views/warehouse_dashboard_screen.dart';
 import 'package:pos_app/features/warehouse/providers/warehouse_provider.dart';
 import 'package:pos_app/features/warehouse/models/warehouse_order_model.dart';
 import 'package:pos_app/features/warehouse/models/warehouse_stock_model.dart';
@@ -114,6 +115,97 @@ void main() {
 
     expect(find.text('کێشەیەک ڕوویدا لە بارکردنی پسوڵەکان'), findsOneWidget);
     expect(find.text('پەیوەندی بە سێرڤەرەوە پچڕا.'), findsOneWidget);
+    expect(find.text('دووبارە هەوڵبدەرەوە'), findsOneWidget);
+  });
+
+  testWidgets('WarehouseDashboardScreen renders dynamic statistics and orders from warehouseDashboardProvider', (WidgetTester tester) async {
+    final mockData = WarehouseDashboardData(
+      warehouseId: 10,
+      warehouseName: 'کۆگای هەولێر',
+      pendingPackingCount: 7,
+      readyTodayCount: 19,
+      lowStockCount: 3,
+      recentOrders: [
+        WarehouseOrderModel(
+          id: 55,
+          orderNumber: 'ORD-9988',
+          status: 'PACKING',
+          createdAt: '2026-09-21T08:00:00Z',
+          customerName: 'مارکێتی ژیان',
+          items: [
+            WarehouseOrderItemModel(
+              id: 1,
+              productId: 10,
+              productName: 'ڕۆنی زەیتوون',
+              quantity: 4,
+              isPacked: true,
+            ),
+          ],
+        ),
+      ],
+      lowStockItems: [
+        WarehouseStockModel(
+          id: 88,
+          warehouseId: 10,
+          warehouseName: 'کۆگای هەولێر',
+          productId: 202,
+          productName: 'برنجی کوردی',
+          barcode: '99887766',
+          quantity: 2,
+          reservedQuantity: 0,
+          minStockLevel: 10,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          warehouseDashboardProvider.overrideWith((ref) => mockData),
+        ],
+        child: const MaterialApp(
+          home: WarehouseDashboardScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Verify dynamic warehouse name
+    expect(find.text('کۆگای هەولێر'), findsOneWidget);
+
+    // Verify dynamic KPI counts
+    expect(find.text('7'), findsOneWidget);
+    expect(find.text('19'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+
+    // Verify recent order details
+    expect(find.text('پسوڵەی #ORD-9988'), findsOneWidget);
+    expect(find.text('مارکێتی ژیان'), findsOneWidget);
+    expect(find.text('لە پاکەتکردندایە'), findsOneWidget);
+
+    // Verify low stock item details
+    expect(find.text('برنجی کوردی'), findsOneWidget);
+    expect(find.text('مەوجوود: 2'), findsOneWidget);
+    expect(find.text('ئاستی کەمینە: 10'), findsOneWidget);
+  });
+
+  testWidgets('WarehouseDashboardScreen displays error state with retry on failure', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          warehouseDashboardProvider.overrideWith((ref) => throw Exception('هەڵە لە پەیوەندی سێرڤەر')),
+        ],
+        child: const MaterialApp(
+          home: WarehouseDashboardScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('کێشەیەک ڕوویدا لە بارکردنی ئامارەکانی کۆگا'), findsOneWidget);
+    expect(find.text('هەڵە لە پەیوەندی سێرڤەر'), findsOneWidget);
     expect(find.text('دووبارە هەوڵبدەرەوە'), findsOneWidget);
   });
 }

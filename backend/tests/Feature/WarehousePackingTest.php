@@ -359,5 +359,39 @@ class WarehousePackingTest extends TestCase
 
         $responseReady->assertStatus(403);
     }
+
+    public function test_warehouse_dashboard_returns_real_kpis_and_lists(): void
+    {
+        // Set packer to Main Warehouse
+        $this->packer->update(['warehouse_id' => $this->warehouse->id]);
+
+        // Create confirmed order in Main Warehouse
+        $order = SalesOrder::create([
+            'order_number' => 'ORD-WH-TEST',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => SalesOrder::STATUS_CONFIRMED,
+            'payment_type' => 'cash',
+            'payment_status' => 'paid',
+            'total_amount' => 15000,
+            'total_profit' => 5000,
+            'created_by' => $this->packer->id,
+        ]);
+
+        // Create low stock entry
+        $this->warehouseStock1->update([
+            'quantity' => 2,
+            'min_stock_level' => 5,
+        ]);
+
+        $response = $this->actingAs($this->packer)
+            ->getJson('/api/v1/warehouse/dashboard');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.warehouse_id', $this->warehouse->id)
+            ->assertJsonPath('data.warehouse_name', $this->warehouse->name)
+            ->assertJsonPath('data.pending_packing_count', 1)
+            ->assertJsonPath('data.low_stock_count', 1);
+    }
 }
 

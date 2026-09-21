@@ -8,6 +8,9 @@ import 'orders_to_pack_screen.dart';
 import 'stock_list_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
+final warehouseTabIndexProvider = StateProvider<int>((ref) => 0);
+final warehouseLowStockFilterProvider = StateProvider<bool>((ref) => false);
+
 class WarehouseMainScreen extends ConsumerStatefulWidget {
   const WarehouseMainScreen({super.key});
 
@@ -17,8 +20,6 @@ class WarehouseMainScreen extends ConsumerStatefulWidget {
 }
 
 class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
-  int _currentIndex = 0;
-
   final List<Widget> _screens = [
     const WarehouseDashboardScreen(),
     const OrdersToPackScreen(),
@@ -28,17 +29,17 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = ref.watch(warehouseTabIndexProvider);
+
     return ResponsiveShell(
-      currentIndex: _currentIndex,
+      currentIndex: currentIndex,
       onDestinationSelected: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
+        ref.read(warehouseTabIndexProvider.notifier).state = index;
       },
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: List.generate(_screens.length, (index) {
-          final isSelected = index == _currentIndex;
+          final isSelected = index == currentIndex;
           return Visibility(
             visible: isSelected,
             maintainState: true,

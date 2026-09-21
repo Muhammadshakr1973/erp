@@ -16,6 +16,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/warehouse_stock_model.dart';
 import '../providers/warehouse_provider.dart';
+import 'warehouse_main_screen.dart';
 
 class StockListScreen extends ConsumerStatefulWidget {
   const StockListScreen({super.key});
@@ -348,6 +349,8 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
   @override
   Widget build(BuildContext context) {
     final stocksAsync = ref.watch(warehouseStocksProvider);
+    final globalLowStock = ref.watch(warehouseLowStockFilterProvider);
+    final isLowStockActive = _filterLowStock || globalLowStock;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -368,13 +371,14 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
           ),
           IconButton(
             icon: Icon(
-              _filterLowStock ? Icons.filter_list_alt : Icons.filter_list,
-              color: _filterLowStock ? theme.colorScheme.primary : null,
+              isLowStockActive ? Icons.filter_list_alt : Icons.filter_list,
+              color: isLowStockActive ? theme.colorScheme.primary : null,
             ),
             tooltip: 'فلتەری ستۆکی کەم',
             onPressed: () {
               setState(() {
-                _filterLowStock = !_filterLowStock;
+                _filterLowStock = !isLowStockActive;
+                ref.read(warehouseLowStockFilterProvider.notifier).state = !isLowStockActive;
               });
             },
           ),
@@ -429,7 +433,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                     final matchesSearch =
                         stock.productName.toLowerCase().contains(searchLower) ||
                         stock.barcode.toLowerCase().contains(searchLower);
-                    if (_filterLowStock) {
+                    if (isLowStockActive) {
                       return matchesSearch && stock.quantity <= stock.minStockLevel;
                     }
                     return matchesSearch;
