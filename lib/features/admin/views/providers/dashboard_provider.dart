@@ -5,7 +5,8 @@ import '../../../../core/api_client.dart';
 import '../../../../core/sync/pusher_service.dart';
 import '../../models/dashboard_model.dart';
 
-final dashboardProvider = FutureProvider<DashboardModel>((ref) async {
+final FutureProvider<DashboardModel> dashboardProvider =
+    FutureProvider<DashboardModel>((ref) async {
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 

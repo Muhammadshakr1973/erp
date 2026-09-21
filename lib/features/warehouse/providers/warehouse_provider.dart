@@ -6,14 +6,14 @@ import '../../../core/sync/sync_service.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
-final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) async {
+final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
+    FutureProvider<List<WarehouseOrderModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
   void onOrdersEvent(Map<String, dynamic> eventData) {
     debugPrint("Pusher: Realtime update received on ordersToPackProvider: $eventData");
     ref.invalidateSelf();
-    ref.invalidate(warehouseDashboardProvider);
   }
 
   pusher.subscribeToChannel('private-orders', onOrdersEvent);
@@ -60,19 +60,22 @@ class WarehouseDashboardData {
   });
 }
 
-final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) async {
+final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
+    FutureProvider<WarehouseDashboardData>((ref) async {
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  void onOrdersEvent(Map<String, dynamic> eventData) {
+  void onRealtimeEvent(Map<String, dynamic> eventData) {
     debugPrint("Pusher: Realtime update received on warehouseDashboardProvider: $eventData");
     ref.invalidateSelf();
   }
 
-  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+  pusher.subscribeToChannel('private-orders', onRealtimeEvent);
+  pusher.subscribeToChannel('private-products', onRealtimeEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+    pusher.unsubscribeFromChannel('private-orders', onRealtimeEvent);
+    pusher.unsubscribeFromChannel('private-products', onRealtimeEvent);
   });
 
   try {
@@ -104,8 +107,10 @@ final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) 
   }
 
   try {
-    final orders = await ref.watch(ordersToPackProvider.future);
-    final stocks = await ref.watch(warehouseStocksProvider.future);
+    final List<WarehouseOrderModel> orders =
+        await ref.watch(ordersToPackProvider.future);
+    final List<WarehouseStockModel> stocks =
+        await ref.watch(warehouseStocksProvider.future);
 
     final lowStockItems =
         stocks.where((s) => s.quantity <= s.minStockLevel).toList();
@@ -126,14 +131,14 @@ final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) 
   }
 });
 
-final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) async {
+final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
+    FutureProvider<List<WarehouseStockModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
   void onProductStockEvent(Map<String, dynamic> eventData) {
     debugPrint("Pusher: Realtime update received on warehouseStocksProvider: $eventData");
     ref.invalidateSelf();
-    ref.invalidate(warehouseDashboardProvider);
   }
 
   pusher.subscribeToChannel('private-products', onProductStockEvent);
