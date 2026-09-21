@@ -20,7 +20,7 @@ class SalesOrderController extends Controller
     public function index(\Illuminate\Http\Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = \App\Models\SalesOrder::with(['customer', 'salesman'])->orderBy('id', 'desc');
+        $query = \App\Models\SalesOrder::with(['customer', 'salesman', 'items.product', 'warehouse'])->orderBy('id', 'desc');
 
         if ($user->role?->name === 'salesman') {
             $query->where('salesman_id', $user->id);
