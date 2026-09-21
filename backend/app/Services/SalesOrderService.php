@@ -742,8 +742,12 @@ class SalesOrderService
     /**
      * تۆمارکردنی دەفتەری مێژوویی کار چالاکییەکان (Audit activity log)
      */
-    private function logActivity(SalesOrder $order, string $oldStatus, string $newStatus, $user): void
+    private function logActivity(SalesOrder $order, ?string $oldStatus, string $newStatus, $user): void
     {
+        $description = $oldStatus 
+            ? "دۆخی پسوڵەی فرۆشتن {$order->order_number} گۆڕدرا لە [{$oldStatus}] بۆ [{$newStatus}]"
+            : "پسوڵەی فرۆشتنی نوێ {$order->order_number} دروستکرا بە دۆخی [{$newStatus}]";
+
         app(AuditService::class)->log([
             'action'      => 'STATUS_CHANGE',
             'entity_type' => 'SalesOrder',
@@ -758,7 +762,7 @@ class SalesOrderService
                 'order_number' => $order->order_number,
                 'total_amount' => $order->total_amount,
             ],
-            'description' => "دۆخی پسوڵەی فرۆشتن {$order->order_number} گۆڕدرا لە [{$oldStatus}] بۆ [{$newStatus}]",
+            'description' => $description,
             'user'        => $user,
         ]);
     }
