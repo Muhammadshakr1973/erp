@@ -58,6 +58,8 @@ class AppTextStyles {
     fontWeight: FontWeight.w700,
   );
 
+  static const TextStyle bodyMediumBold = bodyBold;
+
   static const TextStyle bodySmall = TextStyle(
     fontFamily: fontFamily,
     fontSize: 13,

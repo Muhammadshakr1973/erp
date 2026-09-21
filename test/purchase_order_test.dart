@@ -73,6 +73,12 @@ class FakeSyncService implements SyncService {
   Future<void> syncPendingOperations() async {
     syncCalled = true;
   }
+
+  @override
+  Future<void> clearCompletedOperations() async {}
+
+  @override
+  Future<void> clearFailedOperations() async {}
 }
 
 void main() {

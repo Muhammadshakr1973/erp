@@ -29,7 +29,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
         title: dashboardAsync.when(
           data: (data) => Text(data.warehouseName, style: AppTextStyles.h2),
           loading: () => const Text('داشبۆردی کۆگا', style: AppTextStyles.h2),
-          error: (_, __) => const Text('کۆگا', style: AppTextStyles.h2),
+          error: (err, stack) => const Text('کۆگا', style: AppTextStyles.h2),
         ),
         actions: [
           IconButton(
@@ -229,7 +229,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -238,7 +238,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textSecondaryLight,
                 ),
             ],
           ),
@@ -250,7 +250,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
           Text(
             subtitle,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textTertiary,
+              color: AppColors.textSecondaryLight,
               fontSize: 11,
             ),
           ),
@@ -280,7 +280,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
           child: AppButton(
             text: 'پشکنینی ستۆک',
             icon: Icons.inventory_2_outlined,
-            isOutlined: true,
+            type: AppButtonType.outline,
             onPressed: () {
               ref.read(warehouseLowStockFilterProvider.notifier).state = false;
               ref.read(warehouseTabIndexProvider.notifier).state = 2;
@@ -329,13 +329,13 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.sm),
                     const Text(
                       'هیچ پسوڵەیەک لە چاوەڕوانیدا نییە',
-                      style: AppTextStyles.bodyMediumBold,
+                      style: AppTextStyles.bodyBold,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'هەموو پسوڵەکان پاکەت کراون و ئامادەن.',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
+                        color: AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -348,7 +348,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: orders.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final order = orders[index];
               return AppCard(
@@ -365,7 +365,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 'پسوڵەی #${order.orderNumber}',
-                                style: AppTextStyles.bodyMediumBold,
+                                style: AppTextStyles.bodyBold,
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               StatusBadge(
@@ -382,14 +382,14 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                           Text(
                             order.customerName,
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                              color: AppColors.textSecondaryLight,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'ژمارەی کاڵا: ${order.items.length} دانە • بەروار: ${order.createdAt.length >= 10 ? order.createdAt.substring(0, 10) : order.createdAt}',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: AppColors.textSecondaryLight,
                               fontSize: 11,
                             ),
                           ),
@@ -447,7 +447,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: lowStockItems.length,
-          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+          separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.xs),
           itemBuilder: (context, index) {
             final stock = lowStockItems[index];
             return AppCard(
@@ -463,13 +463,13 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           stock.productName,
-                          style: AppTextStyles.bodyMediumBold,
+                          style: AppTextStyles.bodyBold,
                         ),
                         if (stock.barcode.isNotEmpty)
                           Text(
                             'باڕکۆد: ${stock.barcode}',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
+                              color: AppColors.textSecondaryLight,
                             ),
                           ),
                       ],
@@ -480,14 +480,14 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'مەوجوود: ${stock.quantity}',
-                        style: AppTextStyles.bodyMediumBold.copyWith(
+                        style: AppTextStyles.bodyBold.copyWith(
                           color: AppColors.danger,
                         ),
                       ),
                       Text(
                         'ئاستی کەمینە: ${stock.minStockLevel}',
                         style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textTertiary,
+                          color: AppColors.textSecondaryLight,
                         ),
                       ),
                     ],
