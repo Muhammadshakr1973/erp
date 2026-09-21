@@ -77,28 +77,42 @@ class SalesOrderController extends Controller
 
     public function store(StoreSalesOrderRequest $request): JsonResponse
     {
-        // Check if salesman is assigned to the customer they are making order for
-        $user = $request->user();
-        $customerId = $request->input('customer_id');
-        if (!$user->hasCustomerAccess($customerId)) {
+        try {
+            // Check if salesman is assigned to the customer they are making order for
+            $user = $request->user();
+            $customerId = $request->input('customer_id');
+            if (!$user->hasCustomerAccess($customerId)) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ دروستکردنی پسوڵە بۆ ئەم کڕیارە بەهۆی نەبوونی دەسەڵاتی دەستڕاگەیشتن.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
+
+            // ناردنی داتاکان و بەکارهێنەرەکە بۆ لۆژیکی Service
+            $order = $this->salesOrderService->createOrder($request->validated(), $user);
+
+            // Check if the order already existed (cooperative dual-entry update)
+            $statusCode = $order->wasRecentlyCreated ? 201 : 200;
+            $message = $order->wasRecentlyCreated ? 'پسوڵە بەسەرکەوتوویی دروستکرا' : 'پسوڵەی هاوبەش بەسەرکەوتوویی نوێکرایەوە';
+
+            // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی گونجاو
             return response()->json([
-                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دروستکردنی پسوڵە بۆ ئەم کڕیارە بەهۆی نەبوونی دەسەڵاتی دەستڕاگەیشتن.',
-                'error' => 'Forbidden.'
-            ], 403);
+                'message' => $message,
+                'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
+            ], $statusCode);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("SalesOrderController store error: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'هەڵەیەک ڕوویدا لە دروستکردنی پسوڵە: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // ناردنی داتاکان و بەکارهێنەرەکە بۆ لۆژیکی Service
-        $order = $this->salesOrderService->createOrder($request->validated(), $user);
-
-        // Check if the order already existed (cooperative dual-entry update)
-        $statusCode = $order->wasRecentlyCreated ? 201 : 200;
-        $message = $order->wasRecentlyCreated ? 'پسوڵە بەسەرکەوتوویی دروستکرا' : 'پسوڵەی هاوبەش بەسەرکەوتوویی نوێکرایەوە';
-
-        // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی گونجاو
-        return response()->json([
-            'message' => $message,
-            'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
-        ], $statusCode);
     }
 
     public function update(UpdateSalesOrderRequest $request, int $id): JsonResponse

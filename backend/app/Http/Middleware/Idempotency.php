@@ -31,6 +31,8 @@ class Idempotency
         $requestHash = $this->computeRequestHash($request, $userId);
         $normalizedParams = $this->normalizePayload($request->all());
 
+        $hasRecordedProcessing = false;
+
         try {
             // Try to register the key as processing with canonical request hash
             DB::table('idempotency_keys')->insert([
@@ -43,9 +45,25 @@ class Idempotency
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+            $hasRecordedProcessing = true;
         } catch (QueryException $e) {
-            // Unique constraint violation means it already exists (concurrent or previous submission)
-            $existing = DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->first();
+            // Check if this error is specifically a unique constraint violation (duplicate key)
+            // MySQL error code: 1062, SQLSTATE: 23000
+            $isDuplicate = $e->getCode() == 23000 || (isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062);
+
+            if (!$isDuplicate) {
+                // Table might not exist yet, or other non-duplicate DB issue.
+                // Do NOT block business operations if idempotency table is unavailable.
+                \Illuminate\Support\Facades\Log::warning("Idempotency storage unavailable, proceeding without idempotency lock: " . $e->getMessage());
+                return $next($request);
+            }
+
+            try {
+                $existing = DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->first();
+            } catch (\Throwable $ex) {
+                \Illuminate\Support\Facades\Log::warning("Failed to query existing idempotency key: " . $ex->getMessage());
+                return $next($request);
+            }
 
             if ($existing) {
                 // 1. Security check: ensure requesting user owns this idempotency key
@@ -93,31 +111,46 @@ class Idempotency
                 'message' => 'هەڵەیەک ڕوویدا لە تۆمارکردنی کلیلەکە.',
                 'error' => 'Conflict. Duplicate key entry.'
             ], 409);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Idempotency error, bypassing: " . $e->getMessage());
+            return $next($request);
         }
 
         try {
             // Proceed with request
             $response = $next($request);
 
-            // If response is successful, persist the outcome
-            if ($response->isSuccessful()) {
-                DB::table('idempotency_keys')
-                    ->where('idempotency_key', $idempotencyKey)
-                    ->update([
-                        'status' => 'completed',
-                        'response_status' => $response->getStatusCode(),
-                        'response_body' => $response->getContent(),
-                        'updated_at' => now()
-                    ]);
-            } else {
-                // If it failed (e.g. 422 validation, 400 bad request), delete key to allow retries with fixes
-                DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->delete();
+            if ($hasRecordedProcessing) {
+                try {
+                    // If response is successful, persist the outcome
+                    if ($response->isSuccessful()) {
+                        DB::table('idempotency_keys')
+                            ->where('idempotency_key', $idempotencyKey)
+                            ->update([
+                                'status' => 'completed',
+                                'response_status' => $response->getStatusCode(),
+                                'response_body' => $response->getContent(),
+                                'updated_at' => now()
+                            ]);
+                    } else {
+                        // If it failed (e.g. 422 validation, 400 bad request), delete key to allow retries with fixes
+                        DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->delete();
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Failed to update idempotency key outcome: " . $e->getMessage());
+                }
             }
 
             return $response;
         } catch (\Throwable $e) {
-            // On exception, delete the key so transaction is retry-safe
-            DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->delete();
+            if ($hasRecordedProcessing) {
+                try {
+                    // On exception, delete the key so transaction is retry-safe
+                    DB::table('idempotency_keys')->where('idempotency_key', $idempotencyKey)->delete();
+                } catch (\Throwable $ex) {
+                    // Ignore deletion error
+                }
+            }
             throw $e;
         }
     }

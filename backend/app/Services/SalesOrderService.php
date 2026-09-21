@@ -168,9 +168,17 @@ class SalesOrderService
         });
 
         // Notify new order created AFTER database commit (NOT-001)
-        app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+        try {
+            app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for new order: " . $e->getMessage());
+        }
 
-        event(new \App\Events\SalesOrderUpdated($order, 'create'));
+        try {
+            event(new \App\Events\SalesOrderUpdated($order, 'create'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for new order: " . $e->getMessage());
+        }
 
         $order->wasRecentlyCreated = true;
         return $order;
@@ -495,11 +503,19 @@ class SalesOrderService
 
         if ($oldStatus !== $newStatus) {
             if ($newStatus === SalesOrder::STATUS_READY) {
-                app(NotificationService::class)->notifyOrderReadyForDelivery($updatedOrder, $user);
+                try {
+                    app(NotificationService::class)->notifyOrderReadyForDelivery($updatedOrder, $user);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for ready order: " . $e->getMessage());
+                }
             }
         }
 
-        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
+        try {
+            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order status change: " . $e->getMessage());
+        }
 
         return $updatedOrder;
     }
@@ -923,7 +939,11 @@ class SalesOrderService
             return $order;
         });
 
-        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        try {
+            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for shared order update: " . $e->getMessage());
+        }
 
         return $updatedOrder;
     }

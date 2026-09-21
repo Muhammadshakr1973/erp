@@ -14,6 +14,7 @@ class PusherService {
   final Ref _ref;
   PusherChannelsFlutter? _pusher;
   bool _isConnected = false;
+  bool _isInitialized = false;
   final Map<String, List<void Function(Map<String, dynamic>)>> _listeners = {};
   
   String? _serverKey;
@@ -23,6 +24,7 @@ class PusherService {
   PusherService(this._ref);
 
   bool get isConnected => _isConnected;
+  bool get isInitialized => _isInitialized;
 
   Future<void> _fetchPusherConfig() async {
     if (_serverKey != null && _serverCluster != null) return;
@@ -52,24 +54,29 @@ class PusherService {
         debugPrint("Pusher Config dynamically loaded: key=$_serverKey, cluster=$_serverCluster");
       }
     } catch (e) {
-      debugPrint("Pusher Config Fetch Error (will fallback to environment/default): $e");
+      debugPrint("Pusher Config Fetch Error: $e");
     } finally {
       _isFetchingConfig = false;
     }
   }
 
   Future<void> init() async {
-    if (_pusher != null) return;
+    if (_isInitialized) return;
 
     try {
-      _pusher = PusherChannelsFlutter.getInstance();
-      
       // Load the key/cluster dynamically from the backend for production safety
       await _fetchPusherConfig();
       
-      final apiKey = _serverKey ?? const String.fromEnvironment('PUSHER_APP_KEY', defaultValue: 'aee37adafc0a3d8a1e04');
-      final cluster = _serverCluster ?? const String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: 'ap2');
+      final apiKey = _serverKey ?? const String.fromEnvironment('PUSHER_APP_KEY', defaultValue: '');
+      final cluster = _serverCluster ?? const String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: '');
 
+      if (apiKey.isEmpty || cluster.isEmpty) {
+        debugPrint("Pusher: No valid apiKey or cluster provided. Realtime pusher events safely disabled.");
+        _isInitialized = false;
+        return;
+      }
+
+      _pusher = PusherChannelsFlutter.getInstance();
       debugPrint("Initializing Pusher with key: $apiKey, cluster: $cluster");
 
       await _pusher!.init(
@@ -133,13 +140,19 @@ class PusherService {
           }
         },
       );
+      _isInitialized = true;
     } catch (e) {
+      _isInitialized = false;
       debugPrint("Pusher Initialization Error: $e");
     }
   }
 
   Future<void> connect() async {
-    await init();
+    if (!_isInitialized) {
+      await init();
+    }
+    if (!_isInitialized) return;
+
     try {
       await _pusher?.connect();
     } catch (e) {
@@ -149,11 +162,14 @@ class PusherService {
 
   Future<void> disconnect() async {
     try {
-      await _pusher?.disconnect();
+      if (_isInitialized) {
+        await _pusher?.disconnect();
+      }
       _listeners.clear();
       _isConnected = false;
       _serverKey = null;
       _serverCluster = null;
+      _isInitialized = false;
       debugPrint("Pusher Disconnected and states cleared.");
     } catch (e) {
       debugPrint("Pusher Disconnect Error: $e");
@@ -184,6 +200,10 @@ class PusherService {
 
     try {
       await connect();
+      if (!_isInitialized) {
+        debugPrint("Pusher not initialized, skipping native subscribe to $channelName (listener registered)");
+        return;
+      }
       await _pusher?.subscribe(channelName: channelName);
       debugPrint("Pusher Subscribed to: $channelName");
     } catch (e) {
@@ -200,6 +220,8 @@ class PusherService {
       }
     }
     _listeners.remove(channelName);
+
+    if (!_isInitialized) return;
 
     try {
       await _pusher?.unsubscribe(channelName: channelName);

@@ -84,7 +84,12 @@ class AuditService
         ];
 
         // Insert directly into audit_logs
-        $auditLog = AuditLog::create($auditData);
+        try {
+            $auditLog = AuditLog::create($auditData);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Failed to record audit log: " . $e->getMessage());
+            $auditLog = new AuditLog($auditData);
+        }
 
         // Also record to legacy sync_logs for backwards compatibility if table exists
         try {
