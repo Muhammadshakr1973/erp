@@ -251,18 +251,61 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   final localBox = ref.watch(localOrdersBoxProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
+  // Check if there is an ID mapping from local ID to server ID
+  String actualOrderId = orderId;
+  try {
+    final idMappingsBox = Hive.box<String>('id_mappings');
+    final mapped = idMappingsBox.get(orderId);
+    if (mapped != null) {
+      actualOrderId = mapped;
+    }
+  } catch (_) {}
+
+  final parsedId = int.tryParse(actualOrderId);
+
+  // If orderId is a local ID (starts with 'local_') or represents a negative ID (local draft/packing order)
+  final isLocal = actualOrderId.startsWith('local_') || (parsedId != null && parsedId < 0);
+  if (isLocal) {
+    String? jsonStr;
+    if (actualOrderId.startsWith('local_')) {
+      jsonStr = localBox.get(actualOrderId);
+    } else {
+      for (final key in localBox.keys) {
+        if (key.toString().startsWith('local_')) {
+          final str = localBox.get(key);
+          if (str != null) {
+            try {
+              final Map<String, dynamic> parsed = jsonDecode(str);
+              if (parsed['id'] == parsedId) {
+                jsonStr = str;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
+    if (jsonStr != null) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(jsonStr);
+        return OrderModel.fromJson(json);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   // If orderId is a real server ID (not a local temporary one)
-  final parsedId = int.tryParse(orderId);
   if (parsedId != null && parsedId > 0) {
     // Subscribe to Pusher channel when this provider is active
     pusher.subscribeToOrder(parsedId, (eventData) {
-      debugPrint("Realtime update for order $orderId: $eventData");
+      debugPrint("Realtime update for order $actualOrderId: $eventData");
 
       // Check for pending local mutations before applying realtime update
       final syncBox = ref.read(syncQueueBoxProvider);
       final hasPendingOp = syncBox.values.any(
         (entry) =>
-            entry.entityId == orderId &&
+            entry.entityId == actualOrderId &&
             (entry.status == 'PENDING' ||
                 entry.status == 'FAILED' ||
                 entry.status == 'SYNCING'),
@@ -275,14 +318,14 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
       final eventVersion = int.tryParse(eventData['version']?.toString() ?? '') ?? 0;
 
       // Coalesce/debounce: ignore if we are already refetching/have refetched this or a newer version
-      final lastRefetched = _lastRefetchedVersions[orderId];
+      final lastRefetched = _lastRefetchedVersions[actualOrderId];
       if (lastRefetched != null && lastRefetched >= eventVersion) {
-        debugPrint("Coalescing: already refetched or processing a version >= $eventVersion for order $orderId");
+        debugPrint("Coalescing: already refetched or processing a version >= $eventVersion for order $actualOrderId");
         return;
       }
 
       // Read current local authoritative order from cache to do version comparison
-      final cachedStr = localBox.get(orderId);
+      final cachedStr = localBox.get(actualOrderId);
       if (cachedStr != null) {
         try {
           final Map<String, dynamic> cachedJson = jsonDecode(cachedStr);
@@ -305,10 +348,10 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
           if (eventVersion == currentVersion + 1) {
             debugPrint("Accepting next expected version $eventVersion");
             if (eventData['authoritative_signal'] == 'refetch') {
-              _lastRefetchedVersions[orderId] = eventVersion;
-              _refetchDebounceTimers[orderId]?.cancel();
-              _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
-                debugPrint("Coalesced refetch triggered for order $orderId at version $eventVersion");
+              _lastRefetchedVersions[actualOrderId] = eventVersion;
+              _refetchDebounceTimers[actualOrderId]?.cancel();
+              _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
+                debugPrint("Coalesced refetch triggered for order $actualOrderId at version $eventVersion");
                 ref.invalidateSelf();
                 ref.invalidate(ordersListProvider);
               });
@@ -317,27 +360,27 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
             // Version skipped (eventVersion > currentVersion + 1)
             // Trigger a full server refetch to heal state.
             debugPrint("Version skipped (event version $eventVersion > expected ${currentVersion + 1}). Invalidating self to refetch.");
-            _lastRefetchedVersions[orderId] = eventVersion;
-            _refetchDebounceTimers[orderId]?.cancel();
-            _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
-              debugPrint("Coalesced refetch (skipped version) triggered for order $orderId at version $eventVersion");
+            _lastRefetchedVersions[actualOrderId] = eventVersion;
+            _refetchDebounceTimers[actualOrderId]?.cancel();
+            _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
+              debugPrint("Coalesced refetch (skipped version) triggered for order $actualOrderId at version $eventVersion");
               ref.invalidateSelf();
               ref.invalidate(ordersListProvider);
             });
           }
         } catch (e) {
-          _lastRefetchedVersions[orderId] = eventVersion;
-          _refetchDebounceTimers[orderId]?.cancel();
-          _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+          _lastRefetchedVersions[actualOrderId] = eventVersion;
+          _refetchDebounceTimers[actualOrderId]?.cancel();
+          _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
             ref.invalidateSelf();
             ref.invalidate(ordersListProvider);
           });
         }
       } else {
         // No local cache yet, refetch
-        _lastRefetchedVersions[orderId] = eventVersion;
-        _refetchDebounceTimers[orderId]?.cancel();
-        _refetchDebounceTimers[orderId] = Timer(const Duration(milliseconds: 300), () {
+        _lastRefetchedVersions[actualOrderId] = eventVersion;
+        _refetchDebounceTimers[actualOrderId]?.cancel();
+        _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
           ref.invalidateSelf();
           ref.invalidate(ordersListProvider);
         });
@@ -346,15 +389,15 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
 
     // Unsubscribe when provider is disposed to clean subscription lifecycle (PRV-001)
     ref.onDispose(() {
-      _refetchDebounceTimers[orderId]?.cancel();
-      _refetchDebounceTimers.remove(orderId);
-      _lastRefetchedVersions.remove(orderId);
+      _refetchDebounceTimers[actualOrderId]?.cancel();
+      _refetchDebounceTimers.remove(actualOrderId);
+      _lastRefetchedVersions.remove(actualOrderId);
       pusher.unsubscribeFromOrder(parsedId);
     });
   }
 
   try {
-    final response = await api.client.get('/orders/$orderId');
+    final response = await api.client.get('/orders/$actualOrderId');
     if (response.statusCode == 200) {
       final data = response.data['data'] ?? response.data;
       if (data is! Map) {
@@ -370,7 +413,7 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
     );
   } catch (e) {
     if (_isNetworkError(e)) {
-      final cachedStr = localBox.get(orderId);
+      final cachedStr = localBox.get(actualOrderId);
       if (cachedStr != null) {
         try {
           final Map<String, dynamic> json = jsonDecode(cachedStr);
