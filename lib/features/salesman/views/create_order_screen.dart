@@ -627,7 +627,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       });
     });
 
-    final String sharedKey = widget.existingOrder!.sharedKey;
+    final String? sharedKey = widget.existingOrder!.sharedKey;
     final int version = widget.existingOrder!.version;
 
     final payload = {
