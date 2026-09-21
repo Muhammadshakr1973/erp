@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_app/features/warehouse/views/orders_to_pack_screen.dart';
+import 'package:pos_app/features/warehouse/views/pack_order_screen.dart';
 import 'package:pos_app/features/warehouse/views/stock_list_screen.dart';
 import 'package:pos_app/features/warehouse/views/warehouse_dashboard_screen.dart';
 import 'package:pos_app/features/warehouse/providers/warehouse_provider.dart';
 import 'package:pos_app/features/warehouse/models/warehouse_order_model.dart';
 import 'package:pos_app/features/warehouse/models/warehouse_stock_model.dart';
+import 'package:pos_app/features/auth/providers/auth_provider.dart';
+import 'package:pos_app/features/auth/models/user_model.dart';
 
 
 void main() {
@@ -249,5 +252,107 @@ void main() {
     expect(find.text('پشکنینی ستۆک'), findsOneWidget);
     expect(find.textContaining('پاکەتکردن'), findsOneWidget);
   });
+
+  group('PackOrderScreen Optimistic Packing Tests', () {
+    final testUser = UserModel(
+      id: 1,
+      name: 'Warehouse User',
+      phone: '07501234567',
+      role: 'warehouse',
+      permissions: ['stock.pack', 'stock.view'],
+    );
+
+    final mockOrder = WarehouseOrderModel(
+      id: 1,
+      orderNumber: 'ORD-999',
+      status: 'PACKING',
+      createdAt: '2026-08-29T10:00:00Z',
+      customerName: 'کڕیاری نموونەیی',
+      items: [
+        WarehouseOrderItemModel(
+          id: 101,
+          productId: 1,
+          productName: 'بۆن گەورە',
+          quantity: 2,
+          isPacked: false,
+        ),
+        WarehouseOrderItemModel(
+          id: 102,
+          productId: 2,
+          productName: 'مەعجون پڕۆ نەسلّی',
+          quantity: 3,
+          isPacked: false,
+        ),
+      ],
+    );
+
+    testWidgets('PackOrderScreen renders items with checkboxes and initial 0 / 2 count', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ordersToPackProvider.overrideWith((ref) => [mockOrder]),
+            authProvider.overrideWith((ref) => MockAuthNotifier(ref, AuthState(user: testUser))),
+          ],
+          child: const MaterialApp(
+            home: PackOrderScreen(orderId: '1'),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('بۆن گەورە'), findsOneWidget);
+      expect(find.text('مەعجون پڕۆ نەسلّی'), findsOneWidget);
+      expect(find.text('0 / 2 تەواوبووە'), findsOneWidget);
+      expect(find.byType(Checkbox), findsNWidgets(2));
+    });
+
+    testWidgets('PackOrderScreen toggles checkbox optimistically without blocking spinner', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ordersToPackProvider.overrideWith((ref) => [mockOrder]),
+            authProvider.overrideWith((ref) => MockAuthNotifier(ref, AuthState(user: testUser))),
+            warehouseActionsProvider.overrideWithValue(FakeWarehouseActions()),
+          ],
+          child: const MaterialApp(
+            home: PackOrderScreen(orderId: '1'),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Tap first checkbox
+      final firstCheckbox = find.byType(Checkbox).first;
+      await tester.tap(firstCheckbox);
+      await tester.pump();
+
+      // Checkbox is still present (not replaced by a big spinner) and counter updated immediately!
+      expect(find.byType(Checkbox), findsNWidgets(2));
+      expect(find.text('1 / 2 تەواوبووە'), findsOneWidget);
+    });
+  });
+}
+
+class MockAuthNotifier extends AuthNotifier {
+  MockAuthNotifier(super.ref, AuthState initialState) {
+    state = initialState;
+  }
+}
+
+class FakeWarehouseActions implements WarehouseActions {
+  final List<int> packedCalls = [];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<void> packItem(int itemId, bool packed) async {
+    packedCalls.add(itemId);
+  }
+
+  @override
+  Future<void> markOrderReady(int orderId) async {}
 }
 

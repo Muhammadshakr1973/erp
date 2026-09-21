@@ -266,7 +266,7 @@ class WarehouseController extends Controller
         }
 
         // Check if status is CONFIRMED or PACKING
-        if ($order->status !== SalesOrder::STATUS_PACKING) {
+        if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
             return response()->json([
                 'message' => 'تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەتوانرێت دەستکاری بکرێت.'
             ], 400);
@@ -334,7 +334,11 @@ class WarehouseController extends Controller
                 ]);
             });
 
-            event(new \App\Events\SalesOrderUpdated($order->fresh(['customer', 'warehouse', 'items.product']), 'pack_item'));
+            try {
+                event(new \App\Events\SalesOrderUpdated($order->fresh(['customer', 'warehouse', 'items.product']), 'pack_item'));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Broadcasting SalesOrderUpdated failed: " . $e->getMessage());
+            }
 
             return response()->json([
                 'message' => $packed ? 'کاڵاکە بە سەرکەوتوویی پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',

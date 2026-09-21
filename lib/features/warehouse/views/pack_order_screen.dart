@@ -26,27 +26,25 @@ class PackOrderScreen extends ConsumerStatefulWidget {
 }
 
 class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
-  final Set<int> _packingItemIds = {};
+  final Map<int, bool> _optimisticPackedStates = {};
+  final Set<int> _pendingItemIds = {};
   bool _isSubmittingReady = false;
 
   Future<void> _togglePack(WarehouseOrderItemModel item, bool value) async {
-    if (_packingItemIds.contains(item.id)) return;
-
+    // 1. Instant Optimistic UI Update (0ms delay)
     setState(() {
-      _packingItemIds.add(item.id);
+      _optimisticPackedStates[item.id] = value;
+      _pendingItemIds.add(item.id);
     });
 
     try {
       await ref.read(warehouseActionsProvider).packItem(item.id, value);
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: value ? 'کاڵاکە پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
-          type: value ? SnackbarType.success : SnackbarType.info,
-        );
-      }
     } catch (e) {
       if (mounted) {
+        // Rollback state if server returns error
+        setState(() {
+          _optimisticPackedStates[item.id] = !value;
+        });
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -64,9 +62,41 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _packingItemIds.remove(item.id);
+          _pendingItemIds.remove(item.id);
         });
       }
+    }
+  }
+
+  Future<void> _packAll(WarehouseOrderModel order) async {
+    final unpackedItems = order.items.where((item) {
+      final isPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
+      return !isPacked;
+    }).toList();
+
+    if (unpackedItems.isEmpty) return;
+
+    setState(() {
+      for (final item in unpackedItems) {
+        _optimisticPackedStates[item.id] = true;
+        _pendingItemIds.add(item.id);
+      }
+    });
+
+    for (final item in unpackedItems) {
+      ref.read(warehouseActionsProvider).packItem(item.id, true).catchError((e) {
+        if (mounted) {
+          setState(() {
+            _optimisticPackedStates[item.id] = false;
+          });
+        }
+      }).whenComplete(() {
+        if (mounted) {
+          setState(() {
+            _pendingItemIds.remove(item.id);
+          });
+        }
+      });
     }
   }
 
@@ -74,7 +104,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     if (_isSubmittingReady) return;
 
     // Check if some items are not packed and confirm partial ready
-    final bool hasUnpacked = order.items.any((e) => !e.isPacked);
+    final bool hasUnpacked = order.items.any((e) => !(_optimisticPackedStates[e.id] ?? e.isPacked));
     if (hasUnpacked) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -110,6 +140,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           message: 'پسوڵەکە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا',
           type: SnackbarType.success,
         );
+        ref.invalidate(ordersToPackProvider);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -149,7 +180,8 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       }
 
       if (item != null) {
-        if (item.isPacked) {
+        final currentPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
+        if (currentPacked) {
           AppSnackbar.show(
             context,
             message: 'ئەم کاڵایە پێشتر پاکەتکراوە',
@@ -170,9 +202,16 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PermissionGuard(
-      permission: 'stock.pack',
-      child: _buildScaffold(context),
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          ref.invalidate(ordersToPackProvider);
+        }
+      },
+      child: PermissionGuard(
+        permission: 'stock.pack',
+        child: _buildScaffold(context),
+      ),
     );
   }
 
@@ -199,9 +238,20 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
               }
               if (foundOrder != null) {
                 final WarehouseOrderModel currentOrder = foundOrder;
-                return IconButton(
-                  icon: const Icon(AppIcons.scan),
-                  onPressed: () => _onScanBarcode(currentOrder),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.done_all),
+                      tooltip: 'پاکەتکردنی هەمووی',
+                      onPressed: () => _packAll(currentOrder),
+                    ),
+                    IconButton(
+                      icon: const Icon(AppIcons.scan),
+                      tooltip: 'سکانی باڕکۆد',
+                      onPressed: () => _onScanBarcode(currentOrder),
+                    ),
+                  ],
                 );
               }
               return const SizedBox.shrink();
@@ -256,7 +306,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           final WarehouseOrderModel currentOrder = foundOrder;
           final int totalItemsCount = currentOrder.items.length;
           final int packedItemsCount = currentOrder.items
-              .where((e) => e.isPacked)
+              .where((e) => _optimisticPackedStates[e.id] ?? e.isPacked)
               .length;
           final bool isAnyPacked = packedItemsCount > 0;
 
@@ -276,34 +326,22 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                       const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final item = currentOrder.items[index];
-                    final isPacked = item.isPacked;
-                    final isItemLoading = _packingItemIds.contains(item.id);
+                    final isPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
+                    final isPending = _pendingItemIds.contains(item.id);
 
                     return AppCard(
                       child: Row(
                         children: [
-                          if (isItemLoading)
-                            const Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          else
-                            Checkbox(
-                              value: isPacked,
-                              activeColor: AppColors.success,
-                              checkColor: Colors.white,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  _togglePack(item, value);
-                                }
-                              },
-                            ),
+                          Checkbox(
+                            value: isPacked,
+                            activeColor: AppColors.success,
+                            checkColor: Colors.white,
+                            onChanged: (value) {
+                              if (value != null) {
+                                _togglePack(item, value);
+                              }
+                            },
+                          ),
                           const SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: Column(
@@ -319,13 +357,27 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  'بڕ: ${item.quantity} دانە',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: isPacked
-                                        ? Colors.grey
-                                        : theme.colorScheme.primary,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'بڕ: ${item.quantity} دانە',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: isPacked
+                                            ? Colors.grey
+                                            : theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                    if (isPending) ...[
+                                      const SizedBox(width: 8),
+                                      const SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 1.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),

@@ -184,8 +184,8 @@ class WarehouseActions {
         '/warehouse/pack-item',
         data: {'order_item_id': itemId, 'packed': packed},
       );
-      ref.invalidate(ordersToPackProvider);
-      ref.invalidate(warehouseStocksProvider);
+      // Intentionally not invalidating entire list providers on single item pack
+      // to maintain ultra-fast, smooth, optimistic UI interactions.
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -199,6 +199,7 @@ class WarehouseActions {
       );
       ref.invalidate(ordersToPackProvider);
       ref.invalidate(warehouseStocksProvider);
+      ref.invalidate(warehouseDashboardProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
