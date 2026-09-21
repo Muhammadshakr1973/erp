@@ -91,17 +91,27 @@ class PusherService {
         },
         onEvent: (PusherEvent event) {
           debugPrint("Pusher Event Received: ${event.channelName} - ${event.eventName}");
-          final payloadStr = event.data;
-          if (payloadStr != null && payloadStr.isNotEmpty) {
+          final dynamic rawData = event.data;
+          if (rawData != null) {
             try {
-              final Map<String, dynamic> payload = Map<String, dynamic>.from(jsonDecode(payloadStr));
-              final listeners = _listeners[event.channelName];
-              if (listeners != null && listeners.isNotEmpty) {
-                for (final listener in List.of(listeners)) {
-                  try {
-                    listener(payload);
-                  } catch (e) {
-                    debugPrint("Pusher Error in listener callback: $e");
+              Map<String, dynamic>? payload;
+              if (rawData is Map) {
+                payload = Map<String, dynamic>.from(rawData);
+              } else if (rawData is String) {
+                if (rawData.isNotEmpty) {
+                  payload = Map<String, dynamic>.from(jsonDecode(rawData));
+                }
+              }
+              
+              if (payload != null) {
+                final listeners = _listeners[event.channelName];
+                if (listeners != null && listeners.isNotEmpty) {
+                  for (final listener in List.of(listeners)) {
+                    try {
+                      listener(payload);
+                    } catch (e) {
+                      debugPrint("Pusher Error in listener callback: $e");
+                    }
                   }
                 }
               }

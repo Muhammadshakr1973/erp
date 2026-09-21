@@ -200,6 +200,38 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     });
   }
 
+  List<Widget> _buildActions(AsyncValue<List<WarehouseOrderModel>> ordersAsync) {
+    return ordersAsync.maybeWhen(
+      data: (orders) {
+        WarehouseOrderModel? foundOrder;
+        for (final o in orders) {
+          if (o.id.toString() == widget.orderId ||
+              o.orderNumber == widget.orderId) {
+            foundOrder = o;
+            break;
+          }
+        }
+        if (foundOrder != null) {
+          final currentOrder = foundOrder;
+          return [
+            IconButton(
+              icon: const Icon(Icons.done_all),
+              tooltip: 'پاکەتکردنی هەمووی',
+              onPressed: () => _packAll(currentOrder),
+            ),
+            IconButton(
+              icon: const Icon(AppIcons.scan),
+              tooltip: 'سکانی باڕکۆد',
+              onPressed: () => _onScanBarcode(currentOrder),
+            ),
+          ];
+        }
+        return const [];
+      },
+      orElse: () => const [],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -222,43 +254,12 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'پاکەتکردنی پسوڵەی #${widget.orderId}',
+          'پاکەتکردنی #${widget.orderId}',
           style: AppTextStyles.h2,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
-        actions: [
-          ordersAsync.maybeWhen(
-            data: (orders) {
-              WarehouseOrderModel? foundOrder;
-              for (final o in orders) {
-                if (o.id.toString() == widget.orderId ||
-                    o.orderNumber == widget.orderId) {
-                  foundOrder = o;
-                  break;
-                }
-              }
-              if (foundOrder != null) {
-                final WarehouseOrderModel currentOrder = foundOrder;
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.done_all),
-                      tooltip: 'پاکەتکردنی هەمووی',
-                      onPressed: () => _packAll(currentOrder),
-                    ),
-                    IconButton(
-                      icon: const Icon(AppIcons.scan),
-                      tooltip: 'سکانی باڕکۆد',
-                      onPressed: () => _onScanBarcode(currentOrder),
-                    ),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
-        ],
+        actions: _buildActions(ordersAsync),
       ),
       body: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
