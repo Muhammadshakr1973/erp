@@ -8,6 +8,7 @@ import 'package:hive/hive.dart';
 
 import '../api_client.dart';
 import '../../features/shared/providers/customer_provider.dart';
+import '../../features/orders/providers/orders_provider.dart';
 import 'sync_queue_entry.dart';
 
 final syncQueueBoxProvider = Provider<Box<SyncQueueEntry>>((ref) {
@@ -253,8 +254,15 @@ class SyncService {
                   }
                 } catch (_) {}
               }
+
+              // Invalidate providers for order creation
+              ref.invalidate(ordersListProvider);
+              if (entry.entityId != null) {
+                ref.invalidate(singleOrderProvider(entry.entityId!));
+              }
+              ref.invalidate(singleOrderProvider(serverId.toString()));
             }
-          } else if (entry.operationType == 'UPDATE_ORDER') {
+          } else if (entry.operationType == 'UPDATE_ORDER' || entry.operationType == 'UPDATE_ORDER_STATUS') {
             try {
               final localBox = await Hive.openBox<String>('local_orders');
               if (result is Map) {
@@ -266,6 +274,11 @@ class SyncService {
                 }
               }
             } catch (_) {}
+
+            ref.invalidate(ordersListProvider);
+            if (entry.entityId != null) {
+              ref.invalidate(singleOrderProvider(entry.entityId!));
+            }
           } else if (entry.operationType == 'UPDATE_CUSTOMER' ||
               entry.operationType == 'CREATE_CUSTOMER') {
             ref.invalidate(customerListProvider);
@@ -273,6 +286,15 @@ class SyncService {
             final cId = int.tryParse(entry.entityId ?? '');
             if (cId != null) {
               ref.invalidate(singleCustomerProvider(cId));
+            }
+          } else if (entry.operationType == 'CREATE_PAYMENT') {
+            ref.invalidate(customerListProvider);
+            ref.invalidate(filteredCustomerListProvider);
+            if (entry.payload != null && entry.payload['customer_id'] != null) {
+              final cId = int.tryParse(entry.payload['customer_id'].toString());
+              if (cId != null) {
+                ref.invalidate(singleCustomerProvider(cId));
+              }
             }
           }
         } on DioException catch (e) {
@@ -549,15 +571,59 @@ class SyncService {
     }
   }
 
+  Future<void> _clearPendingSyncForEntity(String? entityId, String operationType) async {
+    if (entityId == null) return;
+    try {
+      if (operationType.contains('ORDER')) {
+        final localBox = await Hive.openBox<String>('local_orders');
+        String keyToUse = entityId;
+        String? existingStr = localBox.get(entityId);
+        if (existingStr == null) {
+          // Check negative ID mapping
+          final parsedId = int.tryParse(entityId);
+          if (parsedId != null && parsedId < 0) {
+            for (final key in localBox.keys) {
+              if (key.toString().startsWith('local_')) {
+                final str = localBox.get(key);
+                if (str != null) {
+                  try {
+                    final Map<String, dynamic> parsed = jsonDecode(str);
+                    if (parsed['id'] == parsedId) {
+                      keyToUse = key.toString();
+                      existingStr = str;
+                      break;
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+          }
+        }
+        if (existingStr != null) {
+          final Map<String, dynamic> json = Map<String, dynamic>.from(jsonDecode(existingStr));
+          json['pending_sync'] = false;
+          await localBox.put(keyToUse, jsonEncode(json));
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> clearFailedOperations() async {
     final failedKeys = box.keys.where((k) {
       final entry = box.get(k);
       return entry?.status == 'FAILED';
     }).toList();
     for (final key in failedKeys) {
+      final entry = box.get(key);
+      if (entry != null) {
+        await _clearPendingSyncForEntity(entry.entityId, entry.operationType);
+      }
       await box.delete(key);
     }
     ref.invalidate(syncStatusProvider);
+    ref.invalidate(ordersListProvider);
+    ref.invalidate(customerListProvider);
+    ref.invalidate(filteredCustomerListProvider);
   }
 
   Future<void> clearCompletedOperations() async {

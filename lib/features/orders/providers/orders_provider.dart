@@ -634,14 +634,6 @@ class OrderActions {
 
   Future<void> updateOrder(int orderId, Map<String, dynamic> data) async {
     final entityId = orderId.toString();
-
-    await syncService.enqueueOperation(
-      entityId: entityId,
-      operationType: 'UPDATE_ORDER',
-      payload: data,
-    );
-
-    // Optimistically update the existing cached order
     final localBox = ref.read(localOrdersBoxProvider);
 
     String keyToUse = entityId;
@@ -665,6 +657,29 @@ class OrderActions {
       }
     }
 
+    // Resolve the most up-to-date version from the local cache to avoid ConcurrencyConflictException
+    int resolvedVersion = data['version'] ?? 1;
+    if (existingStr != null) {
+      try {
+        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(
+          jsonDecode(existingStr),
+        );
+        final int localBoxVersion = existingJson['version'] ?? 1;
+        if (localBoxVersion > resolvedVersion) {
+          resolvedVersion = localBoxVersion;
+        }
+      } catch (_) {}
+    }
+
+    final Map<String, dynamic> resolvedPayload = Map<String, dynamic>.from(data);
+    resolvedPayload['version'] = resolvedVersion;
+
+    await syncService.enqueueOperation(
+      entityId: entityId,
+      operationType: 'UPDATE_ORDER',
+      payload: resolvedPayload,
+    );
+
     if (existingStr != null) {
       try {
         final Map<String, dynamic> existingJson = Map<String, dynamic>.from(
@@ -672,8 +687,8 @@ class OrderActions {
         );
 
         final mergedData = <String, dynamic>{...existingJson};
-        for (final key in data.keys) {
-          mergedData[key] = data[key];
+        for (final key in resolvedPayload.keys) {
+          mergedData[key] = resolvedPayload[key];
         }
 
         final updatedJson = _buildOptimisticOrderJson(
@@ -690,37 +705,37 @@ class OrderActions {
         updatedJson['order_number'] =
             existingJson['order_number'] ?? updatedJson['order_number'];
         updatedJson['shared_key'] =
-            data['shared_key'] ?? existingJson['shared_key'];
+            resolvedPayload['shared_key'] ?? existingJson['shared_key'];
         updatedJson['version'] =
-            data['version'] ?? existingJson['version'] ?? 1;
+            resolvedPayload['version'] ?? existingJson['version'] ?? 1;
         updatedJson['customer_id'] =
-            data['customer_id'] ?? existingJson['customer_id'];
+            resolvedPayload['customer_id'] ?? existingJson['customer_id'];
         updatedJson['salesman_id'] =
-            data['salesman_id'] ?? existingJson['salesman_id'];
+            resolvedPayload['salesman_id'] ?? existingJson['salesman_id'];
         updatedJson['warehouse_id'] =
-            data['warehouse_id'] ?? existingJson['warehouse_id'];
+            resolvedPayload['warehouse_id'] ?? existingJson['warehouse_id'];
         updatedJson['created_at'] =
             existingJson['created_at'] ?? updatedJson['created_at'];
 
-        if (data['customer'] != null) {
-          updatedJson['customer'] = data['customer'];
+        if (resolvedPayload['customer'] != null) {
+          updatedJson['customer'] = resolvedPayload['customer'];
         } else if (existingJson['customer'] != null) {
           updatedJson['customer'] = existingJson['customer'];
         }
 
-        if (data['salesman'] != null) {
-          updatedJson['salesman'] = data['salesman'];
+        if (resolvedPayload['salesman'] != null) {
+          updatedJson['salesman'] = resolvedPayload['salesman'];
         } else if (existingJson['salesman'] != null) {
           updatedJson['salesman'] = existingJson['salesman'];
         }
 
-        if (data['warehouse'] != null) {
-          updatedJson['warehouse'] = data['warehouse'];
+        if (resolvedPayload['warehouse'] != null) {
+          updatedJson['warehouse'] = resolvedPayload['warehouse'];
         } else if (existingJson['warehouse'] != null) {
           updatedJson['warehouse'] = existingJson['warehouse'];
         }
 
-        if (data['items'] == null) {
+        if (resolvedPayload['items'] == null) {
           updatedJson['items'] = existingJson['items'];
           updatedJson['subtotal'] = existingJson['subtotal'];
           updatedJson['discount_amount'] = existingJson['discount_amount'];
