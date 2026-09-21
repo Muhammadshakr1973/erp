@@ -96,25 +96,39 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 crossAxisCount = 3;
               }
 
+              final childAspectRatio = constraints.maxWidth >= 1024
+                  ? 1.4
+                  : (constraints.maxWidth >= 600 ? 1.25 : 1.08);
+
               return GridView.count(
                 crossAxisCount: crossAxisCount,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: AppSpacing.md,
                 mainAxisSpacing: AppSpacing.md,
-                childAspectRatio: 1.5,
+                childAspectRatio: childAspectRatio,
                 children: List.generate(
                   3,
                   (index) => const AppCard(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         LoadingSkeleton(width: 32, height: 32),
-                        SizedBox(height: AppSpacing.sm),
-                        LoadingSkeleton(width: 80, height: 14),
-                        SizedBox(height: 6),
-                        LoadingSkeleton(width: 50, height: 22),
+                        SizedBox(height: 4),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LoadingSkeleton(width: 80, height: 14),
+                            SizedBox(height: 4),
+                            LoadingSkeleton(width: 50, height: 22),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -153,13 +167,17 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 crossAxisCount = 3;
               }
 
+              final childAspectRatio = constraints.maxWidth >= 1024
+                  ? 1.4
+                  : (constraints.maxWidth >= 600 ? 1.25 : 1.08);
+
               return GridView.count(
                 crossAxisCount: crossAxisCount,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: AppSpacing.md,
                 mainAxisSpacing: AppSpacing.md,
-                childAspectRatio: 1.45,
+                childAspectRatio: childAspectRatio,
                 children: [
                   _buildInteractiveStatCard(
                     title: 'چاوەڕوانی پاکەتکردن',
@@ -219,9 +237,13 @@ class WarehouseDashboardScreen extends ConsumerWidget {
   }) {
     return AppCard(
       onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -232,7 +254,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 22),
               ),
               if (onTap != null)
                 const Icon(
@@ -242,17 +264,34 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(title, style: AppTextStyles.caption),
-          const SizedBox(height: 2),
-          Text(value, style: AppTextStyles.h2),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondaryLight,
-              fontSize: 11,
-            ),
+          const SizedBox(height: 4),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.caption,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: AppTextStyles.h2,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondaryLight,
+                  fontSize: 11,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ],
       ),
@@ -264,30 +303,39 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     WarehouseDashboardData data,
   ) {
-    return Row(
-      children: [
-        Expanded(
-          child: AppButton(
-            text: 'پاکەتکردنی پسوڵەکان (${data.pendingPackingCount})',
-            icon: AppIcons.orderStatus,
-            onPressed: () {
-              ref.read(warehouseTabIndexProvider.notifier).state = 1;
-            },
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: AppButton(
-            text: 'پشکنینی ستۆک',
-            icon: Icons.inventory_2_outlined,
-            type: AppButtonType.outline,
-            onPressed: () {
-              ref.read(warehouseLowStockFilterProvider.notifier).state = false;
-              ref.read(warehouseTabIndexProvider.notifier).state = 2;
-            },
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 400;
+        final packingText = isCompact
+            ? 'پاکەتکردن (${data.pendingPackingCount})'
+            : 'پاکەتکردنی پسوڵەکان (${data.pendingPackingCount})';
+
+        return Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                text: packingText,
+                icon: AppIcons.orderStatus,
+                onPressed: () {
+                  ref.read(warehouseTabIndexProvider.notifier).state = 1;
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: AppButton(
+                text: 'پشکنینی ستۆک',
+                icon: Icons.inventory_2_outlined,
+                type: AppButtonType.outline,
+                onPressed: () {
+                  ref.read(warehouseLowStockFilterProvider.notifier).state = false;
+                  ref.read(warehouseTabIndexProvider.notifier).state = 2;
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

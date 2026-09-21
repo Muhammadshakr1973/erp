@@ -208,5 +208,46 @@ void main() {
     expect(find.text('هەڵە لە پەیوەندی سێرڤەر'), findsOneWidget);
     expect(find.text('دووبارە هەوڵبدەرەوە'), findsOneWidget);
   });
+
+  testWidgets('WarehouseDashboardScreen renders quick action buttons and stat cards cleanly on small screens', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final mockData = WarehouseDashboardData(
+      warehouseId: 1,
+      warehouseName: 'کۆگای سەرەکی',
+      pendingPackingCount: 0,
+      readyTodayCount: 0,
+      lowStockCount: 0,
+      recentOrders: [],
+      lowStockItems: [],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          warehouseDashboardProvider.overrideWith((ref) => mockData),
+        ],
+        child: const MaterialApp(
+          home: WarehouseDashboardScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Verify stat cards are rendered
+    expect(find.text('چاوەڕوانی پاکەتکردن'), findsOneWidget);
+    expect(find.text('ئامادەکراوی ئەمڕۆ'), findsOneWidget);
+    expect(find.text('کاڵای کەمبوو'), findsOneWidget);
+
+    // Verify quick action buttons are rendered without overflow
+    expect(find.text('پشکنینی ستۆک'), findsOneWidget);
+    expect(find.textContaining('پاکەتکردن'), findsOneWidget);
+  });
 }
 

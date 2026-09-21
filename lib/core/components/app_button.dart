@@ -95,6 +95,8 @@ class AppButton extends StatelessWidget {
         color: textColor,
         fontSize: size == AppButtonSize.sm ? 13 : 15,
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
 
     if (isLoading) {
@@ -122,6 +124,11 @@ class AppButton extends StatelessWidget {
       );
     }
 
+    final buttonContent = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: content,
+    );
+
     return SizedBox(
       height: height,
       width: width,
@@ -132,9 +139,9 @@ class AppButton extends StatelessWidget {
                 foregroundColor: textColor,
                 side: BorderSide(color: borderColor, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              child: content,
+              child: buttonContent,
             )
           : type == AppButtonType.text
           ? TextButton(
@@ -142,9 +149,9 @@ class AppButton extends StatelessWidget {
               style: TextButton.styleFrom(
                 foregroundColor: textColor,
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              child: content,
+              child: buttonContent,
             )
           : ElevatedButton(
               onPressed: isDisabled ? null : onPressed,
@@ -153,9 +160,9 @@ class AppButton extends StatelessWidget {
                 backgroundColor: backgroundColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              child: content,
+              child: buttonContent,
             ),
     );
   }
