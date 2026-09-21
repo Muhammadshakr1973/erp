@@ -28,16 +28,19 @@ class SyncService {
 
   // To avoid running syncs concurrently
   Timer? _syncTimer;
+  Timer? _retryTimer;
+  int _consecutiveNetworkErrors = 0;
 
   SyncService(this.api, this.box, this.ref) {
-    // Attempt sync periodically or on init
-    _syncTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+    // Attempt sync periodically or on init (every 20 seconds for faster auto-sync)
+    _syncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       syncPendingOperations();
     });
   }
 
   void dispose() {
     _syncTimer?.cancel();
+    _retryTimer?.cancel();
   }
 
   Future<void> enqueueOperation({
@@ -73,7 +76,8 @@ class SyncService {
         entry.retryCount = 0;
         await entry.save();
         
-        // Attempt sync immediately
+        // Attempt sync immediately with fresh retry budget
+        _consecutiveNetworkErrors = 0;
         syncPendingOperations();
         return;
       }
@@ -92,7 +96,8 @@ class SyncService {
     entry.payload = payload;
     await box.put(entry.id, entry);
 
-    // Attempt sync immediately
+    // Attempt sync immediately with fresh retry budget
+    _consecutiveNetworkErrors = 0;
     syncPendingOperations();
   }
 
@@ -152,6 +157,8 @@ class SyncService {
           entry.status = 'COMPLETED';
           entry.syncResult = result;
           await entry.save();
+          
+          _consecutiveNetworkErrors = 0; // Reset network error count on success
 
           // Look-ahead version adjustment for subsequent updates of the same entity
           if (entry.operationType == 'UPDATE_ORDER' || entry.operationType == 'CREATE_ORDER') {
@@ -321,6 +328,7 @@ class SyncService {
             entry.status = 'PENDING'; // Keep pending for network recovery
             entry.errorInformation = 'کێشەی هێڵ: ${api.parseError(e)}';
             await entry.save();
+            _scheduleRetry(); // Automatically retry and try again
             break; // Stop syncing other items if network is down
           } else {
             entry.status = 'FAILED';
@@ -526,6 +534,19 @@ class SyncService {
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.connectionError;
+  }
+
+  void _scheduleRetry() {
+    if (_retryTimer != null && _retryTimer!.isActive) return;
+    
+    // Retry up to 3 times with progressive delays (5s, 10s, 15s)
+    if (_consecutiveNetworkErrors < 3) {
+      _consecutiveNetworkErrors++;
+      final delaySeconds = 5 * _consecutiveNetworkErrors;
+      _retryTimer = Timer(Duration(seconds: delaySeconds), () {
+        syncPendingOperations();
+      });
+    }
   }
 
   Future<void> clearFailedOperations() async {
