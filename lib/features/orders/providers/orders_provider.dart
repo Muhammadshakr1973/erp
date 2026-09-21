@@ -47,6 +47,17 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final localBox = ref.watch(localOrdersBoxProvider);
   final syncBox = ref.watch(syncQueueBoxProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  // Subscribe to real-time order updates
+  pusher.subscribeToChannel('private-orders', (eventData) {
+    debugPrint("Realtime update received on private-orders channel: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders');
+  });
 
   try {
     final response = await api.client.get('/orders');

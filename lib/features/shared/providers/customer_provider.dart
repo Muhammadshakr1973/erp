@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/models/paginated_response.dart';
 import '../models/customer.dart';
@@ -50,6 +52,17 @@ final filteredCustomerListProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      pusher.subscribeToChannel('private-customers', (eventData) {
+        debugPrint("Realtime update received on private-customers channel: $eventData");
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-customers');
+      });
+
       try {
         final response = await api.client.get(
           '/customers',
@@ -99,6 +112,17 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   id,
 ) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  pusher.subscribeToChannel('private-customers', (eventData) {
+    debugPrint("Realtime update received on private-customers channel for singleCustomer: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-customers');
+  });
+
   try {
     final response = await api.client.get('/customers/$id');
     if (response.statusCode == 200) {

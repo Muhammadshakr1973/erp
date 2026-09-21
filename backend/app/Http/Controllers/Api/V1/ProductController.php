@@ -68,6 +68,8 @@ class ProductController extends Controller
             );
         }
 
+        event(new \App\Events\ProductStockUpdated($product, 'create'));
+
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی زیادکرا',
             'data' => $product->load(['category', 'supplier', 'stocks'])
@@ -125,6 +127,8 @@ class ProductController extends Controller
             }
         }
 
+        event(new \App\Events\ProductStockUpdated($product, 'update'));
+
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی نوێکرایەوە',
             'data' => $product->load(['category', 'supplier', 'stocks'])
@@ -133,7 +137,11 @@ class ProductController extends Controller
 
     public function destroy(Product $product): JsonResponse
     {
+        $productId = $product->id;
         $product->delete();
+        
+        event(new \App\Events\ProductStockUpdated(null, 'delete', $productId));
+
         return response()->json([
             'message' => 'کاڵاکە سڕدرایەوە'
         ]);

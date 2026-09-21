@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\SalesOrder;
+use App\Models\Product;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -10,27 +10,24 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class SalesOrderUpdated implements ShouldBroadcast
+class ProductStockUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * Broadcast after database transactions are committed.
-     *
-     * @var bool
-     */
     public $afterCommit = true;
 
-    public SalesOrder $order;
+    public ?Product $product;
     public string $actionType;
+    public ?int $productId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(SalesOrder $order, string $actionType = 'update')
+    public function __construct(?Product $product, string $actionType = 'update', ?int $productId = null)
     {
-        $this->order = $order;
+        $this->product = $product;
         $this->actionType = $actionType;
+        $this->productId = $productId ?? ($product ? $product->id : null);
     }
 
     /**
@@ -41,8 +38,7 @@ class SalesOrderUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('sales-order.' . $this->order->id),
-            new PrivateChannel('orders'),
+            new PrivateChannel('products'),
         ];
     }
 
@@ -51,7 +47,7 @@ class SalesOrderUpdated implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'sales-order.updated';
+        return 'product.updated';
     }
 
     /**
@@ -63,10 +59,7 @@ class SalesOrderUpdated implements ShouldBroadcast
     {
         return [
             'event_type' => $this->actionType,
-            'sales_order_id' => $this->order->id,
-            'shared_key' => $this->order->shared_key,
-            'version' => (int) $this->order->version,
-            'status' => $this->order->status,
+            'product_id' => $this->productId,
             'changed_at' => now()->toIso8601String(),
             'authoritative_signal' => 'refetch',
         ];

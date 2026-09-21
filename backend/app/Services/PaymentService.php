@@ -139,6 +139,8 @@ class PaymentService
             $user
         );
 
+        event(new \App\Events\CustomerAccountUpdated(null, 'payment_received', $result['payment']->customer_id));
+
         return $result['payment'];
     }
 }

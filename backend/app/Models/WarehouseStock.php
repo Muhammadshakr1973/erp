@@ -166,6 +166,8 @@ class WarehouseStock extends Model
                 $userId
             );
 
+            event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
+
             return $transaction;
         });
     }
@@ -225,6 +227,8 @@ class WarehouseStock extends Model
                 $userId
             );
 
+            event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
+
             return $transaction;
         });
     }
@@ -266,6 +270,8 @@ class WarehouseStock extends Model
                     $referenceId,
                     $userId
                 );
+
+                event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
 
                 return $transaction;
             }

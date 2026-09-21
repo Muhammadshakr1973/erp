@@ -1,10 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../models/product_model.dart';
 
 final productsListProvider = FutureProvider<List<ProductModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  // Subscribe to real-time product/stock updates
+  pusher.subscribeToChannel('private-products', (eventData) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-products');
+  });
+
   try {
     final response = await api.client.get('/products');
     if (response.statusCode == 200) {

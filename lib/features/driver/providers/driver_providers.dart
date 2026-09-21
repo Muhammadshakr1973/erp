@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/delivery_trip_model.dart';
@@ -49,6 +51,17 @@ final activeDriversProvider = FutureProvider<List<DriverUserSummary>>((ref) asyn
 
 final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+    debugPrint("Realtime update received on private-delivery-trips: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-delivery-trips');
+  });
+
   try {
     final response = await api.client.get('/delivery-trips');
     if (response.statusCode == 200) {
@@ -70,6 +83,17 @@ final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async 
 final tripDetailProvider =
     FutureProvider.family<DeliveryTripModel, int>((ref, tripId) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+    debugPrint("Realtime update received on private-delivery-trips for single trip: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-delivery-trips');
+  });
+
   try {
     final response = await api.client.get('/delivery-trips/$tripId');
     if (response.statusCode == 200) {

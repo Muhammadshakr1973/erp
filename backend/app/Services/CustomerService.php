@@ -92,6 +92,8 @@ class CustomerService
                 ]);
             }
 
+            event(new \App\Events\CustomerAccountUpdated($customer, 'create'));
+
             return $customer;
         });
     }
@@ -106,12 +108,22 @@ class CustomerService
             $data['route_id'] = $defaultRoute->id;
         }
         $customer->update($data);
-        return $customer->fresh();
+        
+        $updated = $customer->fresh();
+        event(new \App\Events\CustomerAccountUpdated($updated, 'update'));
+        
+        return $updated;
     }
 
     public function deleteCustomer(Customer $customer): bool
     {
-        // سڕینەوەی نەرم (Soft Delete) جێبەجێ دەکات بەپێی مۆدێلەکەت
-        return $customer->delete();
+        $customerId = $customer->id;
+        $deleted = $customer->delete();
+        
+        if ($deleted) {
+            event(new \App\Events\CustomerAccountUpdated(null, 'delete', $customerId));
+        }
+        
+        return $deleted;
     }
 }

@@ -156,7 +156,15 @@ class PusherService {
 
   Future<void> subscribeToOrder(int orderId, void Function(Map<String, dynamic>) onUpdate) async {
     final channelName = 'private-sales-order.$orderId';
-    
+    await subscribeToChannel(channelName, onUpdate);
+  }
+
+  Future<void> unsubscribeFromOrder(int orderId) async {
+    final channelName = 'private-sales-order.$orderId';
+    await unsubscribeFromChannel(channelName);
+  }
+
+  Future<void> subscribeToChannel(String channelName, void Function(Map<String, dynamic>) onUpdate) async {
     // Check if subscription listener is already present to prevent duplicate listeners
     final alreadySubscribed = _listeners.containsKey(channelName);
     _listeners[channelName] = onUpdate;
@@ -175,8 +183,7 @@ class PusherService {
     }
   }
 
-  Future<void> unsubscribeFromOrder(int orderId) async {
-    final channelName = 'private-sales-order.$orderId';
+  Future<void> unsubscribeFromChannel(String channelName) async {
     _listeners.remove(channelName);
 
     try {

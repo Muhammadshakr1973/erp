@@ -85,6 +85,8 @@ class DeliveryTripService
         // Notify driver after trip transaction commits
         app(NotificationService::class)->notifyDeliveryTripAssigned($trip);
 
+        event(new \App\Events\DeliveryTripUpdated($trip, 'create'));
+
         return $trip;
     }
 
@@ -228,6 +230,11 @@ class DeliveryTripService
             $user
         );
 
+        event(new \App\Events\DeliveryTripUpdated($result['trip_order']->trip, 'deliver_order'));
+        if ($result['payment']) {
+            event(new \App\Events\CustomerAccountUpdated(null, 'payment_received', $result['payment']->customer_id));
+        }
+
         return $result['trip_order'];
     }
 
@@ -297,6 +304,8 @@ class DeliveryTripService
 
         // Notifications AFTER commit
         app(NotificationService::class)->notifyOrderDeliveryFailed($tripOrder->order, $tripOrder->failed_reason, $user);
+
+        event(new \App\Events\DeliveryTripUpdated($tripOrder->trip, 'fail_order'));
 
         return $tripOrder;
     }

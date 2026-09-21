@@ -54,3 +54,20 @@ Broadcast::channel('sales-order.{id}', function (User $user, int $id) {
 
     return false;
 });
+
+Broadcast::channel('orders', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('products', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('customers', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('delivery-trips', function (User $user) {
+    return (bool) $user->is_active;
+});
+
