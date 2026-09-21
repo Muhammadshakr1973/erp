@@ -28,7 +28,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/proxy-image', [CustomerController::class, 'proxyImage']);
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
-    Route::middleware(['auth:sanctum', 'active', 'throttle:60,1'])->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
 
         Broadcast::routes();
 
