@@ -334,6 +334,8 @@ class WarehouseController extends Controller
                 ]);
             });
 
+            event(new \App\Events\SalesOrderUpdated($order->fresh(['customer', 'warehouse', 'items.product']), 'pack_item'));
+
             return response()->json([
                 'message' => $packed ? 'کاڵاکە بە سەرکەوتوویی پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
                 'data' => $order->fresh(['customer', 'warehouse', 'items.product'])

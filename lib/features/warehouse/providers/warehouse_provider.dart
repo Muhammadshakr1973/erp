@@ -1,11 +1,27 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
 final ordersToPackProvider = FutureProvider<List<WarehouseOrderModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onOrdersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Pusher: Realtime update received on ordersToPackProvider: $eventData");
+    ref.invalidateSelf();
+    ref.invalidate(warehouseDashboardProvider);
+  }
+
+  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+  });
+
   try {
     final response = await api.client.get('/warehouse/orders-to-pack');
     if (response.statusCode == 200) {
@@ -46,6 +62,18 @@ class WarehouseDashboardData {
 
 final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onOrdersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Pusher: Realtime update received on warehouseDashboardProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+  });
 
   try {
     final response = await api.client.get('/warehouse/dashboard');
@@ -100,6 +128,20 @@ final warehouseDashboardProvider = FutureProvider<WarehouseDashboardData>((ref) 
 
 final warehouseStocksProvider = FutureProvider<List<WarehouseStockModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onProductStockEvent(Map<String, dynamic> eventData) {
+    debugPrint("Pusher: Realtime update received on warehouseStocksProvider: $eventData");
+    ref.invalidateSelf();
+    ref.invalidate(warehouseDashboardProvider);
+  }
+
+  pusher.subscribeToChannel('private-products', onProductStockEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-products', onProductStockEvent);
+  });
+
   try {
     final response = await api.client.get('/warehouse/stock');
     if (response.statusCode == 200) {

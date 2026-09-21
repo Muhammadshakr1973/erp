@@ -222,5 +222,51 @@ void main() {
       expect(defaultKey, equals('aee37adafc0a3d8a1e04'));
       expect(defaultCluster, equals('ap2'));
     });
+
+    test('9. Multi-Subscriber Channel: multiple providers receive real-time events on private-orders', () {
+      final Map<String, List<void Function(Map<String, dynamic>)>> listeners = {};
+      int ordersToPackInvalidations = 0;
+      int warehouseDashboardInvalidations = 0;
+      int adminDashboardInvalidations = 0;
+
+      void subscribeToChannel(String channelName, void Function(Map<String, dynamic>) onUpdate) {
+        listeners.putIfAbsent(channelName, () => []);
+        listeners[channelName]!.add(onUpdate);
+      }
+
+      void ordersToPackCallback(Map<String, dynamic> data) => ordersToPackInvalidations++;
+      void warehouseDashboardCallback(Map<String, dynamic> data) => warehouseDashboardInvalidations++;
+      void adminDashboardCallback(Map<String, dynamic> data) => adminDashboardInvalidations++;
+
+      // Register all 3 providers
+      subscribeToChannel('private-orders', ordersToPackCallback);
+      subscribeToChannel('private-orders', warehouseDashboardCallback);
+      subscribeToChannel('private-orders', adminDashboardCallback);
+
+      expect(listeners['private-orders']!.length, equals(3));
+
+      // Simulate Pusher event arrival
+      final eventData = {'action': 'create', 'authoritative_signal': 'refetch'};
+      for (final listener in listeners['private-orders']!) {
+        listener(eventData);
+      }
+
+      expect(ordersToPackInvalidations, equals(1));
+      expect(warehouseDashboardInvalidations, equals(1));
+      expect(adminDashboardInvalidations, equals(1));
+
+      // Unsubscribe one provider on dispose
+      listeners['private-orders']!.remove(ordersToPackCallback);
+      expect(listeners['private-orders']!.length, equals(2));
+
+      // Fire second event
+      for (final listener in listeners['private-orders']!) {
+        listener(eventData);
+      }
+
+      expect(ordersToPackInvalidations, equals(1)); // Was not invoked again
+      expect(warehouseDashboardInvalidations, equals(2));
+      expect(adminDashboardInvalidations, equals(2));
+    });
   });
 }

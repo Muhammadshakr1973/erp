@@ -1,10 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
 import '../../models/dashboard_model.dart';
 
 final dashboardProvider = FutureProvider<DashboardModel>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onOrdersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Pusher: Realtime update received on admin dashboardProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+  });
+
   try {
     final response = await api.client.get('/reports/dashboard');
     if (response.statusCode == 200) {

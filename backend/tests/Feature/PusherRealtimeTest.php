@@ -263,4 +263,73 @@ class PusherRealtimeTest extends TestCase
 
         Event::assertNotDispatched(SalesOrderUpdated::class);
     }
+
+    /** @test */
+    public function standard_order_without_shared_key_dispatches_sales_order_updated()
+    {
+        Event::fake([SalesOrderUpdated::class]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'status' => SalesOrder::STATUS_DRAFT,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)
+            ->postJson('/api/v1/orders', $payload);
+
+        $response->assertStatus(201);
+
+        Event::assertDispatched(SalesOrderUpdated::class, function ($event) {
+            $this->assertEquals('create', $event->actionType);
+            $this->assertEquals('refetch', $event->broadcastWith()['authoritative_signal']);
+            $channels = $event->broadcastOn();
+            $this->assertCount(2, $channels);
+            return true;
+        });
+    }
+
+    /** @test */
+    public function updating_order_items_dispatches_sales_order_updated()
+    {
+        Event::fake([SalesOrderUpdated::class]);
+
+        $order = SalesOrder::create([
+            'order_number' => 'ORD-STD-UPDATE',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_DRAFT,
+            'version' => 1,
+        ]);
+
+        $payload = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'notes' => 'Updated order note',
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 4,
+                ]
+            ]
+        ];
+
+        $response = $this->actingAs($this->salesman)
+            ->putJson('/api/v1/orders/' . $order->id, $payload);
+
+        $response->assertStatus(200);
+
+        Event::assertDispatched(SalesOrderUpdated::class, function ($event) {
+            $this->assertEquals('update', $event->actionType);
+            return true;
+        });
+    }
 }

@@ -14,7 +14,7 @@ class PusherService {
   final Ref _ref;
   PusherChannelsFlutter? _pusher;
   bool _isConnected = false;
-  final Map<String, void Function(Map<String, dynamic>)> _listeners = {};
+  final Map<String, List<void Function(Map<String, dynamic>)>> _listeners = {};
   
   String? _serverKey;
   String? _serverCluster;
@@ -88,9 +88,15 @@ class PusherService {
           if (payloadStr != null && payloadStr.isNotEmpty) {
             try {
               final Map<String, dynamic> payload = Map<String, dynamic>.from(jsonDecode(payloadStr));
-              final listener = _listeners[event.channelName];
-              if (listener != null) {
-                listener(payload);
+              final listeners = _listeners[event.channelName];
+              if (listeners != null && listeners.isNotEmpty) {
+                for (final listener in List.of(listeners)) {
+                  try {
+                    listener(payload);
+                  } catch (e) {
+                    debugPrint("Pusher Error in listener callback: $e");
+                  }
+                }
               }
             } catch (e) {
               debugPrint("Pusher Error decoding payload: $e");
@@ -159,18 +165,20 @@ class PusherService {
     await subscribeToChannel(channelName, onUpdate);
   }
 
-  Future<void> unsubscribeFromOrder(int orderId) async {
+  Future<void> unsubscribeFromOrder(int orderId, [void Function(Map<String, dynamic>)? onUpdate]) async {
     final channelName = 'private-sales-order.$orderId';
-    await unsubscribeFromChannel(channelName);
+    await unsubscribeFromChannel(channelName, onUpdate);
   }
 
   Future<void> subscribeToChannel(String channelName, void Function(Map<String, dynamic>) onUpdate) async {
-    // Check if subscription listener is already present to prevent duplicate listeners
-    final alreadySubscribed = _listeners.containsKey(channelName);
-    _listeners[channelName] = onUpdate;
+    _listeners.putIfAbsent(channelName, () => []);
+    if (!_listeners[channelName]!.contains(onUpdate)) {
+      _listeners[channelName]!.add(onUpdate);
+    }
 
+    final alreadySubscribed = _listeners[channelName]!.length > 1;
     if (alreadySubscribed) {
-      debugPrint("Pusher already subscribed to: $channelName. Updated local listener callback, skipped duplicate native subscribe.");
+      debugPrint("Pusher already subscribed to: $channelName. Registered callback, skipped duplicate native subscribe.");
       return;
     }
 
@@ -183,7 +191,14 @@ class PusherService {
     }
   }
 
-  Future<void> unsubscribeFromChannel(String channelName) async {
+  Future<void> unsubscribeFromChannel(String channelName, [void Function(Map<String, dynamic>)? onUpdate]) async {
+    if (onUpdate != null && _listeners.containsKey(channelName)) {
+      _listeners[channelName]!.remove(onUpdate);
+      if (_listeners[channelName]!.isNotEmpty) {
+        debugPrint("Pusher kept channel subscription $channelName active for remaining listeners.");
+        return;
+      }
+    }
     _listeners.remove(channelName);
 
     try {

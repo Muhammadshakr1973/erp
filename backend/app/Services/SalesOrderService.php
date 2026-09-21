@@ -170,9 +170,7 @@ class SalesOrderService
         // Notify new order created AFTER database commit (NOT-001)
         app(NotificationService::class)->notifyNewOrderCreated($order, $user);
 
-        if ($order->shared_key) {
-            event(new \App\Events\SalesOrderUpdated($order, 'create'));
-        }
+        event(new \App\Events\SalesOrderUpdated($order, 'create'));
 
         $order->wasRecentlyCreated = true;
         return $order;
@@ -190,7 +188,7 @@ class SalesOrderService
             ]);
         }
 
-        return DB::transaction(function () use ($order, $data, $user) {
+        $updatedOrder = DB::transaction(function () use ($order, $data, $user) {
             $customerId = $data['customer_id'] ?? $order->customer_id;
             $customer = Customer::lockForUpdate()->findOrFail($customerId);
 
@@ -298,6 +296,10 @@ class SalesOrderService
 
             return $order;
         });
+
+        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+
+        return $updatedOrder;
     }
 
     /**
@@ -497,9 +499,7 @@ class SalesOrderService
             }
         }
 
-        if ($updatedOrder->shared_key) {
-            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
-        }
+        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
 
         return $updatedOrder;
     }
@@ -923,9 +923,7 @@ class SalesOrderService
             return $order;
         });
 
-        if ($updatedOrder->shared_key) {
-            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
-        }
+        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
 
         return $updatedOrder;
     }
