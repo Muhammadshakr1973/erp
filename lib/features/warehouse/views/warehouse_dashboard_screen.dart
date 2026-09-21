@@ -409,13 +409,15 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 'پسوڵەی #${order.orderNumber}',
                                 style: AppTextStyles.bodyBold,
                               ),
-                              const SizedBox(width: AppSpacing.sm),
                               StatusBadge(
                                 label: order.status == 'PACKING'
                                     ? 'لە پاکەتکردندایە'
