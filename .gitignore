@@ -52,7 +52,7 @@ backend/storage/logs/
 # Platform Folders
 android/
 ios/
-web/
+# web/ is tracked for web/index.html and web assets
 windows/
 macos/
 linux/
