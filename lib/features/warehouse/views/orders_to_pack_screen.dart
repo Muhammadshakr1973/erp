@@ -121,14 +121,14 @@ class OrdersToPackScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'پسوڵەی #${order.orderNumber}',
+                              'پسوڵەی ${order.customerName}',
                               style: AppTextStyles.bodyBold,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'کڕیار: ${order.customerName} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
+                              'ژمارەی پسوڵە: #${order.orderNumber} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
                               style: AppTextStyles.caption,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,

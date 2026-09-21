@@ -350,7 +350,14 @@ class WarehouseDashboardScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('پسوڵەکانی چاوەڕوانی پاکەتکردن', style: AppTextStyles.h3),
+            Expanded(
+              child: const Text(
+                'پسوڵەکانی چاوەڕوانی پاکەتکردن',
+                style: AppTextStyles.h3,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (orders.isNotEmpty)
               TextButton.icon(
                 onPressed: () {
@@ -415,7 +422,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                'پسوڵەی #${order.orderNumber}',
+                                'پسوڵەی ${order.customerName}',
                                 style: AppTextStyles.bodyBold,
                               ),
                               StatusBadge(
@@ -430,7 +437,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            order.customerName,
+                            'ژمارەی پسوڵە: #${order.orderNumber}',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondaryLight,
                             ),
@@ -472,16 +479,25 @@ class WarehouseDashboardScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: AppColors.danger,
-                  size: 20,
-                ),
-                SizedBox(width: AppSpacing.xs),
-                Text('ئاگاداری کاڵا کەمبووەکان', style: AppTextStyles.h3),
-              ],
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'ئاگاداری کاڵا کەمبووەکان',
+                      style: AppTextStyles.h3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
             TextButton(
               onPressed: () {
