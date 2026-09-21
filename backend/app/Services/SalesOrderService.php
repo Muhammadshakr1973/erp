@@ -86,7 +86,7 @@ class SalesOrderService
             $totalProfit = 0;
 
             // پاشەکەوتکردنی کاڵاکان بە شێوەی سێریاڵ
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] ?? [] as $item) {
                 $quantity = (int) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -117,6 +117,7 @@ class SalesOrderService
                     'total_price' => $lineTotal,
                     'profit' => $profit,
                     'is_packed' => false,
+                    'notes' => $item['notes'] ?? null,
                 ]);
 
                 $subtotal += $lineTotal;
@@ -213,7 +214,7 @@ class SalesOrderService
             $subtotal = 0;
             $totalProfit = 0;
 
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] ?? [] as $item) {
                 $quantity = (int) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -242,6 +243,7 @@ class SalesOrderService
                     'total_price' => $lineTotal,
                     'profit' => $profit,
                     'is_packed' => false,
+                    'notes' => $item['notes'] ?? null,
                 ]);
 
                 $subtotal += $lineTotal;
@@ -832,7 +834,7 @@ class SalesOrderService
             $subtotal = 0;
             $totalProfit = 0;
 
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] ?? [] as $item) {
                 $quantity = (int) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -862,6 +864,7 @@ class SalesOrderService
                     'total_price' => $lineTotal,
                     'profit' => $profit,
                     'is_packed' => false,
+                    'notes' => $item['notes'] ?? null,
                 ]);
 
                 $subtotal += $lineTotal;

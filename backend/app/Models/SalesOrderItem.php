@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SalesOrderItem extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['sales_order_id', 'product_id', 'quantity', 'unit_price', 'cost_price', 'price_type', 'discount_percent', 'discount_amount', 'line_total', 'total_price', 'profit', 'is_packed', 'packed_at', 'packed_by'];
+    protected $fillable = ['sales_order_id', 'product_id', 'quantity', 'unit_price', 'cost_price', 'price_type', 'discount_percent', 'discount_amount', 'line_total', 'total_price', 'profit', 'is_packed', 'packed_at', 'packed_by', 'notes'];
 
     protected static function booted()
     {

@@ -523,6 +523,7 @@ class OrderActions {
         'subtotal': itemSubtotal,
         'is_packed': false,
         'product': prod != null ? {'name': prod.name} : null,
+        'notes': item['notes'],
       });
     }
 

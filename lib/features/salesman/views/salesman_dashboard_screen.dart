@@ -14,6 +14,7 @@ import '../../../core/sync/sync_service.dart';
 import '../../../core/utils/formatters.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
+import '../../shared/views/new_order_creation_dialog.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/providers/customer_provider.dart';
@@ -133,16 +134,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   context,
                   'پسوڵەی نوێ',
                   AppIcons.newOrder,
-                  () async {
-                    final selectedCustomer = await CustomerSelectionDialog.show(
-                      context,
-                    );
-                    if (selectedCustomer != null && context.mounted) {
-                      context.push(
-                        '/salesman/create-order',
-                        extra: {'preselectedCustomerId': selectedCustomer.id},
-                      );
-                    }
+                  () {
+                    NewOrderCreationDialog.show(context);
                   },
                 ),
                 _buildActionCard(context, 'کۆمسیۆنەکانم', Icons.percent, () {
@@ -283,7 +276,11 @@ class SalesmanDashboardScreen extends ConsumerWidget {
 
                     return AppCard(
                       onTap: () {
-                        context.push('/order/${order.id}');
+                        if (order.status == 'PACKING' || order.status == 'DRAFT') {
+                          context.push('/salesman/create-order', extra: order);
+                        } else {
+                          context.push('/order/${order.id}');
+                        }
                       },
                       child: Row(
                         children: [

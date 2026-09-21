@@ -21,10 +21,11 @@ class UpdateSalesOrderRequest extends FormRequest
             'discount_type' => ['nullable', 'string', 'in:PERCENT,FIXED,percent,fixed'],
             'notes' => ['nullable', 'string'],
 
-            // داواکردنی ئایتمەکانی پسوڵەکە (لانی کەم دەبێت ١ کاڵای تێدابێت)
-            'items' => ['required', 'array', 'min:1'],
+            // پشکنینی ئایتمەکانی پسوڵەکە (ڕێگە بە بەتاڵبوون دەدرێت بۆ دراوتی سەرەتایی)
+            'items' => ['nullable', 'array'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.notes' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED'],
             'shared_key' => ['nullable', 'string'],
             'version' => ['nullable', 'integer', 'min:1'],

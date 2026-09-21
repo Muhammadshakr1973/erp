@@ -7,6 +7,7 @@ class OrderItemModel {
   final double unitPrice;
   final double subtotal;
   final bool isPacked;
+  final String? notes;
 
   OrderItemModel({
     required this.id,
@@ -17,6 +18,7 @@ class OrderItemModel {
     required this.unitPrice,
     required this.subtotal,
     required this.isPacked,
+    this.notes,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class OrderItemModel {
       unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
       subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
       isPacked: json['is_packed'] == true || json['is_packed'] == 1,
+      notes: json['notes'],
     );
   }
 }
