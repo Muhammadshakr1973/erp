@@ -569,8 +569,10 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
               style: TextStyle(fontFamily: 'Rudaw'),
             ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.danger,
+            ),
             onPressed: () async {
               try {
                 await ref.read(routeActionsProvider).deleteRoute(route.id);
@@ -601,7 +603,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
             },
             child: const Text(
               'سڕینەوە',
-              style: TextStyle(color: Colors.white, fontFamily: 'Rudaw'),
+              style: TextStyle(fontFamily: 'Rudaw'),
             ),
           ),
         ],

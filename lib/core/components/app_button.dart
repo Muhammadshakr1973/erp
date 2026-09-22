@@ -5,7 +5,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_sizes.dart';
 import '../theme/app_text_styles.dart';
 
-enum AppButtonType { primary, secondary, outline, text, danger }
+enum AppButtonType { primary, secondary, outline, text, danger, textDanger }
 
 enum AppButtonSize { sm, md, lg }
 
@@ -79,9 +79,13 @@ class AppButton extends StatelessWidget {
         backgroundColor = theme.colorScheme.error;
         textColor = theme.colorScheme.onError;
         break;
+      case AppButtonType.textDanger:
+        backgroundColor = Colors.transparent;
+        textColor = theme.colorScheme.error;
+        break;
     }
 
-    if (isDisabled && type != AppButtonType.text) {
+    if (isDisabled && type != AppButtonType.text && type != AppButtonType.textDanger) {
       backgroundColor = isDark ? AppColors.borderDark : AppColors.borderLight;
       textColor = isDark
           ? AppColors.textDisabledLight
@@ -143,7 +147,7 @@ class AppButton extends StatelessWidget {
               ),
               child: buttonContent,
             )
-          : type == AppButtonType.text
+          : (type == AppButtonType.text || type == AppButtonType.textDanger)
           ? TextButton(
               onPressed: isDisabled ? null : onPressed,
               style: TextButton.styleFrom(

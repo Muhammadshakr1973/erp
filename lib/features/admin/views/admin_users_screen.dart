@@ -116,10 +116,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               style: TextStyle(fontFamily: 'Rudaw'),
             ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.danger,
             ),
             onPressed: () async {
               try {

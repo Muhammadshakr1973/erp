@@ -118,10 +118,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('پاشگەزبوونەوە'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.danger,
             ),
             onPressed: () async {
               Navigator.pop(context);

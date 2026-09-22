@@ -787,11 +787,9 @@ class _SalesmanCommissionsReportScreenState
             onPressed: () => Navigator.pop(ctx),
             child: const Text('پاشگەزبوونەوە'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text(
-              'هەڵوەشاندنەوە',
-              style: TextStyle(color: Colors.white),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.danger,
             ),
             onPressed: () async {
               final reason = reasonController.text.trim();
@@ -832,6 +830,7 @@ class _SalesmanCommissionsReportScreenState
                 }
               }
             },
+            child: const Text('هەڵوەشاندنەوە'),
           ),
         ],
       ),

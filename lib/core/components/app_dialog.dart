@@ -47,7 +47,7 @@ class AppDialog {
             ),
             AppButton(
               text: confirmText,
-              type: isDanger ? AppButtonType.danger : AppButtonType.primary,
+              type: isDanger ? AppButtonType.textDanger : AppButtonType.text,
               onPressed: () => Navigator.of(context).pop(true),
             ),
           ],

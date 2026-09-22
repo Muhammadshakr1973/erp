@@ -766,7 +766,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               },
               child: const Text(
                 'سڕینەوە',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
               ),
             ),
           ],

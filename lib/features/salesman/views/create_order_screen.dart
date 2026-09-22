@@ -199,10 +199,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('پاشگەزبوونەوە'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.danger,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('سڕینەوە'),

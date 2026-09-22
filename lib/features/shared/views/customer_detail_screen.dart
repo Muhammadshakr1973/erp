@@ -407,10 +407,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               onPressed: () => Navigator.pop(ctx),
                               child: const Text('پاشگەزبوونەوە'),
                             ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.danger,
-                                foregroundColor: Colors.white,
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.danger,
                               ),
                               onPressed: () async {
                                 Navigator.pop(ctx);
