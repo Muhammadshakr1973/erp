@@ -23,12 +23,12 @@ dependencies:
   intl: ^0.20.3
   material_symbols_icons: ^4.27.0
   responsive_builder: ^0.7.1
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^6.0.11
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
   geolocator: ^11.0.0
   qr_flutter: ^4.1.0
-  pusher_channels_flutter: ^2.2.0
+  pusher_channels_flutter: ^2.6.0
 
 dev_dependencies:
   flutter_test:
