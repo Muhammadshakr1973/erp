@@ -5,12 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/customer_avatar.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -92,55 +90,6 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {},
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.sync_problem, color: AppColors.danger),
-                  title: const Text(
-                    'پاککردنەوەی هەڵەکانی سینک',
-                    style: AppTextStyles.bodyBold,
-                  ),
-                  subtitle: const Text(
-                    'ئەو کردارانەی تووشی هەڵە بوون لە ڕیز لادەبات بۆ نەهێشتنی باڕی سوور',
-                    style: AppTextStyles.caption,
-                  ),
-                  trailing: const Icon(Icons.delete_sweep, color: AppColors.danger),
-                  onTap: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('دڵنیابوونەوە', style: AppTextStyles.h2),
-                        content: const Text(
-                          'ئایا دڵنیایت لە پاککردنەوەی هەموو هەڵەکانی سینک؟ ئەم کردارە ئەو داتایانەی پێشتر لە ناردن فاشل بوون لادەبات لە ڕیزی ناردن.',
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('پاشگەزبوونەوە'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-                            child: const Text('سڕینەوە و پاککردنەوە'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirm == true && context.mounted) {
-                      final syncService = ref.read(syncServiceProvider);
-                      await syncService.clearFailedOperations();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('سەرجەم هەڵەکانی سینک بە سەرکەوتوویی پاککرانەوە.'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      }
-                    }
-                  },
                 ),
               ],
             ),
