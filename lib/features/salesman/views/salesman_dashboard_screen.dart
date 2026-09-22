@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +20,7 @@ import '../../shared/views/new_order_creation_dialog.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
@@ -80,7 +83,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Offline Status Banner
-            _buildSyncStatusBanner(context, syncStatus, syncService),
+            _buildSyncStatusBanner(context, syncStatus, syncService, ref),
             const SizedBox(height: AppSpacing.sectionGap),
 
             // Quick Stats
@@ -282,6 +285,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                           context.push('/order/${order.id}');
                         }
                       },
+                      onLongPress: () {
+                        _showDeleteConfirmationDialog(context, ref, order, customerName);
+                      },
                       child: Row(
                         children: [
                           Container(
@@ -359,6 +365,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     BuildContext context,
     SyncStatus status,
     SyncService syncService,
+    WidgetRef ref,
   ) {
     Color bgColor;
     Color borderColor;
@@ -386,13 +393,17 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         borderColor = AppColors.danger.withValues(alpha: 0.3);
         textColor = AppColors.danger;
         icon = Icons.error_outline;
-        message = 'هەڵەیەک لە سینککردندا هەیە. بۆ هەوڵدانەوە کلیک بکە.';
+        message = 'هەڵەیەک لە سینککردندا هەیە. بۆ چارەسەرکردن و زانیاری زیاتر لێرە کلیک بکە.';
         break;
     }
 
     return InkWell(
       onTap: () {
-        syncService.syncPendingOperations();
+        if (status == SyncStatus.error) {
+          _showSyncQueueDialog(context, ref);
+        } else {
+          syncService.syncPendingOperations();
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -412,10 +423,146 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               ),
             ),
             if (status == SyncStatus.error)
-              Icon(Icons.refresh, color: textColor, size: 20),
+              Icon(Icons.arrow_forward_ios, color: textColor, size: 16),
           ],
         ),
       ),
+    );
+  }
+
+  void _showSyncQueueDialog(BuildContext context, WidgetRef ref) {
+    final syncService = ref.read(syncServiceProvider);
+    final theme = Theme.of(context);
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        final failedEntries = syncService.box.values
+            .where((e) => e.status == 'FAILED')
+            .toList();
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.sync_problem, color: theme.colorScheme.error),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'کێشەکانی هاوشێوەکردن',
+                  style: AppTextStyles.h2,
+                  textDirection: TextDirection.rtl,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: failedEntries.isEmpty
+                ? const Text(
+                    'هیچ هەڵەیەکی چالاک نییە لە سیستەمەکەدا.',
+                    textDirection: TextDirection.rtl,
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: failedEntries.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final entry = failedEntries[index];
+                      
+                      String opLabel = entry.operationType;
+                      switch (entry.operationType) {
+                        case 'CREATE_ORDER':
+                          opLabel = 'دروستکردنی پسوڵە';
+                          break;
+                        case 'UPDATE_ORDER':
+                          opLabel = 'نوێکردنەوەی پسوڵە';
+                          break;
+                        case 'CREATE_PAYMENT':
+                          opLabel = 'تۆمارکردنی پارەدان';
+                          break;
+                        case 'CREATE_CUSTOMER':
+                          opLabel = 'تۆمارکردنی کڕیاری نوێ';
+                          break;
+                        case 'UPDATE_CUSTOMER':
+                          opLabel = 'نوێکردنەوەی زانیاری کڕیار';
+                          break;
+                      }
+
+                      String errorMsg = entry.errorInformation ?? 'هەڵەیەکی نەناسراو ڕوویداوە';
+                      if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+                        try {
+                          final parsed = jsonDecode(errorMsg);
+                          if (parsed is Map && parsed['message'] != null) {
+                            errorMsg = parsed['message'];
+                          }
+                        } catch (_) {}
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        textDirection: TextDirection.rtl,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            textDirection: TextDirection.rtl,
+                            children: [
+                              Text(
+                                opLabel,
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: theme.colorScheme.error,
+                                ),
+                              ),
+                              Text(
+                                '${entry.retryCount} هەوڵدان',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'هۆکاری هەڵە: $errorMsg',
+                            style: AppTextStyles.caption.copyWith(
+                              color: theme.colorScheme.error.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await syncService.clearFailedOperations();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('ڕیزی هەڵەکان بە سەرکەوتوویی پاککرایەوە')),
+                  );
+                }
+              },
+              child: Text(
+                'پاککردنەوەی هەڵەکان',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('پاشگەزبوونەوە'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                syncService.syncPendingOperations();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('دەستکرا بە هەوڵدانەوەی هاوشێوەکردن...')),
+                );
+              },
+              child: const Text('هەوڵدانەوە'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -563,6 +710,68 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    OrderModel order,
+    String customerName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'سڕینەوەی پسوڵە',
+            style: AppTextStyles.h2,
+            textDirection: TextDirection.rtl,
+          ),
+          content: Text(
+            'ئایا دڵنیایت لە سڕینەوەی پسوڵەی #${order.orderNumber} بۆ کڕیار $customerName؟',
+            style: AppTextStyles.bodyMedium,
+            textDirection: TextDirection.rtl,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'پاشگەزبوونەوە',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  await ref.read(orderActionsProvider).deleteOrder(order.id.toString());
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('پسوڵەکە بە سەرکەوتوویی سڕایەوە یان خرایە ڕیزی سڕینەوەوە'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('هەڵە ڕوویدا لە سڕینەوە: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'سڕینەوە',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

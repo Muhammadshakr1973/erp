@@ -947,4 +947,56 @@ class SalesOrderService
 
         return $updatedOrder;
     }
+
+    /**
+     * سڕینەوەی پسوڵەی فرۆشتن بە شێوەیەکی سەلامەت و ئازادکردنی ستۆک
+     */
+    public function deleteOrder(SalesOrder $order, $user): void
+    {
+        DB::transaction(function () use ($order, $user) {
+            $lockedOrder = SalesOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Limit deletion of completed/delivered/in-delivery orders to preserve integrity
+            if (in_array($lockedOrder->status, [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_DELIVERED])) {
+                throw ValidationException::withMessages([
+                    'status' => 'ناتوانرێت پسوڵەیەک بسڕێتەوە کە لە ڕێگەی گەیاندندایە یان گەیشتووە.'
+                ]);
+            }
+
+            // Only release stock if it was actually reserved
+            if (in_array($lockedOrder->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING, SalesOrder::STATUS_READY])) {
+                $this->releaseStock($lockedOrder, $user);
+            }
+
+            // Close linked purchase requirements
+            PurchaseRequirement::where('sales_order_id', $lockedOrder->id)
+                ->where('status', 'OPEN')
+                ->update(['status' => 'CLOSED']);
+
+            // Soft delete the order
+            $lockedOrder->delete();
+
+            // Log the activity
+            app(AuditService::class)->log([
+                'action'      => 'DELETE',
+                'entity_type' => 'SalesOrder',
+                'entity_id'   => $lockedOrder->id,
+                'table_name'  => 'sales_orders',
+                'old_values'  => [
+                    'order_number' => $lockedOrder->order_number,
+                    'status'       => $lockedOrder->status,
+                    'total_amount' => $lockedOrder->total_amount,
+                ],
+                'new_values'  => [],
+                'description' => "پسوڵەی فرۆشتنی ژمارە {$lockedOrder->order_number} سڕایەوە (Soft Delete)",
+                'user'        => $user,
+            ]);
+        });
+
+        try {
+            event(new \App\Events\SalesOrderUpdated($order, 'delete'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order deletion: " . $e->getMessage());
+        }
+    }
 }

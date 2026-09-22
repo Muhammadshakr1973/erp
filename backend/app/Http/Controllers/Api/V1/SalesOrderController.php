@@ -269,4 +269,33 @@ class SalesOrderController extends Controller
             'data' => $updatedOrder->load('items')
         ]);
     }
+
+    public function destroy(\Illuminate\Http\Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = \App\Models\SalesOrder::findOrFail($id);
+
+        // IDOR Prevention Access Check
+        if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەیە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        // Permission check: only those who can create orders or admin/owners can delete them
+        if (!$user->hasPermission('orders.create') && !$user->isAdmin() && !$user->isOwner()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەیە.',
+                'error' => 'Forbidden. Missing permission: orders.create'
+            ], 403);
+        }
+
+        $this->salesOrderService->deleteOrder($order, $user);
+
+        return response()->json([
+            'message' => 'پسوڵەکە بەسەرکەوتوویی سڕایەوە',
+            'data' => null
+        ]);
+    }
 }

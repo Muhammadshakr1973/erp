@@ -815,6 +815,60 @@ class OrderActions {
     ref.invalidate(singleOrderProvider(orderId));
     ref.invalidate(ordersListProvider);
   }
+
+  Future<void> deleteOrder(String orderId) async {
+    final isLocal = orderId.startsWith('local_') || (int.tryParse(orderId) != null && int.parse(orderId) < 0);
+    final localBox = ref.read(localOrdersBoxProvider);
+
+    if (isLocal) {
+      // 1. If it's a local draft order, delete it directly from local Hive cache
+      String keyToDelete = orderId;
+      if (!orderId.startsWith('local_')) {
+        final orderIntId = int.parse(orderId);
+        for (final key in localBox.keys) {
+          if (key.toString().startsWith('local_')) {
+            final str = localBox.get(key);
+            if (str != null) {
+              try {
+                final Map<String, dynamic> parsed = jsonDecode(str);
+                if (parsed['id'] == orderIntId) {
+                  keyToDelete = key.toString();
+                  break;
+                }
+              } catch (_) {}
+            }
+          }
+        }
+      }
+
+      await localBox.delete(keyToDelete);
+
+      // 2. Also find and remove its CREATE_ORDER/UPDATE_ORDER operations from the sync queue box
+      final syncBox = ref.read(syncQueueBoxProvider);
+      final keysToRemove = syncBox.keys.where((key) {
+        final entry = syncBox.get(key);
+        return entry != null && (entry.entityId == keyToDelete || entry.entityId == orderId);
+      }).toList();
+
+      for (final key in keysToRemove) {
+        await syncBox.delete(key);
+      }
+    } else {
+      // 3. For synced online orders, enqueue a DELETE_ORDER operation
+      await syncService.enqueueOperation(
+        entityId: orderId,
+        operationType: 'DELETE_ORDER',
+        payload: {},
+      );
+
+      // 4. Optimistically delete/remove it from our local Hive orders box
+      await localBox.delete(orderId);
+    }
+
+    // 5. Invalidate the providers to refresh UI immediately
+    ref.invalidate(ordersListProvider);
+    ref.invalidate(singleOrderProvider(orderId));
+  }
 }
 
 final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {

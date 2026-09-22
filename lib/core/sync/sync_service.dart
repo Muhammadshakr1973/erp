@@ -440,6 +440,12 @@ class SyncService {
           options: options,
         );
         return response.data;
+      case 'DELETE_ORDER':
+        final response = await api.client.delete(
+          '/orders/${entry.entityId}',
+          options: options,
+        );
+        return response.data;
       case 'UPDATE_ORDER_STATUS':
         final response = await api.client.post(
           '/orders/${entry.entityId}/status',

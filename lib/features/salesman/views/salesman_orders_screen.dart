@@ -9,6 +9,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
 import '../../shared/views/new_order_creation_dialog.dart';
@@ -167,6 +168,9 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                     context.push('/order/${order.id}');
                   }
                 },
+                onLongPress: () {
+                  _showDeleteConfirmationDialog(context, ref, order, customerName);
+                },
                 child: Row(
                   children: [
                     Container(
@@ -231,6 +235,68 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    OrderModel order,
+    String customerName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'سڕینەوەی پسوڵە',
+            style: AppTextStyles.h2,
+            textDirection: TextDirection.rtl,
+          ),
+          content: Text(
+            'ئایا دڵنیایت لە سڕینەوەی پسوڵەی #${order.orderNumber} بۆ کڕیار $customerName؟',
+            style: AppTextStyles.bodyMedium,
+            textDirection: TextDirection.rtl,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'پاشگەزبوونەوە',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                try {
+                  await ref.read(orderActionsProvider).deleteOrder(order.id.toString());
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('پسوڵەکە بە سەرکەوتوویی سڕایەوە یان خرایە ڕیزی سڕینەوەوە'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('هەڵە ڕوویدا لە سڕینەوە: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text(
+                'سڕینەوە',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
