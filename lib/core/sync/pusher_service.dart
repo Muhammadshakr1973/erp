@@ -91,6 +91,14 @@ class PusherService {
         },
         onEvent: (PusherEvent event) {
           debugPrint("Pusher Event Received: ${event.channelName} - ${event.eventName}");
+          
+          // Ignore Pusher internal/protocol events (e.g. pusher:subscription_succeeded)
+          // to prevent infinite invalidation loops in providers.
+          if (event.eventName.startsWith('pusher:')) {
+            debugPrint("Pusher: Ignoring internal protocol event: ${event.eventName}");
+            return;
+          }
+
           final dynamic rawData = event.data;
           if (rawData != null) {
             try {
