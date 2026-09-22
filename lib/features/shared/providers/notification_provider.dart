@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/network/api_constants.dart';
+import '../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/notification_model.dart';
 
 // Unread count provider for badges across the app
@@ -30,6 +33,57 @@ class NotificationsNotifier
   NotificationsNotifier(this._api, this._ref, this._filterType)
     : super(const AsyncValue.loading()) {
     loadNotifications();
+    _subscribeToLiveNotifications();
+  }
+
+  void _subscribeToLiveNotifications() {
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    if (user != null) {
+      final channelName = 'private-user-notifications.${user.id}';
+      _ref.read(pusherServiceProvider).subscribeToChannel(channelName, _onLiveNotificationReceived);
+    }
+  }
+
+  void _onLiveNotificationReceived(Map<String, dynamic> data) {
+    if (data.containsKey('notification')) {
+      try {
+        final notificationJson = data['notification'];
+        final newNotification = AppNotification.fromJson(Map<String, dynamic>.from(notificationJson));
+        
+        final currentList = state.value ?? [];
+        if (currentList.any((n) => n.id == newNotification.id)) return;
+
+        final List<AppNotification> updatedList;
+        if (_filterType == null || _filterType!.isEmpty || newNotification.type.toLowerCase() == _filterType!.toLowerCase()) {
+          updatedList = [newNotification, ...currentList];
+        } else {
+          updatedList = currentList;
+        }
+
+        state = AsyncValue.data(updatedList);
+
+        if (data.containsKey('unread_count')) {
+          _ref.read(unreadNotificationsCountProvider.notifier).state = data['unread_count'] as int;
+        } else {
+          final count = _ref.read(unreadNotificationsCountProvider);
+          _ref.read(unreadNotificationsCountProvider.notifier).state = count + 1;
+        }
+      } catch (e) {
+        debugPrint("Error parsing live notification: $e");
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    final authState = _ref.read(authProvider);
+    final user = authState.user;
+    if (user != null) {
+      final channelName = 'private-user-notifications.${user.id}';
+      _ref.read(pusherServiceProvider).unsubscribeFromChannel(channelName, _onLiveNotificationReceived);
+    }
+    super.dispose();
   }
 
   Future<void> loadNotifications() async {

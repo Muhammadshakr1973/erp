@@ -12,6 +12,7 @@ use App\Models\SalesmanCommission;
 use App\Models\SalesOrder;
 use App\Models\User;
 use App\Models\WarehouseStock;
+use App\Events\NotificationCreated;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +50,13 @@ class NotificationService
             'notification_id' => $notification->id,
             'type' => $type,
         ]));
+
+        // Trigger live real-time notification broadcast via Pusher
+        try {
+            event(new NotificationCreated($notification));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to broadcast live notification: " . $e->getMessage());
+        }
 
         return $notification;
     }
