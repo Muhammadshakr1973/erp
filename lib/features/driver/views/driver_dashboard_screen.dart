@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
@@ -20,12 +21,7 @@ class DriverDashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('سڵاو، شۆفێر', style: AppTextStyles.h2),
         actions: [
-          IconButton(
-            icon: const Icon(AppIcons.notifications),
-            onPressed: () {
-              context.push('/notifications');
-            },
-          ),
+          const NotificationBadgeButton(),
         ],
       ),
       body: tripsAsync.when(

@@ -13,6 +13,9 @@ class NotificationBadgeButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Keep notifications list provider active so Pusher notifications are received in real-time
+    ref.watch(notificationsListProvider);
+
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
 
     return Stack(

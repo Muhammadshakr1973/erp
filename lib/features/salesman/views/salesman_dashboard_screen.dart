@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_icon_button.dart';
 import '../../../core/components/status_badge.dart';
@@ -53,12 +54,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(AppIcons.notifications),
-            onPressed: () {
-              context.push('/notifications');
-            },
-          ),
+          const NotificationBadgeButton(),
           IconButton(
             icon: Icon(
               Icons.sync,

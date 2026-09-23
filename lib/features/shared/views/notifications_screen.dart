@@ -29,6 +29,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // کاتێک شاشەکە دەکرێتەوە، هەموو ئاگادارکردنەوەکان دەبن بە خوێندراوە
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(notificationsListProvider.notifier).markAllAsRead();
+      }
+    });
   }
 
   @override

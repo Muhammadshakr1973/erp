@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/status_badge.dart';
@@ -41,13 +42,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               ref.invalidate(warehouseStocksProvider);
             },
           ),
-          IconButton(
-            icon: const Icon(AppIcons.notifications),
-            tooltip: 'ئاگادارییەکان',
-            onPressed: () {
-              context.push('/notifications');
-            },
-          ),
+          const NotificationBadgeButton(),
         ],
       ),
       body: RefreshIndicator(
