@@ -21,6 +21,8 @@ final notificationsListProvider =
     >((ref) {
       final api = ref.watch(apiClientProvider);
       final filterType = ref.watch(notificationFilterTypeProvider);
+      // Watch authProvider to trigger rebuilding the notifier on login/logout
+      ref.watch(authProvider);
       return NotificationsNotifier(api, ref, filterType);
     });
 
