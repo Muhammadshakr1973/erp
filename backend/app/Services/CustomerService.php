@@ -59,7 +59,7 @@ class CustomerService
 
     public function createCustomer(array $data, int $userId): Customer
     {
-        return DB::transaction(function () use ($data, $userId) {
+        $customer = DB::transaction(function () use ($data, $userId) {
             $data['created_by'] = $userId;
 
             $initialDebt = !empty($data['initial_debt']) ? (int)$data['initial_debt'] : 0;
