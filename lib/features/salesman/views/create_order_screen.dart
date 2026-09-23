@@ -685,35 +685,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       appBar: AppBar(
         titleSpacing: 0,
         title: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 16),
-          child: Row(
-            children: [
-              Text(
-                widget.existingOrder != null ? 'دەستکاری پسوڵە' : 'پسوڵەی نوێ',
-                style: AppTextStyles.h3,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: _buildProductAutocompleteInput(
-                    allProducts,
-                    productsAsync.isLoading,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-            ],
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+          child: SizedBox(
+            height: 42,
+            child: _buildProductAutocompleteInput(
+              allProducts,
+              productsAsync.isLoading,
+            ),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(AppIcons.scan),
-            tooltip: 'سکانی باڕکۆد',
-            onPressed: () => _scanBarcode(allProducts),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -1316,9 +1296,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('سەبەتە', style: AppTextStyles.h3),
-                const Spacer(),
                 // 3. Compact Discount Controls in the Cart Header
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1387,7 +1366,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ],
                   ),
                 ),
-                const Spacer(),
                 Chip(
                   label: Text('$cartItemCount کاڵا'),
                   backgroundColor: theme.colorScheme.primaryContainer,
@@ -1458,56 +1436,101 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      child: Row(
                                         children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  product?.name ?? 'کاڵا',
-                                                  style: AppTextStyles.bodyBold,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              if (isSpecialPrice)
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: theme.colorScheme.primary,
-                                                    borderRadius:
-                                                        BorderRadius.circular(4),
-                                                  ),
-                                                  child: const Text(
-                                                    'نرخی تایبەت',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        product?.name ?? 'کاڵا',
+                                                        style: AppTextStyles.bodyBold,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
                                                     ),
+                                                    if (isSpecialPrice)
+                                                      const SizedBox(width: 4),
+                                                    if (isSpecialPrice)
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: theme.colorScheme.primary,
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: const Text(
+                                                          'نرخی تایبەت',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  Formatters.currency(unitPrice),
+                                                  style: AppTextStyles.caption.copyWith(
+                                                    color: isSpecialPrice
+                                                        ? theme.colorScheme.primary
+                                                        : null,
+                                                    fontWeight: isSpecialPrice
+                                                        ? FontWeight.bold
+                                                        : null,
                                                   ),
                                                 ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: isSpecialPrice
-                                                  ? theme.colorScheme.primary
-                                                  : null,
-                                              fontWeight: isSpecialPrice
-                                                  ? FontWeight.bold
-                                                  : null,
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            width: 125,
+                                            height: 32,
+                                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                                              ),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.edit_note,
+                                                  size: 14,
+                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: TextFormField(
+                                                    initialValue: _cartNotes[productId] ?? '',
+                                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                                                    decoration: const InputDecoration(
+                                                      hintText: 'تێبینی...',
+                                                      isDense: true,
+                                                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                                                      border: InputBorder.none,
+                                                    ),
+                                                    onChanged: (val) {
+                                                      _cartNotes[productId] = val;
+                                                      _triggerDebouncedAutoSave();
+                                                    },
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1535,13 +1558,26 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                   horizontal: 6,
                                                   vertical: 4,
                                                 ),
-                                                child: Text(
-                                                  '$qty',
-                                                  style: AppTextStyles.bodyBold
-                                                      .copyWith(
-                                                    decoration:
-                                                        TextDecoration.underline,
-                                                  ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      '$qty',
+                                                      style: AppTextStyles.bodyBold
+                                                          .copyWith(
+                                                        decoration:
+                                                            TextDecoration.underline,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      product?.unit ?? 'دانە',
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: theme.colorScheme.onSurfaceVariant,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
@@ -1563,29 +1599,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 8, thickness: 0.5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: TextFormField(
-                                        initialValue: _cartNotes[productId] ?? '',
-                                        style: const TextStyle(fontSize: 11),
-                                        decoration: const InputDecoration(
-                                          hintText: 'تێبینی بۆ ئەم کاڵایە...',
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                          border: InputBorder.none,
-                                        ),
-                                        onChanged: (val) {
-                                          _cartNotes[productId] = val;
-                                          _triggerDebouncedAutoSave();
-                                        },
-                                      ),
                                     ),
                                   ],
                                 ),
