@@ -229,7 +229,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         style: AppTextStyles.bodyBold,
                       ),
                       subtitle: Text(
-                        'یەکە: ${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە   •   نرخی یەکە: ${Formatters.currency(item.unitPrice)}',
+                        '${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە   •   ${Formatters.currency(item.unitPrice)}',
                         style: AppTextStyles.caption.copyWith(fontSize: 11),
                       ),
                       trailing: Column(

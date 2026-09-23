@@ -372,7 +372,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'یەکە: ${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە',
+                                      '${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە',
                                       style: AppTextStyles.caption.copyWith(
                                         color: Colors.grey,
                                         fontSize: 11,
