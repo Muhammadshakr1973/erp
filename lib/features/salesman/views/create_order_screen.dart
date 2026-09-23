@@ -683,13 +683,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingOrder != null ? 'دەستکاری پسوڵە' : 'پسوڵەی نوێ', style: AppTextStyles.h2),
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 16),
+          child: Row(
+            children: [
+              Text(
+                widget.existingOrder != null ? 'دەستکاری پسوڵە' : 'پسوڵەی نوێ',
+                style: AppTextStyles.h3,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: _buildProductAutocompleteInput(
+                    allProducts,
+                    productsAsync.isLoading,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(AppIcons.scan),
             tooltip: 'سکانی باڕکۆد',
             onPressed: () => _scanBarcode(allProducts),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: LayoutBuilder(
@@ -724,18 +747,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       )
                     : Column(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            child: _buildProductAutocompleteInput(
-                              allProducts,
-                              productsAsync.isLoading,
-                            ),
-                          ),
                           if (productsAsync.isLoading)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                              child: LinearProgressIndicator(),
-                            ),
+                            const LinearProgressIndicator(),
                           Expanded(
                             child: _buildCartPanel(allProducts, warehousesAsync),
                           ),
@@ -756,165 +769,146 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       color: theme.colorScheme.surfaceContainerLow,
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: customersAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, stackTrace) => const Text('هەڵە لە بارکردنی کڕیاران'),
-                  data: (customers) {
-                    return DropdownButtonFormField<int>(
-                      key: ValueKey(_selectedCustomer?.id),
-                      initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
-                          ? _selectedCustomer?.id
-                          : null,
-                      decoration: const InputDecoration(
-                        labelText: 'دیاریکردنی کڕیار',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      items: customers.map((c) {
-                        return DropdownMenuItem<int>(
-                          value: c.id,
-                          child: Text(
-                            '${c.name} (${c.priceType ?? 'N2'})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        final found = customers
-                            .where((c) => c.id == val)
-                            .firstOrNull;
-                        setState(() {
-                          _selectedCustomer = found;
-                        });
-                        if (found != null) {
-                          _fetchSpecialPricesForCustomer(found.id);
-                        }
-                      },
-                    );
-                  },
-                ),
+          // 1. Customer Selection
+          Expanded(
+            flex: 2,
+            child: customersAsync.when(
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              if (_selectedCustomer != null) ...[
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary),
-                  ),
-                  child: Text(
-                    'نرخی ${_selectedCustomer!.priceType ?? 'N2'}',
-                    style: AppTextStyles.bodyBold.copyWith(
-                      color: AppColors.primary,
+              error: (error, stackTrace) => const Text('هەڵە لە بارکردنی کڕیاران'),
+              data: (customers) {
+                return DropdownButtonFormField<int>(
+                  key: ValueKey(_selectedCustomer?.id),
+                  initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
+                      ? _selectedCustomer?.id
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'دیاریکردنی کڕیار',
+                    prefixIcon: Icon(Icons.person_outline, size: 20),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
                     ),
+                  ),
+                  style: theme.textTheme.bodyMedium,
+                  items: customers.map((c) {
+                    return DropdownMenuItem<int>(
+                      value: c.id,
+                      child: Text(
+                        c.name,
+                        style: const TextStyle(fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    final found = customers
+                        .where((c) => c.id == val)
+                        .firstOrNull;
+                    setState(() {
+                      _selectedCustomer = found;
+                    });
+                    if (found != null) {
+                      _fetchSpecialPricesForCustomer(found.id);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+
+          // 2. Warehouse Selection
+          Expanded(
+            flex: 2,
+            child: warehousesAsync.when(
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (err, _) => const Text('هەڵە لە کۆگا'),
+              data: (warehouses) {
+                if (warehouses.isEmpty) {
+                  return const Text('کۆگا نییە');
+                }
+                final selectedId = _selectedWarehouseId ??
+                    (warehouses.any((w) => w.isMain)
+                        ? warehouses.firstWhere((w) => w.isMain).id
+                        : warehouses.first.id);
+
+                return DropdownButtonFormField<int>(
+                  key: ValueKey(selectedId),
+                  initialValue: warehouses.any((w) => w.id == selectedId)
+                      ? selectedId
+                      : warehouses.first.id,
+                  decoration: const InputDecoration(
+                    labelText: 'دیاریکردنی کۆگا',
+                    prefixIcon: Icon(Icons.warehouse_outlined, size: 20),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                  ),
+                  style: theme.textTheme.bodyMedium,
+                  items: warehouses.map((w) {
+                    return DropdownMenuItem<int>(
+                      value: w.id,
+                      child: Text(
+                        '${w.name}${w.isMain ? " (سەرەکی)" : ""}',
+                        style: const TextStyle(fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedWarehouseId = val;
+                      });
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+
+          // 3. Price Type Display
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 11,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.sell_outlined, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  _selectedCustomer != null
+                      ? 'نرخی ${_selectedCustomer!.priceType ?? 'N2'}'
+                      : 'جۆری نرخ: N2',
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: AppColors.primary,
+                    fontSize: 11,
                   ),
                 ),
               ],
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          warehousesAsync.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (err, _) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.danger),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
-                  const SizedBox(width: AppSpacing.xs),
-                  const Expanded(
-                    child: Text(
-                      'هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)',
-                      style: TextStyle(
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 18, color: AppColors.danger),
-                    onPressed: () => ref.refresh(warehouseListProvider),
-                  ),
-                ],
-              ),
             ),
-            data: (warehouses) {
-              if (warehouses.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.warning),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.warning_amber, color: AppColors.warning, size: 20),
-                      SizedBox(width: AppSpacing.xs),
-                      Text('هیچ کۆگایەک بەردەست نییە'),
-                    ],
-                  ),
-                );
-              }
-              final selectedId = _selectedWarehouseId ??
-                  (warehouses.any((w) => w.isMain)
-                      ? warehouses.firstWhere((w) => w.isMain).id
-                      : warehouses.first.id);
-
-              return DropdownButtonFormField<int>(
-                key: ValueKey(selectedId),
-                initialValue: warehouses.any((w) => w.id == selectedId)
-                    ? selectedId
-                    : warehouses.first.id,
-                decoration: const InputDecoration(
-                  labelText: 'دیاریکردنی کۆگا',
-                  prefixIcon: Icon(Icons.warehouse_outlined),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                ),
-                items: warehouses.map((w) {
-                  return DropdownMenuItem<int>(
-                    value: w.id,
-                    child: Text(
-                      '${w.name}${w.isMain ? " (سەرەکی)" : ""}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _selectedWarehouseId = val;
-                    });
-                  }
-                },
-              );
-            },
           ),
         ],
       ),
@@ -930,18 +924,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: _buildProductAutocompleteInput(
-            allProducts,
-            productsAsync.isLoading,
-          ),
-        ),
         if (productsAsync.isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: LinearProgressIndicator(),
-          ),
+          const LinearProgressIndicator(),
         Expanded(
           child: Center(
             child: SingleChildScrollView(
@@ -971,7 +955,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Text(
-                      'لە ڕێگەی ئینپوتی سەرەوە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
+                      'لە ڕێگەی ئینپوتی ناڤباری سەرەوە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -1329,17 +1313,89 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('سەبەتە', style: AppTextStyles.h2),
+                const Text('سەبەتە', style: AppTextStyles.h3),
+                const Spacer(),
+                // 3. Compact Discount Controls in the Cart Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'داشکان: ',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _discountType,
+                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                          isDense: true,
+                          items: const [
+                            DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)', style: TextStyle(fontSize: 10))),
+                            DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)', style: TextStyle(fontSize: 10))),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _discountType = val;
+                                if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                  _discountValue = 100;
+                                }
+                              });
+                              _triggerAutoSave();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        width: 50,
+                        height: 24,
+                        child: TextFormField(
+                          key: ValueKey('discount_field_${_discountValue}_$_discountType'),
+                          initialValue: _discountValue == 0 ? '' : _discountValue.toString(),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                            border: InputBorder.none,
+                            hintText: '0',
+                          ),
+                          onChanged: (val) {
+                            final parsed = double.tryParse(val) ?? 0.0;
+                            setState(() {
+                              _discountValue = parsed;
+                              if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                _discountValue = 100;
+                              }
+                            });
+                            _triggerDebouncedAutoSave();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
                 Chip(
                   label: Text('$cartItemCount کاڵا'),
                   backgroundColor: theme.colorScheme.primaryContainer,
                   labelStyle: TextStyle(
                     color: theme.colorScheme.onPrimaryContainer,
+                    fontSize: 11,
                   ),
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -1568,71 +1624,74 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                 ],
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
-                    const Text('داشکاندن: '),
-                    const SizedBox(width: AppSpacing.sm),
-                    DropdownButton<String>(
-                      value: _discountType,
-                      items: const [
-                        DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)')),
-                        DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _discountType = val;
-                            if (_discountType == 'PERCENT' && _discountValue > 100) {
-                              _discountValue = 100;
-                            }
-                          });
-                          _triggerAutoSave();
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: TextFormField(
-                        initialValue: _discountValue.toString(),
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
+                      flex: 3,
+                      child: AppTextField(
+                        controller: _notesController,
+                        hintText: 'تێبینی (ئارەزوومەندانە)...',
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(24),
+                          bottomRight: Radius.circular(24),
                         ),
                         onChanged: (val) {
-                          final parsed = double.tryParse(val) ?? 0.0;
-                          setState(() {
-                            _discountValue = parsed;
-                            if (_discountType == 'PERCENT' && _discountValue > 100) {
-                              _discountValue = 100;
-                            }
-                          });
                           _triggerDebouncedAutoSave();
                         },
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppTextField(
-                  controller: _notesController,
-                  hintText: 'تێبینی (ئارەزوومەندانە)...',
-                  onChanged: (val) {
-                    _triggerDebouncedAutoSave();
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('کۆ کۆتایی:', style: AppTextStyles.bodyLarge),
-                    Text(
-                      Formatters.currency(totalAmount),
-                      style: AppTextStyles.priceLarge,
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        height: 52, // Matches AppTextField height exactly
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          border: Border(
+                            top: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                            bottom: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                            left: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            bottomLeft: Radius.circular(24),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'کۆ کۆتایی:',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                Formatters.currency(totalAmount),
+                                textAlign: TextAlign.end,
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: AppColors.primary,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
