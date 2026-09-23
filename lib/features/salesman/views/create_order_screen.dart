@@ -881,7 +881,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     return DropdownMenuItem<int>(
                       value: w.id,
                       child: Text(
-                        '${w.name}${w.isMain ? " (سەرەکی)" : ""}',
+                        w.name,
                         style: const TextStyle(fontSize: 11),
                         overflow: TextOverflow.ellipsis,
                       ),

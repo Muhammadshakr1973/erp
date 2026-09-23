@@ -126,7 +126,7 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
                       items: warehouses.map((wh) {
                         return DropdownMenuItem<WarehouseModel>(
                           value: wh,
-                          child: Text('${wh.name}${wh.isMain ? " (کۆگای سەرەکی)" : ""}'),
+                          child: Text(wh.name),
                         );
                       }).toList(),
                       onChanged: (val) {
