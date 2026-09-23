@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.gardipos.app">
+    <!-- The INTERNET permission is needed for development to allow setting up
+         connections to a running instance of the app (e.g. to perform hot reload,
+         or to connection to Observatory). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>
