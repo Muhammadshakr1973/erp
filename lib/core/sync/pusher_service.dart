@@ -159,6 +159,16 @@ class PusherService {
         },
       );
       _isInitialized = true;
+
+      // Native subscribe to any channels that were registered before initialization completed
+      for (final channelName in _listeners.keys) {
+        try {
+          await _pusher?.subscribe(channelName: channelName);
+          debugPrint("Pusher Late-Subscribed to: $channelName");
+        } catch (e) {
+          debugPrint("Pusher Late-Subscription Error for $channelName: $e");
+        }
+      }
     } catch (e) {
       _isInitialized = false;
       debugPrint("Pusher Initialization Error: $e");

@@ -118,6 +118,13 @@ class NotificationService
             ]);
             $notifications[] = $notification;
             $userIds[] = $user->id;
+
+            // Trigger live real-time notification broadcast via Pusher
+            try {
+                event(new NotificationCreated($notification));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to broadcast live notification in notifyRole: " . $e->getMessage());
+            }
         }
 
         if (!empty($userIds)) {
