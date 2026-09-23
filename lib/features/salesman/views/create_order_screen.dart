@@ -889,22 +889,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               vertical: 11,
             ),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.sell_outlined, size: 14, color: AppColors.primary),
+                Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
                 const SizedBox(width: 4),
                 Text(
                   _selectedCustomer != null
-                      ? 'نرخی ${_selectedCustomer!.priceType ?? 'N2'}'
-                      : 'جۆری نرخ: N2',
+                      ? (_selectedCustomer!.priceType ?? 'N2')
+                      : 'N2',
                   style: AppTextStyles.bodyBold.copyWith(
-                    color: AppColors.primary,
-                    fontSize: 11,
+                    color: theme.colorScheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
@@ -1442,15 +1443,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             decoration: BoxDecoration(
                               border: Border.all(
                                 color: isSpecialPrice
-                                    ? AppColors.primary
-                                    : Theme.of(context)
-                                        .dividerColor
-                                        .withValues(alpha: 0.3),
+                                    ? theme.colorScheme.primary
+                                    : theme.dividerColor.withValues(alpha: 0.3),
                                 width: isSpecialPrice ? 1.5 : 1,
                               ),
                               borderRadius: BorderRadius.circular(8),
                               color: isSpecialPrice
-                                  ? AppColors.primary.withValues(alpha: 0.05)
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
                                   : null,
                             ),
                             child: Column(
@@ -1479,7 +1478,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                     vertical: 2,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: AppColors.primary,
+                                                    color: theme.colorScheme.primary,
                                                     borderRadius:
                                                         BorderRadius.circular(4),
                                                   ),
@@ -1495,78 +1494,73 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                             ],
                                           ),
                                           const SizedBox(height: 2),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
-                                                style: AppTextStyles.caption.copyWith(
-                                                  color: isSpecialPrice
-                                                      ? AppColors.primary
-                                                      : null,
-                                                  fontWeight: isSpecialPrice
-                                                      ? FontWeight.bold
-                                                      : null,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'کۆ: ${Formatters.currency(unitPrice * qty)}',
-                                                style: AppTextStyles.caption.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
                                           Text(
-                                            'کلیک: دانانی نرخی تایبەت | دەستگرتن: سڕینەوە',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Theme.of(context).hintColor,
+                                            '${Formatters.currency(unitPrice)} / ${product?.unit ?? "دانە"}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: isSpecialPrice
+                                                  ? theme.colorScheme.primary
+                                                  : null,
+                                              fontWeight: isSpecialPrice
+                                                  ? FontWeight.bold
+                                                  : null,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    Row(
+                                    Column(
                                       mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.remove_circle_outline,
-                                            color: AppColors.danger,
-                                          ),
-                                          onPressed: () =>
-                                              _removeFromCart(productId),
-                                        ),
-                                        InkWell(
-                                          onTap: () => _editQuantityDialog(
-                                            productId,
-                                            qty,
-                                            product?.name ?? 'کاڵا',
-                                          ),
-                                          borderRadius: BorderRadius.circular(4),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 4,
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.remove_circle_outline,
+                                                color: AppColors.danger,
+                                              ),
+                                              onPressed: () =>
+                                                  _removeFromCart(productId),
                                             ),
-                                            child: Text(
-                                              '$qty',
-                                              style: AppTextStyles.bodyBold
-                                                  .copyWith(
-                                                decoration:
-                                                    TextDecoration.underline,
+                                            InkWell(
+                                              onTap: () => _editQuantityDialog(
+                                                productId,
+                                                qty,
+                                                product?.name ?? 'کاڵا',
+                                              ),
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 4,
+                                                ),
+                                                child: Text(
+                                                  '$qty',
+                                                  style: AppTextStyles.bodyBold
+                                                      .copyWith(
+                                                    decoration:
+                                                        TextDecoration.underline,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                            IconButton(
+                                              icon: Icon(
+                                                Icons.add_circle_outline,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                              onPressed: () => _addToCart(productId),
+                                            ),
+                                          ],
                                         ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.add_circle_outline,
-                                            color: AppColors.primary,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'کۆ: ${Formatters.currency(unitPrice * qty)}',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
                                           ),
-                                          onPressed: () => _addToCart(productId),
                                         ),
                                       ],
                                     ),
@@ -1683,7 +1677,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 Formatters.currency(totalAmount),
                                 textAlign: TextAlign.end,
                                 style: AppTextStyles.bodyBold.copyWith(
-                                  color: AppColors.primary,
+                                  color: theme.colorScheme.primary,
                                   fontSize: 14,
                                 ),
                                 overflow: TextOverflow.ellipsis,
