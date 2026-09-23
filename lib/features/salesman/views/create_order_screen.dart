@@ -681,17 +681,55 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final allProducts = productsAsync.asData?.value ?? [];
 
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-          child: SizedBox(
-            height: 42,
-            child: _buildProductAutocompleteInput(
-              allProducts,
-              productsAsync.isLoading,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: _buildProductAutocompleteInput(
+                    allProducts,
+                    productsAsync.isLoading,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      _selectedCustomer != null
+                          ? (_selectedCustomer!.priceType ?? 'N2')
+                          : 'N2',
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -858,37 +896,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   },
                 );
               },
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-
-          // 3. Price Type Display
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 11,
-            ),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
-                const SizedBox(width: 4),
-                Text(
-                  _selectedCustomer != null
-                      ? (_selectedCustomer!.priceType ?? 'N2')
-                      : 'N2',
-                  style: AppTextStyles.bodyBold.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -1436,95 +1443,51 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Row(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: Text(
-                                                        product?.name ?? 'کاڵا',
-                                                        style: AppTextStyles.bodyBold,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                    if (isSpecialPrice)
-                                                      const SizedBox(width: 4),
-                                                    if (isSpecialPrice)
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: theme.colorScheme.primary,
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: const Text(
-                                                          'نرخی تایبەت',
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 10,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                  ],
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  product?.name ?? 'کاڵا',
+                                                  style: AppTextStyles.bodyBold,
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  Formatters.currency(unitPrice),
-                                                  style: AppTextStyles.caption.copyWith(
-                                                    color: isSpecialPrice
-                                                        ? theme.colorScheme.primary
-                                                        : null,
-                                                    fontWeight: isSpecialPrice
-                                                        ? FontWeight.bold
-                                                        : null,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            width: 125,
-                                            height: 32,
-                                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: theme.colorScheme.outline.withValues(alpha: 0.3),
                                               ),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.edit_note,
-                                                  size: 14,
-                                                  color: theme.colorScheme.onSurfaceVariant,
-                                                ),
+                                              if (isSpecialPrice)
                                                 const SizedBox(width: 4),
-                                                Expanded(
-                                                  child: TextFormField(
-                                                    initialValue: _cartNotes[productId] ?? '',
-                                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
-                                                    decoration: const InputDecoration(
-                                                      hintText: 'تێبینی...',
-                                                      isDense: true,
-                                                      contentPadding: EdgeInsets.symmetric(vertical: 6),
-                                                      border: InputBorder.none,
+                                              if (isSpecialPrice)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.primary,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: const Text(
+                                                    'نرخی تایبەت',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
                                                     ),
-                                                    onChanged: (val) {
-                                                      _cartNotes[productId] = val;
-                                                      _triggerDebouncedAutoSave();
-                                                    },
                                                   ),
                                                 ),
-                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            Formatters.currency(unitPrice),
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: isSpecialPrice
+                                                  ? theme.colorScheme.primary
+                                                  : null,
+                                              fontWeight: isSpecialPrice
+                                                  ? FontWeight.bold
+                                                  : null,
                                             ),
                                           ),
                                         ],
@@ -1599,6 +1562,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           ),
                                         ),
                                       ],
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 8, thickness: 0.5),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: TextFormField(
+                                        initialValue: _cartNotes[productId] ?? '',
+                                        style: const TextStyle(fontSize: 11),
+                                        decoration: const InputDecoration(
+                                          hintText: 'تێبینی بۆ ئەم کاڵایە...',
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                          border: InputBorder.none,
+                                        ),
+                                        onChanged: (val) {
+                                          _cartNotes[productId] = val;
+                                          _triggerDebouncedAutoSave();
+                                        },
+                                      ),
                                     ),
                                   ],
                                 ),
