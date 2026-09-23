@@ -229,12 +229,26 @@ class OrderDetailScreen extends ConsumerWidget {
                         style: AppTextStyles.bodyBold,
                       ),
                       subtitle: Text(
-                        '${item.quantity.toInt()} دانە x ${Formatters.currency(item.unitPrice)}',
-                        style: AppTextStyles.caption,
+                        'یەکە: ${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە   •   نرخی یەکە: ${Formatters.currency(item.unitPrice)}',
+                        style: AppTextStyles.caption.copyWith(fontSize: 11),
                       ),
-                      trailing: Text(
-                        Formatters.currency(item.subtotal),
-                        style: AppTextStyles.price,
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            Formatters.currency(item.subtotal),
+                            style: AppTextStyles.price,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${item.quantity.toInt()} ${item.productUnit ?? 'دانە'}',
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

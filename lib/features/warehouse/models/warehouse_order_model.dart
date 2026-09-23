@@ -44,6 +44,8 @@ class WarehouseOrderItemModel {
   final int quantity;
   final bool isPacked;
   final String? packedAt;
+  final String? productUnit;
+  final int? unitsPerCarton;
 
   WarehouseOrderItemModel({
     required this.id,
@@ -52,6 +54,8 @@ class WarehouseOrderItemModel {
     required this.quantity,
     required this.isPacked,
     this.packedAt,
+    this.productUnit,
+    this.unitsPerCarton,
   });
 
   factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -71,6 +75,8 @@ class WarehouseOrderItemModel {
       quantity: json['quantity'] ?? 0,
       isPacked: isPacked,
       packedAt: json['packed_at'],
+      productUnit: productObj != null ? (productObj['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
+      unitsPerCarton: productObj != null ? (productObj['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
     );
   }
 
@@ -82,6 +88,8 @@ class WarehouseOrderItemModel {
       quantity: quantity,
       isPacked: isPacked ?? this.isPacked,
       packedAt: packedAt ?? this.packedAt,
+      productUnit: productUnit,
+      unitsPerCarton: unitsPerCarton,
     );
   }
 }

@@ -359,13 +359,23 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Expanded(
+                                      child: Text(
+                                        'بڕ: ${item.quantity} ${item.productUnit ?? 'دانە'}',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: isPacked
+                                              ? Colors.grey
+                                              : theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
                                     Text(
-                                      'بڕ: ${item.quantity} دانە',
+                                      'یەکە: ${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە',
                                       style: AppTextStyles.caption.copyWith(
-                                        color: isPacked
-                                            ? Colors.grey
-                                            : theme.colorScheme.primary,
+                                        color: Colors.grey,
+                                        fontSize: 11,
                                       ),
                                     ),
                                     if (isPending) ...[

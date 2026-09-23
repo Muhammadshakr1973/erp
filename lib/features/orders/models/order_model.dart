@@ -8,6 +8,8 @@ class OrderItemModel {
   final double subtotal;
   final bool isPacked;
   final String? notes;
+  final String? productUnit;
+  final int? unitsPerCarton;
 
   OrderItemModel({
     required this.id,
@@ -19,9 +21,12 @@ class OrderItemModel {
     required this.subtotal,
     required this.isPacked,
     this.notes,
+    this.productUnit,
+    this.unitsPerCarton,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
+    final productJson = json['product'] as Map<String, dynamic>?;
     return OrderItemModel(
       id: json['id'] ?? 0,
       orderId: json['sales_order_id'] ?? json['order_id'] ?? 0,
@@ -31,9 +36,11 @@ class OrderItemModel {
           : (json['product_name'] ?? 'کاڵا'),
       quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
       unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
-      subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
+      subtotal: double.tryParse((json['subtotal'] ?? json['total_price'] ?? json['line_total'])?.toString() ?? '0') ?? 0.0,
       isPacked: json['is_packed'] == true || json['is_packed'] == 1,
       notes: json['notes'],
+      productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
+      unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
     );
   }
 }
