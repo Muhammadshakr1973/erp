@@ -96,6 +96,8 @@ class AppNotification {
         return 'ستۆک و کۆگا';
       case 'commission':
         return 'کۆمسیۆن';
+      case 'customer':
+        return 'کڕیار';
       case 'system':
       default:
         return 'سیستەم';
@@ -112,6 +114,8 @@ class AppNotification {
         return Icons.inventory_2_outlined;
       case 'commission':
         return Icons.monetization_on_outlined;
+      case 'customer':
+        return AppIcons.customers;
       case 'system':
       default:
         return AppIcons.notifications;
@@ -128,6 +132,8 @@ class AppNotification {
         return AppColors.warning;
       case 'commission':
         return AppColors.info;
+      case 'customer':
+        return AppColors.purple;
       case 'system':
       default:
         return AppColors.textSecondaryLight;

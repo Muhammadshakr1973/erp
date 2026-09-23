@@ -167,6 +167,24 @@ class NotificationService
     }
 
     /**
+     * NOT-013: New Customer created -> notify Admins & Owner
+     */
+    public function notifyNewCustomerCreated(Customer $customer, $actor = null): void
+    {
+        $creatorName = $actor ? $actor->name : ($customer->creator ? $customer->creator->name : 'مەندوب');
+        $title = 'کڕیاری نوێ زیادکرا';
+        $body = "کڕیاری نوێ '{$customer->name}' لەلایەن '{$creatorName}' زیادکرا لە سیستەم.";
+
+        $data = [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'action' => 'open_customer',
+        ];
+
+        $this->notifyRole(['admin', 'owner'], Notification::TYPE_CUSTOMER, $title, $body, $data);
+    }
+
+    /**
      * NOT-002: Order packed & Ready for delivery -> notify Drivers & Admins
      */
     public function notifyOrderReadyForDelivery(SalesOrder $order, $actor = null): void

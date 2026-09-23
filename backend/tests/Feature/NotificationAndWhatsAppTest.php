@@ -347,4 +347,58 @@ class NotificationAndWhatsAppTest extends TestCase
             'provider_message_id' => 'msg_id_9999',
         ]);
     }
+
+    /**
+     * Test that creating a new customer triggers a notification to admins and owners.
+     */
+    public function test_new_customer_triggers_notification_to_admins_and_owners(): void
+    {
+        // 1. Setup an admin user
+        $adminRole = Role::create([
+            'name' => Role::ADMIN,
+            'display_name' => 'Admin',
+            'permissions' => ['*'],
+        ]);
+
+        $adminUser = User::factory()->create([
+            'role_id' => $adminRole->id,
+            'is_active' => true,
+        ]);
+
+        // 2. Clear out any previous notifications for admin and owner to simplify count
+        Notification::whereIn('user_id', [$this->owner->id, $adminUser->id])->delete();
+
+        // 3. Request customer creation as salesman
+        $payload = [
+            'name' => 'New Awesome Customer',
+            'phone' => '07502223344',
+            'price_tier' => 'RETAIL',
+            'route_id' => $this->customer->route_id,
+        ];
+
+        $response = $this->actingAs($this->salesman, 'sanctum')
+            ->postJson('/api/v1/customers', $payload);
+
+        $response->assertStatus(201);
+        $customerId = $response->json('data.id');
+
+        // 4. Verify notification was created for Owner and Admin
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->owner->id,
+            'type' => 'customer',
+            'title' => 'کڕیاری نوێ زیادکرا',
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $adminUser->id,
+            'type' => 'customer',
+            'title' => 'کڕیاری نوێ زیادکرا',
+        ]);
+
+        // Ensure salesman didn't get this notification (only owner and admin)
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $this->salesman->id,
+            'type' => 'customer',
+        ]);
+    }
 }

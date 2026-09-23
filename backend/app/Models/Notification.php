@@ -15,6 +15,7 @@ class Notification extends Model
     const TYPE_PAYMENT = 'payment';
     const TYPE_STOCK = 'stock';
     const TYPE_COMMISSION = 'commission';
+    const TYPE_CUSTOMER = 'customer';
     const TYPE_SYSTEM = 'system';
     public function user(): BelongsTo
     {

@@ -186,6 +186,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                 const SizedBox(width: 8),
                 _buildFilterChip('کۆمسیۆن', 'commission', selectedFilter),
                 const SizedBox(width: 8),
+                _buildFilterChip('کڕیارەکان', 'customer', selectedFilter),
+                const SizedBox(width: 8),
                 _buildFilterChip('سیستەم', 'system', selectedFilter),
               ],
             ),

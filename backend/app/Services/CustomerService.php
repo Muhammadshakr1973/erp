@@ -96,6 +96,16 @@ class CustomerService
 
             return $customer;
         });
+
+        // Notify new customer created AFTER database commit (NOT-013)
+        try {
+            $actor = \App\Models\User::find($userId);
+            app(\App\Services\NotificationService::class)->notifyNewCustomerCreated($customer, $actor);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for new customer: " . $e->getMessage());
+        }
+
+        return $customer;
     }
 
     public function updateCustomer(Customer $customer, array $data): Customer
