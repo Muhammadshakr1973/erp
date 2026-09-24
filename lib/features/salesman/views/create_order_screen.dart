@@ -57,8 +57,57 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   bool _isSaving = false;
 
   String? _lastChangedField;
-  final Set<String> _successFields = {};
+  final Map<String, String> _fieldStates = {}; // field_name -> 'saving' | 'success' | 'error'
+  final Map<String, String> _fieldErrors = {}; // field_name -> error message
   final Map<String, Timer> _successTimers = {};
+
+  void _setFieldState(String field, String state, {String? error}) {
+    if (!mounted) return;
+    setState(() {
+      _fieldStates[field] = state;
+      if (error != null) {
+        _fieldErrors[field] = error;
+      } else {
+        _fieldErrors.remove(field);
+      }
+    });
+
+    if (state == 'success') {
+      _successTimers[field]?.cancel();
+      _successTimers[field] = Timer(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _fieldStates.remove(field);
+          });
+        }
+        _successTimers.remove(field);
+      });
+    }
+  }
+
+  Widget? _buildFieldStatusIcon(String field, {double size = 20}) {
+    final state = _fieldStates[field];
+    if (state == 'saving') {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+        ),
+      );
+    } else if (state == 'success') {
+      return Icon(Icons.check_circle, color: AppColors.success, size: size);
+    } else if (state == 'error') {
+      final errorMsg = _fieldErrors[field] ?? 'هەڵەیەک ڕوویدا';
+      return Tooltip(
+        message: errorMsg,
+        preferBelow: false,
+        child: Icon(Icons.error, color: AppColors.danger, size: size),
+      );
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -187,23 +236,24 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _addToCart(int productId) {
+    _lastChangedField = 'product_qty_$productId';
+    _setFieldState('product_qty_$productId', 'saving');
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
-      _lastChangedField = 'product_qty_$productId';
     });
     _triggerDebouncedAutoSave();
   }
 
   void _removeFromCart(int productId) {
+    _lastChangedField = 'product_qty_$productId';
+    _setFieldState('product_qty_$productId', 'saving');
     setState(() {
       if (_cart.containsKey(productId)) {
         if (_cart[productId]! > 1) {
           _cart[productId] = _cart[productId]! - 1;
-          _lastChangedField = 'product_qty_$productId';
         } else {
           _cart.remove(productId);
           _cartNotes.remove(productId);
-          _lastChangedField = 'product_qty_$productId';
         }
       }
     });
@@ -289,9 +339,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
 
     if (newQty != null && newQty > 0 && mounted) {
+      _lastChangedField = 'product_qty_$productId';
+      _setFieldState('product_qty_$productId', 'saving');
       setState(() {
         _cart[productId] = newQty;
-        _lastChangedField = 'product_qty_$productId';
       });
       _triggerDebouncedAutoSave();
     }
@@ -579,22 +630,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
 
       if (mounted && _lastChangedField != null) {
-        final field = _lastChangedField!;
+        _setFieldState(_lastChangedField!, 'success');
         _lastChangedField = null;
-        setState(() {
-          _successFields.add(field);
-        });
-        _successTimers[field]?.cancel();
-        _successTimers[field] = Timer(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _successFields.remove(field);
-            });
-          }
-          _successTimers.remove(field);
-        });
       }
-    } catch (_) {
+    } catch (e) {
+      if (mounted && _lastChangedField != null) {
+        final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+        _setFieldState(_lastChangedField!, 'error', error: errorMsg);
+        
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('پاشەکەوتکردن سەرکەوتوو نەبوو: $errorMsg'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        _lastChangedField = null;
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -783,9 +835,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   decoration: InputDecoration(
                     labelText: 'دیاریکردنی کڕیار',
                     prefixIcon: const Icon(Icons.person_outline, size: 20),
-                    suffixIcon: _successFields.contains('customer')
-                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
-                        : null,
+                    suffixIcon: _buildFieldStatusIcon('customer'),
                     border: const OutlineInputBorder(),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -807,9 +857,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     final found = customers
                         .where((c) => c.id == val)
                         .firstOrNull;
+                    _lastChangedField = 'customer';
+                    _setFieldState('customer', 'saving');
                     setState(() {
                       _selectedCustomer = found;
-                      _lastChangedField = 'customer';
                     });
                     if (found != null) {
                       _fetchSpecialPricesForCustomer(found.id);
@@ -848,9 +899,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   decoration: InputDecoration(
                     labelText: 'دیاریکردنی کۆگا',
                     prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
-                    suffixIcon: _successFields.contains('warehouse')
-                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
-                        : null,
+                    suffixIcon: _buildFieldStatusIcon('warehouse'),
                     border: const OutlineInputBorder(),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -870,9 +919,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   }).toList(),
                   onChanged: (val) {
                     if (val != null) {
+                      _lastChangedField = 'warehouse';
+                      _setFieldState('warehouse', 'saving');
                       setState(() {
                         _selectedWarehouseId = val;
-                        _lastChangedField = 'warehouse';
                       });
                       _triggerDebouncedAutoSave();
                     }
@@ -1293,14 +1343,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     controller: _notesController,
                     hintText: 'تێبینی (ئارەزوومەندانە)...',
                     prefixIcon: Icons.note_alt_outlined,
-                    suffixIcon: _successFields.contains('order_notes')
-                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
-                        : null,
+                    suffixIcon: _buildFieldStatusIcon('order_notes'),
                     borderRadius: BorderRadius.circular(12),
                     onChanged: (val) {
-                      setState(() {
-                        _lastChangedField = 'order_notes';
-                      });
+                      _lastChangedField = 'order_notes';
+                      _setFieldState('order_notes', 'saving');
                       _triggerDebouncedAutoSave();
                     },
                   ),
@@ -1434,8 +1481,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            if (_successFields.contains('product_qty_$productId')) ...[
-                                              const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                                            if (_buildFieldStatusIcon('product_qty_$productId', size: 18) != null) ...[
+                                              _buildFieldStatusIcon('product_qty_$productId', size: 18)!,
                                               const SizedBox(width: 4),
                                             ],
                                             IconButton(
@@ -1516,9 +1563,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           isDense: true,
                                           contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                                           border: InputBorder.none,
-                                          suffixIcon: _successFields.contains('product_note_$productId')
-                                              ? const Icon(Icons.check_circle, color: AppColors.success, size: 16)
-                                              : null,
+                                          suffixIcon: _buildFieldStatusIcon('product_note_$productId', size: 16),
                                           suffixIconConstraints: const BoxConstraints(
                                             minWidth: 16,
                                             minHeight: 16,
@@ -1526,9 +1571,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                         ),
                                         onChanged: (val) {
                                           _cartNotes[productId] = val;
-                                          setState(() {
-                                            _lastChangedField = 'product_note_$productId';
-                                          });
+                                          _lastChangedField = 'product_note_$productId';
+                                          _setFieldState('product_note_$productId', 'saving');
                                           _triggerDebouncedAutoSave();
                                         },
                                       ),
@@ -1625,12 +1669,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 ],
                                 onChanged: (val) {
                                   if (val != null) {
+                                    _lastChangedField = 'discount';
+                                    _setFieldState('discount', 'saving');
                                     setState(() {
                                       _discountType = val;
                                       if (_discountType == 'PERCENT' && _discountValue > 100) {
                                         _discountValue = 100;
                                       }
-                                      _lastChangedField = 'discount';
                                     });
                                     _triggerDebouncedAutoSave();
                                   }
@@ -1653,18 +1698,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   border: InputBorder.none,
                                   hintText: '0',
-                                  suffixIcon: _successFields.contains('discount')
-                                      ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
-                                      : null,
+                                  suffixIcon: _buildFieldStatusIcon('discount'),
                                 ),
                                 onChanged: (val) {
                                   final parsed = double.tryParse(val) ?? 0.0;
+                                  _lastChangedField = 'discount';
+                                  _setFieldState('discount', 'saving');
                                   setState(() {
                                     _discountValue = parsed;
                                     if (_discountType == 'PERCENT' && _discountValue > 100) {
                                       _discountValue = 100;
                                     }
-                                    _lastChangedField = 'discount';
                                   });
                                   _triggerDebouncedAutoSave();
                                 },
