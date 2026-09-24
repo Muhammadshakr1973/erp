@@ -51,9 +51,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   double? _searchFieldWidth;
   bool _isSubmitting = false;
 
+  String? _localId;
+  int? _generatedIntId;
+  String? _sharedKey;
+  bool _hasSavedOnce = false;
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
+    _localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+    final cleanStr = _localId!.replaceAll(RegExp(r'[^0-9]'), '');
+    final val = int.tryParse(cleanStr) ?? 0;
+    _generatedIntId = -1 * (val % 1000000000);
+    _sharedKey = 'order_${DateTime.now().microsecondsSinceEpoch}';
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.existingOrder != null) {
         _populateFromExistingOrder(widget.existingOrder!);
@@ -65,6 +77,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _populateFromExistingOrder(OrderModel order) {
     setState(() {
+      _localId = order.id.toString();
+      _generatedIntId = order.id;
+      _sharedKey = order.sharedKey;
+      _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
       _discountType = order.discountType;
       _discountValue = order.discountType == 'PERCENT'
@@ -168,7 +184,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
     });
-    _triggerAutoSave();
+    _triggerDebouncedAutoSave();
   }
 
   void _removeFromCart(int productId) {
@@ -182,7 +198,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     });
-    _triggerAutoSave();
+    _triggerDebouncedAutoSave();
   }
 
   Future<void> _confirmDeleteItem(int productId, String productName) async {
@@ -215,7 +231,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _cart.remove(productId);
         _cartNotes.remove(productId);
       });
-      _triggerAutoSave();
+      _triggerDebouncedAutoSave();
       AppSnackbar.show(
         context,
         message: '$productName لە پسوڵەکە سڕایەوە',
@@ -267,7 +283,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       setState(() {
         _cart[productId] = newQty;
       });
-      _triggerAutoSave();
+      _triggerDebouncedAutoSave();
     }
   }
 
@@ -491,46 +507,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     });
   }
 
-  Future<void> _submitOrder(
+  Future<void> _autoSaveOrder(
     List<ProductModel> products,
     AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) async {
-    if (warehousesAsync.hasError || warehousesAsync.asData == null) {
-      AppSnackbar.show(
-        context,
-        message: 'هەڵە لە بارکردنی کۆگاکان (Failed to load warehouses)',
-        type: SnackbarType.error,
-      );
-      return;
-    }
+    if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
 
     final warehouses = warehousesAsync.asData!.value;
-    if (warehouses.isEmpty) {
-      AppSnackbar.show(
-        context,
-        message: 'هیچ کۆگایەک بەردەست نییە بۆ دروستکردنی پسوڵە',
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    if (_selectedCustomer == null) {
-      AppSnackbar.show(
-        context,
-        message: 'تکایە سەرەتا کڕیارێک هەڵبژێرە',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
-    if (_cart.isEmpty && widget.existingOrder == null) {
-      AppSnackbar.show(
-        context,
-        message: 'سەبەتە بەتاڵە! کاڵا بنێرە ناو سەبەتە',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
+    if (warehouses.isEmpty) return;
+    if (_selectedCustomer == null) return;
+    if (widget.existingOrder == null && _cart.isEmpty) return;
 
     final warehouseId = _selectedWarehouseId ??
         (warehouses.any((w) => w.isMain)
@@ -546,8 +532,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       });
     });
 
-    final String sharedKey = widget.existingOrder?.sharedKey ??
-        'order_${DateTime.now().microsecondsSinceEpoch}';
+    final String sharedKey = _sharedKey ?? 'order_${DateTime.now().microsecondsSinceEpoch}';
     final int version = widget.existingOrder?.version ?? 1;
 
     final payload = {
@@ -565,90 +550,48 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'items': itemsList,
     };
 
-    setState(() => _isSubmitting = true);
+    if (mounted) {
+      setState(() {
+        _isSaving = true;
+      });
+    }
 
     try {
-      if (widget.existingOrder != null) {
+      if (_hasSavedOnce) {
+        final orderIdToUpdate = widget.existingOrder?.id ?? _generatedIntId!;
         await ref
             .read(orderActionsProvider)
-            .updateOrder(widget.existingOrder!.id, payload);
+            .updateOrder(orderIdToUpdate, payload);
       } else {
-        await ref.read(orderActionsProvider).createOrder(payload);
-      }
+        final String localId = _localId!;
+        await ref.read(syncServiceProvider).enqueueOperation(
+          entityId: localId,
+          operationType: 'CREATE_ORDER',
+          payload: payload,
+        );
 
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: widget.existingOrder != null
-              ? 'پسوڵەکە بە سەرکەوتوویی نوێکرایەوە'
-              : 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
-          type: SnackbarType.success,
+        final localBox = ref.read(localOrdersBoxProvider);
+        final optimisticJson = ref.read(orderActionsProvider)._buildOptimisticOrderJson(
+          idStr: localId,
+          intId: _generatedIntId!,
+          data: payload,
+          ref: ref,
+          status: payload['status'] ?? 'PACKING',
         );
-        context.pop();
+
+        await localBox.put(localId, jsonEncode(optimisticJson));
+        ref.invalidate(ordersListProvider);
+
+        _hasSavedOnce = true;
       }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'هەڵە لە تۆمارکردنی پسوڵە: $e',
-          type: SnackbarType.error,
-        );
-      }
+    } catch (_) {
     } finally {
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
-  }
-
-  Future<void> _autoSaveOrder(
-    List<ProductModel> products,
-    AsyncValue<List<WarehouseModel>> warehousesAsync,
-  ) async {
-    if (widget.existingOrder == null) return;
-    if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
-
-    final warehouses = warehousesAsync.asData!.value;
-    if (warehouses.isEmpty) return;
-    if (_selectedCustomer == null) return;
-
-    final warehouseId = _selectedWarehouseId ??
-        (warehouses.any((w) => w.isMain)
-            ? warehouses.firstWhere((w) => w.isMain).id
-            : warehouses.first.id);
-
-    final List<Map<String, dynamic>> itemsList = [];
-    _cart.forEach((productId, qty) {
-      itemsList.add({
-        'product_id': productId,
-        'quantity': qty,
-        'notes': _cartNotes[productId],
-      });
-    });
-
-    final String? sharedKey = widget.existingOrder!.sharedKey;
-    final int version = widget.existingOrder!.version;
-
-    final payload = {
-      'customer_id': _selectedCustomer!.id,
-      'warehouse_id': warehouseId,
-      'status': 'PACKING',
-      'discount_type': _discountType,
-      'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
-      'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
-      'shared_key': sharedKey,
-      'version': version,
-      'notes': _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
-      'items': itemsList,
-    };
-
-    try {
-      await ref
-          .read(orderActionsProvider)
-          .updateOrder(widget.existingOrder!.id, payload);
-    } catch (_) {}
   }
 
   void _triggerAutoSave() {
@@ -670,7 +613,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget build(BuildContext context) {
     return PermissionGuard(
       permission: 'orders.create',
-      child: _buildScaffold(context),
+      child: PopScope(
+        canPop: true,
+        onPopInvoked: (didPop) {
+          if (_debounceTimer?.isActive == true) {
+            _debounceTimer?.cancel();
+            _triggerAutoSave();
+          }
+        },
+        child: _buildScaffold(context),
+      ),
     );
   }
 
@@ -837,6 +789,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     if (found != null) {
                       _fetchSpecialPricesForCustomer(found.id);
                     }
+                    _triggerDebouncedAutoSave();
                   },
                 );
               },
@@ -892,6 +845,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       setState(() {
                         _selectedWarehouseId = val;
                       });
+                      _triggerDebouncedAutoSave();
                     }
                   },
                 );
@@ -1628,7 +1582,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                         _discountValue = 100;
                                       }
                                     });
-                                    _triggerAutoSave();
+                                    _triggerDebouncedAutoSave();
                                   }
                                 },
                               ),
@@ -1722,14 +1676,70 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                AppButton(
-                  width: double.infinity,
-                  text: 'تەواوکردنی پسوڵە',
-                  isLoading: _isSubmitting,
-                  onPressed: (_cart.isNotEmpty && !warehousesAsync.hasError)
-                      ? () => _submitOrder(allProducts, warehousesAsync)
-                      : null,
-                  size: AppButtonSize.lg,
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: _isSaving
+                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
+                        : (_cart.isEmpty || _selectedCustomer == null)
+                            ? theme.colorScheme.surfaceContainerHigh
+                            : theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isSaving
+                          ? theme.colorScheme.primary.withValues(alpha: 0.3)
+                          : (_cart.isEmpty || _selectedCustomer == null)
+                              ? theme.colorScheme.outlineVariant
+                              : theme.colorScheme.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_isSaving) ...[
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'خۆکارانە پاشەکەوت دەکرێت...',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ] else if (_selectedCustomer == null) ...[
+                        const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          'تکایە سەرەتا کڕیارێک دیاری بکە',
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                        ),
+                      ] else if (_cart.isEmpty) ...[
+                        const Icon(Icons.shopping_cart_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          'کاڵا زیاد بکە بۆ دەستپێکردنی پاشەکەوتکردن',
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                        ),
+                      ] else ...[
+                        const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
+                        const SizedBox(width: 8),
+                        Text(
+                          'هەموو گۆڕانکارییەکان پاشەکەوت کراون',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
