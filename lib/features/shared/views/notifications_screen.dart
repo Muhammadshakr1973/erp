@@ -162,6 +162,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     String? selectedFilter,
   ) {
     final theme = Theme.of(context);
+    final user = ref.watch(authProvider).user;
 
     return Column(
       children: [
@@ -179,14 +180,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                 _buildFilterChip('هەموو', null, selectedFilter),
                 const SizedBox(width: 8),
                 _buildFilterChip('پسوڵەکان', 'order', selectedFilter),
-                const SizedBox(width: 8),
-                _buildFilterChip('پارەدان', 'payment', selectedFilter),
+                if (user?.role.toLowerCase() != 'warehouse') ...[
+                  const SizedBox(width: 8),
+                  _buildFilterChip('پارەدان', 'payment', selectedFilter),
+                ],
                 const SizedBox(width: 8),
                 _buildFilterChip('کۆگا و ستۆک', 'stock', selectedFilter),
-                const SizedBox(width: 8),
-                _buildFilterChip('کۆمسیۆن', 'commission', selectedFilter),
-                const SizedBox(width: 8),
-                _buildFilterChip('کڕیارەکان', 'customer', selectedFilter),
+                if (user?.role.toLowerCase() != 'warehouse') ...[
+                  const SizedBox(width: 8),
+                  _buildFilterChip('کۆمسیۆن', 'commission', selectedFilter),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('کڕیارەکان', 'customer', selectedFilter),
+                ],
                 const SizedBox(width: 8),
                 _buildFilterChip('سیستەم', 'system', selectedFilter),
               ],

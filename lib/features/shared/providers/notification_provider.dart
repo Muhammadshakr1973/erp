@@ -53,6 +53,15 @@ class NotificationsNotifier
         final notificationJson = data['notification'];
         final newNotification = AppNotification.fromJson(Map<String, dynamic>.from(notificationJson));
         
+        // Filter out unauthorized notifications for warehouse role
+        final user = _ref.read(authProvider).user;
+        if (user != null && user.role.toLowerCase() == 'warehouse') {
+          final type = newNotification.type.toLowerCase();
+          if (type == 'customer' || type == 'commission' || type == 'payment') {
+            return;
+          }
+        }
+
         final currentList = state.value ?? [];
         if (currentList.any((n) => n.id == newNotification.id)) return;
 
@@ -109,9 +118,18 @@ class NotificationsNotifier
           );
         }
         final List list = resData['data'] as List;
-        final items = list
+        var items = list
             .map((json) => AppNotification.fromJson(json))
             .toList();
+
+        // Client-side safety filter for warehouse role
+        final user = _ref.read(authProvider).user;
+        if (user != null && user.role.toLowerCase() == 'warehouse') {
+          items = items.where((n) {
+            final type = n.type.toLowerCase();
+            return type != 'customer' && type != 'commission' && type != 'payment';
+          }).toList();
+        }
 
         final unreadCount =
             resData['unread_count'] as int? ??

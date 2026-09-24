@@ -427,6 +427,11 @@ class NotificationService
         $query = Notification::where('user_id', $user->id)
             ->latest('id');
 
+        // Apply role-based restrictions for warehouse role
+        if ($user->isWarehouse()) {
+            $query->whereNotIn('type', ['customer', 'commission', 'payment']);
+        }
+
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
@@ -444,9 +449,15 @@ class NotificationService
      */
     public function getUnreadCount(User $user): int
     {
-        return Notification::where('user_id', $user->id)
-            ->where('is_read', false)
-            ->count();
+        $query = Notification::where('user_id', $user->id)
+            ->where('is_read', false);
+
+        // Apply role-based restrictions for warehouse role
+        if ($user->isWarehouse()) {
+            $query->whereNotIn('type', ['customer', 'commission', 'payment']);
+        }
+
+        return $query->count();
     }
 
     /**

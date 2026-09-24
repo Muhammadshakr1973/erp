@@ -1307,27 +1307,27 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               children: [
                 // 3. Compact Discount Controls in the Cart Header
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerLow,
-                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.4)),
-                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
                         'داشکان: ',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
                       ),
                       DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _discountType,
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                           isDense: true,
                           items: const [
-                            DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)', style: TextStyle(fontSize: 10))),
-                            DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)', style: TextStyle(fontSize: 10))),
+                            DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)', style: TextStyle(fontSize: 12))),
+                            DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)', style: TextStyle(fontSize: 12))),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -1342,15 +1342,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       SizedBox(
-                        width: 50,
-                        height: 24,
+                        width: 65,
+                        height: 28,
                         child: TextFormField(
                           key: ValueKey('discount_field_${_discountValue}_$_discountType'),
                           initialValue: _discountValue == 0 ? '' : _discountValue.toString(),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                           decoration: const InputDecoration(
                             isDense: true,
@@ -1480,7 +1480,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            Formatters.currency(unitPrice),
+                                            '(${product?.unit ?? "پاکەت"} = ${product?.unitsPerCarton ?? 12} دانە = ${Formatters.currency(unitPrice)})',
                                             style: AppTextStyles.caption.copyWith(
                                               color: isSpecialPrice
                                                   ? theme.colorScheme.primary
@@ -1664,9 +1664,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'کۆ کۆتایی:',
+                              'کۆ:',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey,
                               ),
@@ -1677,7 +1677,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 textAlign: TextAlign.end,
                                 style: AppTextStyles.bodyBold.copyWith(
                                   color: theme.colorScheme.primary,
-                                  fontSize: 14,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
