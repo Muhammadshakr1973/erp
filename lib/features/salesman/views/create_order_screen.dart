@@ -56,6 +56,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   bool _hasSavedOnce = false;
   bool _isSaving = false;
 
+  String? _lastChangedField;
+  final Set<String> _successFields = {};
+  final Map<String, Timer> _successTimers = {};
+
   @override
   void initState() {
     super.initState();
@@ -141,6 +145,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _notesController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    for (var timer in _successTimers.values) {
+      timer.cancel();
+    }
     super.dispose();
   }
 
@@ -182,6 +189,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void _addToCart(int productId) {
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
+      _lastChangedField = 'product_qty_$productId';
     });
     _triggerDebouncedAutoSave();
   }
@@ -191,9 +199,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (_cart.containsKey(productId)) {
         if (_cart[productId]! > 1) {
           _cart[productId] = _cart[productId]! - 1;
+          _lastChangedField = 'product_qty_$productId';
         } else {
           _cart.remove(productId);
           _cartNotes.remove(productId);
+          _lastChangedField = 'product_qty_$productId';
         }
       }
     });
@@ -281,6 +291,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (newQty != null && newQty > 0 && mounted) {
       setState(() {
         _cart[productId] = newQty;
+        _lastChangedField = 'product_qty_$productId';
       });
       _triggerDebouncedAutoSave();
     }
@@ -566,6 +577,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         await ref.read(orderActionsProvider).createOrder(payload);
         _hasSavedOnce = true;
       }
+
+      if (mounted && _lastChangedField != null) {
+        final field = _lastChangedField!;
+        _lastChangedField = null;
+        setState(() {
+          _successFields.add(field);
+        });
+        _successTimers[field]?.cancel();
+        _successTimers[field] = Timer(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _successFields.remove(field);
+            });
+          }
+          _successTimers.remove(field);
+        });
+      }
     } catch (_) {
     } finally {
       if (mounted) {
@@ -634,6 +662,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
               ),
               const SizedBox(width: 8),
+              if (_isSaving) ...[
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Container(
                 height: 36,
                 padding: const EdgeInsets.symmetric(
@@ -741,11 +780,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
                       ? _selectedCustomer?.id
                       : null,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'دیاریکردنی کڕیار',
-                    prefixIcon: Icon(Icons.person_outline, size: 20),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
+                    prefixIcon: const Icon(Icons.person_outline, size: 20),
+                    suffixIcon: _successFields.contains('customer')
+                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                        : null,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 8,
                     ),
@@ -767,6 +809,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         .firstOrNull;
                     setState(() {
                       _selectedCustomer = found;
+                      _lastChangedField = 'customer';
                     });
                     if (found != null) {
                       _fetchSpecialPricesForCustomer(found.id);
@@ -802,11 +845,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   initialValue: warehouses.any((w) => w.id == selectedId)
                       ? selectedId
                       : warehouses.first.id,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'دیاریکردنی کۆگا',
-                    prefixIcon: Icon(Icons.warehouse_outlined, size: 20),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
+                    prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
+                    suffixIcon: _successFields.contains('warehouse')
+                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                        : null,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 8,
                     ),
@@ -826,6 +872,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     if (val != null) {
                       setState(() {
                         _selectedWarehouseId = val;
+                        _lastChangedField = 'warehouse';
                       });
                       _triggerDebouncedAutoSave();
                     }
@@ -1246,8 +1293,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     controller: _notesController,
                     hintText: 'تێبینی (ئارەزوومەندانە)...',
                     prefixIcon: Icons.note_alt_outlined,
+                    suffixIcon: _successFields.contains('order_notes')
+                        ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                        : null,
                     borderRadius: BorderRadius.circular(12),
                     onChanged: (val) {
+                      setState(() {
+                        _lastChangedField = 'order_notes';
+                      });
                       _triggerDebouncedAutoSave();
                     },
                   ),
@@ -1381,6 +1434,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            if (_successFields.contains('product_qty_$productId')) ...[
+                                              const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                                              const SizedBox(width: 4),
+                                            ],
                                             IconButton(
                                               icon: const Icon(
                                                 Icons.remove_circle_outline,
@@ -1454,14 +1511,24 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                       child: TextFormField(
                                         initialValue: _cartNotes[productId] ?? '',
                                         style: const TextStyle(fontSize: 11),
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: 'تێبینی بۆ ئەم کاڵایە...',
                                           isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                                           border: InputBorder.none,
+                                          suffixIcon: _successFields.contains('product_note_$productId')
+                                              ? const Icon(Icons.check_circle, color: AppColors.success, size: 16)
+                                              : null,
+                                          suffixIconConstraints: const BoxConstraints(
+                                            minWidth: 16,
+                                            minHeight: 16,
+                                          ),
                                         ),
                                         onChanged: (val) {
                                           _cartNotes[productId] = val;
+                                          setState(() {
+                                            _lastChangedField = 'product_note_$productId';
+                                          });
                                           _triggerDebouncedAutoSave();
                                         },
                                       ),
@@ -1563,6 +1630,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                       if (_discountType == 'PERCENT' && _discountValue > 100) {
                                         _discountValue = 100;
                                       }
+                                      _lastChangedField = 'discount';
                                     });
                                     _triggerDebouncedAutoSave();
                                   }
@@ -1580,11 +1648,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.start,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   border: InputBorder.none,
                                   hintText: '0',
+                                  suffixIcon: _successFields.contains('discount')
+                                      ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                                      : null,
                                 ),
                                 onChanged: (val) {
                                   final parsed = double.tryParse(val) ?? 0.0;
@@ -1593,6 +1664,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                     if (_discountType == 'PERCENT' && _discountValue > 100) {
                                       _discountValue = 100;
                                     }
+                                    _lastChangedField = 'discount';
                                   });
                                   _triggerDebouncedAutoSave();
                                 },
@@ -1657,72 +1729,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: _isSaving
-                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
-                        : (_cart.isEmpty || _selectedCustomer == null)
-                            ? theme.colorScheme.surfaceContainerHigh
-                            : theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _isSaving
-                          ? theme.colorScheme.primary.withValues(alpha: 0.3)
-                          : (_cart.isEmpty || _selectedCustomer == null)
-                              ? theme.colorScheme.outlineVariant
-                              : theme.colorScheme.primary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_isSaving) ...[
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'خۆکارانە پاشەکەوت دەکرێت...',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ] else if (_selectedCustomer == null) ...[
-                        const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(
-                          'تکایە سەرەتا کڕیارێک دیاری بکە',
-                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
-                        ),
-                      ] else if (_cart.isEmpty) ...[
-                        const Icon(Icons.shopping_cart_outlined, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(
-                          'کاڵا زیاد بکە بۆ دەستپێکردنی پاشەکەوتکردن',
-                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
-                        ),
-                      ] else ...[
-                        const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
-                        const SizedBox(width: 8),
-                        Text(
-                          'هەموو گۆڕانکارییەکان پاشەکەوت کراون',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+
               ],
             ),
           ),
