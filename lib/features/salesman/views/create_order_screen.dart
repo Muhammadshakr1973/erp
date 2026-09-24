@@ -1305,74 +1305,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // 3. Compact Discount Controls in the Cart Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+                Expanded(
+                  child: AppTextField(
+                    controller: _notesController,
+                    hintText: 'تێبینی (ئارەزوومەندانە)...',
+                    prefixIcon: Icons.note_alt_outlined,
                     borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'داشکان: ',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _discountType,
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                          isDense: true,
-                          items: const [
-                            DropdownMenuItem(value: 'PERCENT', child: Text('% (ڕێژە)', style: TextStyle(fontSize: 12))),
-                            DropdownMenuItem(value: 'FIXED', child: Text('بڕ (پارە)', style: TextStyle(fontSize: 12))),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _discountType = val;
-                                if (_discountType == 'PERCENT' && _discountValue > 100) {
-                                  _discountValue = 100;
-                                }
-                              });
-                              _triggerAutoSave();
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 65,
-                        height: 28,
-                        child: TextFormField(
-                          key: ValueKey('discount_field_${_discountValue}_$_discountType'),
-                          initialValue: _discountValue == 0 ? '' : _discountValue.toString(),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 4),
-                            border: InputBorder.none,
-                            hintText: '0',
-                          ),
-                          onChanged: (val) {
-                            final parsed = double.tryParse(val) ?? 0.0;
-                            setState(() {
-                              _discountValue = parsed;
-                              if (_discountType == 'PERCENT' && _discountValue > 100) {
-                                _discountValue = 100;
-                              }
-                            });
-                            _triggerDebouncedAutoSave();
-                          },
-                        ),
-                      ),
-                    ],
+                    onChanged: (val) {
+                      _triggerDebouncedAutoSave();
+                    },
                   ),
                 ),
+                const SizedBox(width: AppSpacing.md),
                 Chip(
                   label: Text('$cartItemCount کاڵا'),
                   backgroundColor: theme.colorScheme.primaryContainer,
@@ -1622,16 +1566,104 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: AppTextField(
-                        controller: _notesController,
-                        hintText: 'تێبینی (ئارەزوومەندانە)...',
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(24),
-                          bottomRight: Radius.circular(24),
+                      child: Container(
+                        height: 52,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          border: Border(
+                            top: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                            bottom: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                            right: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                              width: 1,
+                            ),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(24),
+                            bottomRight: Radius.circular(24),
+                          ),
                         ),
-                        onChanged: (val) {
-                          _triggerDebouncedAutoSave();
-                        },
+                        child: Row(
+                          children: [
+                            const Text(
+                              'داشکان: ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _discountType,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                isDense: true,
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'PERCENT',
+                                    child: Text('% (ڕێژە)', style: TextStyle(fontSize: 13)),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'FIXED',
+                                    child: Text('بڕ (پارە)', style: TextStyle(fontSize: 13)),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _discountType = val;
+                                      if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                        _discountValue = 100;
+                                      }
+                                    });
+                                    _triggerAutoSave();
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                key: ValueKey('discount_field_${_discountValue}_$_discountType'),
+                                initialValue: _discountValue == 0 ? '' : _discountValue.toString(),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.start,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                  border: InputBorder.none,
+                                  hintText: '0',
+                                ),
+                                onChanged: (val) {
+                                  final parsed = double.tryParse(val) ?? 0.0;
+                                  setState(() {
+                                    _discountValue = parsed;
+                                    if (_discountType == 'PERCENT' && _discountValue > 100) {
+                                      _discountValue = 100;
+                                    }
+                                  });
+                                  _triggerDebouncedAutoSave();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     Expanded(
