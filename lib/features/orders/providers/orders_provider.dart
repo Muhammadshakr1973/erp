@@ -207,8 +207,14 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
         }
       }
 
-      // Merge and return
-      return [...finalOnlineOrders, ...remainingLocalOrders];
+      // Merge and sort descending by createdAt (newest first)
+      final mergedList = [...finalOnlineOrders, ...remainingLocalOrders];
+      mergedList.sort((a, b) {
+        final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+      return mergedList;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -237,6 +243,12 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
       }
 
       if (cachedOrders.isNotEmpty) {
+        // Sort cached orders descending by createdAt (newest first)
+        cachedOrders.sort((a, b) {
+          final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return bDate.compareTo(aDate);
+        });
         return cachedOrders;
       }
 
