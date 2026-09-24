@@ -628,7 +628,7 @@ class OrderActions {
 
   Future<void> createOrder(Map<String, dynamic> data) async {
     // Local UUID for entity tracking
-    final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+    final localId = data['local_id'] ?? 'local_${DateTime.now().microsecondsSinceEpoch}';
 
     // Enqueue the offline operation
     await syncService.enqueueOperation(

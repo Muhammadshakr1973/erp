@@ -49,7 +49,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   double? _searchFieldWidth;
-  bool _isSubmitting = false;
 
   String? _localId;
   int? _generatedIntId;
@@ -563,25 +562,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             .read(orderActionsProvider)
             .updateOrder(orderIdToUpdate, payload);
       } else {
-        final String localId = _localId!;
-        await ref.read(syncServiceProvider).enqueueOperation(
-          entityId: localId,
-          operationType: 'CREATE_ORDER',
-          payload: payload,
-        );
-
-        final localBox = ref.read(localOrdersBoxProvider);
-        final optimisticJson = ref.read(orderActionsProvider)._buildOptimisticOrderJson(
-          idStr: localId,
-          intId: _generatedIntId!,
-          data: payload,
-          ref: ref,
-          status: payload['status'] ?? 'PACKING',
-        );
-
-        await localBox.put(localId, jsonEncode(optimisticJson));
-        ref.invalidate(ordersListProvider);
-
+        payload['local_id'] = _localId!;
+        await ref.read(orderActionsProvider).createOrder(payload);
         _hasSavedOnce = true;
       }
     } catch (_) {
@@ -615,7 +597,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       permission: 'orders.create',
       child: PopScope(
         canPop: true,
-        onPopInvoked: (didPop) {
+        onPopInvokedWithResult: (didPop, result) {
           if (_debounceTimer?.isActive == true) {
             _debounceTimer?.cancel();
             _triggerAutoSave();
