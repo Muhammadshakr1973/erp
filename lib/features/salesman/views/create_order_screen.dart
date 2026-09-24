@@ -661,7 +661,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _triggerDebouncedAutoSave() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
       _triggerAutoSave();
     });
   }
