@@ -1558,13 +1558,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(8),
-                              onTap: product != null
+                              onTap: null,
+                              onLongPress: product != null
                                   ? () => _showSpecialPriceDialog(product)
                                   : null,
-                              onLongPress: () => _confirmDeleteItem(
-                                productId,
-                                product?.name ?? 'کاڵا',
-                              ),
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
