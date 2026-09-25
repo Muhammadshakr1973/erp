@@ -563,7 +563,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Future<void> _autoSaveOrder(
-    List<ProductModel> products,
     AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
@@ -657,7 +656,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final productsAsync = ref.read(productsListProvider);
     final warehousesAsync = ref.read(warehouseListProvider);
     if (productsAsync.asData != null && warehousesAsync.asData != null) {
-      _autoSaveOrder(productsAsync.asData!.value, warehousesAsync);
+      _autoSaveOrder(warehousesAsync);
     }
   }
 
@@ -705,7 +704,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   height: 42,
                   child: _buildProductAutocompleteInput(
                     allProducts,
-                    productsAsync.isLoading,
                   ),
                 ),
               ),
@@ -744,13 +742,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             flex: 2,
                             child: _buildProductSelectionSection(
                               productsAsync,
-                              allProducts,
                             ),
                           ),
                           const VerticalDivider(width: 1, thickness: 1),
                           Expanded(
                             flex: 1,
-                            child: _buildCartPanel(allProducts, warehousesAsync),
+                            child: _buildCartPanel(allProducts),
                           ),
                         ],
                       )
@@ -759,7 +756,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           if (productsAsync.isLoading)
                             const LinearProgressIndicator(),
                           Expanded(
-                            child: _buildCartPanel(allProducts, warehousesAsync),
+                            child: _buildCartPanel(allProducts),
                           ),
                         ],
                       ),
@@ -902,7 +899,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildProductSelectionSection(
     AsyncValue<List<ProductModel>> productsAsync,
-    List<ProductModel> allProducts,
   ) {
     final theme = Theme.of(context);
 
@@ -958,7 +954,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildProductAutocompleteInput(
     List<ProductModel> allProducts,
-    bool isLoading,
   ) {
     final theme = Theme.of(context);
 
@@ -1394,7 +1389,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildCartPanel(
     List<ProductModel> allProducts,
-    AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     final theme = Theme.of(context);
     final subtotal = _calculateSubtotal(allProducts);
