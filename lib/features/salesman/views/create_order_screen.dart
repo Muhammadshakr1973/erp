@@ -1198,7 +1198,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
