@@ -708,6 +708,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              _buildPriceTypeBadge(),
               if (_isSaving) ...[
                 const SizedBox(width: 8),
                 const SizedBox(
@@ -1296,6 +1298,45 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
+  Widget _buildPriceTypeBadge() {
+    final theme = Theme.of(context);
+    final String priceType = _selectedCustomer != null
+        ? (_selectedCustomer!.priceType ?? 'N2')
+        : 'N2';
+
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onPrimary.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.sell_outlined,
+            size: 14,
+            color: theme.colorScheme.onPrimary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            priceType,
+            style: AppTextStyles.bodyBold.copyWith(
+              color: theme.colorScheme.onPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLargeImageDialog(BuildContext context, String imageUrl, String productName) {
     showDialog(
       context: context,
@@ -1481,36 +1522,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               children: [
                 Expanded(
                   child: _buildProductAutocompleteInput(allProducts),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                  ),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        _selectedCustomer != null
-                            ? (_selectedCustomer!.priceType ?? 'N2')
-                            : 'N2',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
