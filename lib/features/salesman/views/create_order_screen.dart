@@ -47,6 +47,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   double? _searchFieldWidth;
+  final GlobalKey _searchKey = GlobalKey();
 
   String? _localId;
   int? _generatedIntId;
@@ -972,41 +973,44 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           builder: (context, constraints) {
             _searchFieldWidth = constraints.maxWidth;
 
-            return AppTextField(
-              controller: textEditingController,
-              focusNode: focusNode,
-              hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
-              prefixIcon: AppIcons.search,
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (textEditingController.text.isNotEmpty)
+            return Container(
+              key: _searchKey,
+              child: AppTextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
+                prefixIcon: AppIcons.search,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (textEditingController.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'سڕینەوەی دەق',
+                        onPressed: () {
+                          textEditingController.clear();
+                          focusNode.requestFocus();
+                          setState(() {});
+                        },
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      tooltip: 'سڕینەوەی دەق',
-                      onPressed: () {
-                        textEditingController.clear();
-                        focusNode.requestFocus();
-                        setState(() {});
-                      },
+                      icon: const Icon(AppIcons.scan),
+                      tooltip: 'سکانی باڕکۆد',
+                      onPressed: () => _scanBarcode(allProducts),
                     ),
-                  IconButton(
-                    icon: const Icon(AppIcons.scan),
-                    tooltip: 'سکانی باڕکۆد',
-                    onPressed: () => _scanBarcode(allProducts),
-                  ),
-                ],
+                  ],
+                ),
+                onChanged: (_) {
+                  setState(() {});
+                },
+                onFieldSubmitted: (_) {
+                  _handleBarcodeOrSearchSubmit(
+                    textEditingController,
+                    focusNode,
+                    allProducts,
+                  );
+                },
               ),
-              onChanged: (_) {
-                setState(() {});
-              },
-              onFieldSubmitted: (_) {
-                _handleBarcodeOrSearchSubmit(
-                  textEditingController,
-                  focusNode,
-                  allProducts,
-                );
-              },
             );
           },
         );
@@ -1017,23 +1021,34 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         Iterable<ProductModel> options,
       ) {
         final screenWidth = MediaQuery.of(context).size.width;
-        final double dropdownWidth = _searchFieldWidth != null
-            ? (_searchFieldWidth! > (screenWidth - 32) ? (screenWidth - 32) : _searchFieldWidth!)
-            : (screenWidth > 450 ? 450.0 : screenWidth - 32);
+
+        final RenderBox? renderBox = _searchKey.currentContext?.findRenderObject() as RenderBox?;
+        final position = renderBox?.localToGlobal(Offset.zero);
+        final textFieldX = position?.dx ?? 0.0;
+
+        final isMobile = screenWidth < 600;
+        final double dropdownWidth = isMobile
+            ? screenWidth
+            : (_searchFieldWidth != null
+                ? (_searchFieldWidth! > (screenWidth - 32) ? (screenWidth - 32) : _searchFieldWidth!)
+                : (screenWidth > 450 ? 450.0 : screenWidth - 32));
+        final double xOffset = isMobile ? -textFieldX : 0.0;
 
         return Align(
           alignment: AlignmentDirectional.topStart,
           child: Padding(
             padding: const EdgeInsets.only(top: 6.0),
-            child: Material(
-              elevation: 8,
-              shadowColor: Colors.black.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              clipBehavior: Clip.antiAlias,
-              color: theme.colorScheme.surface,
-              child: SizedBox(
-                width: dropdownWidth,
-                child: ConstrainedBox(
+            child: Transform.translate(
+              offset: Offset(xOffset, 0),
+              child: Material(
+                elevation: 8,
+                shadowColor: Colors.black.withValues(alpha: 0.15),
+                borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                color: theme.colorScheme.surface,
+                child: SizedBox(
+                  width: dropdownWidth,
+                  child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 340),
                   child: ListView.separated(
                     padding: EdgeInsets.zero,
