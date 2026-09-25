@@ -1097,7 +1097,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         Iterable<ProductModel> options,
       ) {
         return Align(
-          alignment: AlignmentDirectional.topStart,
+          alignment: Alignment.topLeft,
           child: Padding(
             padding: const EdgeInsets.only(top: 6.0),
             child: Material(
