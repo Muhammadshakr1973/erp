@@ -1128,47 +1128,49 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (qtyInCart > 0) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              '$qtyInCart لە سەبەتەدا',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
                                       ],
                                     ),
-                                    if (product.barcode.isNotEmpty) ...[
+                                    if (product.barcode.isNotEmpty || qtyInCart > 0) ...[
                                       const SizedBox(height: 4),
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
-                                            Icons.qr_code,
-                                            size: 14,
-                                            color: Colors.grey,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            product.barcode,
-                                            style: AppTextStyles.caption.copyWith(
-                                              fontFamily: 'monospace',
+                                          if (product.barcode.isNotEmpty) ...[
+                                            const Icon(
+                                              Icons.qr_code,
+                                              size: 14,
+                                              color: Colors.grey,
                                             ),
-                                          ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              product.barcode,
+                                              style: AppTextStyles.caption.copyWith(
+                                                fontFamily: 'monospace',
+                                              ),
+                                            ),
+                                          ],
+                                          if (product.barcode.isNotEmpty && qtyInCart > 0)
+                                            const SizedBox(width: 8),
+                                          if (qtyInCart > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                '$qtyInCart لە سەبەتەدا',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ],
@@ -1699,8 +1701,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                     Icons.remove_circle_outline,
                                                     color: AppColors.danger,
                                                   ),
-                                                  onPressed: () =>
-                                                      _removeFromCart(productId),
+                                                  onPressed: () {
+                                                    if (qty == 1) {
+                                                      _confirmDeleteItem(
+                                                        productId,
+                                                        product?.name ?? 'کاڵا',
+                                                      );
+                                                    } else {
+                                                      _removeFromCart(productId);
+                                                    }
+                                                  },
                                                 ),
                                               ],
                                             ),
