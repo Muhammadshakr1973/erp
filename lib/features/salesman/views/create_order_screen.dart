@@ -703,8 +703,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
+        centerTitle: false,
         title: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+          padding: const EdgeInsetsDirectional.only(start: 8, end: 12),
           child: Row(
             children: [
               Expanded(
@@ -716,8 +717,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
               if (_isSaving) ...[
+                const SizedBox(width: 8),
                 const SizedBox(
                   width: 16,
                   height: 16,
@@ -726,37 +727,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                   ),
                 ),
-                const SizedBox(width: 8),
               ],
-              Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      _selectedCustomer != null
-                          ? (_selectedCustomer!.priceType ?? 'N2')
-                          : 'N2',
-                      style: AppTextStyles.bodyBold.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -1096,8 +1067,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         AutocompleteOnSelected<ProductModel> onSelected,
         Iterable<ProductModel> options,
       ) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final double dropdownWidth = _searchFieldWidth != null
+            ? (_searchFieldWidth! > (screenWidth - 32) ? (screenWidth - 32) : _searchFieldWidth!)
+            : (screenWidth > 450 ? 450.0 : screenWidth - 32);
+
         return Align(
-          alignment: Alignment.topLeft,
+          alignment: AlignmentDirectional.topStart,
           child: Padding(
             padding: const EdgeInsets.only(top: 6.0),
             child: Material(
@@ -1107,7 +1083,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               clipBehavior: Clip.antiAlias,
               color: theme.colorScheme.surface,
               child: SizedBox(
-                width: _searchFieldWidth ?? 450,
+                width: dropdownWidth,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 340),
                   child: ListView.separated(
@@ -1204,12 +1180,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                 ),
                                               ),
                                             ],
-                                          ),
-                                        if (product.sku != null &&
-                                            product.sku!.isNotEmpty)
-                                          Text(
-                                            'SKU: ${product.sku}',
-                                            style: AppTextStyles.caption,
                                           ),
                                         Text(
                                           'یەکە: ${product.unit ?? "دانە"}',
@@ -1328,7 +1298,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ? (amountAfterPerm * _discountValue) / 100 
         : _discountValue;
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
-    final cartItemCount = _getCartTotalCount();
 
     return Container(
       color: theme.colorScheme.surface,
@@ -1353,15 +1322,34 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                Chip(
-                  label: Text('$cartItemCount کاڵا'),
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontSize: 11,
+                Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
                   ),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sell_outlined, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        _selectedCustomer != null
+                            ? (_selectedCustomer!.priceType ?? 'N2')
+                            : 'N2',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
