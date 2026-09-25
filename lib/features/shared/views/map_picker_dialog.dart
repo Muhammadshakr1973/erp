@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/components/app_text_field.dart';
 
 class MapPickerDialog extends StatefulWidget {
   final LatLng? initialLocation;
@@ -218,12 +219,13 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: AppTextField(
                       controller: _latController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: InputDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      customDecoration: InputDecoration(
                         labelText: 'پانی (Lat)',
                         isDense: true,
                         border: OutlineInputBorder(
@@ -238,18 +240,18 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           size: 18,
                         ),
                       ),
-                      style: const TextStyle(fontSize: 13),
                       onChanged: _onManualCoordinateChange,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: TextField(
+                    child: AppTextField(
                       controller: _lngController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: InputDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      customDecoration: InputDecoration(
                         labelText: 'درێژی (Lon)',
                         isDense: true,
                         border: OutlineInputBorder(
@@ -264,7 +266,6 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           size: 18,
                         ),
                       ),
-                      style: const TextStyle(fontSize: 13),
                       onChanged: _onManualCoordinateChange,
                     ),
                   ),

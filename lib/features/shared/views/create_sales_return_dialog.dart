@@ -328,11 +328,11 @@ class _CreateSalesReturnDialogState
                                     ),
                                     SizedBox(
                                       width: 60,
-                                      child: TextFormField(
+                                      child: AppTextField(
                                         controller: _qtyControllers[item.id],
                                         keyboardType: TextInputType.number,
-                                        textAlign: TextAlign.center,
-                                        decoration: const InputDecoration(
+                                        borderRadius: BorderRadius.circular(4),
+                                        customDecoration: const InputDecoration(
                                           isDense: true,
                                           contentPadding: EdgeInsets.symmetric(
                                             horizontal: 4,

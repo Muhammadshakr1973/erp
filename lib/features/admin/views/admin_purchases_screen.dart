@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_text_field.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
@@ -1131,14 +1132,10 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        TextFormField(
+                        AppTextField(
                           controller: controller,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'بڕی وەرگیراوی ئەمجارە',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
+                          labelText: 'بڕی وەرگیراوی ئەمجارە',
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'پێویستە بڕێک بنووسیت';

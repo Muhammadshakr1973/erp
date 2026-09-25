@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
@@ -251,12 +252,10 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
+                  AppTextField(
                     controller: amountController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'بڕی پارەی وەرگیراو (د.ع)',
-                    ),
+                    labelText: 'بڕی پارەی وەرگیراو (د.ع)',
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextField(

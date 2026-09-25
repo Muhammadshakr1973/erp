@@ -23,6 +23,7 @@ class AppTextField extends ConsumerStatefulWidget {
   final BorderRadius? borderRadius;
   final bool? readOnly;
   final InputDecoration? customDecoration;
+  final bool autofocus;
 
   const AppTextField({
     super.key,
@@ -43,6 +44,7 @@ class AppTextField extends ConsumerStatefulWidget {
     this.borderRadius,
     this.readOnly,
     this.customDecoration,
+    this.autofocus = false,
   });
 
   @override
@@ -88,17 +90,13 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     final bool isNumeric = _isNumeric;
     if (_effectiveFocusNode.hasFocus) {
       if (isNumeric) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final bool isMobileOrTablet = screenWidth < 1024.0;
-        if (isMobileOrTablet) {
-          ref.read(numericKeyboardProvider.notifier).register(
-                controller: _effectiveController,
-                focusNode: _effectiveFocusNode,
-                decimal: true, // Always allow decimals on our custom iOS layout
-                signed: true,  // Always allow negative sign on our custom iOS layout
-                onChanged: widget.onChanged,
-              );
-        }
+        ref.read(numericKeyboardProvider.notifier).register(
+              controller: _effectiveController,
+              focusNode: _effectiveFocusNode,
+              decimal: true, // Always allow decimals on our custom iOS layout
+              signed: true,  // Always allow negative sign on our custom iOS layout
+              onChanged: widget.onChanged,
+            );
       } else {
         // If a non-numeric field is focused, immediately hide the custom numeric keyboard
         ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
@@ -110,11 +108,9 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final radius = widget.borderRadius ?? BorderRadius.circular(24);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobileOrTablet = screenWidth < 1024.0;
 
     final bool isReadOnly = widget.readOnly ?? false;
-    final TextInputType effectiveKeyboardType = (isMobileOrTablet && _isNumeric)
+    final TextInputType effectiveKeyboardType = _isNumeric
         ? TextInputType.none
         : widget.keyboardType;
 
@@ -126,6 +122,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
       readOnly: isReadOnly,
       showCursor: true,
       enableInteractiveSelection: true,
+      autofocus: widget.autofocus,
       validator: widget.validator,
       onChanged: widget.onChanged,
       maxLines: widget.maxLines,

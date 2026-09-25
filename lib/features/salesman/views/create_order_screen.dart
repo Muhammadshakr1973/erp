@@ -305,14 +305,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('دەستکاری بڕی $productName', style: AppTextStyles.h3),
-        content: TextField(
+        content: AppTextField(
           controller: controller,
           keyboardType: TextInputType.number,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'بڕ (دانە)',
-            border: OutlineInputBorder(),
-          ),
+          labelText: 'بڕ (دانە)',
         ),
         actions: [
           TextButton(
@@ -411,15 +408,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  TextField(
+                  AppTextField(
                     controller: controller,
                     keyboardType: TextInputType.number,
                     autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'نرخی تایبەتی نوێ (دینار)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.monetization_on_outlined),
-                    ),
+                    labelText: 'نرخی تایبەتی نوێ (دینار)',
+                    prefixIcon: Icons.monetization_on_outlined,
                   ),
                 ],
               ),
@@ -1861,16 +1855,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: TextFormField(
+                              child: AppTextField(
                                 key: ValueKey('discount_field_${_discountValue}_$_discountType'),
-                                initialValue: _discountValue == 0 ? '' : _discountValue.toString(),
+                                controller: TextEditingController(text: _discountValue == 0 ? '' : _discountValue.toString())..selection = TextSelection.fromPosition(TextPosition(offset: (_discountValue == 0 ? '' : _discountValue.toString()).length)),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.start,
-                                decoration: InputDecoration(
+                                borderRadius: BorderRadius.zero,
+                                customDecoration: InputDecoration(
                                   isDense: true,
                                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   border: InputBorder.none,

@@ -13,16 +13,11 @@ class GlobalNumericKeyboard extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // Verify screen is mobile or tablet (< 1024 width)
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth >= 1024) {
-      return const SizedBox.shrink();
-    }
 
     final double keyboardHeight = 290;
 
-    return Directionality(
+    Widget keyboardWidget = Directionality(
       textDirection: TextDirection.ltr,
       child: Material(
         elevation: 24,
@@ -137,6 +132,32 @@ class GlobalNumericKeyboard extends ConsumerWidget {
         ),
       ),
     );
+
+    // If screen is desktop/wide, center the keyboard at the bottom with a max-width and border-radius
+    if (screenWidth >= 1024) {
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: keyboardWidget,
+        ),
+      );
+    }
+
+    return keyboardWidget;
   }
 
   Widget _buildKey(
@@ -195,10 +216,8 @@ class GlobalNumericKeyboardWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(numericKeyboardProvider);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobileOrTablet = screenWidth < 1024.0;
 
-    final double keyboardHeight = (state.isVisible && isMobileOrTablet) ? 290 : 0;
+    final double keyboardHeight = state.isVisible ? 290 : 0;
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
@@ -211,7 +230,7 @@ class GlobalNumericKeyboardWrapper extends ConsumerWidget {
           Positioned.fill(
             child: child,
           ),
-          if (state.isVisible && isMobileOrTablet)
+          if (state.isVisible)
             Positioned(
               left: 0,
               right: 0,
