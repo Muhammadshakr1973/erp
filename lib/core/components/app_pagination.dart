@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'app_icon_button.dart';
 

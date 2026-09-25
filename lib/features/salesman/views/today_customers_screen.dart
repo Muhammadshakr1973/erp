@@ -35,7 +35,6 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final customersAsync = ref.watch(customerListProvider);
 
     return Scaffold(

@@ -115,7 +115,6 @@ void main() {
     });
 
     test('3. PURCHASE_RECEIVE operation mapping uses correct endpoint route', () {
-      final opType = 'PURCHASE_RECEIVE';
       final entityId = 'po_100';
       final expectedPath = '/purchase-orders/$entityId/receive';
 

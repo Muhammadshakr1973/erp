@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../core/components/responsive_shell.dart';
 import 'salesman_dashboard_screen.dart';
 import 'today_customers_screen.dart';

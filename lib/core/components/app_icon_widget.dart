@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ignore: unused_import
-import '../theme/app_colors.dart';
-// ignore: unused_import
-import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
 
 class AppIconBadge extends StatelessWidget {

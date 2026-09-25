@@ -1,7 +1,6 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'dart:math';
@@ -14,7 +13,6 @@ import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/models/user_model.dart';
