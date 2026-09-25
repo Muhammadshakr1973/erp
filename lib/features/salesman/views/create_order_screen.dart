@@ -1585,12 +1585,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                   const SizedBox(width: 4),
                                                 ],
                                                 IconButton(
-                                                  icon: const Icon(
-                                                    Icons.remove_circle_outline,
-                                                    color: AppColors.danger,
+                                                  icon: Icon(
+                                                    Icons.add_circle_outline,
+                                                    color: theme.colorScheme.primary,
                                                   ),
-                                                  onPressed: () =>
-                                                      _removeFromCart(productId),
+                                                  onPressed: () => _addToCart(productId),
                                                 ),
                                                 InkWell(
                                                   onTap: () => _editQuantityDialog(
@@ -1628,11 +1627,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                   ),
                                                 ),
                                                 IconButton(
-                                                  icon: Icon(
-                                                    Icons.add_circle_outline,
-                                                    color: theme.colorScheme.primary,
+                                                  icon: const Icon(
+                                                    Icons.remove_circle_outline,
+                                                    color: AppColors.danger,
                                                   ),
-                                                  onPressed: () => _addToCart(productId),
+                                                  onPressed: () =>
+                                                      _removeFromCart(productId),
                                                 ),
                                               ],
                                             ),

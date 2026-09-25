@@ -315,13 +315,13 @@ class _CreateSalesReturnDialogState
                                     ),
                                     IconButton(
                                       icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        color: AppColors.danger,
+                                        Icons.add_circle_outline,
+                                        color: AppColors.primary,
                                       ),
-                                      onPressed: currentQty > 0
+                                      onPressed: currentQty < maxQty
                                           ? () => _updateQuantity(
                                                 item.id,
-                                                currentQty - 1,
+                                                currentQty + 1,
                                                 maxQty,
                                               )
                                           : null,
@@ -352,13 +352,13 @@ class _CreateSalesReturnDialogState
                                     ),
                                     IconButton(
                                       icon: const Icon(
-                                        Icons.add_circle_outline,
-                                        color: AppColors.primary,
+                                        Icons.remove_circle_outline,
+                                        color: AppColors.danger,
                                       ),
-                                      onPressed: currentQty < maxQty
+                                      onPressed: currentQty > 0
                                           ? () => _updateQuantity(
                                                 item.id,
-                                                currentQty + 1,
+                                                currentQty - 1,
                                                 maxQty,
                                               )
                                           : null,
