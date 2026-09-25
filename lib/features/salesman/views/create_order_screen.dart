@@ -1035,7 +1035,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         final double xOffset = isMobile ? -textFieldX : 0.0;
 
         return Align(
-          alignment: Alignment.topLeft,
+          alignment: AlignmentDirectional.topStart,
           child: Padding(
             padding: const EdgeInsets.only(top: 6.0),
             child: Transform.translate(
@@ -1200,9 +1200,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ),
         ),
       );
-      },
-    );
-  }
+    },
+  );
+}
 
   Widget _buildCustomerSelectionDropdown(
     AsyncValue<List<Customer>> customersAsync,
