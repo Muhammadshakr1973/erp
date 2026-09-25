@@ -85,17 +85,23 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
   }
 
   void _onFocusChange() {
-    if (_effectiveFocusNode.hasFocus && _isNumeric) {
-      final screenWidth = MediaQuery.of(context).size.width;
-      final bool isMobileOrTablet = screenWidth < 1024.0;
-      if (isMobileOrTablet) {
-        ref.read(numericKeyboardProvider.notifier).register(
-              controller: _effectiveController,
-              focusNode: _effectiveFocusNode,
-              decimal: true, // Always allow decimals on our custom iOS layout
-              signed: true,  // Always allow negative sign on our custom iOS layout
-              onChanged: widget.onChanged,
-            );
+    final bool isNumeric = _isNumeric;
+    if (_effectiveFocusNode.hasFocus) {
+      if (isNumeric) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final bool isMobileOrTablet = screenWidth < 1024.0;
+        if (isMobileOrTablet) {
+          ref.read(numericKeyboardProvider.notifier).register(
+                controller: _effectiveController,
+                focusNode: _effectiveFocusNode,
+                decimal: true, // Always allow decimals on our custom iOS layout
+                signed: true,  // Always allow negative sign on our custom iOS layout
+                onChanged: widget.onChanged,
+              );
+        }
+      } else {
+        // If a non-numeric field is focused, immediately hide the custom numeric keyboard
+        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
       }
     }
   }

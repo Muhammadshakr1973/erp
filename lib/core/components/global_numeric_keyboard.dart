@@ -22,114 +22,117 @@ class GlobalNumericKeyboard extends ConsumerWidget {
 
     final double keyboardHeight = 290;
 
-    return Material(
-      elevation: 24,
-      color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFD1D5DB),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: keyboardHeight,
-          child: Column(
-            children: [
-              // iOS-Style Accessory Toolbar with Done and Backspace
-              Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? Colors.white12 : Colors.black12,
-                      width: 0.5,
-                    ),
-                    bottom: BorderSide(
-                      color: isDark ? Colors.white12 : Colors.black12,
-                      width: 0.5,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Material(
+        elevation: 24,
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFD1D5DB),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: keyboardHeight,
+            child: Column(
+              children: [
+                // iOS-Style Accessory Toolbar with Done and Backspace
+                Container(
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
+                    border: Border(
+                      top: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                        width: 0.5,
+                      ),
+                      bottom: BorderSide(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                        width: 0.5,
+                      ),
                     ),
                   ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Done Button (Kurdish: تەواو)
-                    TextButton(
-                      onPressed: () {
-                        ref.read(numericKeyboardProvider.notifier).hide();
-                      },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'تەواو',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    // Backspace Button
-                    IconButton(
-                      icon: const Icon(Icons.backspace_outlined),
-                      color: isDark ? Colors.white70 : Colors.black70,
-                      iconSize: 22,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        ref.read(numericKeyboardProvider.notifier).delete();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              // Keyboard Key Grid
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Column(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildKey(context, ref, '1'),
-                            _buildKey(context, ref, '2'),
-                            _buildKey(context, ref, '3'),
-                          ],
+                      // Done Button (Kurdish: تەواو)
+                      TextButton(
+                        onPressed: () {
+                          ref.read(numericKeyboardProvider.notifier).hide();
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'تەواو',
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildKey(context, ref, '4'),
-                            _buildKey(context, ref, '5'),
-                            _buildKey(context, ref, '6'),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildKey(context, ref, '7'),
-                            _buildKey(context, ref, '8'),
-                            _buildKey(context, ref, '9'),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            _buildKey(context, ref, '-', isSpecial: true),
-                            _buildKey(context, ref, '0'),
-                            _buildKey(context, ref, '.', isSpecial: true),
-                          ],
-                        ),
+                      // Backspace Button
+                      IconButton(
+                        icon: const Icon(Icons.backspace_outlined),
+                        color: isDark ? Colors.white70 : Colors.black.withOpacity(0.7),
+                        iconSize: 22,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          ref.read(numericKeyboardProvider.notifier).delete();
+                        },
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                // Keyboard Key Grid
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _buildKey(context, ref, '1'),
+                              _buildKey(context, ref, '2'),
+                              _buildKey(context, ref, '3'),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _buildKey(context, ref, '4'),
+                              _buildKey(context, ref, '5'),
+                              _buildKey(context, ref, '6'),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _buildKey(context, ref, '7'),
+                              _buildKey(context, ref, '8'),
+                              _buildKey(context, ref, '9'),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _buildKey(context, ref, '-', isSpecial: true),
+                              _buildKey(context, ref, '0'),
+                              _buildKey(context, ref, '.', isSpecial: true),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

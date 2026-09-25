@@ -68,6 +68,10 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     state = state.copyWith(isVisible: false);
   }
 
+  void hideKeyboardOnly() {
+    state = state.copyWith(isVisible: false);
+  }
+
   void toggleSign() {
     final controller = state.controller;
     if (controller == null) return;
