@@ -1098,6 +1098,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
                       return InkWell(
                         onTap: () => onSelected(product),
+                        onLongPress: () {
+                          _addToCart(product.id);
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product.name} زیادکرا بۆ سەبەتە'),
+                              backgroundColor: AppColors.success,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -1106,17 +1117,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                width: 40,
+                                height: 40,
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primaryContainer
                                       .withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: theme.colorScheme.primary,
-                                  size: 22,
-                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: (product.imagePath != null &&
+                                        product.imagePath!.isNotEmpty)
+                                    ? GestureDetector(
+                                        onTap: () {
+                                          _showLargeImageDialog(context, product.imagePath!, product.name);
+                                        },
+                                        child: Image.network(
+                                          product.imagePath!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Icon(
+                                            Icons.inventory_2_outlined,
+                                            color: theme.colorScheme.primary,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.inventory_2_outlined,
+                                        color: theme.colorScheme.primary,
+                                        size: 20,
+                                      ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1204,6 +1233,90 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLargeImageDialog(BuildContext context, String imageUrl, String productName) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  color: Colors.transparent,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    maxHeight: MediaQuery.of(context).size.height * 0.7,
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.black,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(32),
+                          color: Theme.of(context).colorScheme.surface,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
+                              const SizedBox(height: 8),
+                              Text('بارکردنی وێنەکە سەرکەوتوو نەبوو', style: AppTextStyles.bodyMedium),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      productName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Rudaw',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
           ),
         );
       },
