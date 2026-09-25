@@ -1035,7 +1035,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         final double xOffset = isMobile ? -textFieldX : 0.0;
 
         return Align(
-          alignment: AlignmentDirectional.topStart,
+          alignment: Alignment.topLeft,
           child: Padding(
             padding: const EdgeInsets.only(top: 6.0),
             child: Transform.translate(
