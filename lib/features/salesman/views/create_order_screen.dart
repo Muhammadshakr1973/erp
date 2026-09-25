@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -232,10 +230,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
     });
     return total;
-  }
-
-  int _getCartTotalCount() {
-    return _cart.values.fold(0, (sum, qty) => sum + qty);
   }
 
   void _addToCart(int productId) {
@@ -697,8 +691,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final warehousesAsync = ref.watch(warehouseListProvider);
 
     final allProducts = productsAsync.asData?.value ?? [];
-
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -1262,8 +1254,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    maxHeight: MediaQuery.of(context).size.height * 0.7,
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.7,
+                      maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       color: Colors.black,
