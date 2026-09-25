@@ -63,6 +63,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _setFieldState(String field, String state, {String? error}) {
     if (!mounted) return;
+    if (_fieldStates[field] == state && _fieldErrors[field] == error) {
+      return;
+    }
     setState(() {
       _fieldStates[field] = state;
       if (error != null) {
@@ -237,7 +240,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _addToCart(int productId) {
     _lastChangedField = 'product_qty_$productId';
-    _setFieldState('product_qty_$productId', 'saving');
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
     });
@@ -246,7 +248,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _removeFromCart(int productId) {
     _lastChangedField = 'product_qty_$productId';
-    _setFieldState('product_qty_$productId', 'saving');
     setState(() {
       if (_cart.containsKey(productId)) {
         if (_cart[productId]! > 1) {
@@ -340,7 +341,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     if (newQty != null && newQty > 0 && mounted) {
       _lastChangedField = 'product_qty_$productId';
-      _setFieldState('product_qty_$productId', 'saving');
       setState(() {
         _cart[productId] = newQty;
       });
@@ -614,6 +614,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (mounted) {
       setState(() {
         _isSaving = true;
+        if (_lastChangedField != null) {
+          _fieldStates[_lastChangedField!] = 'saving';
+        }
       });
     }
 
@@ -858,7 +861,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         .where((c) => c.id == val)
                         .firstOrNull;
                     _lastChangedField = 'customer';
-                    _setFieldState('customer', 'saving');
                     setState(() {
                       _selectedCustomer = found;
                     });
@@ -920,7 +922,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   onChanged: (val) {
                     if (val != null) {
                       _lastChangedField = 'warehouse';
-                      _setFieldState('warehouse', 'saving');
                       setState(() {
                         _selectedWarehouseId = val;
                       });
@@ -1347,7 +1348,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     borderRadius: BorderRadius.circular(12),
                     onChanged: (val) {
                       _lastChangedField = 'order_notes';
-                      _setFieldState('order_notes', 'saving');
                       _triggerDebouncedAutoSave();
                     },
                   ),
@@ -1375,214 +1375,219 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       style: AppTextStyles.bodyMedium,
                     ),
                   )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: _cart.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final productId = _cart.keys.elementAt(index);
-                      final qty = _cart[productId]!;
-                      final product = allProducts
-                          .where((p) => p.id == productId)
-                          .firstOrNull;
-                      final unitPrice = product != null
-                          ? _getProductUnitPrice(product)
-                          : 0.0;
-                      final isSpecialPrice =
-                          _customerSpecialPrices.containsKey(productId);
+                : Builder(
+                    builder: (context) {
+                      final cartKeys = _cart.keys.toList();
+                      return ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        itemCount: cartKeys.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final productId = cartKeys[index];
+                          final qty = _cart[productId]!;
+                          final product = allProducts
+                              .where((p) => p.id == productId)
+                              .firstOrNull;
+                          final unitPrice = product != null
+                              ? _getProductUnitPrice(product)
+                              : 0.0;
+                          final isSpecialPrice =
+                              _customerSpecialPrices.containsKey(productId);
 
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: product != null
-                              ? () => _showSpecialPriceDialog(product)
-                              : null,
-                          onLongPress: () => _confirmDeleteItem(
-                            productId,
-                            product?.name ?? 'کاڵا',
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: isSpecialPrice
-                                    ? theme.colorScheme.primary
-                                    : theme.dividerColor.withValues(alpha: 0.3),
-                                width: isSpecialPrice ? 1.5 : 1,
-                              ),
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
                               borderRadius: BorderRadius.circular(8),
-                              color: isSpecialPrice
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                              onTap: product != null
+                                  ? () => _showSpecialPriceDialog(product)
                                   : null,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
+                              onLongPress: () => _confirmDeleteItem(
+                                productId,
+                                product?.name ?? 'کاڵا',
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isSpecialPrice
+                                        ? theme.colorScheme.primary
+                                        : theme.dividerColor.withValues(alpha: 0.3),
+                                    width: isSpecialPrice ? 1.5 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: isSpecialPrice
+                                      ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                                      : null,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  product?.name ?? 'کاڵا',
-                                                  style: AppTextStyles.bodyBold,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              if (isSpecialPrice)
-                                                const SizedBox(width: 4),
-                                              if (isSpecialPrice)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: theme.colorScheme.primary,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: const Text(
-                                                    'نرخی تایبەت',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '(${product?.unit ?? "پاکەت"} = ${product?.unitsPerCarton ?? 12} دانە = ${Formatters.currency(unitPrice)})',
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: isSpecialPrice
-                                                  ? theme.colorScheme.primary
-                                                  : null,
-                                              fontWeight: isSpecialPrice
-                                                  ? FontWeight.bold
-                                                  : null,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                    Row(
                                       children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (_buildFieldStatusIcon('product_qty_$productId', size: 18) != null) ...[
-                                              _buildFieldStatusIcon('product_qty_$productId', size: 18)!,
-                                              const SizedBox(width: 4),
-                                            ],
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.remove_circle_outline,
-                                                color: AppColors.danger,
-                                              ),
-                                              onPressed: () =>
-                                                  _removeFromCart(productId),
-                                            ),
-                                            InkWell(
-                                              onTap: () => _editQuantityDialog(
-                                                productId,
-                                                qty,
-                                                product?.name ?? 'کاڵا',
-                                              ),
-                                              borderRadius: BorderRadius.circular(4),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 4,
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      '$qty',
-                                                      style: AppTextStyles.bodyBold
-                                                          .copyWith(
-                                                        decoration:
-                                                            TextDecoration.underline,
-                                                      ),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      product?.name ?? 'کاڵا',
+                                                      style: AppTextStyles.bodyBold,
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
+                                                  ),
+                                                  if (isSpecialPrice)
                                                     const SizedBox(width: 4),
-                                                    Text(
-                                                      product?.unit ?? 'دانە',
-                                                      style: AppTextStyles.caption.copyWith(
-                                                        color: theme.colorScheme.onSurfaceVariant,
-                                                        fontWeight: FontWeight.bold,
+                                                  if (isSpecialPrice)
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: theme.colorScheme.primary,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text(
+                                                        'نرخی تایبەت',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
+                                                          // ignore: deprecated_member_use
+                                                        ),
                                                       ),
                                                     ),
-                                                  ],
+                                                ],
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '(${product?.unit ?? "پاکەت"} = ${product?.unitsPerCarton ?? 12} دانە = ${Formatters.currency(unitPrice)})',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: isSpecialPrice
+                                                      ? theme.colorScheme.primary
+                                                      : null,
+                                                  fontWeight: isSpecialPrice
+                                                      ? FontWeight.bold
+                                                      : null,
                                                 ),
                                               ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (_buildFieldStatusIcon('product_qty_$productId', size: 18) != null) ...[
+                                                  _buildFieldStatusIcon('product_qty_$productId', size: 18)!,
+                                                  const SizedBox(width: 4),
+                                                ],
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.remove_circle_outline,
+                                                    color: AppColors.danger,
+                                                  ),
+                                                  onPressed: () =>
+                                                      _removeFromCart(productId),
+                                                ),
+                                                InkWell(
+                                                  onTap: () => _editQuantityDialog(
+                                                    productId,
+                                                    qty,
+                                                    product?.name ?? 'کاڵا',
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 4,
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          '$qty',
+                                                          style: AppTextStyles.bodyBold
+                                                              .copyWith(
+                                                            decoration:
+                                                                TextDecoration.underline,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          product?.unit ?? 'دانە',
+                                                          style: AppTextStyles.caption.copyWith(
+                                                            color: theme.colorScheme.onSurfaceVariant,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(
+                                                    Icons.add_circle_outline,
+                                                    color: theme.colorScheme.primary,
+                                                  ),
+                                                  onPressed: () => _addToCart(productId),
+                                                ),
+                                              ],
                                             ),
-                                            IconButton(
-                                              icon: Icon(
-                                                Icons.add_circle_outline,
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'کۆ: ${Formatters.currency(unitPrice * qty)}',
+                                              style: AppTextStyles.caption.copyWith(
+                                                fontWeight: FontWeight.bold,
                                                 color: theme.colorScheme.primary,
                                               ),
-                                              onPressed: () => _addToCart(productId),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'کۆ: ${Formatters.currency(unitPrice * qty)}',
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.primary,
+                                      ],
+                                    ),
+                                    const Divider(height: 8, thickness: 0.5),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: TextFormField(
+                                            initialValue: _cartNotes[productId] ?? '',
+                                            style: const TextStyle(fontSize: 11),
+                                            decoration: InputDecoration(
+                                              hintText: 'تێبینی بۆ ئەم کاڵایە...',
+                                              isDense: true,
+                                              contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                              border: InputBorder.none,
+                                              suffixIcon: _buildFieldStatusIcon('product_note_$productId', size: 16),
+                                              suffixIconConstraints: const BoxConstraints(
+                                                minWidth: 16,
+                                                minHeight: 16,
+                                              ),
+                                            ),
+                                            onChanged: (val) {
+                                              _cartNotes[productId] = val;
+                                              _lastChangedField = 'product_note_$productId';
+                                              _triggerDebouncedAutoSave();
+                                            },
                                           ),
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
-                                const Divider(height: 8, thickness: 0.5),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: TextFormField(
-                                        initialValue: _cartNotes[productId] ?? '',
-                                        style: const TextStyle(fontSize: 11),
-                                        decoration: InputDecoration(
-                                          hintText: 'تێبینی بۆ ئەم کاڵایە...',
-                                          isDense: true,
-                                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                          border: InputBorder.none,
-                                          suffixIcon: _buildFieldStatusIcon('product_note_$productId', size: 16),
-                                          suffixIconConstraints: const BoxConstraints(
-                                            minWidth: 16,
-                                            minHeight: 16,
-                                          ),
-                                        ),
-                                        onChanged: (val) {
-                                          _cartNotes[productId] = val;
-                                          _lastChangedField = 'product_note_$productId';
-                                          _setFieldState('product_note_$productId', 'saving');
-                                          _triggerDebouncedAutoSave();
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -1670,7 +1675,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 onChanged: (val) {
                                   if (val != null) {
                                     _lastChangedField = 'discount';
-                                    _setFieldState('discount', 'saving');
                                     setState(() {
                                       _discountType = val;
                                       if (_discountType == 'PERCENT' && _discountValue > 100) {
@@ -1703,7 +1707,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 onChanged: (val) {
                                   final parsed = double.tryParse(val) ?? 0.0;
                                   _lastChangedField = 'discount';
-                                  _setFieldState('discount', 'saving');
                                   setState(() {
                                     _discountValue = parsed;
                                     if (_discountType == 'PERCENT' && _discountValue > 100) {

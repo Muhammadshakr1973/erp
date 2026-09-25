@@ -38,117 +38,127 @@ class ResponsiveShell extends StatelessWidget {
       ),
       showDragHandle: true,
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'بەشەکانی تر',
-                      style: AppTextStyles.h2.copyWith(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'بەشەکانی تر',
+                        style: AppTextStyles.h2.copyWith(
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                      tooltip: 'داخستن',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: secondaryIndices.map((index) {
-                        final destination = destinations[index];
-                        final isSelected = index == currentIndex;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? (isDark
-                                    ? AppColors.primaryDark.withValues(alpha: 0.2)
-                                    : AppColors.primaryLight)
-                                : (isDark
-                                    ? AppColors.backgroundDark
-                                    : AppColors.backgroundLight),
-                            borderRadius: AppRadius.radiusLg,
-                            border: Border.all(
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                        tooltip: 'داخستن',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: secondaryIndices.map((index) {
+                          final destination = destinations[index];
+                          final isSelected = index == currentIndex;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            decoration: BoxDecoration(
                               color: isSelected
                                   ? (isDark
-                                      ? AppColors.primaryDark
-                                      : AppColors.primary)
+                                      ? AppColors.primaryDark.withValues(alpha: 0.2)
+                                      : AppColors.primaryLight)
                                   : (isDark
-                                      ? AppColors.borderDark
-                                      : AppColors.borderLight),
-                              width: isSelected ? 1.5 : 1.0,
-                            ),
-                          ),
-                          child: ListTile(
-                            leading: Theme(
-                              data: theme.copyWith(
-                                iconTheme: IconThemeData(
-                                  color: isSelected
-                                      ? (isDark
-                                          ? AppColors.primaryDark
-                                          : AppColors.primary)
-                                      : (isDark
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.textSecondaryLight),
-                                ),
-                              ),
-                              child: isSelected
-                                  ? (destination.selectedIcon ?? destination.icon)
-                                  : destination.icon,
-                            ),
-                            title: Text(
-                              destination.label,
-                              style: AppTextStyles.bodyBold.copyWith(
+                                      ? AppColors.backgroundDark
+                                      : AppColors.backgroundLight),
+                              borderRadius: AppRadius.radiusLg,
+                              border: Border.all(
                                 color: isSelected
                                     ? (isDark
                                         ? AppColors.primaryDark
                                         : AppColors.primary)
                                     : (isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimaryLight),
+                                        ? AppColors.borderDark
+                                        : AppColors.borderLight),
+                                width: isSelected ? 1.5 : 1.0,
                               ),
                             ),
-                            trailing: isSelected
-                                ? Icon(
-                                    Icons.check_circle,
-                                    color: isDark
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: 2,
+                              ),
+                              leading: Theme(
+                                data: theme.copyWith(
+                                  iconTheme: IconThemeData(
+                                    color: isSelected
+                                        ? (isDark
+                                            ? AppColors.primaryDark
+                                            : AppColors.primary)
+                                        : (isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondaryLight),
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? (destination.selectedIcon ?? destination.icon)
+                                    : destination.icon,
+                              ),
+                              title: Text(
+                                destination.label,
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: isSelected
+                                      ? (isDark
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary)
+                                      : (isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimaryLight),
+                                ),
+                              ),
+                              trailing: isSelected
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      color: isDark
                                         ? AppColors.primaryDark
                                         : AppColors.primary,
-                                    size: 20,
-                                  )
-                                : null,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppRadius.radiusLg,
+                                      size: 20,
+                                    )
+                                  : null,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.radiusLg,
+                              ),
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                onDestinationSelected(index);
+                              },
                             ),
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              onDestinationSelected(index);
-                            },
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
             ),
           ),
         );
@@ -176,7 +186,7 @@ class ResponsiveShell extends StatelessWidget {
               const NavigationDestination(
                 icon: Icon(Icons.more_horiz),
                 selectedIcon: Icon(Icons.more_horiz),
-                label: '...',
+                label: 'تر',
               ),
             ];
 
