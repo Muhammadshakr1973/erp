@@ -1152,43 +1152,46 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                         ],
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 4,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      children: [
-                                        if (product.barcode.isNotEmpty)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.qr_code,
-                                                size: 14,
-                                                color: Colors.grey,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                product.barcode,
-                                                style: AppTextStyles.caption.copyWith(
-                                                  fontFamily: 'monospace',
-                                                ),
-                                              ),
-                                            ],
+                                    if (product.barcode.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.qr_code,
+                                            size: 14,
+                                            color: Colors.grey,
                                           ),
-                                        Text(
-                                          'یەکە: ${product.unit ?? "دانە"}',
-                                          style: AppTextStyles.caption,
-                                        ),
-                                      ],
-                                    ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            product.barcode,
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Text(
-                                Formatters.currency(unitPrice),
-                                style: AppTextStyles.price,
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    Formatters.currency(unitPrice),
+                                    style: AppTextStyles.price,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'یەکە: ${product.unit ?? "دانە"}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
