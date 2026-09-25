@@ -702,8 +702,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               Expanded(
                 child: SizedBox(
                   height: 42,
-                  child: _buildProductAutocompleteInput(
-                    allProducts,
+                  child: _buildCustomerSelectionDropdown(
+                    customersAsync,
                   ),
                 ),
               ),
@@ -780,56 +780,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 1. Customer Selection
+          // 1. Notes Input (replaces Customer Selection)
           Expanded(
             flex: 2,
-            child: customersAsync.when(
-              loading: () => const SizedBox(
-                height: 48,
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              error: (error, stackTrace) => const Text('هەڵە لە بارکردنی کڕیاران'),
-              data: (customers) {
-                return DropdownButtonFormField<int>(
-                  key: ValueKey(_selectedCustomer?.id),
-                  initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
-                      ? _selectedCustomer?.id
-                      : null,
-                  decoration: InputDecoration(
-                    labelText: 'دیاریکردنی کڕیار',
-                    prefixIcon: const Icon(Icons.person_outline, size: 20),
-                    suffixIcon: _buildFieldStatusIcon('customer'),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                  ),
-                  style: theme.textTheme.bodyMedium,
-                  items: customers.map((c) {
-                    return DropdownMenuItem<int>(
-                      value: c.id,
-                      child: Text(
-                        c.name,
-                        style: const TextStyle(fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    final found = customers
-                        .where((c) => c.id == val)
-                        .firstOrNull;
-                    _lastChangedField = 'customer';
-                    setState(() {
-                      _selectedCustomer = found;
-                    });
-                    if (found != null) {
-                      _fetchSpecialPricesForCustomer(found.id);
-                    }
-                    _triggerDebouncedAutoSave();
-                  },
-                );
+            child: AppTextField(
+              controller: _notesController,
+              hintText: 'تێبینی (ئارەزوومەندانە)...',
+              prefixIcon: Icons.note_alt_outlined,
+              suffixIcon: _buildFieldStatusIcon('order_notes'),
+              borderRadius: BorderRadius.circular(8),
+              onChanged: (val) {
+                _lastChangedField = 'order_notes';
+                _triggerDebouncedAutoSave();
               },
             ),
           ),
@@ -936,7 +898,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Text(
-                      'لە ڕێگەی ئینپوتی ناڤباری سەرەوە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
+                      'لە ڕێگەی ئینپوتی گەڕانی سەرەوەی سەبەتە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -1226,6 +1188,98 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
+  Widget _buildCustomerSelectionDropdown(
+    AsyncValue<List<Customer>> customersAsync,
+  ) {
+    final theme = Theme.of(context);
+
+    return customersAsync.when(
+      loading: () => const SizedBox(
+        height: 36,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+      ),
+      error: (error, stackTrace) => const Text(
+        'هەڵە لە بارکردنی کڕیاران',
+        style: TextStyle(color: Colors.white, fontSize: 11),
+      ),
+      data: (customers) {
+        return DropdownButtonFormField<int>(
+          key: ValueKey(_selectedCustomer?.id),
+          initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
+              ? _selectedCustomer?.id
+              : null,
+          decoration: InputDecoration(
+            labelText: 'دیاریکردنی کڕیار',
+            labelStyle: TextStyle(
+              color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+              fontSize: 11,
+              fontFamily: 'Rudaw',
+            ),
+            prefixIcon: Icon(
+              Icons.person_outline,
+              size: 20,
+              color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+            ),
+            suffixIcon: _buildFieldStatusIcon('customer', size: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: theme.colorScheme.onPrimary,
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 4,
+            ),
+          ),
+          dropdownColor: theme.colorScheme.surface,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onPrimary,
+            fontFamily: 'Rudaw',
+          ),
+          iconEnabledColor: theme.colorScheme.onPrimary,
+          items: customers.map((c) {
+            return DropdownMenuItem<int>(
+              value: c.id,
+              child: Text(
+                c.name,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontFamily: 'Rudaw',
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            final found = customers.where((c) => c.id == val).firstOrNull;
+            _lastChangedField = 'customer';
+            setState(() {
+              _selectedCustomer = found;
+            });
+            if (found != null) {
+              _fetchSpecialPricesForCustomer(found.id);
+            }
+            _triggerDebouncedAutoSave();
+          },
+        );
+      },
+    );
+  }
+
   void _showLargeImageDialog(BuildContext context, String imageUrl, String productName) {
     showDialog(
       context: context,
@@ -1410,17 +1464,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: AppTextField(
-                    controller: _notesController,
-                    hintText: 'تێبینی (ئارەزوومەندانە)...',
-                    prefixIcon: Icons.note_alt_outlined,
-                    suffixIcon: _buildFieldStatusIcon('order_notes'),
-                    borderRadius: BorderRadius.circular(12),
-                    onChanged: (val) {
-                      _lastChangedField = 'order_notes';
-                      _triggerDebouncedAutoSave();
-                    },
-                  ),
+                  child: _buildProductAutocompleteInput(allProducts),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Container(
