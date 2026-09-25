@@ -12,6 +12,7 @@ import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../models/order_model.dart';
@@ -44,6 +45,7 @@ bool _isNetworkError(dynamic e) {
 }
 
 final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final localBox = ref.watch(localOrdersBoxProvider);
   final syncBox = ref.watch(syncQueueBoxProvider);
@@ -272,6 +274,7 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
   orderId,
 ) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final localBox = ref.watch(localOrdersBoxProvider);
   final pusher = ref.watch(pusherServiceProvider);
@@ -884,6 +887,7 @@ class OrderActions {
 }
 
 final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/sales-returns');
@@ -908,6 +912,7 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
   ref,
   id,
 ) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/sales-returns/$id');

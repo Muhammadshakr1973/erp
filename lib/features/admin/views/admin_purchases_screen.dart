@@ -446,27 +446,61 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   color: theme.colorScheme.primaryContainer.withValues(
                     alpha: 0.3,
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      const Spacer(),
-                      _isConverting
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : ElevatedButton.icon(
-                              onPressed: _convertSelectedToPO,
-                              icon: const Icon(Icons.shopping_cart_checkout),
-                              label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final bool useVerticalLayout = constraints.maxWidth < 420;
+                      if (useVerticalLayout) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
+                              style: AppTextStyles.bodyBold.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                    ],
+                            const SizedBox(height: AppSpacing.sm),
+                            _isConverting
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : ElevatedButton.icon(
+                                    onPressed: _convertSelectedToPO,
+                                    icon: const Icon(Icons.shopping_cart_checkout),
+                                    label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
+                                  ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Text(
+                            'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          const Spacer(),
+                          _isConverting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : ElevatedButton.icon(
+                                  onPressed: _convertSelectedToPO,
+                                  icon: const Icon(Icons.shopping_cart_checkout),
+                                  label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
+                                ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               Expanded(

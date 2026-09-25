@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/product_model.dart';
 
 final productsListProvider = FutureProvider<List<ProductModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 

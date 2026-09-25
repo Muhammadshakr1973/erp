@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/route_model.dart';
 import 'customer_provider.dart';
 
@@ -26,6 +27,7 @@ List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
 }
 
 final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/routes');

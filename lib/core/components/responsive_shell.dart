@@ -78,9 +78,9 @@ class ResponsiveShell extends StatelessWidget {
                         children: secondaryIndices.map((index) {
                           final destination = destinations[index];
                           final isSelected = index == currentIndex;
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            decoration: BoxDecoration(
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: Material(
                               color: isSelected
                                   ? (isDark
                                       ? AppColors.primaryDark.withValues(alpha: 0.2)
@@ -88,68 +88,68 @@ class ResponsiveShell extends StatelessWidget {
                                   : (isDark
                                       ? AppColors.backgroundDark
                                       : AppColors.backgroundLight),
-                              borderRadius: AppRadius.radiusLg,
-                              border: Border.all(
-                                color: isSelected
-                                    ? (isDark
-                                        ? AppColors.primaryDark
-                                        : AppColors.primary)
-                                    : (isDark
-                                        ? AppColors.borderDark
-                                        : AppColors.borderLight),
-                                width: isSelected ? 1.5 : 1.0,
-                              ),
-                            ),
-                            child: ListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: 2,
-                              ),
-                              leading: Theme(
-                                data: theme.copyWith(
-                                  iconTheme: IconThemeData(
-                                    color: isSelected
-                                        ? (isDark
-                                            ? AppColors.primaryDark
-                                            : AppColors.primary)
-                                        : (isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondaryLight),
-                                  ),
-                                ),
-                                child: isSelected
-                                    ? (destination.selectedIcon ?? destination.icon)
-                                    : destination.icon,
-                              ),
-                              title: Text(
-                                destination.label,
-                                style: AppTextStyles.bodyBold.copyWith(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.radiusLg,
+                                side: BorderSide(
                                   color: isSelected
                                       ? (isDark
                                           ? AppColors.primaryDark
                                           : AppColors.primary)
                                       : (isDark
-                                          ? AppColors.textPrimaryDark
-                                          : AppColors.textPrimaryLight),
+                                          ? AppColors.borderDark
+                                          : AppColors.borderLight),
+                                  width: isSelected ? 1.5 : 1.0,
                                 ),
                               ),
-                              trailing: isSelected
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      color: isDark
-                                        ? AppColors.primaryDark
-                                        : AppColors.primary,
-                                      size: 20,
-                                    )
-                                  : null,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.radiusLg,
+                              clipBehavior: Clip.antiAlias,
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: 2,
+                                ),
+                                leading: Theme(
+                                  data: theme.copyWith(
+                                    iconTheme: IconThemeData(
+                                      color: isSelected
+                                          ? (isDark
+                                              ? AppColors.primaryDark
+                                              : AppColors.primary)
+                                          : (isDark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondaryLight),
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? (destination.selectedIcon ?? destination.icon)
+                                      : destination.icon,
+                                ),
+                                title: Text(
+                                  destination.label,
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: isSelected
+                                        ? (isDark
+                                            ? AppColors.primaryDark
+                                            : AppColors.primary)
+                                        : (isDark
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.textPrimaryLight),
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? Icon(
+                                        Icons.check_circle,
+                                        color: isDark
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary,
+                                        size: 20,
+                                      )
+                                    : null,
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  onDestinationSelected(index);
+                                },
                               ),
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                onDestinationSelected(index);
-                              },
                             ),
                           );
                         }).toList(),

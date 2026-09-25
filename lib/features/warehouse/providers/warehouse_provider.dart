@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
 final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
     FutureProvider<List<WarehouseOrderModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -62,6 +64,7 @@ class WarehouseDashboardData {
 
 final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
     FutureProvider<WarehouseDashboardData>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -133,6 +136,7 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
 
 final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
     FutureProvider<List<WarehouseStockModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 

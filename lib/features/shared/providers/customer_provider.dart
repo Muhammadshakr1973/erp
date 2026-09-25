@@ -6,6 +6,7 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/models/paginated_response.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/customer.dart';
 import '../models/customer_ledger_model.dart';
 import '../models/customer_reconciliation_model.dart';
@@ -51,6 +52,7 @@ final filteredCustomerListProvider =
       ref,
       filters,
     ) async {
+      ref.watch(authProvider.select((state) => state.user?.id));
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
@@ -111,6 +113,7 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   ref,
   id,
 ) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -142,6 +145,7 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
 
 final customerReconciliationProvider =
     FutureProvider.family<CustomerReconciliationModel, int>((ref, id) async {
+      ref.watch(authProvider.select((state) => state.user?.id));
       final api = ref.watch(apiClientProvider);
       try {
         final response = await api.client.get('/customers/$id/reconcile');
@@ -167,6 +171,7 @@ final customerLedgerProvider =
       ref,
       filters,
     ) async {
+      ref.watch(authProvider.select((state) => state.user?.id));
       final api = ref.watch(apiClientProvider);
       final customerId = filters['customer_id'];
       try {
