@@ -328,24 +328,29 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 800;
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
-    return Dialog(
-      backgroundColor: theme.colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 24,
-        vertical: isMobile ? 16 : 24,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        viewInsets: MediaQuery.of(context).viewInsets.copyWith(bottom: 0),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: SizedBox(
-        width: isMobile ? double.infinity : 900,
-        height: screenHeight * 0.9,
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Dialog(
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 12 : 24,
+          vertical: isMobile ? 16 : 24,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: SizedBox(
+          width: isMobile ? double.infinity : 900,
+          height: screenHeight * 0.9,
+          child: Padding(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -764,15 +769,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: TextFormField(
+                                        child: AppTextField(
                                           controller: _costPriceController,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                          decoration: InputDecoration(
+                                          customDecoration: InputDecoration(
                                             labelText: 'کۆست',
                                             labelStyle: AppTextStyles.bodyMedium
                                                 .copyWith(
@@ -799,15 +799,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             .withValues(alpha: 0.4),
                                       ),
                                       Expanded(
-                                        child: TextFormField(
+                                        child: AppTextField(
                                           controller: _priceN1Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                          decoration: InputDecoration(
+                                          customDecoration: InputDecoration(
                                             labelText: 'نرخی ١',
                                             labelStyle: AppTextStyles.bodyMedium
                                                 .copyWith(
@@ -842,15 +837,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: TextFormField(
+                                        child: AppTextField(
                                           controller: _priceN2Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                          decoration: InputDecoration(
+                                          customDecoration: InputDecoration(
                                             labelText: 'نرخی ٢',
                                             labelStyle: AppTextStyles.bodyMedium
                                                 .copyWith(
@@ -877,15 +867,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             .withValues(alpha: 0.4),
                                       ),
                                       Expanded(
-                                        child: TextFormField(
+                                        child: AppTextField(
                                           controller: _priceN3Controller,
                                           keyboardType: TextInputType.number,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                                color:
-                                                    theme.colorScheme.onSurface,
-                                              ),
-                                          decoration: InputDecoration(
+                                          customDecoration: InputDecoration(
                                             labelText: 'نرخی ٣',
                                             labelStyle: AppTextStyles.bodyMedium
                                                 .copyWith(
@@ -927,13 +912,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 children: [
                                   // Cost Price
                                   Expanded(
-                                    child: TextFormField(
+                                    child: AppTextField(
                                       controller: _costPriceController,
                                       keyboardType: TextInputType.number,
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
+                                      customDecoration: InputDecoration(
                                         labelText: 'کۆست',
                                         labelStyle: AppTextStyles.bodyMedium
                                             .copyWith(
@@ -962,13 +944,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   ),
                                   // Price N1
                                   Expanded(
-                                    child: TextFormField(
+                                    child: AppTextField(
                                       controller: _priceN1Controller,
                                       keyboardType: TextInputType.number,
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
+                                      customDecoration: InputDecoration(
                                         labelText: 'نرخی ١',
                                         labelStyle: AppTextStyles.bodyMedium
                                             .copyWith(
@@ -997,13 +976,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   ),
                                   // Price N2
                                   Expanded(
-                                    child: TextFormField(
+                                    child: AppTextField(
                                       controller: _priceN2Controller,
                                       keyboardType: TextInputType.number,
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
+                                      customDecoration: InputDecoration(
                                         labelText: 'نرخی ٢',
                                         labelStyle: AppTextStyles.bodyMedium
                                             .copyWith(
@@ -1032,13 +1008,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   ),
                                   // Price N3
                                   Expanded(
-                                    child: TextFormField(
+                                    child: AppTextField(
                                       controller: _priceN3Controller,
                                       keyboardType: TextInputType.number,
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
+                                      customDecoration: InputDecoration(
                                         labelText: 'نرخی ٣',
                                         labelStyle: AppTextStyles.bodyMedium
                                             .copyWith(
@@ -1102,6 +1075,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             ],
                           ),
                         ],
+                        SizedBox(height: keyboardHeight),
                       ],
                     ),
                   ),
@@ -1129,6 +1103,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/sync_queue_entry.dart';
+import 'core/components/global_numeric_keyboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +51,10 @@ class PosApp extends ConsumerWidget {
       ],
       builder: (context, child) {
         // Enforce RTL directionality
-        return Directionality(textDirection: TextDirection.rtl, child: child!);
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: GlobalNumericKeyboardWrapper(child: child!),
+        );
       },
     );
   }
