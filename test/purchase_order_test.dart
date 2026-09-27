@@ -61,11 +61,13 @@ class FakeSyncService implements SyncService {
     required String entityId,
     required String operationType,
     required Map<String, dynamic> payload,
+    String? customId,
   }) async {
     enqueued.add({
       'entityId': entityId,
       'operationType': operationType,
       'payload': payload,
+      if (customId != null) 'customId': customId,
     });
   }
 

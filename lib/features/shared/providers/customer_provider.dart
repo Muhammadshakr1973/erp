@@ -370,6 +370,35 @@ class CustomerActions {
     }
   }
 
+  Future<void> createPayment({
+    required int customerId,
+    required int amount,
+    int? salesOrderId,
+    String? paymentMethod = 'CASH',
+    String? notes,
+  }) async {
+    final payload = {
+      'customer_id': customerId,
+      'amount': amount,
+      if (salesOrderId != null) 'sales_order_id': salesOrderId,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    };
+
+    try {
+      final response = await api.client.post('/payments', data: payload);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
+        ref.invalidate(singleCustomerProvider(customerId));
+        return;
+      }
+      throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە');
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
   Future<void> deleteSpecialPrice(int customerId, int productId) async {
     try {
       await api.client.delete('/customers/$customerId/special-prices/$productId');

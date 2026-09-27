@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'package:hive/hive.dart';
 
-class SyncQueueEntry {
+class SyncQueueEntry extends HiveObject {
   final String id;
   final String entityId;
   final String operationType;

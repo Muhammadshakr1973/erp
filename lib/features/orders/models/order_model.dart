@@ -76,6 +76,7 @@ class OrderModel {
   final dynamic salesman;
   final dynamic warehouse;
   final List<OrderItemModel> items;
+  final bool pendingSync;
 
   OrderModel({
     required this.id,
@@ -100,6 +101,7 @@ class OrderModel {
     this.salesman,
     this.warehouse,
     this.items = const [],
+    this.pendingSync = false,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {

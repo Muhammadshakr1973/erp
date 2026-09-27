@@ -23,7 +23,6 @@ import '../providers/route_provider.dart';
 import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
 import '../views/customer_reconciliation_dialog.dart';
-import '../../admin/views/providers/reports_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 

@@ -30,25 +30,20 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 });
 
 class SyncService {
-  final ApiClient _api;
-  final Ref _ref;
-  Box<SyncQueueEntry>? _box;
+  final ApiClient api;
+  final Ref ref;
+  final Box<SyncQueueEntry>? _customBox;
   bool _isSyncing = false;
   Timer? _autoSyncTimer;
 
   SyncService({
-    required ApiClient api,
-    required Ref ref,
+    required this.api,
+    required this.ref,
     Box<SyncQueueEntry>? box,
-  })  : _api = api,
-        _ref = ref,
-        _box = box;
-
-  ApiClient get api => _api;
-  Ref get ref => _ref;
+  }) : _customBox = box;
 
   Box<SyncQueueEntry> get box {
-    if (_box != null) return _box!;
+    if (_customBox != null) return _customBox;
     if (Hive.isBoxOpen('sync_queue')) {
       return Hive.box<SyncQueueEntry>('sync_queue');
     }
@@ -93,7 +88,7 @@ class SyncService {
   Future<void> syncPendingOperations() async {
     if (_isSyncing) return;
     _isSyncing = true;
-    _ref.read(syncStatusProvider.notifier).state = SyncStatus.syncing;
+    ref.read(syncStatusProvider.notifier).state = SyncStatus.syncing;
 
     try {
       if (!Hive.isBoxOpen('sync_queue')) {
@@ -155,7 +150,7 @@ class SyncService {
             // Permanent client error / payload mismatch: mark FAILED
             entry.status = 'FAILED';
             entry.retryCount = 999;
-            entry.errorInformation = _api.parseError(e);
+            entry.errorInformation = api.parseError(e);
             try {
               if (entry.isInBox) {
                 await entry.save();
@@ -165,7 +160,7 @@ class SyncService {
             // Network failure or temporary 500: retain PENDING for retry
             entry.status = 'PENDING';
             entry.retryCount += 1;
-            entry.errorInformation = _api.parseError(e);
+            entry.errorInformation = api.parseError(e);
             try {
               if (entry.isInBox) {
                 await entry.save();
@@ -200,62 +195,62 @@ class SyncService {
 
     switch (entry.operationType) {
       case 'CREATE_ORDER':
-        return await _api.client.post(
+        return await api.client.post(
           '/orders',
           data: payload,
           options: Options(headers: headers),
         );
       case 'UPDATE_ORDER':
-        return await _api.client.put(
+        return await api.client.put(
           '/orders/${entry.entityId}',
           data: payload,
           options: Options(headers: headers),
         );
       case 'CREATE_SALES_RETURN':
-        return await _api.client.post(
+        return await api.client.post(
           '/sales-returns',
           data: payload,
           options: Options(headers: headers),
         );
       case 'DELIVER_ORDER':
-        return await _api.client.post(
+        return await api.client.post(
           '/delivery-trips/orders/${entry.entityId}/deliver',
           data: payload,
           options: Options(headers: headers),
         );
       case 'FAIL_ORDER':
-        return await _api.client.post(
+        return await api.client.post(
           '/delivery-trips/orders/${entry.entityId}/fail',
           data: payload,
           options: Options(headers: headers),
         );
       case 'RECORD_PAYMENT':
       case 'CREATE_PAYMENT':
-        return await _api.client.post(
+        return await api.client.post(
           '/payments',
           data: payload,
           options: Options(headers: headers),
         );
       case 'CREATE_PURCHASE_ORDER':
-        return await _api.client.post(
+        return await api.client.post(
           '/purchase-orders',
           data: payload,
           options: Options(headers: headers),
         );
       case 'RECEIVE_PURCHASE_ORDER':
-        return await _api.client.post(
+        return await api.client.post(
           '/purchase-orders/${entry.entityId}/receive',
           data: payload,
           options: Options(headers: headers),
         );
       case 'STOCK_TRANSFER':
-        return await _api.client.post(
+        return await api.client.post(
           '/stock-transfers',
           data: payload,
           options: Options(headers: headers),
         );
       default:
-        return await _api.client.post(
+        return await api.client.post(
           '/sync-operations',
           data: payload,
           options: Options(headers: headers),
@@ -291,7 +286,7 @@ class SyncService {
 
   void _updateSyncStatus() {
     if (!Hive.isBoxOpen('sync_queue')) {
-      _ref.read(syncStatusProvider.notifier).state = SyncStatus.synced;
+      ref.read(syncStatusProvider.notifier).state = SyncStatus.synced;
       return;
     }
 
@@ -299,13 +294,13 @@ class SyncService {
     final entries = queueBox.values.toList();
 
     if (entries.any((e) => e.status == 'SYNCING')) {
-      _ref.read(syncStatusProvider.notifier).state = SyncStatus.syncing;
+      ref.read(syncStatusProvider.notifier).state = SyncStatus.syncing;
     } else if (entries.any((e) => e.status == 'PENDING')) {
-      _ref.read(syncStatusProvider.notifier).state = SyncStatus.pending;
+      ref.read(syncStatusProvider.notifier).state = SyncStatus.pending;
     } else if (entries.any((e) => e.status == 'FAILED')) {
-      _ref.read(syncStatusProvider.notifier).state = SyncStatus.error;
+      ref.read(syncStatusProvider.notifier).state = SyncStatus.error;
     } else {
-      _ref.read(syncStatusProvider.notifier).state = SyncStatus.synced;
+      ref.read(syncStatusProvider.notifier).state = SyncStatus.synced;
     }
   }
 }
