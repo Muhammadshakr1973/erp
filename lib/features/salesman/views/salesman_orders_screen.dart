@@ -195,25 +195,11 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                         children: [
                           Text(customerName, style: AppTextStyles.bodyBold),
                           const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'پسوڵەی #${order.orderNumber}',
-                                  style: AppTextStyles.caption,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (order.pendingSync) ...[
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.sync,
-                                  size: 12,
-                                  color: Colors.orange,
-                                ),
-                              ],
-                            ],
+                          Text(
+                            'پسوڵەی #${order.orderNumber}',
+                            style: AppTextStyles.caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
