@@ -18,7 +18,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/sync/sync_service.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../models/customer.dart';
@@ -250,16 +249,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   if (_paymentFormKey.currentState!.validate()) {
                     setStateDialog(() => _isPaying = true);
                     try {
-                      final syncService = ref.read(syncServiceProvider);
-                      await syncService.enqueueOperation(
-                        entityId: 'local_payment_${DateTime.now().microsecondsSinceEpoch}',
-                        operationType: 'CREATE_PAYMENT',
-                        payload: {
-                          'customer_id': customer.id,
-                          'amount': int.parse(_paymentAmountController.text),
-                          'notes': _paymentNotesController.text,
-                          'payment_method': 'CASH',
-                        },
+                      await ref.read(customerActionsProvider).createPayment(
+                        customerId: customer.id,
+                        amount: int.parse(_paymentAmountController.text.trim()),
+                        paymentMethod: 'CASH',
+                        notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
                       );
 
                       ref.invalidate(singleCustomerProvider(customer.id));
@@ -272,7 +266,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         Navigator.pop(context);
                         AppSnackbar.show(
                           context,
-                          message: 'داواکاری پارەدانەکە بە سەرکەوتوویی خرایە ڕیزی سینکەوە',
+                          message: 'پارەدانەکە بە سەرکەوتوویی تۆمارکرا',
                           type: SnackbarType.success,
                         );
                       }
