@@ -26,7 +26,7 @@ class ReportService
 {
     /**
      * ١. ڕاپۆرتی گشتگیری فرۆشتن (Sales Report)
-     * Authoritative sales data with filters and KPIs
+     * Ultra-fast Authoritative sales data with single SQL aggregations and indexed joins.
      */
     public function getSalesReport(array $filters): array
     {
@@ -40,59 +40,69 @@ class ReportService
 
         $this->applySalesOrderFilters($query, $filters);
 
-        // Calculate Authoritative Totals from matching orders
-        $totalOrdersCount = (clone $query)->count();
-        $totalDeliveredCount = (clone $query)->where('status', SalesOrder::STATUS_DELIVERED)->count();
-        $totalGrossAmount = (int) (clone $query)->sum('subtotal');
-        $totalDiscountAmount = (int) (clone $query)->sum('discount_amount');
-        $totalNetAmount = (int) (clone $query)->sum('total_amount');
-        $totalProfitAmount = (int) (clone $query)->sum('total_profit');
+        // Single SQL query for complete summary metrics
+        $summaryData = (clone $query)
+            ->selectRaw("
+                COUNT(*) as total_orders_count,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as total_delivered_count,
+                COALESCE(SUM(subtotal), 0) as total_gross_amount,
+                COALESCE(SUM(discount_amount), 0) as total_discount_amount,
+                COALESCE(SUM(total_amount), 0) as total_net_amount,
+                COALESCE(SUM(total_profit), 0) as total_profit_amount
+            ", [SalesOrder::STATUS_DELIVERED])
+            ->first();
+
+        $totalOrdersCount = (int) ($summaryData->total_orders_count ?? 0);
+        $totalDeliveredCount = (int) ($summaryData->total_delivered_count ?? 0);
+        $totalGrossAmount = (int) ($summaryData->total_gross_amount ?? 0);
+        $totalDiscountAmount = (int) ($summaryData->total_discount_amount ?? 0);
+        $totalNetAmount = (int) ($summaryData->total_net_amount ?? 0);
+        $totalProfitAmount = (int) ($summaryData->total_profit_amount ?? 0);
         $totalCostAmount = $totalNetAmount - $totalProfitAmount;
         $avgOrderValue = $totalOrdersCount > 0 ? (int) round($totalNetAmount / $totalOrdersCount) : 0;
 
-        // Breakdown by Salesman
-        $bySalesmanRaw = (clone $query)
-            ->select('salesman_id', DB::raw('COUNT(*) as orders_count'), DB::raw('SUM(total_amount) as total_sales'), DB::raw('SUM(total_profit) as total_profit'))
-            ->groupBy('salesman_id')
-            ->get();
-
-        $salesmanIds = $bySalesmanRaw->pluck('salesman_id')->filter();
-        $salesmen = User::whereIn('id', $salesmanIds)->get()->keyBy('id');
-
-        $bySalesman = $bySalesmanRaw->map(function ($row) use ($salesmen) {
-            $salesman = $salesmen->get($row->salesman_id);
-            return [
+        // Breakdown by Salesman (single joined query without pluck collection overhead)
+        $bySalesman = (clone $query)
+            ->leftJoin('users', 'sales_orders.salesman_id', '=', 'users.id')
+            ->select(
+                'sales_orders.salesman_id',
+                DB::raw("COALESCE(users.name, 'نەزانراو') as salesman_name"),
+                DB::raw('COUNT(*) as orders_count'),
+                DB::raw('COALESCE(SUM(sales_orders.total_amount), 0) as total_sales'),
+                DB::raw('COALESCE(SUM(sales_orders.total_profit), 0) as total_profit')
+            )
+            ->groupBy('sales_orders.salesman_id', 'users.name')
+            ->get()
+            ->map(fn($row) => [
                 'salesman_id'   => $row->salesman_id,
-                'salesman_name' => $salesman?->name ?? 'نەزانراو',
+                'salesman_name' => $row->salesman_name,
                 'orders_count'  => (int) $row->orders_count,
                 'total_sales'   => (int) $row->total_sales,
                 'total_profit'  => (int) $row->total_profit,
-            ];
-        });
+            ]);
 
-        // Breakdown by Route
-        $byRouteRaw = (clone $query)
+        // Breakdown by Route (single joined query)
+        $byRoute = (clone $query)
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
-            ->select('customers.route_id', DB::raw('COUNT(sales_orders.id) as orders_count'), DB::raw('SUM(sales_orders.total_amount) as total_sales'))
-            ->groupBy('customers.route_id')
-            ->get();
-
-        $routeIds = $byRouteRaw->pluck('route_id')->filter();
-        $routes = Route::whereIn('id', $routeIds)->get()->keyBy('id');
-
-        $byRoute = $byRouteRaw->map(function ($row) use ($routes) {
-            $route = $routes->get($row->route_id);
-            return [
+            ->leftJoin('routes', 'customers.route_id', '=', 'routes.id')
+            ->select(
+                'customers.route_id',
+                DB::raw("COALESCE(routes.name, 'بێ ڕێگا') as route_name"),
+                DB::raw('COUNT(sales_orders.id) as orders_count'),
+                DB::raw('COALESCE(SUM(sales_orders.total_amount), 0) as total_sales')
+            )
+            ->groupBy('customers.route_id', 'routes.name')
+            ->get()
+            ->map(fn($row) => [
                 'route_id'     => $row->route_id,
-                'route_name'   => $route?->name ?? 'بێ ڕێگا',
+                'route_name'   => $row->route_name,
                 'orders_count' => (int) $row->orders_count,
                 'total_sales'  => (int) $row->total_sales,
-            ];
-        });
+            ]);
 
         // Breakdown by Status
         $byStatus = (clone $query)
-            ->select('status', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total_amount'))
+            ->select('status', DB::raw('COUNT(*) as count'), DB::raw('COALESCE(SUM(total_amount), 0) as total_amount'))
             ->groupBy('status')
             ->get()
             ->map(fn($row) => [
@@ -128,85 +138,102 @@ class ReportService
 
     /**
      * ٢. ڕاپۆرتی گشتگیری قازانج (Profit Report)
-     * Uses strictly historical snapshots from orders and order items to prevent recalculation drifts.
+     * High performance database joins and single query aggregations using strictly historical snapshots.
      */
     public function getProfitReport(array $filters): array
     {
-        $orderQuery = SalesOrder::query()
-            ->whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED]);
+        $baseItemQuery = SalesOrderItem::query()
+            ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
+            ->whereIn('sales_orders.status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED]);
 
-        $this->applySalesOrderFilters($orderQuery, $filters);
-
-        $matchingOrderIds = (clone $orderQuery)->pluck('id');
-
-        $itemQuery = SalesOrderItem::query()
-            ->with(['product:id,name,sku,category_id', 'product.category:id,name', 'order:id,order_number,order_date,customer_id,salesman_id', 'order.customer:id,name', 'order.salesman:id,name'])
-            ->whereIn('sales_order_id', $matchingOrderIds);
-
+        // Apply filters on baseItemQuery
+        if (!empty($filters['start_date'])) {
+            $baseItemQuery->whereDate('sales_orders.order_date', '>=', $filters['start_date']);
+        }
+        if (!empty($filters['end_date'])) {
+            $baseItemQuery->whereDate('sales_orders.order_date', '<=', $filters['end_date']);
+        }
+        if (!empty($filters['customer_id'])) {
+            $baseItemQuery->where('sales_orders.customer_id', $filters['customer_id']);
+        }
+        if (!empty($filters['salesman_id'])) {
+            $baseItemQuery->where('sales_orders.salesman_id', $filters['salesman_id']);
+        }
+        if (!empty($filters['warehouse_id'])) {
+            $baseItemQuery->where('sales_orders.warehouse_id', $filters['warehouse_id']);
+        }
         if (!empty($filters['product_id'])) {
-            $itemQuery->where('product_id', $filters['product_id']);
+            $baseItemQuery->where('sales_order_items.product_id', $filters['product_id']);
         }
-
         if (!empty($filters['category_id'])) {
-            $itemQuery->whereHas('product', function ($q) use ($filters) {
-                $q->where('category_id', $filters['category_id']);
-            });
+            $baseItemQuery->join('products as p_cat', 'sales_order_items.product_id', '=', 'p_cat.id')
+                          ->where('p_cat.category_id', $filters['category_id']);
         }
 
-        $totalRevenue = (int) (clone $itemQuery)->sum('line_total');
-        $totalCost = (int) (clone $itemQuery)->select(DB::raw('SUM(quantity * cost_price) as total_cost'))->value('total_cost');
-        $totalProfit = (int) (clone $itemQuery)->sum('profit');
-        $totalUnitsSold = (int) (clone $itemQuery)->sum('quantity');
+        // Single aggregation query for profit KPIs
+        $summaryData = (clone $baseItemQuery)
+            ->selectRaw('
+                COALESCE(SUM(sales_order_items.line_total), 0) as total_revenue,
+                COALESCE(SUM(sales_order_items.quantity * sales_order_items.cost_price), 0) as total_cost,
+                COALESCE(SUM(sales_order_items.profit), 0) as total_profit,
+                COALESCE(SUM(sales_order_items.quantity), 0) as total_units_sold
+            ')
+            ->first();
+
+        $totalRevenue = (int) ($summaryData->total_revenue ?? 0);
+        $totalCost = (int) ($summaryData->total_cost ?? 0);
+        $totalProfit = (int) ($summaryData->total_profit ?? 0);
+        $totalUnitsSold = (int) ($summaryData->total_units_sold ?? 0);
         $profitMargin = $totalRevenue > 0 ? round(($totalProfit / $totalRevenue) * 100, 2) : 0.0;
 
-        // Top Profitable Products
-        $productBreakdownRaw = (clone $itemQuery)
-            ->select(
-                'product_id',
-                DB::raw('SUM(quantity) as units_sold'),
-                DB::raw('SUM(line_total) as total_revenue'),
-                DB::raw('SUM(quantity * cost_price) as total_cost'),
-                DB::raw('SUM(profit) as total_profit')
-            )
-            ->groupBy('product_id')
-            ->orderByDesc('total_profit')
-            ->limit(15)
-            ->get();
-
-        $productIds = $productBreakdownRaw->pluck('product_id')->filter();
-        $products = Product::with('category')->whereIn('id', $productIds)->get()->keyBy('id');
-
-        $productBreakdown = $productBreakdownRaw->map(function ($row) use ($products) {
-            $product = $products->get($row->product_id);
-            $revenue = (int) $row->total_revenue;
-            $profit = (int) $row->total_profit;
-            $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
-
-            return [
-                'product_id'     => $row->product_id,
-                'product_name'   => $product?->name ?? 'نەزانراو',
-                'sku'            => $product?->sku ?? '',
-                'category_name'  => $product?->category?->name ?? 'گشتی',
-                'units_sold'     => (int) $row->units_sold,
-                'total_revenue'  => $revenue,
-                'total_cost'     => (int) $row->total_cost,
-                'total_profit'   => $profit,
-                'margin_percent' => $margin,
-            ];
-        });
-
-        // Top Profitable Categories
-        $categoryBreakdown = (clone $itemQuery)
+        // Top Profitable Products (Direct SQL Group By with joins)
+        $productBreakdown = (clone $baseItemQuery)
             ->join('products', 'sales_order_items.product_id', '=', 'products.id')
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->select(
-                'categories.id as category_id',
-                'categories.name as category_name',
+                'sales_order_items.product_id',
+                'products.name as product_name',
+                'products.sku',
+                DB::raw("COALESCE(categories.name, 'گشتی') as category_name"),
+                DB::raw('SUM(sales_order_items.quantity) as units_sold'),
+                DB::raw('SUM(sales_order_items.line_total) as total_revenue'),
+                DB::raw('SUM(sales_order_items.quantity * sales_order_items.cost_price) as total_cost'),
+                DB::raw('SUM(sales_order_items.profit) as total_profit')
+            )
+            ->groupBy('sales_order_items.product_id', 'products.name', 'products.sku', 'categories.name')
+            ->orderByDesc('total_profit')
+            ->limit(15)
+            ->get()
+            ->map(function ($row) {
+                $revenue = (int) $row->total_revenue;
+                $profit = (int) $row->total_profit;
+                $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+
+                return [
+                    'product_id'     => $row->product_id,
+                    'product_name'   => $row->product_name ?? 'نەزانراو',
+                    'sku'            => $row->sku ?? '',
+                    'category_name'  => $row->category_name,
+                    'units_sold'     => (int) $row->units_sold,
+                    'total_revenue'  => $revenue,
+                    'total_cost'     => (int) $row->total_cost,
+                    'total_profit'   => $profit,
+                    'margin_percent' => $margin,
+                ];
+            });
+
+        // Top Profitable Categories (Direct SQL Group By)
+        $categoryBreakdown = (clone $baseItemQuery)
+            ->join('products as prd_cat', 'sales_order_items.product_id', '=', 'prd_cat.id')
+            ->leftJoin('categories as cat_tbl', 'prd_cat.category_id', '=', 'cat_tbl.id')
+            ->select(
+                'cat_tbl.id as category_id',
+                DB::raw("COALESCE(cat_tbl.name, 'بێ پۆل') as category_name"),
                 DB::raw('SUM(sales_order_items.quantity) as units_sold'),
                 DB::raw('SUM(sales_order_items.line_total) as total_revenue'),
                 DB::raw('SUM(sales_order_items.profit) as total_profit')
             )
-            ->groupBy('categories.id', 'categories.name')
+            ->groupBy('cat_tbl.id', 'cat_tbl.name')
             ->orderByDesc('total_profit')
             ->get()
             ->map(function ($row) {
@@ -216,7 +243,7 @@ class ReportService
 
                 return [
                     'category_id'    => $row->category_id,
-                    'category_name'  => $row->category_name ?? 'بێ پۆل',
+                    'category_name'  => $row->category_name,
                     'units_sold'     => (int) $row->units_sold,
                     'total_revenue'  => $revenue,
                     'total_profit'   => $profit,
@@ -225,28 +252,54 @@ class ReportService
             });
 
         // Profit Breakdown by Salesman
-        $salesmanBreakdownRaw = (clone $orderQuery)
-            ->select('salesman_id', DB::raw('SUM(total_amount) as total_revenue'), DB::raw('SUM(total_profit) as total_profit'))
-            ->groupBy('salesman_id')
-            ->get();
+        $orderQuery = SalesOrder::query()
+            ->whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED]);
+        $this->applySalesOrderFilters($orderQuery, $filters);
 
-        $salesmanIds = $salesmanBreakdownRaw->pluck('salesman_id')->filter();
-        $salesmen = User::whereIn('id', $salesmanIds)->get()->keyBy('id');
+        $salesmanBreakdown = (clone $orderQuery)
+            ->leftJoin('users', 'sales_orders.salesman_id', '=', 'users.id')
+            ->select(
+                'sales_orders.salesman_id',
+                DB::raw("COALESCE(users.name, 'نەزانراو') as salesman_name"),
+                DB::raw('COALESCE(SUM(sales_orders.total_amount), 0) as total_revenue'),
+                DB::raw('COALESCE(SUM(sales_orders.total_profit), 0) as total_profit')
+            )
+            ->groupBy('sales_orders.salesman_id', 'users.name')
+            ->get()
+            ->map(function ($row) {
+                $revenue = (int) $row->total_revenue;
+                $profit = (int) $row->total_profit;
+                $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
 
-        $salesmanBreakdown = $salesmanBreakdownRaw->map(function ($row) use ($salesmen) {
-            $salesman = $salesmen->get($row->salesman_id);
-            $revenue = (int) $row->total_revenue;
-            $profit = (int) $row->total_profit;
-            $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+                return [
+                    'salesman_id'    => $row->salesman_id,
+                    'salesman_name'  => $row->salesman_name,
+                    'total_revenue'  => $revenue,
+                    'total_profit'   => $profit,
+                    'margin_percent' => $margin,
+                ];
+            });
 
-            return [
-                'salesman_id'    => $row->salesman_id,
-                'salesman_name'  => $salesman?->name ?? 'نەزانراو',
-                'total_revenue'  => $revenue,
-                'total_profit'   => $profit,
-                'margin_percent' => $margin,
-            ];
-        });
+        // Eager-loaded paginated items
+        $itemQuery = SalesOrderItem::query()
+            ->with([
+                'product:id,name,sku,category_id',
+                'product.category:id,name',
+                'order:id,order_number,order_date,customer_id,salesman_id',
+                'order.customer:id,name',
+                'order.salesman:id,name'
+            ])
+            ->whereHas('order', function ($q) use ($filters) {
+                $q->whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED]);
+                $this->applySalesOrderFilters($q, $filters);
+            });
+
+        if (!empty($filters['product_id'])) {
+            $itemQuery->where('product_id', $filters['product_id']);
+        }
+        if (!empty($filters['category_id'])) {
+            $itemQuery->whereHas('product', fn($q) => $q->where('category_id', $filters['category_id']));
+        }
 
         $perPage = (int) ($filters['per_page'] ?? 25);
         $page = (int) ($filters['page'] ?? 1);
@@ -271,6 +324,7 @@ class ReportService
 
     /**
      * ٣. فرۆشتن بەپێی مەندوب و ئەدای کار (Sales by Salesman Report)
+     * High efficiency aggregated report.
      */
     public function getSalesBySalesmanReport(array $filters): array
     {
@@ -282,47 +336,66 @@ class ReportService
         }
 
         $salesmen = $salesmenQuery->get();
-
         $startDate = !empty($filters['start_date']) ? $filters['start_date'] : Carbon::now()->startOfMonth()->toDateString();
         $endDate = !empty($filters['end_date']) ? $filters['end_date'] : Carbon::now()->endOfMonth()->toDateString();
-
         $salesmanIds = $salesmen->pluck('id');
 
-        $allOrdersQuery = SalesOrder::whereIn('salesman_id', $salesmanIds)
-            ->whereBetween('order_date', [$startDate, $endDate])
-            ->with('commissionDetail');
+        // Aggregated orders summary by salesman
+        $ordersAggQuery = SalesOrder::whereIn('salesman_id', $salesmanIds)
+            ->whereBetween('order_date', [$startDate, $endDate]);
 
         if (!empty($filters['warehouse_id'])) {
-            $allOrdersQuery->where('warehouse_id', $filters['warehouse_id']);
+            $ordersAggQuery->where('warehouse_id', $filters['warehouse_id']);
         }
 
-        $allOrders = $allOrdersQuery->get()->groupBy('salesman_id');
-
-        $allPayments = CustomerPayment::whereIn('collected_by', $salesmanIds)
-            ->whereBetween('paid_at', [$startDate, $endDate])
+        $ordersAgg = (clone $ordersAggQuery)
+            ->selectRaw('
+                salesman_id,
+                COUNT(*) as total_orders,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as delivered_orders,
+                COALESCE(SUM(total_amount), 0) as total_sales,
+                COALESCE(SUM(total_profit), 0) as total_profit
+            ', [SalesOrder::STATUS_DELIVERED])
+            ->groupBy('salesman_id')
             ->get()
-            ->groupBy('collected_by');
+            ->keyBy('salesman_id');
 
-        $reportData = $salesmen->map(function ($salesman) use ($startDate, $endDate, $filters, $allOrders, $allPayments) {
-            $ordersForComp = $allOrders->get($salesman->id) ?? collect();
-            $totalOrders = $ordersForComp->count();
-            $deliveredOrders = $ordersForComp->where('status', SalesOrder::STATUS_DELIVERED)->count();
-            $totalSales = (int) $ordersForComp->sum('total_amount');
-            $totalProfit = (int) $ordersForComp->sum('total_profit');
+        // Payments aggregated by collector in period
+        $paymentsAgg = CustomerPayment::whereIn('collected_by', $salesmanIds)
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->selectRaw('collected_by, COALESCE(SUM(amount), 0) as total_collected')
+            ->groupBy('collected_by')
+            ->get()
+            ->keyBy('collected_by');
+
+        // Commission details if recorded
+        $commissionsAgg = DB::table('salesman_commission_details')
+            ->join('sales_orders', 'salesman_commission_details.sales_order_id', '=', 'sales_orders.id')
+            ->whereIn('sales_orders.salesman_id', $salesmanIds)
+            ->whereBetween('sales_orders.order_date', [$startDate, $endDate])
+            ->selectRaw('sales_orders.salesman_id, COALESCE(SUM(salesman_commission_details.commission_amount), 0) as total_commission')
+            ->groupBy('sales_orders.salesman_id')
+            ->get()
+            ->keyBy('salesman_id');
+
+        $reportData = $salesmen->map(function ($salesman) use ($ordersAgg, $paymentsAgg, $commissionsAgg) {
+            $ord = $ordersAgg->get($salesman->id);
+            $totalOrders = (int) ($ord->total_orders ?? 0);
+            $deliveredOrders = (int) ($ord->delivered_orders ?? 0);
+            $totalSales = (int) ($ord->total_sales ?? 0);
+            $totalProfit = (int) ($ord->total_profit ?? 0);
 
             $rate = (float) ($salesman->commission_rate ?? 0);
-            $estimatedCommission = 0;
-            foreach ($ordersForComp as $order) {
-                if ($order->commissionDetail) {
-                    $estimatedCommission += (int) $order->commissionDetail->commission_amount;
-                } else {
-                    $estimatedCommission += (int) round(($order->total_profit * $rate) / 100);
-                }
+            
+            // Check if authoritative commission details exist, else use formula
+            $commDetail = $commissionsAgg->get($salesman->id);
+            if ($commDetail) {
+                $estimatedCommission = (int) $commDetail->total_commission;
+            } else {
+                $estimatedCommission = (int) round(($totalProfit * $rate) / 100);
             }
 
-            // Payments collected by this salesman in period
-            $paymentsCollected = (int) ($allPayments->get($salesman->id) ?? collect())->sum('amount');
-
+            $paymentsCollected = (int) ($paymentsAgg->get($salesman->id)->total_collected ?? 0);
             $avgOrder = $totalOrders > 0 ? (int) round($totalSales / $totalOrders) : 0;
 
             return [
@@ -366,7 +439,7 @@ class ReportService
      */
     public function getCustomerDebtsReport(array $filters): array
     {
-        // 1. Authoritative Customer Balances Summary
+        // 1. Authoritative Customer Balances Summary (Single aggregated query)
         $customerQuery = Customer::query()->with('route:id,name');
 
         if (!empty($filters['customer_id'])) {
@@ -379,9 +452,15 @@ class ReportService
             $customerQuery->where('current_balance', '>', 0);
         }
 
-        $totalCustomersCount = (clone $customerQuery)->count();
-        $totalOutstandingDebt = (int) (clone $customerQuery)->sum('current_balance');
-        $customersWithDebtCount = (clone $customerQuery)->where('current_balance', '>', 0)->count();
+        $custSummary = (clone $customerQuery)->selectRaw('
+            COUNT(*) as total_customers,
+            SUM(CASE WHEN current_balance > 0 THEN 1 ELSE 0 END) as customers_with_debt,
+            COALESCE(SUM(current_balance), 0) as total_outstanding_debt
+        ')->first();
+
+        $totalCustomersCount = (int) ($custSummary->total_customers ?? 0);
+        $customersWithDebtCount = (int) ($custSummary->customers_with_debt ?? 0);
+        $totalOutstandingDebt = (int) ($custSummary->total_outstanding_debt ?? 0);
 
         // 2. Ledger Entries Query
         $ledgerQuery = CustomerLedger::query()
@@ -409,8 +488,13 @@ class ReportService
             $ledgerQuery->where('entry_type', $filters['entry_type']);
         }
 
-        $totalDebitInPeriod = (int) (clone $ledgerQuery)->sum('debit');
-        $totalCreditInPeriod = (int) (clone $ledgerQuery)->sum('credit');
+        $ledgerSummary = (clone $ledgerQuery)->selectRaw('
+            COALESCE(SUM(debit), 0) as total_debit,
+            COALESCE(SUM(credit), 0) as total_credit
+        ')->first();
+
+        $totalDebitInPeriod = (int) ($ledgerSummary->total_debit ?? 0);
+        $totalCreditInPeriod = (int) ($ledgerSummary->total_credit ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 30);
         $page = (int) ($filters['page'] ?? 1);
@@ -443,9 +527,15 @@ class ReportService
             $supplierQuery->where('current_balance', '>', 0);
         }
 
-        $totalSuppliers = (clone $supplierQuery)->count();
-        $totalOutstandingPayables = (int) (clone $supplierQuery)->sum('current_balance');
-        $suppliersWithDebtCount = (clone $supplierQuery)->where('current_balance', '>', 0)->count();
+        $supSummary = (clone $supplierQuery)->selectRaw('
+            COUNT(*) as total_suppliers,
+            SUM(CASE WHEN current_balance > 0 THEN 1 ELSE 0 END) as suppliers_with_debt,
+            COALESCE(SUM(current_balance), 0) as total_outstanding_payables
+        ')->first();
+
+        $totalSuppliers = (int) ($supSummary->total_suppliers ?? 0);
+        $suppliersWithDebtCount = (int) ($supSummary->suppliers_with_debt ?? 0);
+        $totalOutstandingPayables = (int) ($supSummary->total_outstanding_payables ?? 0);
 
         // Ledger
         $ledgerQuery = SupplierLedger::query()
@@ -469,8 +559,13 @@ class ReportService
             $ledgerQuery->where('entry_type', $filters['entry_type']);
         }
 
-        $totalDebitInPeriod = (int) (clone $ledgerQuery)->sum('debit');
-        $totalCreditInPeriod = (int) (clone $ledgerQuery)->sum('credit');
+        $ledgerSummary = (clone $ledgerQuery)->selectRaw('
+            COALESCE(SUM(debit), 0) as total_debit,
+            COALESCE(SUM(credit), 0) as total_credit
+        ')->first();
+
+        $totalDebitInPeriod = (int) ($ledgerSummary->total_debit ?? 0);
+        $totalCreditInPeriod = (int) ($ledgerSummary->total_credit ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 30);
         $page = (int) ($filters['page'] ?? 1);
@@ -515,11 +610,19 @@ class ReportService
                 $query->where('payment_method', strtolower($filters['payment_method']));
             }
 
-            $totalCount = (clone $query)->count();
-            $totalAmount = (int) (clone $query)->sum('amount');
-            $cashTotal = (int) (clone $query)->where('payment_method', 'cash')->sum('amount');
-            $bankTotal = (int) (clone $query)->where('payment_method', 'bank')->sum('amount');
-            $transferTotal = (int) (clone $query)->where('payment_method', 'transfer')->sum('amount');
+            $summaryData = (clone $query)->selectRaw("
+                COUNT(*) as total_count,
+                COALESCE(SUM(amount), 0) as total_amount,
+                COALESCE(SUM(CASE WHEN LOWER(payment_method) = 'cash' THEN amount ELSE 0 END), 0) as cash_total,
+                COALESCE(SUM(CASE WHEN LOWER(payment_method) = 'bank' THEN amount ELSE 0 END), 0) as bank_total,
+                COALESCE(SUM(CASE WHEN LOWER(payment_method) = 'transfer' THEN amount ELSE 0 END), 0) as transfer_total
+            ")->first();
+
+            $totalCount = (int) ($summaryData->total_count ?? 0);
+            $totalAmount = (int) ($summaryData->total_amount ?? 0);
+            $cashTotal = (int) ($summaryData->cash_total ?? 0);
+            $bankTotal = (int) ($summaryData->bank_total ?? 0);
+            $transferTotal = (int) ($summaryData->transfer_total ?? 0);
 
             $perPage = (int) ($filters['per_page'] ?? 30);
             $page = (int) ($filters['page'] ?? 1);
@@ -572,10 +675,17 @@ class ReportService
             $query->where('payment_method', strtoupper($filters['payment_method']));
         }
 
-        $totalCount = (clone $query)->count();
-        $totalAmount = (int) (clone $query)->sum('amount');
-        $cashTotal = (int) (clone $query)->where('payment_method', 'CASH')->sum('amount');
-        $bankTotal = (int) (clone $query)->where('payment_method', 'BANK')->sum('amount');
+        $summaryData = (clone $query)->selectRaw("
+            COUNT(*) as total_count,
+            COALESCE(SUM(amount), 0) as total_amount,
+            COALESCE(SUM(CASE WHEN UPPER(payment_method) = 'CASH' THEN amount ELSE 0 END), 0) as cash_total,
+            COALESCE(SUM(CASE WHEN UPPER(payment_method) = 'BANK' THEN amount ELSE 0 END), 0) as bank_total
+        ")->first();
+
+        $totalCount = (int) ($summaryData->total_count ?? 0);
+        $totalAmount = (int) ($summaryData->total_amount ?? 0);
+        $cashTotal = (int) ($summaryData->cash_total ?? 0);
+        $bankTotal = (int) ($summaryData->bank_total ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 30);
         $page = (int) ($filters['page'] ?? 1);
@@ -694,9 +804,15 @@ class ReportService
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        $totalTransactions = (clone $query)->count();
-        $totalInQty = (int) (clone $query)->where('quantity_change', '>', 0)->sum('quantity_change');
-        $totalOutQty = (int) abs((clone $query)->where('quantity_change', '<', 0)->sum('quantity_change'));
+        $summaryData = (clone $query)->selectRaw('
+            COUNT(*) as total_transactions,
+            COALESCE(SUM(CASE WHEN quantity_change > 0 THEN quantity_change ELSE 0 END), 0) as total_in_qty,
+            COALESCE(SUM(CASE WHEN quantity_change < 0 THEN ABS(quantity_change) ELSE 0 END), 0) as total_out_qty
+        ')->first();
+
+        $totalTransactions = (int) ($summaryData->total_transactions ?? 0);
+        $totalInQty = (int) ($summaryData->total_in_qty ?? 0);
+        $totalOutQty = (int) ($summaryData->total_out_qty ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 30);
         $page = (int) ($filters['page'] ?? 1);
@@ -738,8 +854,13 @@ class ReportService
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        $totalTransfers = (clone $query)->count();
-        $completedTransfers = (clone $query)->where('status', 'COMPLETED')->count();
+        $summaryData = (clone $query)->selectRaw("
+            COUNT(*) as total_transfers,
+            SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_transfers
+        ")->first();
+
+        $totalTransfers = (int) ($summaryData->total_transfers ?? 0);
+        $completedTransfers = (int) ($summaryData->completed_transfers ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 25);
         $page = (int) ($filters['page'] ?? 1);

@@ -37,6 +37,46 @@ class ProductModel {
     this.stocks = const [],
   });
 
+  ProductModel copyWith({
+    int? id,
+    String? name,
+    String? sku,
+    String? barcode,
+    int? categoryId,
+    int? supplierId,
+    dynamic category,
+    dynamic supplier,
+    String? unit,
+    double? costPrice,
+    double? priceN1,
+    double? priceN2,
+    double? priceN3,
+    int? unitsPerCarton,
+    String? imagePath,
+    bool? isActive,
+    List<dynamic>? stocks,
+  }) {
+    return ProductModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      sku: sku ?? this.sku,
+      barcode: barcode ?? this.barcode,
+      categoryId: categoryId ?? this.categoryId,
+      supplierId: supplierId ?? this.supplierId,
+      category: category ?? this.category,
+      supplier: supplier ?? this.supplier,
+      unit: unit ?? this.unit,
+      costPrice: costPrice ?? this.costPrice,
+      priceN1: priceN1 ?? this.priceN1,
+      priceN2: priceN2 ?? this.priceN2,
+      priceN3: priceN3 ?? this.priceN3,
+      unitsPerCarton: unitsPerCarton ?? this.unitsPerCarton,
+      imagePath: imagePath ?? this.imagePath,
+      isActive: isActive ?? this.isActive,
+      stocks: stocks ?? this.stocks,
+    );
+  }
+
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
       id: json['id'] ?? 0,

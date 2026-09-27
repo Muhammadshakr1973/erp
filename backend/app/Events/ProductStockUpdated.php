@@ -57,11 +57,34 @@ class ProductStockUpdated implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
-        return [
+        $payload = [
             'event_type' => $this->actionType,
             'product_id' => $this->productId,
             'changed_at' => now()->toIso8601String(),
-            'authoritative_signal' => 'refetch',
+            'authoritative_signal' => 'patch',
         ];
+
+        if ($this->product) {
+            $payload['product'] = [
+                'id' => $this->product->id,
+                'name' => $this->product->name,
+                'sku' => $this->product->sku,
+                'barcode' => $this->product->barcode,
+                'cost_price' => $this->product->cost_price,
+                'price_n1' => $this->product->price_n1,
+                'price_n2' => $this->product->price_n2,
+                'price_n3' => $this->product->price_n3,
+                'stocks' => $this->product->relationLoaded('stocks')
+                    ? $this->product->stocks->map(fn($s) => [
+                        'warehouse_id' => $s->warehouse_id,
+                        'quantity' => (int) $s->quantity,
+                        'reserved_quantity' => (int) $s->reserved_quantity,
+                        'min_stock_level' => (int) $s->min_stock_level,
+                    ])->values()->all()
+                    : null,
+            ];
+        }
+
+        return $payload;
     }
 }

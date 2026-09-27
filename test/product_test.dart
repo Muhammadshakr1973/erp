@@ -188,5 +188,36 @@ void main() {
       expect(logoWidth, 138.0);
       expect(logoHeight, 122.0);
     });
+
+    test('ProductModel copyWith allows granular stock and price updates without full reload', () {
+      final initialProduct = ProductModel(
+        id: 5,
+        name: 'چای مەحمود',
+        barcode: '555444333',
+        costPrice: 2000.0,
+        priceN1: 3000.0,
+        priceN2: 2800.0,
+        priceN3: 2600.0,
+        unitsPerCarton: 20,
+        stocks: [
+          {'warehouse_id': 1, 'quantity': 50, 'reserved_quantity': 5},
+        ],
+      );
+
+      final updatedProduct = initialProduct.copyWith(
+        priceN1: 3200.0,
+        stocks: [
+          {'warehouse_id': 1, 'quantity': 45, 'reserved_quantity': 10},
+        ],
+      );
+
+      expect(updatedProduct.id, 5);
+      expect(updatedProduct.name, 'چای مەحمود');
+      expect(updatedProduct.priceN1, 3200.0);
+      expect(updatedProduct.priceN2, 2800.0); // Preserved
+      expect(updatedProduct.costPrice, 2000.0); // Preserved
+      expect((updatedProduct.stocks[0]['quantity'] as int), 45);
+      expect((updatedProduct.stocks[0]['reserved_quantity'] as int), 10);
+    });
   });
 }
