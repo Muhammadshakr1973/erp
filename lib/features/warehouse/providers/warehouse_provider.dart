@@ -1,8 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
@@ -171,16 +171,14 @@ final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
 
 final warehouseActionsProvider = Provider<WarehouseActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  final syncService = ref.watch(syncServiceProvider);
-  return WarehouseActions(api, syncService, ref);
+  return WarehouseActions(api, ref);
 });
 
 class WarehouseActions {
   final ApiClient api;
-  final SyncService syncService;
   final Ref ref;
 
-  WarehouseActions(this.api, this.syncService, this.ref);
+  WarehouseActions(this.api, this.ref);
 
   Future<void> packItem(int itemId, bool packed) async {
     try {
@@ -217,18 +215,22 @@ class WarehouseActions {
     String? notes,
   }) async {
     try {
-      await syncService.enqueueOperation(
-        entityId: warehouseId.toString(),
-        operationType: 'STOCK_ADJUSTMENT',
-        payload: {
+      final idempotencyKey = 'adjust_${warehouseId}_${productId}_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/warehouses/$warehouseId/stock/$productId/adjust',
+        data: {
           'warehouse_id': warehouseId,
           'product_id': productId,
           'quantity_change': quantityChange,
           'type': type,
           if (notes != null && notes.isNotEmpty) 'notes': notes,
         },
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
-      await syncService.syncPendingOperations();
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -286,18 +288,21 @@ class WarehouseActions {
     String? notes,
   }) async {
     try {
-      final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
-      await syncService.enqueueOperation(
-        entityId: localId,
-        operationType: 'STOCK_TRANSFER_CREATE',
-        payload: {
+      final idempotencyKey = 'transfer_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/stock-transfers',
+        data: {
           'from_warehouse_id': fromWarehouseId,
           'to_warehouse_id': toWarehouseId,
           'items': items,
           if (notes != null && notes.isNotEmpty) 'notes': notes,
         },
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
-      await syncService.syncPendingOperations();
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -306,12 +311,16 @@ class WarehouseActions {
 
   Future<void> completeStockTransfer(int transferId) async {
     try {
-      await syncService.enqueueOperation(
-        entityId: transferId.toString(),
-        operationType: 'STOCK_TRANSFER_COMPLETE',
-        payload: {},
+      final idempotencyKey = 'transfer_complete_${transferId}_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/stock-transfers/$transferId/complete',
+        data: {},
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
-      await syncService.syncPendingOperations();
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -320,12 +329,16 @@ class WarehouseActions {
 
   Future<void> cancelStockTransfer(int transferId) async {
     try {
-      await syncService.enqueueOperation(
-        entityId: transferId.toString(),
-        operationType: 'STOCK_TRANSFER_CANCEL',
-        payload: {},
+      final idempotencyKey = 'transfer_cancel_${transferId}_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/stock-transfers/$transferId/cancel',
+        data: {},
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
-      await syncService.syncPendingOperations();
       ref.invalidate(warehouseStocksProvider);
     } catch (e) {
       throw Exception(api.parseError(e));

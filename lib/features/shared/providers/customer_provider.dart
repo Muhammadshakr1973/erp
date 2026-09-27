@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-import '../../../core/sync/sync_service.dart';
 import '../../../core/models/paginated_response.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/customer.dart';
@@ -201,16 +200,14 @@ final customerLedgerProvider =
 
 final customerActionsProvider = Provider<CustomerActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  final syncService = ref.watch(syncServiceProvider);
-  return CustomerActions(api, syncService, ref);
+  return CustomerActions(api, ref);
 });
 
 class CustomerActions {
   final ApiClient api;
-  final SyncService syncService;
   final Ref ref;
 
-  CustomerActions(this.api, this.syncService, this.ref);
+  CustomerActions(this.api, this.ref);
 
   Future<Customer> addCustomer({
     required String name,
@@ -237,46 +234,19 @@ class CustomerActions {
       if (longitude != null) 'longitude': longitude,
     };
 
-    Customer? createdCustomer;
-
     try {
       final response = await api.client.post('/customers', data: payload);
       final resData = response.data;
       if (resData is Map && resData['data'] is Map) {
-        createdCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+        final createdCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+        ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
+        return createdCustomer;
       }
+      throw FormatException('داتای دروستکراوی کڕیار نادروستە');
     } catch (e) {
-      if (e is DioException && _isNetworkError(e)) {
-        final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
-        await syncService.enqueueOperation(
-          entityId: localId,
-          operationType: 'CREATE_CUSTOMER',
-          payload: payload,
-        );
-      } else {
-        throw Exception(api.parseError(e));
-      }
+      throw Exception(api.parseError(e));
     }
-
-    ref.invalidate(customerListProvider);
-    ref.invalidate(filteredCustomerListProvider);
-
-    if (createdCustomer != null) {
-      return createdCustomer;
-    }
-
-    return Customer(
-      id: 0,
-      name: name,
-      phone: phone,
-      phone2: phone2,
-      address: address,
-      imageUrl: imageUrl,
-      routeId: routeId,
-      priceType: priceType,
-      latitude: latitude,
-      longitude: longitude,
-    );
   }
 
   Future<Customer> updateCustomer(
@@ -305,47 +275,20 @@ class CustomerActions {
       if (longitude != null) 'longitude': longitude,
     };
 
-    Customer? updatedCustomer;
-
     try {
       final response = await api.client.put('/customers/$id', data: payload);
       final resData = response.data;
       if (resData is Map && resData['data'] is Map) {
-        updatedCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+        final updatedCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
+        ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
+        ref.invalidate(singleCustomerProvider(id));
+        return updatedCustomer;
       }
+      throw FormatException('داتای نوێکراوەی کڕیار نادروستە');
     } catch (e) {
-      if (e is DioException && _isNetworkError(e)) {
-        await syncService.enqueueOperation(
-          entityId: id.toString(),
-          operationType: 'UPDATE_CUSTOMER',
-          payload: payload,
-        );
-      } else {
-        throw Exception(api.parseError(e));
-      }
+      throw Exception(api.parseError(e));
     }
-
-    ref.invalidate(customerListProvider);
-    ref.invalidate(filteredCustomerListProvider);
-    ref.invalidate(singleCustomerProvider(id));
-
-    if (updatedCustomer != null) {
-      return updatedCustomer;
-    }
-
-    return Customer(
-      id: id,
-      name: name,
-      phone: phone,
-      phone2: phone2,
-      address: address,
-      imageUrl: imageUrl,
-      routeId: routeId,
-      priceType: priceType,
-      isActive: isActive ?? true,
-      latitude: latitude,
-      longitude: longitude,
-    );
   }
 
   Future<void> deleteCustomer(int id) async {
@@ -433,12 +376,5 @@ class CustomerActions {
     } catch (e) {
       throw Exception(api.parseError(e));
     }
-  }
-
-  bool _isNetworkError(DioException e) {
-    return e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.sendTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError;
   }
 }

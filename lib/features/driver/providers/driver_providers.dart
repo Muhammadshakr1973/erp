@@ -1,8 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-import '../../../core/sync/sync_service.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/delivery_trip_model.dart';
 
@@ -113,16 +113,14 @@ final tripDetailProvider =
 
 final driverActionsProvider = Provider<DriverActions>((ref) {
   final api = ref.watch(apiClientProvider);
-  final syncService = ref.watch(syncServiceProvider);
-  return DriverActions(api, syncService, ref);
+  return DriverActions(api, ref);
 });
 
 class DriverActions {
   final ApiClient api;
-  final SyncService syncService;
   final Ref ref;
 
-  DriverActions(this.api, this.syncService, this.ref);
+  DriverActions(this.api, this.ref);
 
   Future<void> createDeliveryTrip({
     required int driverId,
@@ -143,10 +141,14 @@ class DriverActions {
         payload['notes'] = notes.trim();
       }
 
-      await syncService.enqueueOperation(
-        entityId: entityId,
-        operationType: 'STORE_DELIVERY',
-        payload: payload,
+      await api.client.post(
+        '/delivery-trips',
+        data: payload,
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': entityId,
+          },
+        ),
       );
 
       ref.invalidate(driverTripsProvider);
@@ -163,13 +165,18 @@ class DriverActions {
     String? notes,
   }) async {
     try {
-      await syncService.enqueueOperation(
-        entityId: tripOrderId.toString(),
-        operationType: 'DELIVER_ORDER',
-        payload: {
+      final idempotencyKey = 'deliver_${tripOrderId}_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/delivery-trips/orders/$tripOrderId/deliver',
+        data: {
           'received_amount': receivedAmount,
           'notes': notes,
         },
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
       ref.invalidate(driverTripsProvider);
     } catch (e) {
@@ -183,13 +190,18 @@ class DriverActions {
     String? notes,
   }) async {
     try {
-      await syncService.enqueueOperation(
-        entityId: tripOrderId.toString(),
-        operationType: 'FAIL_ORDER',
-        payload: {
+      final idempotencyKey = 'fail_${tripOrderId}_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/delivery-trips/orders/$tripOrderId/fail',
+        data: {
           'failed_reason': failedReason,
           'notes': notes,
         },
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
       ref.invalidate(driverTripsProvider);
     } catch (e) {

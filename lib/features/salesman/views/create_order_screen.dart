@@ -49,8 +49,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   double? _searchFieldWidth;
   final GlobalKey _searchKey = GlobalKey();
 
-  String? _localId;
-  int? _generatedIntId;
+  int? _serverOrderId;
   String? _sharedKey;
   bool _hasSavedOnce = false;
   bool _isSaving = false;
@@ -114,10 +113,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   @override
   void initState() {
     super.initState();
-    _localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
-    final cleanStr = _localId!.replaceAll(RegExp(r'[^0-9]'), '');
-    final val = int.tryParse(cleanStr) ?? 0;
-    _generatedIntId = -1 * (val % 1000000000);
     _sharedKey = 'order_${DateTime.now().microsecondsSinceEpoch}';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -131,8 +126,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _populateFromExistingOrder(OrderModel order) {
     setState(() {
-      _localId = order.id.toString();
-      _generatedIntId = order.id;
+      _serverOrderId = order.id;
       _sharedKey = order.sharedKey;
       _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
@@ -609,14 +603,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     try {
-      if (_hasSavedOnce) {
-        final orderIdToUpdate = widget.existingOrder?.id ?? _generatedIntId!;
+      if (_hasSavedOnce && _serverOrderId != null) {
         await ref
             .read(orderActionsProvider)
-            .updateOrder(orderIdToUpdate, payload);
+            .updateOrder(_serverOrderId!, payload);
       } else {
-        payload['local_id'] = _localId!;
-        await ref.read(orderActionsProvider).createOrder(payload);
+        final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
+        _serverOrderId = createdOrder.id;
         _hasSavedOnce = true;
       }
 

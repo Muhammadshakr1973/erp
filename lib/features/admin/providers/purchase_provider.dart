@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/sync/sync_service.dart';
 import '../models/purchase_requirement_model.dart';
 import '../models/purchase_order_model.dart';
 
@@ -120,18 +119,21 @@ class PurchaseActions {
 
   Future<void> receivePurchaseOrder(int orderId, {List<Map<String, dynamic>>? items}) async {
     final apiClient = _ref.read(apiClientProvider);
-    final syncService = _ref.read(syncServiceProvider);
     try {
       final payload = <String, dynamic>{};
       if (items != null && items.isNotEmpty) {
         payload['items'] = items;
       }
-      await syncService.enqueueOperation(
-        entityId: orderId.toString(),
-        operationType: 'PURCHASE_RECEIVE',
-        payload: payload,
+      final key = 'receive_po_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
+      await apiClient.client.post(
+        '/purchase-orders/$orderId/receive',
+        data: payload,
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': key,
+          },
+        ),
       );
-      await syncService.syncPendingOperations();
       // Invalidate purchase orders provider to refresh list
       _ref.invalidate(purchaseOrdersProvider);
     } catch (e) {

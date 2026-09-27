@@ -1,54 +1,17 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-import '../../../core/sync/sync_service.dart';
-import '../../shared/models/customer.dart';
-import '../../shared/providers/customer_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../products/models/product_model.dart';
-import '../../products/providers/products_provider.dart';
 import '../models/order_model.dart';
-
-// Provide local orders box
-final localOrdersBoxProvider = Provider<Box<String>>((ref) {
-  return Hive.box<String>('local_orders');
-});
-
-bool _isNetworkError(dynamic e) {
-  if (e is DioException) {
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.sendTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError) {
-      return true;
-    }
-    if (e.response == null) {
-      return true;
-    }
-    return false;
-  }
-  final errStr = e.toString().toLowerCase();
-  if (errStr.contains('socketexception') ||
-      errStr.contains('networkisunreachable') ||
-      errStr.contains('connection refused')) {
-    return true;
-  }
-  return false;
-}
 
 final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
-  final localBox = ref.watch(localOrdersBoxProvider);
-  final syncBox = ref.watch(syncQueueBoxProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
   void onOrdersEvent(Map<String, dynamic> eventData) {
@@ -75,190 +38,18 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      // Update local cache: clear server-cached entries (keys not starting with 'local_')
-      // Only delete if there is no pending/failed/syncing operation in the sync queue
-      final keysToDelete = localBox.keys
-          .where((k) {
-            final keyStr = k.toString();
-            if (keyStr.startsWith('local_')) return false;
-            final hasPendingOp = syncBox.values.any(
-              (entry) =>
-                  entry.entityId == keyStr &&
-                  (entry.status == 'PENDING' ||
-                      entry.status == 'FAILED' ||
-                      entry.status == 'SYNCING'),
-            );
-            return !hasPendingOp;
-          })
-          .toList();
-      for (final key in keysToDelete) {
-        await localBox.delete(key);
-      }
-
-      // Write new online orders, preserving those that have pending mutations in the sync queue
-      for (var i = 0; i < data.length; i++) {
-        final order = onlineOrders[i];
-        final rawJson = data[i];
-        if (rawJson is Map) {
-          final Map<String, dynamic> castedJson = Map<String, dynamic>.from(
-            rawJson,
-          );
-          // Only overwrite if it is NOT pending/syncing/failed in the sync queue
-          final hasPendingOp = syncBox.values.any(
-            (entry) =>
-                entry.entityId == order.id.toString() &&
-                (entry.status == 'PENDING' ||
-                    entry.status == 'FAILED' ||
-                    entry.status == 'SYNCING'),
-          );
-          if (!hasPendingOp) {
-            await localBox.put(order.id.toString(), jsonEncode(castedJson));
-          }
-        }
-      }
-
-      // Replace online orders with their local optimistic versions if they are pending sync
-      final List<OrderModel> finalOnlineOrders = [];
-      for (final order in onlineOrders) {
-        final hasPendingOp = syncBox.values.any(
-          (entry) =>
-              entry.entityId == order.id.toString() &&
-              (entry.status == 'PENDING' ||
-                  entry.status == 'FAILED' ||
-                  entry.status == 'SYNCING'),
-        );
-        if (hasPendingOp) {
-          final localJsonStr = localBox.get(order.id.toString());
-          if (localJsonStr != null) {
-            try {
-              final Map<String, dynamic> localJson = jsonDecode(localJsonStr);
-              finalOnlineOrders.add(OrderModel.fromJson(localJson));
-              continue;
-            } catch (_) {}
-          }
-        }
-        finalOnlineOrders.add(order);
-      }
-
-      // Read remaining local optimistic orders
-      final remainingLocalOrders = <OrderModel>[];
-      final freshLocalKeys = localBox.keys
-          .where((k) => k.toString().startsWith('local_'))
-          .toList();
-      for (final key in freshLocalKeys) {
-        final jsonStr = localBox.get(key);
-        if (jsonStr != null) {
-          try {
-            final Map<String, dynamic> json = jsonDecode(jsonStr);
-            final localOrder = OrderModel.fromJson(json);
-
-            // Duplicate prevention: check if online orders contain this local order (by sharedKey, mappedServerId, or ID)
-            Box<String>? idMappingsBox;
-            try {
-              idMappingsBox = Hive.box<String>('id_mappings');
-            } catch (_) {}
-
-            final mappedServerIdStr = idMappingsBox?.get(key);
-            final mappedServerId = mappedServerIdStr != null
-                ? int.tryParse(mappedServerIdStr)
-                : null;
-
-            final alreadySynced = finalOnlineOrders.any(
-              (o) =>
-                  (o.sharedKey != null &&
-                      localOrder.sharedKey != null &&
-                      o.sharedKey == localOrder.sharedKey) ||
-                  (mappedServerId != null && o.id == mappedServerId) ||
-                  (localOrder.id > 0 && o.id == localOrder.id),
-            );
-
-            if (alreadySynced) {
-              await localBox.delete(
-                key,
-              ); // Safe sweep: Synced order found, clean up local key
-            } else {
-              // Check if it still has a pending create operation
-              final hasPendingOp = syncBox.values.any(
-                (entry) =>
-                    entry.entityId == key &&
-                    entry.operationType == 'CREATE_ORDER' &&
-                    (entry.status == 'PENDING' ||
-                        entry.status == 'FAILED' ||
-                        entry.status == 'SYNCING'),
-              );
-
-              if (hasPendingOp) {
-                remainingLocalOrders.add(localOrder);
-              } else {
-                final isCompleted = syncBox.values.any(
-                  (entry) =>
-                      entry.entityId == key &&
-                      entry.operationType == 'CREATE_ORDER' &&
-                      entry.status == 'COMPLETED',
-                );
-                if (isCompleted) {
-                  // Keep it to prevent a flash of disappearing order before next synchronization loop syncs up fully
-                  remainingLocalOrders.add(localOrder);
-                } else {
-                  // Truly orphaned local record (no corresponding sync queue entry), clean it up
-                  await localBox.delete(key);
-                }
-              }
-            }
-          } catch (_) {}
-        }
-      }
-
-      // Merge and sort descending by createdAt (newest first)
-      final mergedList = [...finalOnlineOrders, ...remainingLocalOrders];
-      mergedList.sort((a, b) {
+      // Sort descending by createdAt (newest first)
+      onlineOrders.sort((a, b) {
         final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
         final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
-      return mergedList;
+      return onlineOrders;
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
     );
   } catch (e) {
-    if (_isNetworkError(e)) {
-      // Return cached orders on genuine network error
-      final cachedOrders = <OrderModel>[];
-      final corruptedKeys = <String>[];
-
-      for (final key in localBox.keys) {
-        final jsonStr = localBox.get(key);
-        if (jsonStr != null) {
-          try {
-            final Map<String, dynamic> json = jsonDecode(jsonStr);
-            cachedOrders.add(OrderModel.fromJson(json));
-          } catch (_) {
-            corruptedKeys.add(key.toString());
-          }
-        }
-      }
-
-      // Clean up corrupted keys if any
-      for (final key in corruptedKeys) {
-        await localBox.delete(key);
-      }
-
-      if (cachedOrders.isNotEmpty) {
-        // Sort cached orders descending by createdAt (newest first)
-        cachedOrders.sort((a, b) {
-          final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return bDate.compareTo(aDate);
-        });
-        return cachedOrders;
-      }
-
-      // Throw specific exception if there is no network connection and no cached orders
-      throw Exception(
-        'پەیوەندی هێڵ لەدەستدراوە و هیچ پسوڵەیەکی پاشەکەوتکراو نییە (No network connection and no cached orders)',
-      );
-    }
     if (e is DioException) {
       throw Exception(api.parseError(e));
     }
@@ -266,191 +57,44 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
   }
 });
 
-// Coalesce and debounce structures for rapid refetches
-final Map<String, int> _lastRefetchedVersions = {};
-final Map<String, Timer?> _refetchDebounceTimers = {};
-
 final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
   orderId,
 ) async {
   ref.watch(authProvider.select((state) => state.user?.id));
   final api = ref.watch(apiClientProvider);
-  final localBox = ref.watch(localOrdersBoxProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  // Check if there is an ID mapping from local ID to server ID
-  String actualOrderId = orderId;
-  try {
-    final idMappingsBox = Hive.box<String>('id_mappings');
-    final mapped = idMappingsBox.get(orderId);
-    if (mapped != null) {
-      actualOrderId = mapped;
-    }
-  } catch (_) {}
+  final parsedId = int.tryParse(orderId);
 
-  final parsedId = int.tryParse(actualOrderId);
-
-  // If orderId is a local ID (starts with 'local_') or represents a negative ID (local draft/packing order)
-  final isLocal = actualOrderId.startsWith('local_') || (parsedId != null && parsedId < 0);
-  if (isLocal) {
-    String? jsonStr;
-    if (actualOrderId.startsWith('local_')) {
-      jsonStr = localBox.get(actualOrderId);
-    } else {
-      for (final key in localBox.keys) {
-        if (key.toString().startsWith('local_')) {
-          final str = localBox.get(key);
-          if (str != null) {
-            try {
-              final Map<String, dynamic> parsed = jsonDecode(str);
-              if (parsed['id'] == parsedId) {
-                jsonStr = str;
-                break;
-              }
-            } catch (_) {}
-          }
-        }
-      }
-    }
-
-    if (jsonStr != null) {
-      try {
-        final Map<String, dynamic> json = jsonDecode(jsonStr);
-        return OrderModel.fromJson(json);
-      } catch (_) {}
-    }
-    return null;
-  }
-
-  // If orderId is a real server ID (not a local temporary one)
+  // Subscribe to Pusher channel when this provider is active for real-time updates
   if (parsedId != null && parsedId > 0) {
-    // Subscribe to Pusher channel when this provider is active
-    pusher.subscribeToOrder(parsedId, (eventData) {
-      debugPrint("Realtime update for order $actualOrderId: $eventData");
+    void onOrderEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update for order $orderId: $eventData");
+      ref.invalidateSelf();
+      ref.invalidate(ordersListProvider);
+    }
 
-      // Check for pending local mutations before applying realtime update
-      final syncBox = ref.read(syncQueueBoxProvider);
-      final hasPendingOp = syncBox.values.any(
-        (entry) =>
-            entry.entityId == actualOrderId &&
-            (entry.status == 'PENDING' ||
-                entry.status == 'FAILED' ||
-                entry.status == 'SYNCING'),
-      );
-      if (hasPendingOp) {
-        debugPrint("Preserving still-valid pending offline mutations. Skipping realtime update overwrite.");
-        return;
-      }
+    pusher.subscribeToOrder(parsedId, onOrderEvent);
 
-      final eventVersion = int.tryParse(eventData['version']?.toString() ?? '') ?? 0;
-
-      // Coalesce/debounce: ignore if we are already refetching/have refetched this or a newer version
-      final lastRefetched = _lastRefetchedVersions[actualOrderId];
-      if (lastRefetched != null && lastRefetched >= eventVersion) {
-        debugPrint("Coalescing: already refetched or processing a version >= $eventVersion for order $actualOrderId");
-        return;
-      }
-
-      // Read current local authoritative order from cache to do version comparison
-      final cachedStr = localBox.get(actualOrderId);
-      if (cachedStr != null) {
-        try {
-          final Map<String, dynamic> cachedJson = jsonDecode(cachedStr);
-          final currentVersion = int.tryParse(cachedJson['version']?.toString() ?? '1') ?? 1;
-
-          // Version Comparison Logic:
-          // Ignore older versions (preventing race conditions)
-          if (eventVersion < currentVersion) {
-            debugPrint("Ignoring stale realtime update (event version $eventVersion < current version $currentVersion)");
-            return;
-          }
-
-          // Equal version is a duplicate/no-op
-          if (eventVersion == currentVersion) {
-            debugPrint("Realtime update version is equal to current version ($eventVersion). No-op.");
-            return;
-          }
-
-          // Check if it's the next expected version (currentVersion + 1)
-          if (eventVersion == currentVersion + 1) {
-            debugPrint("Accepting next expected version $eventVersion");
-            if (eventData['authoritative_signal'] == 'refetch') {
-              _lastRefetchedVersions[actualOrderId] = eventVersion;
-              _refetchDebounceTimers[actualOrderId]?.cancel();
-              _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
-                debugPrint("Coalesced refetch triggered for order $actualOrderId at version $eventVersion");
-                ref.invalidateSelf();
-                ref.invalidate(ordersListProvider);
-              });
-            }
-          } else {
-            // Version skipped (eventVersion > currentVersion + 1)
-            // Trigger a full server refetch to heal state.
-            debugPrint("Version skipped (event version $eventVersion > expected ${currentVersion + 1}). Invalidating self to refetch.");
-            _lastRefetchedVersions[actualOrderId] = eventVersion;
-            _refetchDebounceTimers[actualOrderId]?.cancel();
-            _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
-              debugPrint("Coalesced refetch (skipped version) triggered for order $actualOrderId at version $eventVersion");
-              ref.invalidateSelf();
-              ref.invalidate(ordersListProvider);
-            });
-          }
-        } catch (e) {
-          _lastRefetchedVersions[actualOrderId] = eventVersion;
-          _refetchDebounceTimers[actualOrderId]?.cancel();
-          _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
-            ref.invalidateSelf();
-            ref.invalidate(ordersListProvider);
-          });
-        }
-      } else {
-        // No local cache yet, refetch
-        _lastRefetchedVersions[actualOrderId] = eventVersion;
-        _refetchDebounceTimers[actualOrderId]?.cancel();
-        _refetchDebounceTimers[actualOrderId] = Timer(const Duration(milliseconds: 300), () {
-          ref.invalidateSelf();
-          ref.invalidate(ordersListProvider);
-        });
-      }
-    });
-
-    // Unsubscribe when provider is disposed to clean subscription lifecycle (PRV-001)
     ref.onDispose(() {
-      _refetchDebounceTimers[actualOrderId]?.cancel();
-      _refetchDebounceTimers.remove(actualOrderId);
-      _lastRefetchedVersions.remove(actualOrderId);
-      pusher.unsubscribeFromOrder(parsedId);
+      pusher.unsubscribeFromOrder(parsedId, onOrderEvent);
     });
   }
 
   try {
-    final response = await api.client.get('/orders/$actualOrderId');
+    final response = await api.client.get('/orders/$orderId');
     if (response.statusCode == 200) {
       final data = response.data['data'] ?? response.data;
       if (data is! Map) {
         throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
       }
-      final order = OrderModel.fromJson(Map<String, dynamic>.from(data));
-      final Map<String, dynamic> castedJson = Map<String, dynamic>.from(data);
-      await localBox.put(order.id.toString(), jsonEncode(castedJson));
-      return order;
+      return OrderModel.fromJson(Map<String, dynamic>.from(data));
     }
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
     );
   } catch (e) {
-    if (_isNetworkError(e)) {
-      final cachedStr = localBox.get(actualOrderId);
-      if (cachedStr != null) {
-        try {
-          final Map<String, dynamic> json = jsonDecode(cachedStr);
-          return OrderModel.fromJson(json);
-        } catch (_) {
-          // Safe fallback - don't crash
-        }
-      }
-    }
     if (e is DioException) {
       throw Exception(api.parseError(e));
     }
@@ -467,422 +111,111 @@ final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((
 });
 
 final orderActionsProvider = Provider<OrderActions>((ref) {
-  final syncService = ref.watch(syncServiceProvider);
   final api = ref.watch(apiClientProvider);
-  return OrderActions(syncService, api, ref);
+  return OrderActions(api, ref);
 });
 
 class OrderActions {
-  final SyncService syncService;
   final ApiClient api;
   final Ref ref;
 
-  OrderActions(this.syncService, this.api, this.ref);
+  OrderActions(this.api, this.ref);
 
-  Map<String, dynamic> _buildOptimisticOrderJson({
-    required String idStr,
-    required int intId,
-    required Map<String, dynamic> data,
-    required Ref ref,
-    required String status,
-    String? existingOrderNumber,
-  }) {
-    final customers = ref.read(customerListProvider).value ?? [];
-    final customerId = data['customer_id'] ?? 0;
+  Future<OrderModel> createOrder(Map<String, dynamic> data) async {
+    try {
+      final idempotencyKey = data['idempotency_key'] ??
+          'create_order_${DateTime.now().microsecondsSinceEpoch}';
 
-    Customer? customer;
-    for (final c in customers) {
-      if (c.id == customerId) {
-        customer = c;
-        break;
-      }
-    }
-
-    final products = ref.read(productsListProvider).value ?? [];
-    final itemsData = data['items'] ?? [];
-
-    double subtotal = 0.0;
-    double totalProfit = 0.0;
-    final List<Map<String, dynamic>> resolvedItems = [];
-
-    for (final item in itemsData) {
-      final int prodId = item['product_id'] ?? 0;
-      final double qty =
-          double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
-
-      ProductModel? prod;
-      for (final p in products) {
-        if (p.id == prodId) {
-          prod = p;
-          break;
-        }
-      }
-
-      String productName = 'کاڵا';
-      double unitPrice = 0.0;
-      double costPrice = 0.0;
-
-      if (prod != null) {
-        productName = prod.name;
-        costPrice = prod.costPrice;
-        final priceType = customer?.priceType ?? 'N2';
-        if (priceType == 'N1') {
-          unitPrice = prod.priceN1;
-        } else if (priceType == 'N3') {
-          unitPrice = prod.priceN3;
-        } else {
-          unitPrice = prod.priceN2;
-        }
-      }
-
-      final double itemSubtotal = qty * unitPrice;
-      subtotal += itemSubtotal;
-
-      final double profit = (unitPrice - costPrice) * qty;
-      totalProfit += profit;
-
-      resolvedItems.add({
-        'id': 0,
-        'sales_order_id': intId,
-        'product_id': prodId,
-        'product_name': productName,
-        'quantity': qty,
-        'unit_price': unitPrice,
-        'subtotal': itemSubtotal,
-        'is_packed': false,
-        'product': prod != null ? {'name': prod.name} : null,
-        'notes': item['notes'],
-      });
-    }
-
-    // 1. Permanent Customer Discount
-    final double permDiscountPercent = customer?.permanentDiscount ?? 0.0;
-    double permDiscountAmount = 0.0;
-    if (permDiscountPercent > 0.0) {
-      permDiscountAmount = (subtotal * permDiscountPercent / 100.0)
-          .roundToDouble();
-    }
-    final double amountAfterPermDiscount = max(
-      0.0,
-      subtotal - permDiscountAmount,
-    );
-
-    // 2. Invoice / Order Discount (matching exact php logic)
-    final String discountType = (data['discount_type'] ?? 'PERCENT')
-        .toString()
-        .toUpperCase();
-    double invoiceDiscountPercent = 0.0;
-    double invoiceDiscountAmount = 0.0;
-
-    if (discountType == 'FIXED' ||
-        (data['discount_amount'] != null &&
-            double.tryParse(data['discount_amount'].toString()) != null &&
-            double.parse(data['discount_amount'].toString()) > 0.0 &&
-            data['discount_percent'] == null)) {
-      final double fixedAmount =
-          double.tryParse(data['discount_amount']?.toString() ?? '0') ?? 0.0;
-      invoiceDiscountAmount = min(
-        amountAfterPermDiscount,
-        max(0.0, fixedAmount),
+      final response = await api.client.post(
+        '/orders',
+        data: data,
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
       );
-    } else {
-      invoiceDiscountPercent =
-          double.tryParse(data['discount_percent']?.toString() ?? '0') ?? 0.0;
-      invoiceDiscountAmount =
-          (amountAfterPermDiscount * invoiceDiscountPercent / 100.0)
-              .roundToDouble();
-    }
 
-    final double totalAmount = max(
-      0.0,
-      amountAfterPermDiscount - invoiceDiscountAmount,
-    );
+      ref.invalidate(ordersListProvider);
 
-    final orderNumber =
-        existingOrderNumber ??
-        "LOCAL_${idStr.replaceAll('local_', '').substring(0, min(6, idStr.replaceAll('local_', '').length))}";
+      final resData = response.data;
+      final orderData = (resData is Map && resData.containsKey('data'))
+          ? resData['data']
+          : resData;
 
-    return {
-      'id': intId,
-      'order_number': orderNumber,
-      'shared_key': data['shared_key'],
-      'version': data['version'] ?? 1,
-      'customer_id': customerId,
-      'salesman_id': data['salesman_id'] ?? 0,
-      'warehouse_id': data['warehouse_id'],
-      'subtotal': subtotal,
-      'permanent_discount_percent': permDiscountPercent,
-      'permanent_discount_amount': permDiscountAmount,
-      'discount_amount': invoiceDiscountAmount,
-      'discount_percent': invoiceDiscountPercent,
-      'discount_type': discountType,
-      'total_amount': totalAmount,
-      'total_profit': totalProfit,
-      'status': status,
-      'notes': data['notes'],
-      'created_at': DateTime.now().toIso8601String(),
-      'customer': customer != null
-          ? {'id': customer.id, 'name': customer.name}
-          : null,
-      'items': resolvedItems,
-      'pending_sync': true,
-    };
-  }
-
-  Future<void> createOrder(Map<String, dynamic> data) async {
-    // Local UUID for entity tracking
-    final localId = data['local_id'] ?? 'local_${DateTime.now().microsecondsSinceEpoch}';
-
-    // Enqueue the offline operation
-    await syncService.enqueueOperation(
-      entityId: localId,
-      operationType: 'CREATE_ORDER',
-      payload: data,
-    );
-
-    // Save optimistic representation in Hive
-    final localBox = ref.read(localOrdersBoxProvider);
-    final cleanStr = localId.replaceAll(RegExp(r'[^0-9]'), '');
-    final val = int.tryParse(cleanStr) ?? 0;
-    final intId = -1 * (val % 1000000000);
-
-    final optimisticJson = _buildOptimisticOrderJson(
-      idStr: localId,
-      intId: intId,
-      data: data,
-      ref: ref,
-      status: data['status'] ?? 'PACKING',
-    );
-
-    await localBox.put(localId, jsonEncode(optimisticJson));
-
-    // Optimistically update the UI by invalidating or updating local list
-    ref.invalidate(ordersListProvider);
-  }
-
-  Future<void> updateOrder(int orderId, Map<String, dynamic> data) async {
-    final entityId = orderId.toString();
-    final localBox = ref.read(localOrdersBoxProvider);
-
-    String keyToUse = entityId;
-    String? existingStr = localBox.get(entityId);
-    if (existingStr == null && orderId < 0) {
-      // Find the local_ key that corresponds to this negative ID
-      for (final key in localBox.keys) {
-        if (key.toString().startsWith('local_')) {
-          final str = localBox.get(key);
-          if (str != null) {
-            try {
-              final Map<String, dynamic> parsed = jsonDecode(str);
-              if (parsed['id'] == orderId) {
-                keyToUse = key.toString();
-                existingStr = str;
-                break;
-              }
-            } catch (_) {}
-          }
-        }
+      if (orderData is Map) {
+        return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
       }
+
+      throw FormatException('داتای دروستکراوی پسوڵە نادروستە');
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
+  }
 
-    // Resolve the most up-to-date version from the local cache to avoid ConcurrencyConflictException
-    int resolvedVersion = data['version'] ?? 1;
-    if (existingStr != null) {
-      try {
-        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(
-          jsonDecode(existingStr),
-        );
-        final int localBoxVersion = existingJson['version'] ?? 1;
-        if (localBoxVersion > resolvedVersion) {
-          resolvedVersion = localBoxVersion;
-        }
-      } catch (_) {}
+  Future<OrderModel> updateOrder(int orderId, Map<String, dynamic> data) async {
+    try {
+      final idempotencyKey = data['idempotency_key'] ??
+          'update_order_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
+
+      final response = await api.client.put(
+        '/orders/$orderId',
+        data: data,
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
+
+      ref.invalidate(singleOrderProvider(orderId.toString()));
+      ref.invalidate(ordersListProvider);
+
+      final resData = response.data;
+      final orderData = (resData is Map && resData.containsKey('data'))
+          ? resData['data']
+          : resData;
+
+      if (orderData is Map) {
+        return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+      }
+
+      throw FormatException('داتای نوێکراوەی پسوڵە نادروستە');
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
-
-    final Map<String, dynamic> resolvedPayload = Map<String, dynamic>.from(data);
-    resolvedPayload['version'] = resolvedVersion;
-
-    await syncService.enqueueOperation(
-      entityId: entityId,
-      operationType: 'UPDATE_ORDER',
-      payload: resolvedPayload,
-    );
-
-    if (existingStr != null) {
-      try {
-        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(
-          jsonDecode(existingStr),
-        );
-
-        final mergedData = <String, dynamic>{...existingJson};
-        for (final key in resolvedPayload.keys) {
-          mergedData[key] = resolvedPayload[key];
-        }
-
-        final updatedJson = _buildOptimisticOrderJson(
-          idStr: keyToUse,
-          intId: orderId,
-          data: mergedData,
-          ref: ref,
-          status: existingJson['status'] ?? 'PACKING',
-          existingOrderNumber: existingJson['order_number'],
-        );
-
-        // Retain and preserve fields from existing order specifically matching instructions
-        updatedJson['id'] = existingJson['id'] ?? orderId;
-        updatedJson['order_number'] =
-            existingJson['order_number'] ?? updatedJson['order_number'];
-        updatedJson['shared_key'] =
-            resolvedPayload['shared_key'] ?? existingJson['shared_key'];
-        updatedJson['version'] =
-            resolvedPayload['version'] ?? existingJson['version'] ?? 1;
-        updatedJson['customer_id'] =
-            resolvedPayload['customer_id'] ?? existingJson['customer_id'];
-        updatedJson['salesman_id'] =
-            resolvedPayload['salesman_id'] ?? existingJson['salesman_id'];
-        updatedJson['warehouse_id'] =
-            resolvedPayload['warehouse_id'] ?? existingJson['warehouse_id'];
-        updatedJson['created_at'] =
-            existingJson['created_at'] ?? updatedJson['created_at'];
-
-        if (resolvedPayload['customer'] != null) {
-          updatedJson['customer'] = resolvedPayload['customer'];
-        } else if (existingJson['customer'] != null) {
-          updatedJson['customer'] = existingJson['customer'];
-        }
-
-        if (resolvedPayload['salesman'] != null) {
-          updatedJson['salesman'] = resolvedPayload['salesman'];
-        } else if (existingJson['salesman'] != null) {
-          updatedJson['salesman'] = existingJson['salesman'];
-        }
-
-        if (resolvedPayload['warehouse'] != null) {
-          updatedJson['warehouse'] = resolvedPayload['warehouse'];
-        } else if (existingJson['warehouse'] != null) {
-          updatedJson['warehouse'] = existingJson['warehouse'];
-        }
-
-        if (resolvedPayload['items'] == null) {
-          updatedJson['items'] = existingJson['items'];
-          updatedJson['subtotal'] = existingJson['subtotal'];
-          updatedJson['discount_amount'] = existingJson['discount_amount'];
-          updatedJson['discount_percent'] = existingJson['discount_percent'];
-          updatedJson['discount_type'] = existingJson['discount_type'];
-          updatedJson['total_amount'] = existingJson['total_amount'];
-          updatedJson['total_profit'] = existingJson['total_profit'];
-        }
-
-        updatedJson['pending_sync'] = true;
-
-        await localBox.put(keyToUse, jsonEncode(updatedJson));
-      } catch (_) {}
-    }
-
-    ref.invalidate(singleOrderProvider(entityId));
-    ref.invalidate(ordersListProvider);
   }
 
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
-    await syncService.enqueueOperation(
-      entityId: orderId,
-      operationType: 'UPDATE_ORDER_STATUS',
-      payload: {'status': newStatus},
-    );
+    try {
+      final idempotencyKey =
+          'status_order_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
 
-    // Optimistically update status in Hive cache preserving everything else
-    final localBox = ref.read(localOrdersBoxProvider);
+      await api.client.post(
+        '/orders/$orderId/status',
+        data: {'status': newStatus},
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
 
-    String keyToUse = orderId;
-    String? existingStr = localBox.get(orderId);
-    final isNegativeId =
-        int.tryParse(orderId) != null && int.parse(orderId) < 0;
-    if (existingStr == null && isNegativeId) {
-      final orderIntId = int.parse(orderId);
-      for (final key in localBox.keys) {
-        if (key.toString().startsWith('local_')) {
-          final str = localBox.get(key);
-          if (str != null) {
-            try {
-              final Map<String, dynamic> parsed = jsonDecode(str);
-              if (parsed['id'] == orderIntId) {
-                keyToUse = key.toString();
-                existingStr = str;
-                break;
-              }
-            } catch (_) {}
-          }
-        }
-      }
+      ref.invalidate(singleOrderProvider(orderId));
+      ref.invalidate(ordersListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
-
-    if (existingStr != null) {
-      try {
-        final Map<String, dynamic> existingJson = Map<String, dynamic>.from(
-          jsonDecode(existingStr),
-        );
-        existingJson['status'] = newStatus.toUpperCase();
-        existingJson['pending_sync'] = true;
-        await localBox.put(keyToUse, jsonEncode(existingJson));
-      } catch (_) {}
-    }
-
-    ref.invalidate(singleOrderProvider(orderId));
-    ref.invalidate(ordersListProvider);
   }
 
   Future<void> deleteOrder(String orderId) async {
-    final isLocal = orderId.startsWith('local_') || (int.tryParse(orderId) != null && int.parse(orderId) < 0);
-    final localBox = ref.read(localOrdersBoxProvider);
-
-    if (isLocal) {
-      // 1. If it's a local draft order, delete it directly from local Hive cache
-      String keyToDelete = orderId;
-      if (!orderId.startsWith('local_')) {
-        final orderIntId = int.parse(orderId);
-        for (final key in localBox.keys) {
-          if (key.toString().startsWith('local_')) {
-            final str = localBox.get(key);
-            if (str != null) {
-              try {
-                final Map<String, dynamic> parsed = jsonDecode(str);
-                if (parsed['id'] == orderIntId) {
-                  keyToDelete = key.toString();
-                  break;
-                }
-              } catch (_) {}
-            }
-          }
-        }
-      }
-
-      await localBox.delete(keyToDelete);
-
-      // 2. Also find and remove its CREATE_ORDER/UPDATE_ORDER operations from the sync queue box
-      final syncBox = ref.read(syncQueueBoxProvider);
-      final keysToRemove = syncBox.keys.where((key) {
-        final entry = syncBox.get(key);
-        return entry != null && (entry.entityId == keyToDelete || entry.entityId == orderId);
-      }).toList();
-
-      for (final key in keysToRemove) {
-        await syncBox.delete(key);
-      }
-    } else {
-      // 3. For synced online orders, enqueue a DELETE_ORDER operation
-      await syncService.enqueueOperation(
-        entityId: orderId,
-        operationType: 'DELETE_ORDER',
-        payload: {},
-      );
-
-      // 4. Optimistically delete/remove it from our local Hive orders box
-      await localBox.delete(orderId);
+    try {
+      await api.client.delete('/orders/$orderId');
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(singleOrderProvider(orderId));
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
-
-    // 5. Invalidate the providers to refresh UI immediately
-    ref.invalidate(ordersListProvider);
-    ref.invalidate(singleOrderProvider(orderId));
   }
 }
 
@@ -935,39 +268,44 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
 });
 
 class SalesReturnActions {
-  final SyncService syncService;
   final ApiClient api;
   final Ref ref;
 
-  SalesReturnActions(this.syncService, this.api, this.ref);
+  SalesReturnActions(this.api, this.ref);
 
   Future<void> createSalesReturn(Map<String, dynamic> data) async {
     final String returnEntityId =
         data['idempotency_key'] ??
-        data['local_id'] ??
         'return_${DateTime.now().microsecondsSinceEpoch}';
 
     final payload = Map<String, dynamic>.from(data)
       ..['idempotency_key'] = returnEntityId;
 
-    await syncService.enqueueOperation(
-      entityId: returnEntityId,
-      operationType: 'CREATE_SALES_RETURN',
-      payload: payload,
-    );
+    try {
+      await api.client.post(
+        '/sales-returns',
+        data: payload,
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': returnEntityId,
+          },
+        ),
+      );
 
-    if (payload['sales_order_id'] != null) {
-      ref.invalidate(singleOrderProvider(payload['sales_order_id'].toString()));
+      if (payload['sales_order_id'] != null) {
+        ref.invalidate(singleOrderProvider(payload['sales_order_id'].toString()));
+      }
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(salesReturnsListProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
-    ref.invalidate(ordersListProvider);
-    ref.invalidate(salesReturnsListProvider);
   }
 }
 
 final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
-  final syncService = ref.watch(syncServiceProvider);
   final api = ref.watch(apiClientProvider);
-  return SalesReturnActions(syncService, api, ref);
+  return SalesReturnActions(api, ref);
 });
 
 /// پسوڵە ئامادەکراوەکان بۆ دابەشکردن و دروستکردنی گەشتی شۆفێر

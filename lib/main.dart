@@ -6,17 +6,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
-import 'core/sync/sync_queue_entry.dart';
 import 'core/components/global_numeric_keyboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Hive.initFlutter();
-  Hive.registerAdapter(SyncQueueEntryAdapter());
-  await Hive.openBox<SyncQueueEntry>('sync_queue');
-  await Hive.openBox<String>('local_orders');
-  await Hive.openBox<String>('id_mappings');
   await Hive.openBox('settings');
 
   runApp(const ProviderScope(child: PosApp()));
