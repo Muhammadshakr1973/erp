@@ -479,7 +479,6 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     Customer customer,
     bool canViewReconciliation,
   ) {
-    final theme = Theme.of(context);
     final routesAsync = ref.watch(routeListProvider);
     String routeName = 'بێ گەڕەک / ڕاوت';
     routesAsync.whenData((routes) {

@@ -11,6 +11,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/sync/sync_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
 import '../../shared/views/new_order_creation_dialog.dart';
@@ -32,6 +33,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
     final ordersAsync = ref.watch(ordersListProvider);
+    final syncStatus = ref.watch(syncStatusProvider);
+    final syncService = ref.watch(syncServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,6 +57,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             onPressed: () {
               ref.invalidate(ordersListProvider);
               ref.invalidate(customerListProvider);
+              syncService.syncPendingOperations();
             },
           ),
           const NotificationBadgeButton(),
@@ -63,6 +67,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(ordersListProvider);
           ref.invalidate(customerListProvider);
+          await syncService.syncPendingOperations();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -70,6 +75,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildSyncStatusBanner(context, syncStatus, syncService),
               // Quick Stats
               Row(
                 children: [
@@ -328,6 +334,100 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSyncStatusBanner(
+    BuildContext context,
+    SyncStatus status,
+    SyncService syncService,
+  ) {
+    Color bgColor = AppColors.successLight;
+    Color borderColor = AppColors.success;
+    IconData icon = Icons.cloud_done;
+    Color textColor = AppColors.success;
+    String message = 'هەموو داتاکان هاوکات کراون';
+
+    switch (status) {
+      case SyncStatus.syncing:
+        bgColor = AppColors.infoLight;
+        borderColor = AppColors.info;
+        icon = Icons.sync;
+        textColor = AppColors.info;
+        message = 'داتاکان لە هاوکاتکردندان...';
+        break;
+      case SyncStatus.pending:
+        bgColor = AppColors.warningLight;
+        borderColor = AppColors.warning;
+        icon = Icons.cloud_upload;
+        textColor = AppColors.warning;
+        message = 'کردەوەی پاشەکەوتکراو هەیە کە چاوەڕێی هاوکاتکردنن';
+        break;
+      case SyncStatus.error:
+      case SyncStatus.failed:
+        bgColor = AppColors.dangerLight;
+        borderColor = AppColors.danger;
+        icon = Icons.sync_problem;
+        textColor = AppColors.danger;
+        message = 'هەڵە لە هاوکاتکردنی هەندێک داتادا ڕوویدا';
+        break;
+      case SyncStatus.offline:
+        bgColor = AppColors.warningLight;
+        borderColor = AppColors.warning;
+        icon = Icons.cloud_off;
+        textColor = AppColors.warning;
+        message = 'ئێستا ئۆفلاینیت؛ داتاکان لۆکاڵی پاشەکەوت دەکرێن';
+        break;
+      case SyncStatus.synced:
+      case SyncStatus.idle:
+      case SyncStatus.completed:
+        bgColor = AppColors.successLight;
+        borderColor = AppColors.success;
+        icon = Icons.cloud_done;
+        textColor = AppColors.success;
+        message = 'هەموو داتاکان هاوکات کراون';
+        break;
+    }
+
+    if (status == SyncStatus.synced ||
+        status == SyncStatus.idle ||
+        status == SyncStatus.completed) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: AppRadius.radiusMd,
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: textColor, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.caption.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (status != SyncStatus.syncing)
+            IconButton(
+              icon: Icon(Icons.refresh, color: textColor, size: 20),
+              tooltip: 'هاوکاتکردنەوە',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                syncService.syncPendingOperations();
+              },
+            ),
+        ],
       ),
     );
   }
