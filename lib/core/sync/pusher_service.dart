@@ -20,6 +20,7 @@ class PusherService {
   String? _serverKey;
   String? _serverCluster;
   bool _isFetchingConfig = false;
+  Future<void>? _fetchFuture;
 
   PusherService(this._ref);
 
@@ -28,6 +29,31 @@ class PusherService {
 
   Future<void> _fetchPusherConfig() async {
     if (_serverKey != null && _serverCluster != null) return;
+    
+    // First, try loading from local cache (SharedPreferences) for absolute zero-latency startup!
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedKey = prefs.getString('pusher_server_key');
+      final cachedCluster = prefs.getString('pusher_server_cluster');
+      if (cachedKey != null && cachedCluster != null) {
+        _serverKey = cachedKey;
+        _serverCluster = cachedCluster;
+        debugPrint("Pusher config loaded from local cache: key=$_serverKey");
+        return;
+      }
+    } catch (_) {}
+
+    if (_fetchFuture != null) {
+      await _fetchFuture;
+      return;
+    }
+
+    _fetchFuture = _fetchConfigFromServer();
+    await _fetchFuture;
+    _fetchFuture = null;
+  }
+
+  Future<void> _fetchConfigFromServer() async {
     if (_isFetchingConfig) return;
     _isFetchingConfig = true;
     try {
@@ -38,6 +64,7 @@ class PusherService {
         return;
       }
 
+      // Short, defensive timeouts to guarantee rapid startup (max 3 seconds delay if server is offline)
       final response = await Dio().get(
         '${ApiClient.baseUrl}/broadcasting/config',
         options: Options(
@@ -45,13 +72,21 @@ class PusherService {
             'Accept': 'application/json',
             'Authorization': 'Bearer $token',
           },
+          receiveTimeout: const Duration(seconds: 3),
+          sendTimeout: const Duration(seconds: 3),
         ),
       );
 
       if (response.statusCode == 200 && response.data is Map) {
         _serverKey = response.data['key']?.toString();
         _serverCluster = response.data['cluster']?.toString();
-        debugPrint("Pusher Config dynamically loaded: key=$_serverKey, cluster=$_serverCluster");
+        debugPrint("Pusher Config dynamically loaded from server: key=$_serverKey, cluster=$_serverCluster");
+
+        // Save to cache for subsequent rapid app launches
+        if (_serverKey != null && _serverCluster != null) {
+          await prefs.setString('pusher_server_key', _serverKey!);
+          await prefs.setString('pusher_server_cluster', _serverCluster!);
+        }
       }
     } catch (e) {
       debugPrint("Pusher Config Fetch Error: $e");
@@ -198,6 +233,12 @@ class PusherService {
       _serverKey = null;
       _serverCluster = null;
       _isInitialized = false;
+      _fetchFuture = null;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pusher_server_key');
+      await prefs.remove('pusher_server_cluster');
+
       debugPrint("Pusher Disconnected and states cleared.");
     } catch (e) {
       debugPrint("Pusher Disconnect Error: $e");

@@ -51,36 +51,44 @@ class ReportService
         $avgOrderValue = $totalOrdersCount > 0 ? (int) round($totalNetAmount / $totalOrdersCount) : 0;
 
         // Breakdown by Salesman
-        $bySalesman = (clone $query)
+        $bySalesmanRaw = (clone $query)
             ->select('salesman_id', DB::raw('COUNT(*) as orders_count'), DB::raw('SUM(total_amount) as total_sales'), DB::raw('SUM(total_profit) as total_profit'))
             ->groupBy('salesman_id')
-            ->get()
-            ->map(function ($row) {
-                $salesman = User::find($row->salesman_id);
-                return [
-                    'salesman_id'   => $row->salesman_id,
-                    'salesman_name' => $salesman?->name ?? 'نەزانراو',
-                    'orders_count'  => (int) $row->orders_count,
-                    'total_sales'   => (int) $row->total_sales,
-                    'total_profit'  => (int) $row->total_profit,
-                ];
-            });
+            ->get();
+
+        $salesmanIds = $bySalesmanRaw->pluck('salesman_id')->filter();
+        $salesmen = User::whereIn('id', $salesmanIds)->get()->keyBy('id');
+
+        $bySalesman = $bySalesmanRaw->map(function ($row) use ($salesmen) {
+            $salesman = $salesmen->get($row->salesman_id);
+            return [
+                'salesman_id'   => $row->salesman_id,
+                'salesman_name' => $salesman?->name ?? 'نەزانراو',
+                'orders_count'  => (int) $row->orders_count,
+                'total_sales'   => (int) $row->total_sales,
+                'total_profit'  => (int) $row->total_profit,
+            ];
+        });
 
         // Breakdown by Route
-        $byRoute = (clone $query)
+        $byRouteRaw = (clone $query)
             ->join('customers', 'sales_orders.customer_id', '=', 'customers.id')
             ->select('customers.route_id', DB::raw('COUNT(sales_orders.id) as orders_count'), DB::raw('SUM(sales_orders.total_amount) as total_sales'))
             ->groupBy('customers.route_id')
-            ->get()
-            ->map(function ($row) {
-                $route = Route::find($row->route_id);
-                return [
-                    'route_id'     => $row->route_id,
-                    'route_name'   => $route?->name ?? 'بێ ڕێگا',
-                    'orders_count' => (int) $row->orders_count,
-                    'total_sales'  => (int) $row->total_sales,
-                ];
-            });
+            ->get();
+
+        $routeIds = $byRouteRaw->pluck('route_id')->filter();
+        $routes = Route::whereIn('id', $routeIds)->get()->keyBy('id');
+
+        $byRoute = $byRouteRaw->map(function ($row) use ($routes) {
+            $route = $routes->get($row->route_id);
+            return [
+                'route_id'     => $row->route_id,
+                'route_name'   => $route?->name ?? 'بێ ڕێگا',
+                'orders_count' => (int) $row->orders_count,
+                'total_sales'  => (int) $row->total_sales,
+            ];
+        });
 
         // Breakdown by Status
         $byStatus = (clone $query)
@@ -152,7 +160,7 @@ class ReportService
         $profitMargin = $totalRevenue > 0 ? round(($totalProfit / $totalRevenue) * 100, 2) : 0.0;
 
         // Top Profitable Products
-        $productBreakdown = (clone $itemQuery)
+        $productBreakdownRaw = (clone $itemQuery)
             ->select(
                 'product_id',
                 DB::raw('SUM(quantity) as units_sold'),
@@ -163,25 +171,29 @@ class ReportService
             ->groupBy('product_id')
             ->orderByDesc('total_profit')
             ->limit(15)
-            ->get()
-            ->map(function ($row) {
-                $product = Product::with('category')->find($row->product_id);
-                $revenue = (int) $row->total_revenue;
-                $profit = (int) $row->total_profit;
-                $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+            ->get();
 
-                return [
-                    'product_id'     => $row->product_id,
-                    'product_name'   => $product?->name ?? 'نەزانراو',
-                    'sku'            => $product?->sku ?? '',
-                    'category_name'  => $product?->category?->name ?? 'گشتی',
-                    'units_sold'     => (int) $row->units_sold,
-                    'total_revenue'  => $revenue,
-                    'total_cost'     => (int) $row->total_cost,
-                    'total_profit'   => $profit,
-                    'margin_percent' => $margin,
-                ];
-            });
+        $productIds = $productBreakdownRaw->pluck('product_id')->filter();
+        $products = Product::with('category')->whereIn('id', $productIds)->get()->keyBy('id');
+
+        $productBreakdown = $productBreakdownRaw->map(function ($row) use ($products) {
+            $product = $products->get($row->product_id);
+            $revenue = (int) $row->total_revenue;
+            $profit = (int) $row->total_profit;
+            $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+
+            return [
+                'product_id'     => $row->product_id,
+                'product_name'   => $product?->name ?? 'نەزانراو',
+                'sku'            => $product?->sku ?? '',
+                'category_name'  => $product?->category?->name ?? 'گشتی',
+                'units_sold'     => (int) $row->units_sold,
+                'total_revenue'  => $revenue,
+                'total_cost'     => (int) $row->total_cost,
+                'total_profit'   => $profit,
+                'margin_percent' => $margin,
+            ];
+        });
 
         // Top Profitable Categories
         $categoryBreakdown = (clone $itemQuery)
@@ -213,24 +225,28 @@ class ReportService
             });
 
         // Profit Breakdown by Salesman
-        $salesmanBreakdown = (clone $orderQuery)
+        $salesmanBreakdownRaw = (clone $orderQuery)
             ->select('salesman_id', DB::raw('SUM(total_amount) as total_revenue'), DB::raw('SUM(total_profit) as total_profit'))
             ->groupBy('salesman_id')
-            ->get()
-            ->map(function ($row) {
-                $salesman = User::find($row->salesman_id);
-                $revenue = (int) $row->total_revenue;
-                $profit = (int) $row->total_profit;
-                $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+            ->get();
 
-                return [
-                    'salesman_id'    => $row->salesman_id,
-                    'salesman_name'  => $salesman?->name ?? 'نەزانراو',
-                    'total_revenue'  => $revenue,
-                    'total_profit'   => $profit,
-                    'margin_percent' => $margin,
-                ];
-            });
+        $salesmanIds = $salesmanBreakdownRaw->pluck('salesman_id')->filter();
+        $salesmen = User::whereIn('id', $salesmanIds)->get()->keyBy('id');
+
+        $salesmanBreakdown = $salesmanBreakdownRaw->map(function ($row) use ($salesmen) {
+            $salesman = $salesmen->get($row->salesman_id);
+            $revenue = (int) $row->total_revenue;
+            $profit = (int) $row->total_profit;
+            $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 2) : 0.0;
+
+            return [
+                'salesman_id'    => $row->salesman_id,
+                'salesman_name'  => $salesman?->name ?? 'نەزانراو',
+                'total_revenue'  => $revenue,
+                'total_profit'   => $profit,
+                'margin_percent' => $margin,
+            ];
+        });
 
         $perPage = (int) ($filters['per_page'] ?? 25);
         $page = (int) ($filters['page'] ?? 1);
@@ -270,15 +286,25 @@ class ReportService
         $startDate = !empty($filters['start_date']) ? $filters['start_date'] : Carbon::now()->startOfMonth()->toDateString();
         $endDate = !empty($filters['end_date']) ? $filters['end_date'] : Carbon::now()->endOfMonth()->toDateString();
 
-        $reportData = $salesmen->map(function ($salesman) use ($startDate, $endDate, $filters) {
-            $ordersQuery = SalesOrder::where('salesman_id', $salesman->id)
-                ->whereBetween('order_date', [$startDate, $endDate]);
+        $salesmanIds = $salesmen->pluck('id');
 
-            if (!empty($filters['warehouse_id'])) {
-                $ordersQuery->where('warehouse_id', $filters['warehouse_id']);
-            }
+        $allOrdersQuery = SalesOrder::whereIn('salesman_id', $salesmanIds)
+            ->whereBetween('order_date', [$startDate, $endDate])
+            ->with('commissionDetail');
 
-            $ordersForComp = (clone $ordersQuery)->with('commissionDetail')->get();
+        if (!empty($filters['warehouse_id'])) {
+            $allOrdersQuery->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        $allOrders = $allOrdersQuery->get()->groupBy('salesman_id');
+
+        $allPayments = CustomerPayment::whereIn('collected_by', $salesmanIds)
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->get()
+            ->groupBy('collected_by');
+
+        $reportData = $salesmen->map(function ($salesman) use ($startDate, $endDate, $filters, $allOrders, $allPayments) {
+            $ordersForComp = $allOrders->get($salesman->id) ?? collect();
             $totalOrders = $ordersForComp->count();
             $deliveredOrders = $ordersForComp->where('status', SalesOrder::STATUS_DELIVERED)->count();
             $totalSales = (int) $ordersForComp->sum('total_amount');
@@ -295,9 +321,7 @@ class ReportService
             }
 
             // Payments collected by this salesman in period
-            $paymentsCollected = (int) CustomerPayment::where('collected_by', $salesman->id)
-                ->whereBetween('paid_at', [$startDate, $endDate])
-                ->sum('amount');
+            $paymentsCollected = (int) ($allPayments->get($salesman->id) ?? collect())->sum('amount');
 
             $avgOrder = $totalOrders > 0 ? (int) round($totalSales / $totalOrders) : 0;
 

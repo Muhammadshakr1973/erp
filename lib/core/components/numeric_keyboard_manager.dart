@@ -79,7 +79,11 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     final text = controller.text;
     final selection = controller.selection;
     String newText;
+    
+    // Sanitize cursor position
     int cursorPosition = selection.isValid ? selection.baseOffset : text.length;
+    if (cursorPosition < 0) cursorPosition = 0;
+    if (cursorPosition > text.length) cursorPosition = text.length;
 
     if (text.startsWith('-')) {
       newText = text.substring(1);
@@ -89,9 +93,12 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       cursorPosition++;
     }
 
+    if (cursorPosition < 0) cursorPosition = 0;
+    if (cursorPosition > newText.length) cursorPosition = newText.length;
+
     controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorPosition >= 0 ? cursorPosition : 0),
+      selection: TextSelection.collapsed(offset: cursorPosition),
     );
 
     state.onChanged?.call(newText);
@@ -113,16 +120,32 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     String newText;
     int cursorPosition;
 
-    if (selection.isValid && selection.start != selection.end) {
+    // Sanitize start and end of selection
+    int start = selection.isValid ? selection.start : text.length;
+    int end = selection.isValid ? selection.end : text.length;
+    
+    if (start < 0) start = 0;
+    if (start > text.length) start = text.length;
+    if (end < 0) end = 0;
+    if (end > text.length) end = text.length;
+    if (start > end) {
+      final temp = start;
+      start = end;
+      end = temp;
+    }
+
+    if (start != end) {
       // Replace selection
-      newText = text.replaceRange(selection.start, selection.end, char);
-      cursorPosition = selection.start + char.length;
+      newText = text.replaceRange(start, end, char);
+      cursorPosition = start + char.length;
     } else {
       // Insert at cursor or at end
-      final pos = selection.isValid ? selection.baseOffset : text.length;
-      newText = text.replaceRange(pos, pos, char);
-      cursorPosition = pos + char.length;
+      newText = text.replaceRange(start, start, char);
+      cursorPosition = start + char.length;
     }
+
+    if (cursorPosition < 0) cursorPosition = 0;
+    if (cursorPosition > newText.length) cursorPosition = newText.length;
 
     controller.value = TextEditingValue(
       text: newText,
@@ -144,17 +167,33 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     String newText;
     int cursorPosition;
 
-    if (selection.isValid && selection.start != selection.end) {
+    // Sanitize start and end of selection
+    int start = selection.isValid ? selection.start : text.length;
+    int end = selection.isValid ? selection.end : text.length;
+
+    if (start < 0) start = 0;
+    if (start > text.length) start = text.length;
+    if (end < 0) end = 0;
+    if (end > text.length) end = text.length;
+    if (start > end) {
+      final temp = start;
+      start = end;
+      end = temp;
+    }
+
+    if (start != end) {
       // Delete selection
-      newText = text.replaceRange(selection.start, selection.end, '');
-      cursorPosition = selection.start;
+      newText = text.replaceRange(start, end, '');
+      cursorPosition = start;
     } else {
       // Delete preceding character
-      final pos = selection.isValid ? selection.baseOffset : text.length;
-      if (pos == 0) return;
-      newText = text.replaceRange(pos - 1, pos, '');
-      cursorPosition = pos - 1;
+      if (start == 0) return;
+      newText = text.replaceRange(start - 1, start, '');
+      cursorPosition = start - 1;
     }
+
+    if (cursorPosition < 0) cursorPosition = 0;
+    if (cursorPosition > newText.length) cursorPosition = newText.length;
 
     controller.value = TextEditingValue(
       text: newText,
