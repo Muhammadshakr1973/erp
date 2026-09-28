@@ -147,11 +147,24 @@ class PusherService {
               }
               
               if (payload != null) {
+                // Safely resolve nested payload if Laravel/Pusher wraps it under 'data' key
+                Map<String, dynamic> resolvedPayload = payload;
+                if (payload.containsKey('data')) {
+                  final dataVal = payload['data'];
+                  if (dataVal is Map) {
+                    resolvedPayload = Map<String, dynamic>.from(dataVal);
+                  } else if (dataVal is String && dataVal.isNotEmpty) {
+                    try {
+                      resolvedPayload = Map<String, dynamic>.from(jsonDecode(dataVal));
+                    } catch (_) {}
+                  }
+                }
+
                 final listeners = _listeners[event.channelName];
                 if (listeners != null && listeners.isNotEmpty) {
                   for (final listener in List.of(listeners)) {
                     try {
-                      listener(payload);
+                      listener(resolvedPayload);
                     } catch (e) {
                       debugPrint("Pusher Error in listener callback: $e");
                     }

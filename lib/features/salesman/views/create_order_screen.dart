@@ -180,9 +180,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     debugPrint("CreateOrderScreen: Received Pusher event: $eventData");
     if (!mounted || _isSaving) return;
 
-    final eventVersion = eventData['version'] as int?;
+    // Support both flat and nested 'data' wrappers from Laravel/Pusher
+    final dynamic dataObj = eventData.containsKey('data') && eventData['data'] is Map 
+        ? eventData['data'] 
+        : eventData;
+
+    final dynamic rawVersion = dataObj['version'];
+    final int? eventVersion = rawVersion is num 
+        ? rawVersion.toInt() 
+        : (rawVersion != null ? int.tryParse(rawVersion.toString()) : null);
+
     if (eventVersion != null && eventVersion > _currentVersion) {
       try {
+        debugPrint("CreateOrderScreen: Event version ($eventVersion) > current local version ($_currentVersion). Refreshing order...");
         final latestOrder = await ref.refresh(singleOrderProvider(_subscribedOrderId!.toString()).future);
         if (latestOrder != null && mounted) {
           _populateFromExistingOrder(latestOrder);
@@ -195,6 +205,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       } catch (e) {
         debugPrint("CreateOrderScreen: Error fetching updated order: $e");
       }
+    } else {
+      debugPrint("CreateOrderScreen: Ignored older or duplicate version event (eventVersion: $eventVersion, localVersion: $_currentVersion)");
     }
   }
 
