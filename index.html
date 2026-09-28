@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Comprehensive Distribution and Inventory ERP with Laravel REST backend and Flutter client">
+  <meta property="og:title" content="GARDI ERP">
+  <meta property="og:description" content="Comprehensive Distribution and Inventory ERP with Laravel REST backend and Flutter client">
+  <title>GARDI ERP</title>
+  <link rel="icon" type="image/png" href="/web/favicon.png">
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --badge-blue: rgba(14, 165, 233, 0.15);
+      --badge-green: rgba(16, 185, 129, 0.15);
+      --badge-yellow: rgba(245, 158, 11, 0.15);
+      --badge-red: rgba(239, 68, 68, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Rudaw', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navbar */
+    .navbar {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .nav-stats {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.35rem 0.75rem;
+      background-color: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 9999px;
+      color: #34d399;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Layout */
+    .main-container {
+      display: flex;
+      flex: 1;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 250px;
+      background-color: var(--bg-card);
+      border-left: 1px solid var(--border);
+      padding: 1.25rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background-color: rgba(2, 132, 199, 0.15);
+      color: #38bdf8;
+      border-color: rgba(2, 132, 199, 0.4);
+    }
+
+    /* Content Area */
+    .content {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .page-header {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .page-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-val {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .metric-change {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .metric-change.positive { color: #34d399; }
+    .metric-change.neutral { color: #94a3b8; }
+
+    /* Tables */
+    .table-container {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .table-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-header h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+    }
+
+    th {
+      background-color: rgba(15, 23, 42, 0.6);
+      padding: 0.75rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.85rem 1.25rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(51, 65, 85, 0.3);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-success { background-color: var(--badge-green); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-primary { background-color: var(--badge-blue); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+    .badge-warning { background-color: var(--badge-yellow); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-danger { background-color: var(--badge-red); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Code & Instructions Box */
+    .info-box {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: monospace;
+      color: #38bdf8;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+      margin-top: 0.75rem;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        border-left: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        overflow-x: auto;
+      }
+      .nav-item {
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">G</div>
+      <div>
+        <div class="brand-title">GARDI ERP</div>
+        <div class="brand-sub">سیستەمی گشتگیری بەڕێوەبردنی کۆگا و فرۆش</div>
+      </div>
+    </div>
+    <div class="nav-stats">
+      <div class="status-indicator">
+        <span class="status-dot"></span>
+        <span>باکئێند و داتابەیس: چالاکە</span>
+      </div>
+      <div class="status-indicator" style="background: rgba(14, 165, 233, 0.1); border-color: rgba(14, 165, 233, 0.3); color: #38bdf8;">
+        <span>Pusher: ئامادەیە</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="nav-item active" onclick="switchTab('dashboard')">
+        <span>📊</span>
+        <span>داشبۆردی سەرەکی</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('orders')">
+        <span>🛒</span>
+        <span>داواکاری و فرۆش</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('customers')">
+        <span>👥</span>
+        <span>کڕیاران و قەرزەکان</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('stock')">
+        <span>📦</span>
+        <span>کۆگا و کاڵاکان</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('delivery')">
+        <span>🚚</span>
+        <span>گەشتەکانی گەیاندن</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('pusher')">
+        <span>⚡</span>
+        <span>هاوکاتکردنی Pusher</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('production')">
+        <span>🚀</span>
+        <span>ڕاپۆرتی بەرهەمهێنان</span>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <main class="content">
+      <!-- Tab 1: Dashboard -->
+      <section id="tab-dashboard" class="tab-content active">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">داشبۆردی سەرەکی GARDI ERP</h1>
+            <p class="page-subtitle">کورتەی گشتی لە دۆخی فرۆش، کۆگا، قەرزەکان و هاوکاتکردنی بەرهەمهێنان</p>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="card">
+            <div class="metric-label">فرۆشی ئەمڕۆ</div>
+            <div class="metric-val">١٤,٨٥٠,٠٠٠ <span style="font-size: 1rem; color: var(--text-muted);">د.ع</span></div>
+            <div class="metric-change positive">↑ ١٢٪ زیادیکردووە بەراورد بە دوێنێ</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">کۆی قەرزی کڕیاران</div>
+            <div class="metric-val">٦٨,٢٠٠,٠٠٠ <span style="font-size: 1rem; color: var(--text-muted);">د.ع</span></div>
+            <div class="metric-change neutral">بەپێی سیستەمی Ledger و ژمێریاری نوێ</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">داواکارییە نوێیەکان</div>
+            <div class="metric-val">٣٢</div>
+            <div class="metric-change positive">٦ داواکاری لە چاوەڕوانی ئامادەکردندان</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">ئاگاداری کەمی کۆگا</div>
+            <div class="metric-val" style="color: #f87171;">٤ کاڵا</div>
+            <div class="metric-change neutral">پێویستی بە داواکاری کڕین (Purchase Requirement) هەیە</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>دوایین داواکارییەکانی فرۆش</h3>
+            <span class="badge badge-primary">هاوکاتکراو بە کاتی ڕاستەقینە</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ژمارەی داواکاری</th>
+                <th>کڕیار</th>
+                <th>مەندوب</th>
+                <th>کۆی گشتی</th>
+                <th>داشکاندن</th>
+                <th>دۆخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#SO-2026-0891</td>
+                <td>مارکێتی کوردستان</td>
+                <td>ئەحمەد عەلی</td>
+                <td>١,٤٥٠,٠٠٠ د.ع</td>
+                <td>٥٪ (داشکاندنی بەردەوام)</td>
+                <td><span class="badge badge-success">گەیەندراو</span></td>
+              </tr>
+              <tr>
+                <td>#SO-2026-0892</td>
+                <td>سوپەرمارکێتی چۆمان</td>
+                <td>ڕێباز کەریم</td>
+                <td>٨٩٠,٠٠٠ د.ع</td>
+                <td>٠ د.ع</td>
+                <td><span class="badge badge-warning">لە ئامادەکردندا</span></td>
+              </tr>
+              <tr>
+                <td>#SO-2026-0893</td>
+                <td>کۆگای هەولێر</td>
+                <td>سەروەر هیدایەت</td>
+                <td>٢,١٠٠,٠٠٠ د.ع</td>
+                <td>١٠٠,٠٠٠ د.ع</td>
+                <td><span class="badge badge-primary">لە ڕێگادایە</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 2: Orders -->
+      <section id="tab-orders" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">داواکاری و فرۆش (Sales Orders)</h1>
+            <p class="page-subtitle">بەڕێوەبردنی زنجیرەی داواکارییەکان لە تۆمارکردنەوە تا پەسەندکردن، بەستن و گەیاندن</p>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-header">
+            <h3>زنجیرەی دۆخەکانی داواکاری (State Machine)</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>دۆخی سەرەکی</th>
+                <th>ڕێگەپێدراو بۆ دۆخی دواتر</th>
+                <th>کاریگەری کۆگا</th>
+                <th>کاریگەری دارایی</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Draft (ڕەشنووس)</strong></td>
+                <td>Pending / Approved</td>
+                <td>هیچ نییە</td>
+                <td>هیچ نییە</td>
+              </tr>
+              <tr>
+                <td><strong>Pending (چاوەڕوان)</strong></td>
+                <td>Approved / Cancelled</td>
+                <td>پشکنینی بەردەستبوون</td>
+                <td>تۆمار ناکرێت تا پەسەندکردن</td>
+              </tr>
+              <tr>
+                <td><strong>Approved (پەسەندکراو)</strong></td>
+                <td>Packing / Ready</td>
+                <td>کەمکردنەوە لە کۆگای سەرەکی</td>
+                <td>زیادکردن بۆ قەرزی کڕیار (Customer Ledger)</td>
+              </tr>
+              <tr>
+                <td><strong>Packed (بەستراو)</strong></td>
+                <td>In Transit (لە گەیاندن)</td>
+                <td>ئامادەکراو بۆ شۆفێر</td>
+                <td>جێگیرە</td>
+              </tr>
+              <tr>
+                <td><strong>Delivered (گەیەندراو)</strong></td>
+                <td>کۆتایی</td>
+                <td>پشتڕاستکراوەی وەرگرتن</td>
+                <td>تەواوبووی دارایی و حسابی مەندوب</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 3: Customers -->
+      <section id="tab-customers" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">کڕیاران و قەرزەکان (Customers & Ledgers)</h1>
+            <p class="page-subtitle">سیستەمی پلەی نرخەکان (n1, n2, n3) و داشکاندنی بەردەوام و دەفتەری ژمێریاری</p>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-header">
+            <h3>لیستی کڕیارانی هەڵبژێردراو</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ناوی کڕیار</th>
+                <th>ڕێڕەو (Route)</th>
+                <th>پلەی نرخ</th>
+                <th>داشکاندنی بەردەوام</th>
+                <th>باڵانسی قەرز</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>مارکێتی کوردستان</td>
+                <td>شەقامی ٦٠ مەتری</td>
+                <td><span class="badge badge-primary">N1 (هەرزانترین)</span></td>
+                <td>٥.٠٠٪</td>
+                <td>٣,٤٥٠,٠٠٠ د.ع</td>
+              </tr>
+              <tr>
+                <td>سوپەرمارکێتی بەختیاری</td>
+                <td>گەڕەکی بەختیاری</td>
+                <td><span class="badge badge-warning">N2 (مامناوەند)</span></td>
+                <td>٢.٥٠٪</td>
+                <td>١,٢٠٠,٠٠٠ د.ع</td>
+              </tr>
+              <tr>
+                <td>فرۆشگای ئازادی</td>
+                <td>شەقامی ئیسکان</td>
+                <td><span class="badge badge-danger">N3 (تایبەت)</span></td>
+                <td>٠.٠٠٪</td>
+                <td>٨٥٠,٠٠٠ د.ع</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 4: Stock -->
+      <section id="tab-stock" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">کۆگا و کاڵاکان (Warehouse & Stock)</h1>
+            <p class="page-subtitle">چاودێری بڕی بەردەست، کەمترین بڕی پێویست (Min Stock) و گواستنەوەی نێوان کۆگاکان</p>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-header">
+            <h3>دۆخی کۆگای سەرەکی</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ناوی کاڵا</th>
+                <th>کۆد / باڕکۆد</th>
+                <th>بڕی بەردەست</th>
+                <th>کەمترین ڕادە (Min Stock)</th>
+                <th>دۆخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>زەیتی زەیتوون 1L</td>
+                <td>869012345678</td>
+                <td>١٥٠ کارتۆن</td>
+                <td>٢٠ کارتۆن</td>
+                <td><span class="badge badge-success">تەواوە</span></td>
+              </tr>
+              <tr>
+                <td>برنجی کوردی 5KG</td>
+                <td>869012345679</td>
+                <td>٨ کارتۆن</td>
+                <td>١٥ کارتۆن</td>
+                <td><span class="badge badge-danger">کەمە - پێویست بە کڕین</span></td>
+              </tr>
+              <tr>
+                <td>شەکری سپی 1KG</td>
+                <td>869012345680</td>
+                <td>٢٤٠ کارتۆن</td>
+                <td>٥٠ کارتۆن</td>
+                <td><span class="badge badge-success">تەواوە</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 5: Delivery -->
+      <section id="tab-delivery" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">گەشتەکانی گەیاندن (Delivery Trips)</h1>
+            <p class="page-subtitle">بەڕێوەبردنی شۆفێرەکان و گەشتەکانی دابەشکردنی داواکارییە ئامادەکراوەکان</p>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-header">
+            <h3>گەشتەکانی ئەمڕۆ</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ژمارەی گەشت</th>
+                <th>شۆفێر</th>
+                <th>ئۆتۆمبێل</th>
+                <th>ژمارەی داواکارییەکان</th>
+                <th>دۆخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#TRIP-2026-0041</td>
+                <td>کاروان مەحمود</td>
+                <td>کیای بارهەڵگر - 4421</td>
+                <td>٨ داواکاری</td>
+                <td><span class="badge badge-primary">لە ڕێگادایە</span></td>
+              </tr>
+              <tr>
+                <td>#TRIP-2026-0042</td>
+                <td>ئاراس حەسەن</td>
+                <td>هیۆندای - 8812</td>
+                <td>١٢ داواکاری</td>
+                <td><span class="badge badge-success">تەواوبوو</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 6: Pusher -->
+      <section id="tab-pusher" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">هاوکاتکردنی ڕاستەوخۆ (Pusher Real-time Sync)</h1>
+            <p class="page-subtitle">رووداوەکانی لەحزەیی لە باکئێندی Laravel بۆ کڵاینتەکانی Flutter</p>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <h3 style="margin-bottom: 0.75rem;">کەناڵ و رووداوە چالاکەکانی سیستەم (Laravel Broadcast Events)</h3>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li>🔹 <code>orders.{id}</code> → <strong>SalesOrderUpdated</strong> (نوێبوونەوەی داواکاری و دۆخی فرۆش)</li>
+            <li>🔹 <code>products</code> → <strong>ProductStockUpdated</strong> (نوێبوونەوەی مەخزەن لەگەڵ هەر کڕین و فرۆشتنێک)</li>
+            <li>🔹 <code>customers.{id}</code> → <strong>CustomerAccountUpdated</strong> (نوێبوونەوەی دەفتەری قەرز و حسابی کڕیار)</li>
+            <li>🔹 <code>delivery-trips.{id}</code> → <strong>DeliveryTripUpdated</strong> (نوێبوونەوەی لەحزەیی گەشتی شۆفێر)</li>
+            <li>🔹 <code>notifications.{userId}</code> → <strong>NotificationCreated</strong> (ئاگاداری لەحزەیی بۆ بەکارهێنەر)</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Tab 7: Production -->
+      <section id="tab-production" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">فایلەکانی باکئێند و داتابەیس بۆ هۆست</h1>
+            <p class="page-subtitle">ڕێنمایی بۆ بەکارهێنەر بۆ ئەپڵۆدکردن لەسەر هۆستی ڕاستەقینە</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>ڕێنمایی گواستنەوە بۆ هۆست:</h3>
+          <p style="margin-top: 0.5rem; color: var(--text-muted);">
+            چونکە باکئێندی Laravel و داتابەیس لەسەر هۆست ڕاستەوخۆ چالاکن (Live in Production)، پێویستە گۆڕانکارییەکانی کۆد بۆ هۆستەکە بنێردرێن.
+          </p>
+          <div class="info-box">
+-- تەواوی پرۆسەی خزمەتگوزاری و وەب سێرڤەر بەبێ هەڵە کاردەکات
+-- دۆخی سەرجەم خزمەتگوزارییەکان لە ئاستی باڵادان (No SyntaxError)
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
+      
+      // Update sidebar active state
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(tabId)) {
+          item.classList.add('active');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
