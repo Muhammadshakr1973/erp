@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",
-    "build": "cd / && flutter build web --release",
+    "build": "flutter build web --release",
     "start": "node server.js"
   },
   "dependencies": {},
