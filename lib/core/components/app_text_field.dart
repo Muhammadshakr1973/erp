@@ -123,6 +123,8 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
       showCursor: true,
       enableInteractiveSelection: true,
       autofocus: widget.autofocus,
+      autocorrect: !_isNumeric,
+      enableSuggestions: !_isNumeric,
       validator: widget.validator,
       onChanged: widget.onChanged,
       maxLines: widget.maxLines,

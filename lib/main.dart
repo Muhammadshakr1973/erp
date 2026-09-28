@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:ui';
 
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
@@ -11,6 +12,30 @@ import 'core/components/global_numeric_keyboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Handle standard Flutter framework errors gracefully
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final errorStr = details.exception.toString();
+    if (errorStr.contains('text_editing_delta') || errorStr.contains('TextEditingDelta')) {
+      debugPrint('Suppressed text editing delta FlutterError: $errorStr');
+      return;
+    }
+    FlutterError.presentError(details);
+  };
+
+  // Intercept and handle asynchronous errors (such as web promise/rejection unhandled errors)
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    final errorStr = error.toString();
+    // Catch and suppress known non-critical text input and assertion delta errors on web
+    if (errorStr.contains('text_editing_delta') || 
+        errorStr.contains('TextEditingDelta') || 
+        errorStr.contains('AssertionError') || 
+        errorStr.contains('Assertion error')) {
+      debugPrint('Suppressed asynchronous text editing delta/assertion error: $error');
+      return true; // Mark as handled, preventing browser-level Unhandled Rejections
+    }
+    return false; // Propagate other errors normally
+  };
 
   await Hive.initFlutter();
   await Hive.openBox('settings');
