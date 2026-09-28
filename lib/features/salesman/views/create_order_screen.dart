@@ -19,6 +19,7 @@ import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../../core/sync/pusher_service.dart';
 
 class CreateOrderScreen extends ConsumerStatefulWidget {
   final int? preselectedCustomerId;
@@ -51,6 +52,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   int? _serverOrderId;
   String? _sharedKey;
+  int _currentVersion = 1;
+  int? _subscribedOrderId;
   bool _hasSavedOnce = false;
   bool _isSaving = false;
 
@@ -114,6 +117,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void initState() {
     super.initState();
     _sharedKey = 'order_${DateTime.now().microsecondsSinceEpoch}';
+    _currentVersion = widget.existingOrder?.version ?? 1;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.existingOrder != null) {
@@ -128,6 +132,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     setState(() {
       _serverOrderId = order.id;
       _sharedKey = order.sharedKey;
+      _currentVersion = order.version;
       _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
       _discountType = order.discountType;
@@ -136,7 +141,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           : order.discountAmount;
       if (order.notes != null) {
         _notesController.text = order.notes!;
+      } else {
+        _notesController.clear();
       }
+      _cart.clear();
+      _cartNotes.clear();
       for (var item in order.items) {
         _cart[item.productId] = item.quantity.toInt();
         if (item.notes != null) {
@@ -144,7 +153,49 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     });
+    _subscribeToOrderPusher(order.id);
     _loadCustomerById(order.customerId);
+  }
+
+  void _subscribeToOrderPusher(int orderId) {
+    if (_subscribedOrderId == orderId) return;
+    _unsubscribeFromOrderPusher();
+
+    _subscribedOrderId = orderId;
+    final pusher = ref.read(pusherServiceProvider);
+    pusher.subscribeToOrder(orderId, _onRemoteOrderUpdate);
+    debugPrint("CreateOrderScreen: Subscribed to Pusher updates for order $orderId");
+  }
+
+  void _unsubscribeFromOrderPusher() {
+    if (_subscribedOrderId != null) {
+      final pusher = ref.read(pusherServiceProvider);
+      pusher.unsubscribeFromOrder(_subscribedOrderId!, _onRemoteOrderUpdate);
+      debugPrint("CreateOrderScreen: Unsubscribed from Pusher updates for order $_subscribedOrderId");
+      _subscribedOrderId = null;
+    }
+  }
+
+  void _onRemoteOrderUpdate(Map<String, dynamic> eventData) async {
+    debugPrint("CreateOrderScreen: Received Pusher event: $eventData");
+    if (!mounted || _isSaving) return;
+
+    final eventVersion = eventData['version'] as int?;
+    if (eventVersion != null && eventVersion > _currentVersion) {
+      try {
+        final latestOrder = await ref.refresh(singleOrderProvider(_subscribedOrderId!.toString()).future);
+        if (latestOrder != null && mounted) {
+          _populateFromExistingOrder(latestOrder);
+          AppSnackbar.show(
+            context,
+            message: 'پسوڵەکە لە لایەن ئامێرێکی ترەوە نوێکرایەوە',
+            type: SnackbarType.info,
+          );
+        }
+      } catch (e) {
+        debugPrint("CreateOrderScreen: Error fetching updated order: $e");
+      }
+    }
   }
 
   void _loadCustomerById(int customerId) async {
@@ -202,6 +253,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   @override
   void dispose() {
+    _unsubscribeFromOrderPusher();
     _debounceTimer?.cancel();
     _notesController.dispose();
     _searchController.dispose();
@@ -592,7 +644,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     });
 
     final String sharedKey = _sharedKey ?? 'order_${DateTime.now().microsecondsSinceEpoch}';
-    final int version = widget.existingOrder?.version ?? 1;
+    final int version = _currentVersion;
 
     final payload = {
       'customer_id': _selectedCustomer!.id,
@@ -620,13 +672,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     try {
       if (_hasSavedOnce && _serverOrderId != null) {
-        await ref
+        final updatedOrder = await ref
             .read(orderActionsProvider)
             .updateOrder(_serverOrderId!, payload);
+        _currentVersion = updatedOrder.version;
       } else {
         final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
         _serverOrderId = createdOrder.id;
+        _currentVersion = createdOrder.version;
         _hasSavedOnce = true;
+        _subscribeToOrderPusher(createdOrder.id);
       }
 
       if (mounted && _lastChangedField != null) {
