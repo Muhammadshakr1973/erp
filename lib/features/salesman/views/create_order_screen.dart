@@ -193,7 +193,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
     try {
       await Future.wait([
-        ref.read(productsListProvider.future),
+        ref.read(productsListProvider.notifier).fetchProducts(),
         ref.read(customerListProvider.future),
         ref.read(warehouseListProvider.future),
       ]);
@@ -1786,7 +1786,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       );
                     },
                   ),
-          ),
+                ),
+              ),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
