@@ -20,6 +20,14 @@ class ProductController extends Controller
         ]);
     }
 
+    public function show(Product $product): JsonResponse
+    {
+        return response()->json([
+            'message' => 'زانیاریی کاڵا',
+            'data' => $product->load(['category', 'supplier', 'stocks'])
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         if (empty($request->sku)) {
