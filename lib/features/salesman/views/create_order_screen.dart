@@ -184,6 +184,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     } catch (_) {}
   }
 
+  Future<void> _handleRefresh() async {
+    ref.invalidate(productsListProvider);
+    ref.invalidate(customerListProvider);
+    ref.invalidate(warehouseListProvider);
+    if (_selectedCustomer != null) {
+      await _fetchSpecialPricesForCustomer(_selectedCustomer!.id);
+    }
+    try {
+      await Future.wait([
+        ref.read(productsListProvider.future),
+        ref.read(customerListProvider.future),
+        ref.read(warehouseListProvider.future),
+      ]);
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -860,42 +876,51 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         if (productsAsync.isLoading)
           const LinearProgressIndicator(),
         Expanded(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer
-                          .withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.qr_code_scanner,
-                      size: 48,
-                      color: theme.colorScheme.primary,
-                    ),
+          child: RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - AppSpacing.xl * 2,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  const Text(
-                    'گەڕان بەپێی ناوی کاڵا یان باڕکۆد',
-                    style: AppTextStyles.h3,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Text(
-                      'لە ڕێگەی ئینپوتی گەڕانی سەرەوەی سەبەتە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer
+                              .withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.qr_code_scanner,
+                          size: 48,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.md),
+                      const Text(
+                        'گەڕان بەپێی ناوی کاڵا یان باڕکۆد',
+                        style: AppTextStyles.h3,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Text(
+                          'لە ڕێگەی ئینپوتی گەڕانی سەرەوەی سەبەتە بە ناوی کاڵا یان باڕکۆد بگەڕێ بۆ ئەوەی ڕاستەوخۆ کاڵا زیادبکەیت بۆ پسوڵەکە',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -1520,22 +1545,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: _cart.isEmpty
-                ? const Center(
-                    child: Text(
-                      'سەبەتە بەتاڵە',
-                      style: AppTextStyles.bodyMedium,
-                    ),
-                  )
-                : Builder(
-                    builder: (context) {
-                      final cartKeys = _cart.keys.toList();
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        itemCount: cartKeys.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) {
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              child: _cart.isEmpty
+                  ? LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'سەبەتە بەتاڵە',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Builder(
+                      builder: (context) {
+                        final cartKeys = _cart.keys.toList();
+                        return ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          itemCount: cartKeys.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (context, index) {
                           final productId = cartKeys[index];
                           final qty = _cart[productId]!;
                           final product = allProducts

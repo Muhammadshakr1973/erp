@@ -203,5 +203,37 @@ void main() {
       final RenderBox renderBox = tester.renderObject(buttonFinder);
       expect(renderBox.size.width, equals(160.0));
     });
+
+    testWidgets('RefreshIndicator with AlwaysScrollableScrollPhysics renders for empty and populated order views', (WidgetTester tester) async {
+      bool refreshed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RefreshIndicator(
+              onRefresh: () async {
+                refreshed = true;
+              },
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: const Center(
+                      child: Text('سەبەتە بەتاڵە'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+      expect(find.text('سەبەتە بەتاڵە'), findsOneWidget);
+      expect(refreshed, isFalse);
+    });
   });
 }
