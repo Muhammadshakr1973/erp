@@ -129,8 +129,7 @@ const server = http.createServer((req, res) => {
 
       res.statusCode = 200;
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      // Removed COEP and COOP to allow third-party scripts (like Pusher) to load without being blocked by browser security
       res.end(content);
     });
   });
