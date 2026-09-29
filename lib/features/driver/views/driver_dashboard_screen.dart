@@ -8,7 +8,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../orders/providers/orders_provider.dart';
 import '../providers/driver_providers.dart';
 
 class DriverDashboardScreen extends ConsumerWidget {
@@ -17,7 +16,6 @@ class DriverDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tripsAsync = ref.watch(driverTripsProvider);
-    final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,8 +42,6 @@ class DriverDashboardScreen extends ConsumerWidget {
                 ElevatedButton(
                   onPressed: () {
                     ref.invalidate(driverTripsProvider);
-                    ref.invalidate(ordersListProvider);
-                    ref.invalidate(readyOrdersForDeliveryProvider);
                   },
                   child: const Text('دووبارە هەوڵبدەرەوە'),
                 ),
@@ -69,16 +65,9 @@ class DriverDashboardScreen extends ConsumerWidget {
             }
           }
 
-          final readyOrdersCount = readyOrdersAsync.maybeWhen(
-            data: (orders) => orders.length,
-            orElse: () => 0,
-          );
-
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(driverTripsProvider);
-              ref.invalidate(ordersListProvider);
-              ref.invalidate(readyOrdersForDeliveryProvider);
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -88,22 +77,22 @@ class DriverDashboardScreen extends ConsumerWidget {
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      int crossAxisCount = 2;
-                      double aspectRatio = 1.0;
+                      int crossAxisCount = 3;
+                      double aspectRatio = 0.95;
                       if (constraints.maxWidth >= 1024) {
-                        crossAxisCount = 4;
-                        aspectRatio = 1.4;
+                        crossAxisCount = 3;
+                        aspectRatio = 1.5;
                       } else if (constraints.maxWidth >= 600) {
                         crossAxisCount = 3;
-                        aspectRatio = 1.25;
+                        aspectRatio = 1.3;
                       }
 
                       return GridView.count(
                         crossAxisCount: crossAxisCount,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: AppSpacing.md,
-                        mainAxisSpacing: AppSpacing.md,
+                        crossAxisSpacing: AppSpacing.sm,
+                        mainAxisSpacing: AppSpacing.sm,
                         childAspectRatio: aspectRatio,
                         children: [
                           _buildStatCard(
@@ -126,13 +115,6 @@ class DriverDashboardScreen extends ConsumerWidget {
                             value: '${_formatCurrency(totalCollected)} د.ع',
                             icon: AppIcons.customerDebt,
                             color: AppColors.primary,
-                          ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'پسوڵەی پاکەتکراو (بێ گەشت)',
-                            value: '$readyOrdersCount',
-                            icon: Icons.inventory_2_outlined,
-                            color: AppColors.warning,
                           ),
                         ],
                       );
