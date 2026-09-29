@@ -32,7 +32,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(authProvider).user;
-      if (user != null && (user.isDriver == true || user.role?.name == 'driver')) {
+      if (user != null && (user.isDriver || user.role.toLowerCase() == 'driver')) {
         setState(() {
           _selectedDriverId = user.id;
         });
@@ -115,7 +115,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentUser = ref.watch(authProvider).user;
-    final isDriver = currentUser != null && (currentUser.isDriver == true || currentUser.role?.name == 'driver');
+    final isDriver = currentUser != null && (currentUser.isDriver || currentUser.role.toLowerCase() == 'driver');
     final driversAsync = ref.watch(activeDriversProvider);
     final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
@@ -165,7 +165,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                               Icon(AppIcons.profile, color: theme.colorScheme.primary),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
-                                currentUser.name,
+                                currentUser?.name ?? '',
                                 style: AppTextStyles.bodyBold,
                               ),
                             ],

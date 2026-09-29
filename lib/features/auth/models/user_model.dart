@@ -100,6 +100,10 @@ class UserModel {
     return lowerRole == 'admin' || lowerRole == 'owner';
   }
 
+  bool get isDriver => role.toLowerCase() == 'driver';
+  bool get isSalesman => role.toLowerCase() == 'salesman';
+  bool get isWarehouse => role.toLowerCase() == 'warehouse';
+
   bool hasPermission(String permission) {
     final lowerRole = role.toLowerCase();
 
