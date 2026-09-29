@@ -13,151 +13,126 @@ class GlobalNumericKeyboard extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
 
-    final double keyboardHeight = 290;
+    final double keyboardHeight = 250;
 
-    Widget keyboardWidget = Directionality(
+    return Directionality(
       textDirection: TextDirection.ltr,
       child: Material(
-        elevation: 24,
-        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFD1D5DB),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: keyboardHeight,
-            child: Column(
-              children: [
-                // iOS-Style Accessory Toolbar with Done and Backspace
-                Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
-                    border: Border(
-                      top: BorderSide(
-                        color: isDark ? Colors.white12 : Colors.black12,
-                        width: 0.5,
-                      ),
-                      bottom: BorderSide(
-                        color: isDark ? Colors.white12 : Colors.black12,
-                        width: 0.5,
-                      ),
+        elevation: 8,
+        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E7EB),
+        child: Container(
+          height: keyboardHeight,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.black12,
+              width: 1,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              // iOS-Style Accessory Toolbar with Done and Backspace
+              Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark ? Colors.white10 : Colors.black10,
+                      width: 0.5,
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Done Button (Kurdish: تەواو)
-                      TextButton(
-                        onPressed: () {
-                          ref.read(numericKeyboardProvider.notifier).hide();
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          'تەواو',
-                          style: AppTextStyles.bodyBold.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontSize: 16,
-                          ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Done Button (Kurdish: تەواو)
+                    TextButton(
+                      onPressed: () {
+                        ref.read(numericKeyboardProvider.notifier).hide();
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'تەواو',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontSize: 15,
                         ),
                       ),
-                      // Backspace Button
-                      IconButton(
-                        icon: const Icon(Icons.backspace_outlined),
-                        color: isDark ? Colors.white70 : Colors.black.withOpacity(0.7),
-                        iconSize: 22,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          ref.read(numericKeyboardProvider.notifier).delete();
-                        },
+                    ),
+                    // Backspace Button
+                    IconButton(
+                      icon: const Icon(Icons.backspace_outlined),
+                      color: isDark ? Colors.white70 : Colors.black.withOpacity(0.7),
+                      iconSize: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        ref.read(numericKeyboardProvider.notifier).delete();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // Keyboard Key Grid
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            _buildKey(context, ref, '1'),
+                            _buildKey(context, ref, '2'),
+                            _buildKey(context, ref, '3'),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            _buildKey(context, ref, '4'),
+                            _buildKey(context, ref, '5'),
+                            _buildKey(context, ref, '6'),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            _buildKey(context, ref, '7'),
+                            _buildKey(context, ref, '8'),
+                            _buildKey(context, ref, '9'),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            _buildKey(context, ref, '-', isSpecial: true),
+                            _buildKey(context, ref, '0'),
+                            _buildKey(context, ref, '.', isSpecial: true),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // Keyboard Key Grid
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              _buildKey(context, ref, '1'),
-                              _buildKey(context, ref, '2'),
-                              _buildKey(context, ref, '3'),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              _buildKey(context, ref, '4'),
-                              _buildKey(context, ref, '5'),
-                              _buildKey(context, ref, '6'),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              _buildKey(context, ref, '7'),
-                              _buildKey(context, ref, '8'),
-                              _buildKey(context, ref, '9'),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              _buildKey(context, ref, '-', isSpecial: true),
-                              _buildKey(context, ref, '0'),
-                              _buildKey(context, ref, '.', isSpecial: true),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
-
-    // If screen is desktop/wide, center the keyboard at the bottom with a max-width and border-radius
-    if (screenWidth >= 1024) {
-      return Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 10,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: keyboardWidget,
-        ),
-      );
-    }
-
-    return keyboardWidget;
   }
 
   Widget _buildKey(
@@ -178,7 +153,7 @@ class GlobalNumericKeyboard extends ConsumerWidget {
 
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(2),
         child: Material(
           color: buttonColor,
           borderRadius: BorderRadius.circular(6),
@@ -215,34 +190,7 @@ class GlobalNumericKeyboardWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(numericKeyboardProvider);
-
-    final double keyboardHeight = state.isVisible ? 290 : 0;
-
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        viewInsets: MediaQuery.of(context).viewInsets.copyWith(
-          bottom: keyboardHeight + MediaQuery.of(context).viewInsets.bottom,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: child,
-          ),
-          if (state.isVisible)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onTap: () {}, // Swallows taps on the keyboard background itself
-                behavior: HitTestBehavior.opaque,
-                child: const GlobalNumericKeyboard(),
-              ),
-            ),
-        ],
-      ),
-    );
+    // The keyboard is now displayed as a dropdown linked to each AppTextField, so the global screen-bottom keyboard is disabled.
+    return child;
   }
 }
