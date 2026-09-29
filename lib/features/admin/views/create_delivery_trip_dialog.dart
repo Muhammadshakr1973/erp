@@ -384,6 +384,13 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                   final orderId = order.id;
                                   final isSelected = _selectedOrderIds.contains(orderId);
 
+                                  final routeText = (order.customerRouteName != null && order.customerRouteName.trim().isNotEmpty)
+                                      ? order.customerRouteName.trim()
+                                      : 'دیاری نەکراوە';
+                                  final noteText = (order.notes != null && order.notes!.trim().isNotEmpty)
+                                      ? order.notes!.trim()
+                                      : 'نییە';
+
                                   return Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -422,188 +429,115 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                         ),
                                         child: Padding(
                                           padding: const EdgeInsets.all(AppSpacing.md),
-                                          child: Column(
+                                          child: Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              // Top Row: Order Badge & Checkbox
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 4,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                                          borderRadius: BorderRadius.circular(AppRadius.xs),
-                                                        ),
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
-                                                              Icons.receipt_long_rounded,
-                                                              size: 15,
-                                                              color: theme.colorScheme.primary,
-                                                            ),
-                                                            const SizedBox(width: 4),
-                                                            Text(
-                                                              'پسوڵەی #${order.orderNumber}',
-                                                              style: AppTextStyles.caption.copyWith(
-                                                                fontWeight: FontWeight.bold,
-                                                                color: theme.colorScheme.primary,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                          vertical: 4,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                                                          borderRadius: BorderRadius.circular(AppRadius.xs),
-                                                        ),
-                                                        child: Text(
-                                                          '${Formatters.currency(order.totalAmount)} د.ع',
-                                                          style: AppTextStyles.caption.copyWith(
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
+                                              // Checkbox
+                                              SizedBox(
+                                                height: 24,
+                                                width: 24,
+                                                child: Checkbox(
+                                                  value: isSelected,
+                                                  activeColor: theme.colorScheme.primary,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(4),
                                                   ),
-                                                  SizedBox(
-                                                    height: 24,
-                                                    width: 24,
-                                                    child: Checkbox(
-                                                      value: isSelected,
-                                                      activeColor: theme.colorScheme.primary,
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      onChanged: (bool? checked) {
-                                                        setState(() {
-                                                          if (checked == true) {
-                                                            _selectedOrderIds.add(orderId);
-                                                          } else {
-                                                            _selectedOrderIds.remove(orderId);
-                                                          }
-                                                        });
-                                                      },
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: AppSpacing.sm),
-
-                                              // Customer Name
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.person_outline_rounded,
-                                                    size: 16,
-                                                    color: theme.colorScheme.primary,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'ناوی کڕیار: ${order.customerName}',
-                                                      style: AppTextStyles.bodyBold.copyWith(
-                                                        fontSize: 14,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-
-                                              // Route Name
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.alt_route_rounded,
-                                                    size: 15,
-                                                    color: Colors.grey,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'ڕاوت: ${order.customerRouteName}',
-                                                      style: AppTextStyles.bodyMedium.copyWith(
-                                                        color: theme.colorScheme.onSurfaceVariant,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-
-                                              // Text Address
-                                              Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  const Icon(
-                                                    Icons.location_on_outlined,
-                                                    size: 15,
-                                                    color: Colors.grey,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      'ناونیشان: ${order.customerAddress}',
-                                                      style: AppTextStyles.caption.copyWith(
-                                                        color: theme.colorScheme.onSurfaceVariant,
-                                                      ),
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-
-                                              // Order Notes (تێبینی مەندوب)
-                                              if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.warning.withValues(alpha: 0.12),
-                                                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                                                    border: Border.all(
-                                                      color: AppColors.warning.withValues(alpha: 0.35),
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.sticky_note_2_outlined,
-                                                        size: 16,
-                                                        color: AppColors.warning,
-                                                      ),
-                                                      const SizedBox(width: 6),
-                                                      Expanded(
-                                                        child: Text(
-                                                          'تێبینی مەندوب: ${order.notes!.trim()}',
-                                                          style: AppTextStyles.caption.copyWith(
-                                                            color: theme.colorScheme.onSurface,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                  onChanged: (bool? checked) {
+                                                    setState(() {
+                                                      if (checked == true) {
+                                                        _selectedOrderIds.add(orderId);
+                                                      } else {
+                                                        _selectedOrderIds.remove(orderId);
+                                                      }
+                                                    });
+                                                  },
                                                 ),
-                                              ],
+                                              ),
+                                              const SizedBox(width: AppSpacing.sm),
+
+                                              // Details: Customer Name, Route, Notes ONLY
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Customer Name
+                                                    Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.person_outline_rounded,
+                                                          size: 18,
+                                                          color: theme.colorScheme.primary,
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'ناوی کڕیار: ${order.customerName}',
+                                                            style: AppTextStyles.bodyBold.copyWith(
+                                                              fontSize: 14,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 6),
+
+                                                    // Route Name
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.alt_route_rounded,
+                                                          size: 16,
+                                                          color: Colors.grey,
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'ڕاوت: $routeText',
+                                                            style: AppTextStyles.bodyMedium.copyWith(
+                                                              color: theme.colorScheme.onSurfaceVariant,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 6),
+
+                                                    // Notes
+                                                    Row(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.sticky_note_2_outlined,
+                                                          size: 16,
+                                                          color: noteText != 'نییە'
+                                                              ? AppColors.warning
+                                                              : Colors.grey,
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'تێبینی: $noteText',
+                                                            style: AppTextStyles.caption.copyWith(
+                                                              color: noteText != 'نییە'
+                                                                  ? theme.colorScheme.onSurface
+                                                                  : theme.colorScheme.onSurfaceVariant,
+                                                              fontWeight: noteText != 'نییە'
+                                                                  ? FontWeight.w600
+                                                                  : FontWeight.normal,
+                                                            ),
+                                                            maxLines: 2,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
