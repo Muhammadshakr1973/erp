@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api_client.dart';
@@ -59,6 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await api.client.post(
         '/auth/login',
         data: {'phone': phone, 'password': password, 'device_name': _getDeviceName()},
+        options: Options(validateStatus: (status) => status != null && status < 500),
       );
 
       if (response.statusCode == 200) {
@@ -81,15 +83,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         state = state.copyWith(isLoading: false, user: user);
         return true;
+      } else {
+        final errorMsg = api.extractErrorMessage(response.data, defaultMsg: 'ژمارەی مۆبایل یان وشەی نهێنی هەڵەیە');
+        state = state.copyWith(isLoading: false, error: errorMsg);
+        return false;
       }
     } catch (e) {
       final errorMsg = ref.read(apiClientProvider).parseError(e);
       state = state.copyWith(isLoading: false, error: errorMsg);
       return false;
     }
-
-    state = state.copyWith(isLoading: false, error: 'هەڵەیەکی نەزانراو ڕوویدا');
-    return false;
   }
 
   Future<bool> loginByBarcode(String barcode) async {
@@ -100,6 +103,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await api.client.post(
         '/auth/login',
         data: {'barcode': barcode, 'device_name': _getDeviceName()},
+        options: Options(validateStatus: (status) => status != null && status < 500),
       );
 
       if (response.statusCode == 200) {
@@ -122,15 +126,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         state = state.copyWith(isLoading: false, user: user);
         return true;
+      } else {
+        final errorMsg = api.extractErrorMessage(response.data, defaultMsg: 'هیچ بەکارهێنەرێک بەم بارکۆدە نەدۆزرایەوە');
+        state = state.copyWith(isLoading: false, error: errorMsg);
+        return false;
       }
     } catch (e) {
       final errorMsg = ref.read(apiClientProvider).parseError(e);
       state = state.copyWith(isLoading: false, error: errorMsg);
       return false;
     }
-
-    state = state.copyWith(isLoading: false, error: 'هەڵەیەکی نەزانراو ڕوویدا');
-    return false;
   }
 
   Future<void> logout() async {

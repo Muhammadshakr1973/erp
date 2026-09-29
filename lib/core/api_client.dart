@@ -22,6 +22,7 @@ class ApiClient {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
+        validateStatus: (status) => status != null && status < 500,
       ),
     );
 
@@ -53,27 +54,32 @@ class ApiClient {
 
   Dio get client => _dio;
 
+  // Helper to extract error message from response data directly
+  String extractErrorMessage(dynamic data, {String defaultMsg = 'ژمارەی مۆبایل یان وشەی نهێنی هەڵەیە'}) {
+    if (data is Map) {
+      if (data['errors'] != null && data['errors'] is Map) {
+        final errors = data['errors'] as Map;
+        if (errors.isNotEmpty) {
+          final firstError = errors.values.first;
+          if (firstError is List && firstError.isNotEmpty) {
+            return firstError.first.toString();
+          } else if (firstError != null) {
+            return firstError.toString();
+          }
+        }
+      }
+      if (data['message'] != null && data['message'].toString().isNotEmpty) {
+        return data['message'].toString();
+      }
+    }
+    return defaultMsg;
+  }
+
   // Error parser helper
   String parseError(dynamic error) {
     if (error is DioException) {
       if (error.response != null && error.response!.data != null) {
-        try {
-          final data = error.response!.data;
-          if (data is Map) {
-            if (data['errors'] != null && data['errors'] is Map) {
-              final errors = data['errors'] as Map;
-              if (errors.isNotEmpty) {
-                final firstError = errors.values.first;
-                if (firstError is List && firstError.isNotEmpty) {
-                  return firstError.first.toString();
-                }
-              }
-            }
-            if (data['message'] != null) {
-              return data['message'].toString();
-            }
-          }
-        } catch (_) {}
+        return extractErrorMessage(error.response!.data, defaultMsg: error.message ?? 'هەڵەی نادیار');
       }
       switch (error.type) {
         case DioExceptionType.connectionTimeout:
@@ -85,6 +91,8 @@ class ApiClient {
         default:
           return 'هەڵەیەک ڕوویدا: ${error.message ?? 'هەڵەی نادیار'}';
       }
+    } else if (error is Map) {
+      return extractErrorMessage(error);
     }
     return error.toString();
   }
