@@ -18,11 +18,18 @@ class GlobalNumericKeyboard extends ConsumerWidget {
 
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(16),
-        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E7EB),
-        child: Container(
+      child: Listener(
+        onPointerDown: (_) {
+          ref.read(numericKeyboardProvider.notifier).setTapping(true);
+        },
+        onPointerUp: (_) {
+          ref.read(numericKeyboardProvider.notifier).setTapping(false);
+        },
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(16),
+          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E7EB),
+          child: Container(
           height: keyboardHeight,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -137,6 +144,7 @@ class GlobalNumericKeyboard extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
 

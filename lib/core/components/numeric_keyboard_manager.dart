@@ -7,6 +7,7 @@ class NumericKeyboardState {
   final bool decimal;
   final bool signed;
   final bool isVisible;
+  final bool isTappingKeyboard;
   final ValueChanged<String>? onChanged;
 
   NumericKeyboardState({
@@ -15,6 +16,7 @@ class NumericKeyboardState {
     this.decimal = true,
     this.signed = true,
     this.isVisible = false,
+    this.isTappingKeyboard = false,
     this.onChanged,
   });
 
@@ -24,6 +26,7 @@ class NumericKeyboardState {
     bool? decimal,
     bool? signed,
     bool? isVisible,
+    bool? isTappingKeyboard,
     ValueChanged<String>? onChanged,
     bool clearAll = false,
   }) {
@@ -36,6 +39,7 @@ class NumericKeyboardState {
       decimal: decimal ?? this.decimal,
       signed: signed ?? this.signed,
       isVisible: isVisible ?? this.isVisible,
+      isTappingKeyboard: isTappingKeyboard ?? this.isTappingKeyboard,
       onChanged: onChanged ?? this.onChanged,
     );
   }
@@ -57,8 +61,13 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       decimal: decimal,
       signed: signed,
       isVisible: true,
+      isTappingKeyboard: false,
       onChanged: onChanged,
     );
+  }
+
+  void setTapping(bool tapping) {
+    state = state.copyWith(isTappingKeyboard: tapping);
   }
 
   void hide() {
@@ -111,15 +120,6 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     final text = controller.text;
     final selection = controller.selection;
 
-    // Check decimal constraint
-    if (char == '.') {
-      if (!state.decimal) return;
-      if (text.contains('.')) return;
-    }
-
-    String newText;
-    int cursorPosition;
-
     // Sanitize start and end of selection
     int start = selection.isValid ? selection.start : text.length;
     int end = selection.isValid ? selection.end : text.length;
@@ -133,6 +133,17 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       start = end;
       end = temp;
     }
+
+    final String textRemaining = text.replaceRange(start, end, '');
+
+    // Check decimal constraint
+    if (char == '.') {
+      if (!state.decimal) return;
+      if (textRemaining.contains('.')) return;
+    }
+
+    String newText;
+    int cursorPosition;
 
     if (start != end) {
       // Replace selection

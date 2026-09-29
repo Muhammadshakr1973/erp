@@ -108,7 +108,12 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         _hideKeyboardOverlay();
       }
     } else {
-      _hideKeyboardOverlay();
+      final keyboardState = ref.read(numericKeyboardProvider);
+      if (keyboardState.isTappingKeyboard && keyboardState.focusNode == _effectiveFocusNode) {
+        _effectiveFocusNode.requestFocus();
+      } else {
+        _hideKeyboardOverlay();
+      }
     }
   }
 
