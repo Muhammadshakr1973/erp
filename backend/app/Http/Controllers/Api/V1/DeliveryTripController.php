@@ -22,7 +22,7 @@ class DeliveryTripController extends Controller
     public function index(\Illuminate\Http\Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer'])->orderBy('id', 'desc');
+        $query = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer.route'])->orderBy('id', 'desc');
 
         if ($user && $user->isDriver()) {
             $query->where('driver_id', $user->id);
@@ -54,7 +54,7 @@ class DeliveryTripController extends Controller
     public function show(\Illuminate\Http\Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $trip = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer', 'orders.order.items.product'])->findOrFail($id);
+        $trip = \App\Models\DeliveryTrip::with(['driver', 'orders.order.customer.route', 'orders.order.items.product'])->findOrFail($id);
 
         if ($user && $user->isDriver() && (int)$trip->driver_id !== (int)$user->id) {
             return response()->json([
@@ -86,7 +86,7 @@ class DeliveryTripController extends Controller
 
         return response()->json([
             'message' => 'گەشتەکە بەسەرکەوتوویی دروستکرا و پسوڵەکان دران بە شۆفێر',
-            'data'    => $trip->load(['driver', 'orders.order.customer'])
+            'data'    => $trip->load(['driver', 'orders.order.customer.route'])
         ], 201);
     }
 

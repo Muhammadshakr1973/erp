@@ -8,11 +8,9 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
 import '../../orders/providers/orders_provider.dart';
-import '../../shared/views/map_picker_dialog.dart';
 
 class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
   const CreateDeliveryTripDialog({super.key});
@@ -420,44 +418,22 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                // Top Row: Order Number & Total Money
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(
-                                                      child: Text(
-                                                        'پسوڵەی #${order.orderNumber}',
-                                                        style: AppTextStyles.bodyBold,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: AppSpacing.xs),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                      decoration: BoxDecoration(
-                                                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                                        borderRadius: BorderRadius.circular(AppRadius.xs),
-                                                      ),
-                                                      child: Text(
-                                                        'کۆی پارە: ${Formatters.currency(order.totalAmount)} د.ع',
-                                                        style: AppTextStyles.bodyMedium.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                          color: theme.colorScheme.primary,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
+                                                // Top Row: Order Number
+                                                Text(
+                                                  'پسوڵەی #${order.orderNumber}',
+                                                  style: AppTextStyles.bodyBold,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                                 const SizedBox(height: 6),
-                                                // Customer Name
+                                                // Route Name (ڕاوتەکەی)
                                                 Row(
                                                   children: [
-                                                    const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                                                    const Icon(Icons.alt_route_outlined, size: 16, color: Colors.grey),
                                                     const SizedBox(width: 4),
                                                     Expanded(
                                                       child: Text(
-                                                        'ناوی کڕیار: ${order.customerName}',
+                                                        'ڕاوت: ${order.customerRouteName}',
                                                         style: AppTextStyles.bodyMedium.copyWith(
                                                           fontWeight: FontWeight.w600,
                                                         ),
@@ -468,7 +444,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                                   ],
                                                 ),
                                                 const SizedBox(height: 4),
-                                                // Text Address
+                                                // Text Address (ناونیشانە تێکستەکەی)
                                                 Row(
                                                   children: [
                                                     const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
@@ -482,35 +458,6 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                                       ),
                                                     ),
                                                   ],
-                                                ),
-                                                const SizedBox(height: 8),
-                                                // Button to show customer location on map
-                                                OutlinedButton.icon(
-                                                  style: OutlinedButton.styleFrom(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                    minimumSize: Size.zero,
-                                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                    side: BorderSide(
-                                                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                                                    ),
-                                                  ),
-                                                  icon: const Icon(Icons.map_outlined, size: 16),
-                                                  label: const Text(
-                                                    'شوێنی کڕیار لەسەر نەخشە',
-                                                    style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
-                                                  ),
-                                                  onPressed: () {
-                                                    MapPickerDialog.showCustomerLocation(
-                                                      context,
-                                                      customerName: order.customerName,
-                                                      customerAddress: order.customerAddress,
-                                                      latitude: order.customerLatitude,
-                                                      longitude: order.customerLongitude,
-                                                    );
-                                                  },
                                                 ),
                                               ],
                                             ),

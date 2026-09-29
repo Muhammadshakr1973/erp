@@ -161,6 +161,26 @@ class OrderModel {
     return 'کڕیاری نەناسراو';
   }
 
+  String get customerRouteName {
+    if (customer == null) return 'ڕاوت دیاری نەکراوە';
+    if (customer is Map) {
+      if (customer['route'] != null && customer['route'] is Map) {
+        final rName = customer['route']['name']?.toString();
+        if (rName != null && rName.trim().isNotEmpty) return rName.trim();
+      }
+      final rNameDirect = customer['route_name']?.toString();
+      if (rNameDirect != null && rNameDirect.trim().isNotEmpty) return rNameDirect.trim();
+    }
+    try {
+      final routeVal = (customer as dynamic).route;
+      if (routeVal != null) {
+        final rName = (routeVal as dynamic).name;
+        if (rName != null && rName.toString().trim().isNotEmpty) return rName.toString().trim();
+      }
+    } catch (_) {}
+    return 'ڕاوت دیاری نەکراوە';
+  }
+
   String get customerAddress {
     if (customer == null) return 'ناونیشان دیاری نەکراوە';
     if (customer is Map) {
