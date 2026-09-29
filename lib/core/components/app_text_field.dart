@@ -55,8 +55,7 @@ class AppTextField extends ConsumerStatefulWidget {
 class _AppTextFieldState extends ConsumerState<AppTextField> {
   FocusNode? _localFocusNode;
   TextEditingController? _localController;
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
+  bool _isDialogShowing = false;
 
   FocusNode get _effectiveFocusNode => widget.focusNode ?? (_localFocusNode ??= FocusNode());
   TextEditingController get _effectiveController => widget.controller ?? (_localController ??= TextEditingController());
@@ -78,7 +77,6 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
 
   @override
   void dispose() {
-    _hideKeyboardOverlay();
     _effectiveFocusNode.removeListener(_onFocusChange);
     _localFocusNode?.dispose();
     _localController?.dispose();
@@ -101,71 +99,39 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
               signed: true,  // Always allow negative sign on our custom iOS layout
               onChanged: widget.onChanged,
             );
-        _showKeyboardOverlay();
+        _showKeyboardDialog();
       } else {
         // If a non-numeric field is focused, immediately hide the custom numeric keyboard
         ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
-        _hideKeyboardOverlay();
-      }
-    } else {
-      final keyboardState = ref.read(numericKeyboardProvider);
-      if (keyboardState.isTappingKeyboard && keyboardState.focusNode == _effectiveFocusNode) {
-        _effectiveFocusNode.requestFocus();
-      } else {
-        _hideKeyboardOverlay();
       }
     }
   }
 
-  void _showKeyboardOverlay() {
-    if (_overlayEntry != null) return;
+  void _showKeyboardDialog() {
+    if (_isDialogShowing) return;
+    _isDialogShowing = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _overlayEntry != null) return;
-
-      final overlay = Overlay.of(context);
-      _overlayEntry = OverlayEntry(
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: true,
         builder: (context) {
-          final renderBox = this.context.findRenderObject() as RenderBox?;
-          final width = renderBox?.size.width ?? 300.0;
-
-          return Consumer(
-            builder: (context, ref, child) {
-              final keyboardState = ref.watch(numericKeyboardProvider);
-              if (!keyboardState.isVisible || keyboardState.focusNode != _effectiveFocusNode) {
-                return const SizedBox.shrink();
-              }
-
-              return Stack(
-                children: [
-                  Positioned(
-                    width: width,
-                    child: CompositedTransformFollower(
-                      link: _layerLink,
-                      showWhenUnlinked: false,
-                      targetAnchor: Alignment.bottomLeft,
-                      followerAnchor: Alignment.topLeft,
-                      offset: const Offset(0, 4),
-                      child: TapRegion(
-                        groupId: _effectiveFocusNode,
-                        child: const GlobalNumericKeyboard(),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
+          return NumericKeyboardDialog(
+            controller: _effectiveController,
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            onChanged: widget.onChanged,
           );
         },
-      );
-
-      overlay.insert(_overlayEntry!);
+      ).then((_) {
+        _isDialogShowing = false;
+        if (mounted) {
+          _effectiveFocusNode.unfocus();
+        }
+        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
+      });
     });
-  }
-
-  void _hideKeyboardOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
   }
 
   @override
@@ -181,16 +147,13 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     return TapRegion(
       groupId: _effectiveFocusNode,
       onTapOutside: (event) {
-        // If the user tapped completely outside the input field and its custom keyboard dropdown, unfocus and close it.
+        // If the user tapped completely outside the input field, unfocus it.
         if (_effectiveFocusNode.hasFocus) {
           _effectiveFocusNode.unfocus();
           ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
-          _hideKeyboardOverlay();
         }
       },
-      child: CompositedTransformTarget(
-        link: _layerLink,
-        child: TextFormField(
+      child: TextFormField(
         controller: _effectiveController,
         focusNode: _effectiveFocusNode,
         keyboardType: effectiveKeyboardType,
@@ -263,7 +226,6 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
               ),
             ),
       ),
-    ),
     );
   }
 }
