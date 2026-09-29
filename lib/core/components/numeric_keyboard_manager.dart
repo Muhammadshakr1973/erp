@@ -74,6 +74,14 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
   }) {
     if (state.controller != controller) {
       _removeListener();
+    }
+
+    // Position the cursor at the end of the text to ensure natural appending and deleting
+    final text = controller.text;
+    controller.selection = TextSelection.collapsed(offset: text.length);
+    _lastSelection = controller.selection;
+
+    if (state.controller != controller) {
       controller.addListener(_handleControllerSelectionChange);
     }
 
@@ -86,8 +94,6 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       isTappingKeyboard: state.isTappingKeyboard, // Preserve tapping status during focus fluctuation
       onChanged: onChanged,
     );
-
-    _lastSelection = controller.selection;
   }
 
   void setTapping(bool tapping) {
