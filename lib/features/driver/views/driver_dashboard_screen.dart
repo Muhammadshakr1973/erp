@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/components/app_button.dart';
 import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../admin/views/create_delivery_trip_dialog.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../providers/driver_providers.dart';
 
@@ -135,14 +133,6 @@ class DriverDashboardScreen extends ConsumerWidget {
                             value: '$readyOrdersCount',
                             icon: Icons.inventory_2_outlined,
                             color: AppColors.warning,
-                            onTap: readyOrdersCount > 0
-                                ? () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => const CreateDeliveryTripDialog(),
-                                    );
-                                  }
-                                : null,
                           ),
                         ],
                       );
@@ -153,24 +143,9 @@ class DriverDashboardScreen extends ConsumerWidget {
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.xl),
-                        child: Column(
-                          children: [
-                            Text(
-                              'هیچ گەشتێک نییە بۆ ئەمڕۆ',
-                              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            AppButton(
-                              text: 'دروستکردنی گەشت لە پسوڵە ئامادەکراوەکان',
-                              icon: Icons.add_rounded,
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => const CreateDeliveryTripDialog(),
-                                );
-                              },
-                            ),
-                          ],
+                        child: Text(
+                          'هیچ گەشتێک نییە بۆ ئەمڕۆ',
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
                         ),
                       ),
                     )
