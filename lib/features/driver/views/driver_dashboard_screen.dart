@@ -10,6 +10,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../admin/views/create_delivery_trip_dialog.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../providers/driver_providers.dart';
 
 class DriverDashboardScreen extends ConsumerWidget {
@@ -18,6 +19,7 @@ class DriverDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tripsAsync = ref.watch(driverTripsProvider);
+    final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -42,7 +44,11 @@ class DriverDashboardScreen extends ConsumerWidget {
                 Text(err.toString(), style: AppTextStyles.caption),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
-                  onPressed: () => ref.invalidate(driverTripsProvider),
+                  onPressed: () {
+                    ref.invalidate(driverTripsProvider);
+                    ref.invalidate(ordersListProvider);
+                    ref.invalidate(readyOrdersForDeliveryProvider);
+                  },
                   child: const Text('دووبارە هەوڵبدەرەوە'),
                 ),
               ],
@@ -65,8 +71,17 @@ class DriverDashboardScreen extends ConsumerWidget {
             }
           }
 
+          final readyOrdersCount = readyOrdersAsync.maybeWhen(
+            data: (orders) => orders.length,
+            orElse: () => 0,
+          );
+
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(driverTripsProvider),
+            onRefresh: () async {
+              ref.invalidate(driverTripsProvider);
+              ref.invalidate(ordersListProvider);
+              ref.invalidate(readyOrdersForDeliveryProvider);
+            },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
@@ -113,6 +128,21 @@ class DriverDashboardScreen extends ConsumerWidget {
                             value: '${_formatCurrency(totalCollected)} د.ع',
                             icon: AppIcons.customerDebt,
                             color: AppColors.primary,
+                          ),
+                          _buildStatCard(
+                            context: context,
+                            title: 'پسوڵەی پاکەتکراو (بێ گەشت)',
+                            value: '$readyOrdersCount',
+                            icon: Icons.inventory_2_outlined,
+                            color: AppColors.warning,
+                            onTap: readyOrdersCount > 0
+                                ? () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => const CreateDeliveryTripDialog(),
+                                    );
+                                  }
+                                : null,
                           ),
                         ],
                       );
@@ -239,9 +269,11 @@ class DriverDashboardScreen extends ConsumerWidget {
     required String value,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -257,6 +289,12 @@ class DriverDashboardScreen extends ConsumerWidget {
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
+              if (onTap != null)
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: color,
+                ),
             ],
           ),
           const SizedBox(height: 2),

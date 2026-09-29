@@ -13,6 +13,7 @@ import '../../../core/utils/formatters.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import 'create_sales_return_dialog.dart';
+import 'map_picker_dialog.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -360,12 +361,10 @@ class OrderDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     OrderModel order,
   ) {
-    final customerName =
-        order.customer != null ? order.customer['name'] ?? '-' : '-';
-    final salesmanName =
-        order.salesman != null ? order.salesman['name'] ?? '-' : '-';
-    final warehouseName =
-        order.warehouse != null ? order.warehouse['name'] ?? '-' : '-';
+    final customerName = order.customerName;
+    final customerAddress = order.customerAddress;
+    final salesmanName = order.salesmanName;
+    final warehouseName = order.warehouseName;
 
     StatusBadgeType statusType = StatusBadgeType.warning;
     switch (order.status) {
@@ -398,11 +397,35 @@ class OrderDetailScreen extends ConsumerWidget {
               const Text('زانیاری پسوڵە', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.md),
               _buildInfoRow('کڕیار', customerName),
+              _buildInfoRow('ناونیشان', customerAddress),
               _buildInfoRow('مەندوب', salesmanName),
               _buildInfoRow('کۆگا', warehouseName),
               _buildInfoRow(
                 'بەروار',
                 order.createdAt.split('T').first,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                  icon: const Icon(Icons.map_outlined, size: 16),
+                  label: const Text(
+                    'شوێنی کڕیار لەسەر نەخشە',
+                    style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                  ),
+                  onPressed: () {
+                    MapPickerDialog.showCustomerLocation(
+                      context,
+                      customerName: customerName,
+                      customerAddress: customerAddress,
+                      latitude: order.customerLatitude,
+                      longitude: order.customerLongitude,
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(

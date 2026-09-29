@@ -161,6 +161,45 @@ class OrderModel {
     return 'کڕیاری نەناسراو';
   }
 
+  String get customerAddress {
+    if (customer == null) return 'ناونیشان دیاری نەکراوە';
+    if (customer is Map) {
+      final addr = customer['address']?.toString() ?? '';
+      return addr.trim().isNotEmpty ? addr.trim() : 'ناونیشان دیاری نەکراوە';
+    }
+    try {
+      final addrVal = (customer as dynamic).address;
+      if (addrVal != null && addrVal.toString().trim().isNotEmpty) {
+        return addrVal.toString().trim();
+      }
+    } catch (_) {}
+    return 'ناونیشان دیاری نەکراوە';
+  }
+
+  double? get customerLatitude {
+    if (customer == null) return null;
+    if (customer is Map) {
+      return double.tryParse(customer['latitude']?.toString() ?? '');
+    }
+    try {
+      final lat = (customer as dynamic).latitude;
+      if (lat != null) return double.tryParse(lat.toString());
+    } catch (_) {}
+    return null;
+  }
+
+  double? get customerLongitude {
+    if (customer == null) return null;
+    if (customer is Map) {
+      return double.tryParse(customer['longitude']?.toString() ?? '');
+    }
+    try {
+      final lng = (customer as dynamic).longitude;
+      if (lng != null) return double.tryParse(lng.toString());
+    } catch (_) {}
+    return null;
+  }
+
   String get salesmanName {
     if (salesman == null) return 'مەندوبی نەناسراو';
     if (salesman is Map) return salesman['name']?.toString() ?? 'مەندوبی نەناسراو';

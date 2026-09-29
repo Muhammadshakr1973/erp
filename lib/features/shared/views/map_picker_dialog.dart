@@ -10,6 +10,34 @@ class MapPickerDialog extends StatefulWidget {
 
   const MapPickerDialog({super.key, this.initialLocation});
 
+  static Future<void> showCustomerLocation(
+    BuildContext context, {
+    required String customerName,
+    required String customerAddress,
+    double? latitude,
+    double? longitude,
+  }) async {
+    if (latitude != null && longitude != null && (latitude != 0 || longitude != 0)) {
+      await showDialog(
+        context: context,
+        builder: (context) => MapPickerDialog(
+          initialLocation: LatLng(latitude, longitude),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'کڕیاری "$customerName" نیشانەی نەخشەی (GPS) بۆ تۆمار نەکراوە. ناونیشان: $customerAddress',
+            style: const TextStyle(fontFamily: 'Rudaw'),
+          ),
+          backgroundColor: Colors.orangeAccent,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   @override
   State<MapPickerDialog> createState() => _MapPickerDialogState();
 }

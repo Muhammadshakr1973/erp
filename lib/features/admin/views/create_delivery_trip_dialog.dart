@@ -12,6 +12,7 @@ import '../../../core/utils/formatters.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../shared/views/map_picker_dialog.dart';
 
 class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
   const CreateDeliveryTripDialog({super.key});
@@ -397,47 +398,125 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                           ? theme.colorScheme.primary.withValues(alpha: 0.04)
                                           : null,
                                     ),
-                                    child: CheckboxListTile(
-                                      value: isSelected,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.sm,
-                                        vertical: 0,
-                                      ),
-                                      title: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(AppSpacing.sm),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Expanded(
-                                            child: Text(
-                                              order.orderNumber,
-                                              style: AppTextStyles.bodyBold,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (bool? checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  _selectedOrderIds.add(orderId);
+                                                } else {
+                                                  _selectedOrderIds.remove(orderId);
+                                                }
+                                              });
+                                            },
                                           ),
                                           const SizedBox(width: AppSpacing.xs),
-                                          Text(
-                                            Formatters.currency(order.totalAmount),
-                                            style: AppTextStyles.bodyMedium.copyWith(
-                                              fontWeight: FontWeight.bold,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                // Top Row: Order Number & Total Money
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        'پسوڵەی #${order.orderNumber}',
+                                                        style: AppTextStyles.bodyBold,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: AppSpacing.xs),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                      decoration: BoxDecoration(
+                                                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                                                      ),
+                                                      child: Text(
+                                                        'کۆی پارە: ${Formatters.currency(order.totalAmount)} د.ع',
+                                                        style: AppTextStyles.bodyMedium.copyWith(
+                                                          fontWeight: FontWeight.bold,
+                                                          color: theme.colorScheme.primary,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 6),
+                                                // Customer Name
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'ناوی کڕیار: ${order.customerName}',
+                                                        style: AppTextStyles.bodyMedium.copyWith(
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 4),
+                                                // Text Address
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                                                    const SizedBox(width: 4),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'ناونیشان: ${order.customerAddress}',
+                                                        style: AppTextStyles.caption,
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                // Button to show customer location on map
+                                                OutlinedButton.icon(
+                                                  style: OutlinedButton.styleFrom(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                    minimumSize: Size.zero,
+                                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                    side: BorderSide(
+                                                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                                    ),
+                                                  ),
+                                                  icon: const Icon(Icons.map_outlined, size: 16),
+                                                  label: const Text(
+                                                    'شوێنی کڕیار لەسەر نەخشە',
+                                                    style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                                                  ),
+                                                  onPressed: () {
+                                                    MapPickerDialog.showCustomerLocation(
+                                                      context,
+                                                      customerName: order.customerName,
+                                                      customerAddress: order.customerAddress,
+                                                      latitude: order.customerLatitude,
+                                                      longitude: order.customerLongitude,
+                                                    );
+                                                  },
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
-                                      subtitle: Text(
-                                        order.customerName,
-                                        style: AppTextStyles.caption,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      onChanged: (bool? checked) {
-                                        setState(() {
-                                          if (checked == true) {
-                                            _selectedOrderIds.add(orderId);
-                                          } else {
-                                            _selectedOrderIds.remove(orderId);
-                                          }
-                                        });
-                                      },
                                     ),
                                   );
                                 },

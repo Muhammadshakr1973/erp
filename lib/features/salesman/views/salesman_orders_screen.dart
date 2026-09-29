@@ -13,6 +13,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../shared/views/customer_selection_dialog.dart';
+import '../../shared/views/map_picker_dialog.dart';
 import '../../shared/views/new_order_creation_dialog.dart';
 
 class SalesmanOrdersScreen extends ConsumerWidget {
@@ -121,9 +122,8 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final order = filtered[index];
-              final customerName = order.customer != null
-                  ? order.customer['name']
-                  : 'نەناسراو';
+              final customerName = order.customerName;
+              final customerAddress = order.customerAddress;
 
               String statusLabel = 'داڕشتن (Draft)';
               StatusBadgeType statusType = StatusBadgeType.warning;
@@ -172,47 +172,99 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                 onLongPress: () {
                   _showDeleteConfirmationDialog(context, ref, order, customerName);
                 },
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          AppIcons.order,
-                          color: theme.colorScheme.primary,
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              AppIcons.order,
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(customerName, style: AppTextStyles.bodyBold, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 2),
+                              Text(
+                                'پسوڵەی #${order.orderNumber}',
+                                style: AppTextStyles.caption,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              Formatters.currency(order.totalAmount),
+                              style: AppTextStyles.price,
+                            ),
+                            const SizedBox(height: 2),
+                            StatusBadge(label: statusLabel, type: statusType),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(customerName, style: AppTextStyles.bodyBold),
-                          const SizedBox(height: 4),
-                          Text(
-                            'پسوڵەی #${order.orderNumber}',
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            customerAddress,
                             style: AppTextStyles.caption,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currency(order.totalAmount),
-                          style: AppTextStyles.price,
                         ),
-                        const SizedBox(height: 4),
-                        StatusBadge(label: statusLabel, type: statusType),
+                        InkWell(
+                          onTap: () {
+                            MapPickerDialog.showCustomerLocation(
+                              context,
+                              customerName: customerName,
+                              customerAddress: customerAddress,
+                              latitude: order.customerLatitude,
+                              longitude: order.customerLongitude,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.map_outlined, size: 14, color: theme.colorScheme.primary),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'شوێن',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],

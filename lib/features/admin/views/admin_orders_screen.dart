@@ -12,6 +12,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../shared/views/map_picker_dialog.dart';
 import 'admin_order_filter_dialog.dart';
 import 'providers/user_provider.dart';
 
@@ -341,17 +342,14 @@ class AdminOrdersScreen extends ConsumerWidget {
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: AppSpacing.md,
                   mainAxisSpacing: AppSpacing.md,
-                  mainAxisExtent: 90,
+                  mainAxisExtent: 135,
                 ),
                 itemCount: filteredOrders.length,
                 itemBuilder: (context, index) {
                   final order = filteredOrders[index];
-                  final customerName = order.customer != null
-                      ? order.customer['name']
-                      : 'نەناسراو';
-                  final salesmanName = order.salesman != null
-                      ? order.salesman['name']
-                      : 'نەناسراو';
+                  final customerName = order.customerName;
+                  final customerAddress = order.customerAddress;
+                  final salesmanName = order.salesmanName;
 
                   String statusLabel = 'ئامادەکردن';
                   StatusBadgeType statusType = StatusBadgeType.warning;
@@ -372,63 +370,98 @@ class AdminOrdersScreen extends ConsumerWidget {
                     onTap: () {
                       context.push('/order/${order.id}');
                     },
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primaryContainer,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Icon(
-                              AppIcons.order,
-                              color: theme.colorScheme.primary,
+                        Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  AppIcons.order,
+                                  size: 18,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(customerName, style: AppTextStyles.bodyBold),
-                              const SizedBox(height: 4),
-                              Row(
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      'پسوڵەی #${order.orderNumber} • مەندوب: $salesmanName',
-                                      style: AppTextStyles.caption,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  Text(customerName, style: AppTextStyles.bodyBold, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Text(
+                                    'پسوڵەی #${order.orderNumber} • مەندوب: $salesmanName',
+                                    style: AppTextStyles.caption,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  if (order.pendingSync) ...[
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.sync,
-                                      size: 12,
-                                      color: Colors.orange,
-                                    ),
-                                  ],
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              Formatters.currency(order.totalAmount),
-                              style: AppTextStyles.price,
                             ),
-                            const SizedBox(height: 4),
-                            StatusBadge(label: statusLabel, type: statusType),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  Formatters.currency(order.totalAmount),
+                                  style: AppTextStyles.price,
+                                ),
+                                const SizedBox(height: 2),
+                                StatusBadge(label: statusLabel, type: statusType),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                customerAddress,
+                                style: AppTextStyles.caption,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                MapPickerDialog.showCustomerLocation(
+                                  context,
+                                  customerName: customerName,
+                                  customerAddress: customerAddress,
+                                  latitude: order.customerLatitude,
+                                  longitude: order.customerLongitude,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.map_outlined, size: 14, color: theme.colorScheme.primary),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'شوێن',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ],

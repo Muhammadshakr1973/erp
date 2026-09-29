@@ -9,6 +9,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../shared/views/map_picker_dialog.dart';
 import '../providers/driver_providers.dart';
 
 class TripOrdersScreen extends ConsumerStatefulWidget {
@@ -148,27 +149,57 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                               ],
                             ),
                           ],
-                          if (_getCustomerAddress(order?.customer).isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on_outlined,
-                                  size: 16,
-                                  color: Colors.grey,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'ناونیشان: ${_getCustomerAddress(order?.customer)}',
+                                  style: AppTextStyles.caption,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    _getCustomerAddress(order?.customer),
-                                    style: AppTextStyles.caption,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(width: 4),
+                              InkWell(
+                                onTap: () {
+                                  MapPickerDialog.showCustomerLocation(
+                                    context,
+                                    customerName: customerName,
+                                    customerAddress: _getCustomerAddress(order?.customer),
+                                    latitude: _getCustomerLatitude(order?.customer),
+                                    longitude: _getCustomerLongitude(order?.customer),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.map_outlined, size: 14, color: theme.colorScheme.primary),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        'شوێن',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Rudaw',
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                           if (tripOrder.notes != null && tripOrder.notes!.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
@@ -281,9 +312,28 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   String _getCustomerAddress(dynamic customer) {
-    if (customer == null) return '';
-    if (customer is Map) return customer['address']?.toString() ?? '';
-    return '';
+    if (customer == null) return 'ناونیشان دیاری نەکراوە';
+    if (customer is Map) {
+      final addr = customer['address']?.toString() ?? '';
+      return addr.trim().isNotEmpty ? addr.trim() : 'ناونیشان دیاری نەکراوە';
+    }
+    return 'ناونیشان دیاری نەکراوە';
+  }
+
+  double? _getCustomerLatitude(dynamic customer) {
+    if (customer == null) return null;
+    if (customer is Map) {
+      return double.tryParse(customer['latitude']?.toString() ?? '');
+    }
+    return null;
+  }
+
+  double? _getCustomerLongitude(dynamic customer) {
+    if (customer == null) return null;
+    if (customer is Map) {
+      return double.tryParse(customer['longitude']?.toString() ?? '');
+    }
+    return null;
   }
 
   String _getOrderStatusLabel(String status) {
