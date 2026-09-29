@@ -41,7 +41,7 @@ class GlobalNumericKeyboard extends ConsumerWidget {
                   color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
                   border: Border(
                     bottom: BorderSide(
-                      color: isDark ? Colors.white10 : Colors.black10,
+                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.1),
                       width: 0.5,
                     ),
                   ),
@@ -71,7 +71,7 @@ class GlobalNumericKeyboard extends ConsumerWidget {
                     // Backspace Button
                     IconButton(
                       icon: const Icon(Icons.backspace_outlined),
-                      color: isDark ? Colors.white70 : Colors.black.withOpacity(0.7),
+                      color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.7),
                       iconSize: 18,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),

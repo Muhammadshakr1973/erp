@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'numeric_keyboard_manager.dart';
+import 'global_numeric_keyboard.dart';
 
 class AppTextField extends ConsumerStatefulWidget {
   final String? hintText;
