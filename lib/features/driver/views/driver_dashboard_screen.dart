@@ -74,10 +74,13 @@ class DriverDashboardScreen extends ConsumerWidget {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       int crossAxisCount = 2;
+                      double aspectRatio = 1.15;
                       if (constraints.maxWidth >= 1024) {
                         crossAxisCount = 4;
+                        aspectRatio = 1.4;
                       } else if (constraints.maxWidth >= 600) {
                         crossAxisCount = 3;
+                        aspectRatio = 1.3;
                       }
 
                       return GridView.count(
@@ -86,7 +89,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisSpacing: AppSpacing.md,
                         mainAxisSpacing: AppSpacing.md,
-                        childAspectRatio: 1.5,
+                        childAspectRatio: aspectRatio,
                         children: [
                           _buildStatCard(
                             context: context,
@@ -149,10 +152,14 @@ class DriverDashboardScreen extends ConsumerWidget {
                             title: Text(
                               'گەشتی ژمارە ${trip.tripNumber}',
                               style: AppTextStyles.bodyBold,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: Text(
                               '${trip.orders.length} پسوڵە • ${trip.tripDate}',
                               style: AppTextStyles.caption,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             trailing: Container(
                               padding: const EdgeInsets.symmetric(
@@ -217,16 +224,24 @@ class DriverDashboardScreen extends ConsumerWidget {
     required Color color,
   }) {
     return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: AppSpacing.sm),
-          Text(title, style: AppTextStyles.caption),
-          const SizedBox(height: 4),
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            title,
+            style: AppTextStyles.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
             child: Text(value, style: AppTextStyles.h2),
           ),
         ],

@@ -88,15 +88,29 @@ class TodayTripsScreen extends ConsumerWidget {
                             Text(
                               'گەشتی ژمارە ${trip.tripNumber}',
                               style: AppTextStyles.bodyBold,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '${trip.orders.length} پسوڵە • ${trip.tripDate}',
                               style: AppTextStyles.caption,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
+                            if (trip.notes != null && trip.notes!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                trip.notes!,
+                                style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ],
                         ),
                       ),
+                      const SizedBox(width: AppSpacing.sm),
                       StatusBadge(
                         label: _getStatusLabel(trip.status),
                         type: _getStatusBadgeType(trip.status),

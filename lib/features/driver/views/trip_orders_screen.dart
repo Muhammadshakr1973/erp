@@ -123,23 +123,115 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                               ),
                             ],
                           ),
+                          if (_getCustomerPhone(order?.customer).isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.phone_outlined,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    _getCustomerPhone(order?.customer),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (_getCustomerAddress(order?.customer).isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    _getCustomerAddress(order?.customer),
+                                    style: AppTextStyles.caption,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           if (tripOrder.notes != null && tripOrder.notes!.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
                               'تێبینی: ${tripOrder.notes}',
                               style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          if (order != null && order.items.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Theme(
+                              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                              child: ExpansionTile(
+                                tilePadding: EdgeInsets.zero,
+                                childrenPadding: const EdgeInsets.only(bottom: 8.0),
+                                title: Text(
+                                  'کاڵاکانی پسوڵەکە (${order.items.length} جۆر)',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                children: order.items.map((item) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '• ${item.productName} (${item.quantity.toStringAsFixed(item.quantity.truncateToDouble() == item.quantity ? 0 : 1)} ${item.productUnit})',
+                                          style: AppTextStyles.caption,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Text(
+                                        '${_formatCurrency(item.subtotal)} د.ع',
+                                        style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                )).toList(),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
                             children: [
-                              Text(
-                                '${_formatCurrency(order?.totalAmount ?? 0)} د.ع',
-                                style: AppTextStyles.price,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '${_formatCurrency(order?.totalAmount ?? 0)} د.ع',
+                                  style: AppTextStyles.price,
+                                ),
                               ),
                               if (isPending && !_isSubmitting)
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     AppButton(
                                       text: 'گەیشت',
@@ -177,6 +269,22 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     return 'کڕیاری نەناسراو';
   }
 
+  String _getCustomerPhone(dynamic customer) {
+    if (customer == null) return '';
+    if (customer is Map) {
+      final phone = customer['phone']?.toString() ?? '';
+      if (phone.isNotEmpty) return phone;
+      return customer['phone2']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  String _getCustomerAddress(dynamic customer) {
+    if (customer == null) return '';
+    if (customer is Map) return customer['address']?.toString() ?? '';
+    return '';
+  }
+
   String _getOrderStatusLabel(String status) {
     switch (status.toUpperCase()) {
       case 'DELIVERED':
@@ -203,7 +311,10 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     final theme = Theme.of(context);
     return Container(
       color: theme.brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white,
-      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenHorizontal,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -217,17 +328,27 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   Widget _buildSummaryItem(String label, String value, [Color? color]) {
-    return Column(
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.h2.copyWith(
-            color: color ?? AppColors.textPrimaryLight,
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: AppTextStyles.h2.copyWith(
+                color: color ?? AppColors.textPrimaryLight,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -237,8 +358,8 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   Future<void> _showDeliverDialog(dynamic tripOrder) async {
-    final defaultAmount = tripOrder.order?.totalAmount ?? 0;
-    final amountController = TextEditingController(text: defaultAmount.toString());
+    final num totalAmt = tripOrder.order?.totalAmount ?? 0;
+    final amountController = TextEditingController(text: totalAmt.toInt().toString());
     final notesController = TextEditingController();
 
     await showDialog(
