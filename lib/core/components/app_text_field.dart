@@ -25,6 +25,7 @@ class AppTextField extends ConsumerStatefulWidget {
   final bool? readOnly;
   final InputDecoration? customDecoration;
   final bool autofocus;
+  final TextAlign? textAlign;
 
   const AppTextField({
     super.key,
@@ -46,6 +47,7 @@ class AppTextField extends ConsumerStatefulWidget {
     this.readOnly,
     this.customDecoration,
     this.autofocus = false,
+    this.textAlign,
   });
 
   @override
@@ -162,6 +164,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         showCursor: true,
         enableInteractiveSelection: true,
         textDirection: _isNumeric ? TextDirection.ltr : null,
+        textAlign: widget.textAlign ?? (_isNumeric ? TextAlign.right : TextAlign.start),
         autofocus: widget.autofocus,
         autocorrect: !_isNumeric,
         enableSuggestions: !_isNumeric,
