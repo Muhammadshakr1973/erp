@@ -10,6 +10,7 @@ class OrderItemModel {
   final String? notes;
   final String? productUnit;
   final int? unitsPerCarton;
+  final String? productImagePath;
 
   OrderItemModel({
     required this.id,
@@ -23,10 +24,15 @@ class OrderItemModel {
     this.notes,
     this.productUnit,
     this.unitsPerCarton,
+    this.productImagePath,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     final productJson = json['product'] as Map<String, dynamic>?;
+    final imgPath = productJson != null
+        ? (productJson['image_path'] ?? productJson['image_url'] ?? productJson['image'])
+        : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
+
     return OrderItemModel(
       id: json['id'] ?? 0,
       orderId: json['sales_order_id'] ?? json['order_id'] ?? 0,
@@ -41,6 +47,7 @@ class OrderItemModel {
       notes: json['notes'],
       productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
       unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      productImagePath: imgPath?.toString(),
     );
   }
 }

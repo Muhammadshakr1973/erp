@@ -224,25 +224,46 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                children: order.items.map((item) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          '• ${item.productName} (${item.quantity.toStringAsFixed(item.quantity.truncateToDouble() == item.quantity ? 0 : 1)} ${item.productUnit})',
-                                          style: AppTextStyles.caption,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                children: order.items.map((item) => Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () => _showProductImageFullScreen(context, item),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.image_search_outlined,
+                                                  size: 16,
+                                                  color: AppColors.primary,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    '• ${item.productName} (${item.quantity.toStringAsFixed(item.quantity.truncateToDouble() == item.quantity ? 0 : 1)} ${item.productUnit})',
+                                                    style: AppTextStyles.caption.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppSpacing.xs),
+                                          Text(
+                                            '${_formatCurrency(item.subtotal)} د.ع',
+                                            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: AppSpacing.xs),
-                                      Text(
-                                        '${_formatCurrency(item.subtotal)} د.ع',
-                                        style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 )).toList(),
                               ),
@@ -594,5 +615,239 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _showProductImageFullScreen(BuildContext context, dynamic item) {
+    String? rawImagePath;
+    try {
+      rawImagePath = item.productImagePath;
+    } catch (_) {}
+
+    final bool hasImage = rawImagePath != null && rawImagePath.trim().isNotEmpty;
+    final String? resolvedUrl = hasImage ? _resolveImageUrl(rawImagePath!.trim()) : null;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black.withOpacity(0.95),
+          child: SafeArea(
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Stack(
+                children: [
+                  // Image/Content viewer area
+                  Center(
+                    child: resolvedUrl != null
+                        ? InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            child: Image.network(
+                              resolvedUrl,
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 80,
+                                      color: Colors.white54,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                      child: Text(
+                                        item.productName ?? 'کاڵا',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Rudaw',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'وێنەی کاڵاکە بارنەبوو یان بەردەست نییە',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 100,
+                                color: Colors.white38,
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                child: Text(
+                                  item.productName ?? 'کاڵا',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'هیچ وێنەیەک بۆ ئەم کاڵایە تۆمار نەکراوە',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontFamily: 'Rudaw',
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+
+                  // Top Header Bar
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.black87, Colors.transparent],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  item.productName ?? 'کاڵا',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'بڕ: ${(item.quantity ?? 0).toStringAsFixed((item.quantity ?? 0).truncateToDouble() == (item.quantity ?? 0) ? 0 : 1)} ${item.productUnit ?? 'دانە'}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Info Bar
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black87],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'کۆی گشتی: ${_formatCurrency(item.subtotal ?? 0)} د.ع',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Rudaw',
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'پڕ بە شاشە',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Rudaw',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _resolveImageUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    return 'https://pos.gardi.click$cleanPath';
   }
 }
