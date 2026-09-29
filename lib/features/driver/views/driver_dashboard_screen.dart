@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/components/app_button.dart';
 import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../admin/views/create_delivery_trip_dialog.dart';
 import '../providers/driver_providers.dart';
 
 class DriverDashboardScreen extends ConsumerWidget {
@@ -74,13 +76,13 @@ class DriverDashboardScreen extends ConsumerWidget {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       int crossAxisCount = 2;
-                      double aspectRatio = 1.15;
+                      double aspectRatio = 1.0;
                       if (constraints.maxWidth >= 1024) {
                         crossAxisCount = 4;
                         aspectRatio = 1.4;
                       } else if (constraints.maxWidth >= 600) {
                         crossAxisCount = 3;
-                        aspectRatio = 1.3;
+                        aspectRatio = 1.25;
                       }
 
                       return GridView.count(
@@ -121,9 +123,24 @@ class DriverDashboardScreen extends ConsumerWidget {
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.xl),
-                        child: Text(
-                          'هیچ گەشتێک نییە بۆ ئەمڕۆ',
-                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                        child: Column(
+                          children: [
+                            Text(
+                              'هیچ گەشتێک نییە بۆ ئەمڕۆ',
+                              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AppButton(
+                              text: 'دروستکردنی گەشت لە پسوڵە ئامادەکراوەکان',
+                              icon: Icons.add_rounded,
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => const CreateDeliveryTripDialog(),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     )
@@ -224,25 +241,47 @@ class DriverDashboardScreen extends ConsumerWidget {
     required Color color,
   }) {
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            title,
-            style: AppTextStyles.caption,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+            ],
           ),
           const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Text(value, style: AppTextStyles.h2),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondaryLight,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: AppTextStyles.h2,
+                ),
+              ),
+            ],
           ),
         ],
       ),
