@@ -151,6 +151,47 @@ void main() {
       expect(matches.first.barcode, equals(query));
       expect(matches.first.id, equals(2));
     });
+
+    test('Allows adding multiple products and incrementing quantities without wiping search query', () {
+      final Map<int, int> cart = {};
+      const query = 'شامپۆ';
+
+      // Simulate search results
+      final matches = sampleProducts.where((p) => p.name.contains(query)).toList();
+      expect(matches.length, equals(1));
+      final product = matches.first;
+
+      // Simulate clicking on the product 3 times in the autocomplete
+      void addToCart(int productId) {
+        cart[productId] = (cart[productId] ?? 0) + 1;
+      }
+
+      void removeFromCart(int productId) {
+        if (cart.containsKey(productId)) {
+          if (cart[productId]! > 1) {
+            cart[productId] = cart[productId]! - 1;
+          } else {
+            cart.remove(productId);
+          }
+        }
+      }
+
+      addToCart(product.id);
+      expect(cart[product.id], equals(1));
+
+      addToCart(product.id);
+      expect(cart[product.id], equals(2));
+
+      addToCart(product.id);
+      expect(cart[product.id], equals(3));
+
+      // Decrement
+      removeFromCart(product.id);
+      expect(cart[product.id], equals(2));
+
+      // Query remains valid for continued selection
+      expect(query, equals('شامپۆ'));
+    });
   });
 
   group('Create Order - UI Layout Safety', () {

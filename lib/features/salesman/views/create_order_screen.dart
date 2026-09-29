@@ -1115,180 +1115,276 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 : (screenWidth > 450 ? 450.0 : screenWidth - 32));
         final double xOffset = isMobile ? -textFieldX : 0.0;
 
-        return Align(
-          alignment: AlignmentDirectional.topStart,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 6.0),
-            child: Transform.translate(
-              offset: Offset(xOffset, 0),
-              child: Material(
-                elevation: 8,
-                shadowColor: Colors.black.withValues(alpha: 0.15),
-                borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(12),
-                clipBehavior: Clip.antiAlias,
-                color: theme.colorScheme.surface,
-                child: SizedBox(
-                  width: dropdownWidth,
-                  child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 340),
-                  child: ListView.separated(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    itemCount: options.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final product = options.elementAt(index);
-                      final unitPrice = _getProductUnitPrice(product);
-                      final qtyInCart = _cart[product.id] ?? 0;
-
-                      return InkWell(
-                        onTap: () => onSelected(product),
-                        onLongPress: () {
-                          _addToCart(product.id);
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product.name} زیادکرا بۆ سەبەتە'),
-                              backgroundColor: AppColors.success,
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primaryContainer
-                                      .withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: (product.imagePath != null &&
-                                        product.imagePath!.isNotEmpty)
-                                    ? GestureDetector(
-                                        onTap: () {
-                                          _showLargeImageDialog(context, product.imagePath!, product.name);
-                                        },
-                                        child: Image.network(
-                                          product.imagePath!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Icon(
-                                            Icons.inventory_2_outlined,
-                                            color: theme.colorScheme.primary,
-                                            size: 20,
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.inventory_2_outlined,
-                                        color: theme.colorScheme.primary,
-                                        size: 20,
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            product.name,
-                                            style: AppTextStyles.bodyBold,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (product.barcode.isNotEmpty || qtyInCart > 0) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (product.barcode.isNotEmpty) ...[
-                                            const Icon(
-                                              Icons.qr_code,
-                                              size: 14,
-                                              color: Colors.grey,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              product.barcode,
-                                              style: AppTextStyles.caption.copyWith(
-                                                fontFamily: 'monospace',
-                                              ),
-                                            ),
-                                          ],
-                                          if (product.barcode.isNotEmpty && qtyInCart > 0)
-                                            const SizedBox(width: 8),
-                                          if (qtyInCart > 0)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primary,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                '$qtyInCart لە سەبەتەدا',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    Formatters.currency(unitPrice),
-                                    style: AppTextStyles.price,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'یەکە: ${product.unit ?? "دانە"}',
+        return TapRegion(
+          groupId: _searchFocusNode,
+          child: Align(
+            alignment: AlignmentDirectional.topStart,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6.0),
+              child: Transform.translate(
+                offset: Offset(xOffset, 0),
+                child: Material(
+                  elevation: 8,
+                  shadowColor: Colors.black.withValues(alpha: 0.15),
+                  borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  color: theme.colorScheme.surface,
+                  child: SizedBox(
+                    width: dropdownWidth,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 380),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            child: Row(
+                              children: [
+                                Icon(Icons.search, size: 16, color: theme.colorScheme.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${options.length} کاڵا دۆزرایەوە',
                                     style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    _searchFocusNode.unfocus();
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'داخستن',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.close, size: 14, color: theme.colorScheme.primary),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                          const Divider(height: 1),
+                          Flexible(
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              separatorBuilder: (context, index) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final product = options.elementAt(index);
+                                final unitPrice = _getProductUnitPrice(product);
+                                final qtyInCart = _cart[product.id] ?? 0;
+
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      _addToCart(product.id);
+                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('${product.name} زیادکرا بۆ سەبەتە (${qtyInCart + 1})'),
+                                          backgroundColor: AppColors.success,
+                                          duration: const Duration(milliseconds: 900),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primaryContainer
+                                                  .withValues(alpha: 0.5),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            clipBehavior: Clip.antiAlias,
+                                            child: (product.imagePath != null &&
+                                                    product.imagePath!.isNotEmpty)
+                                                ? GestureDetector(
+                                                    onTap: () {
+                                                      _showLargeImageDialog(context, product.imagePath!, product.name);
+                                                    },
+                                                    child: Image.network(
+                                                      product.imagePath!,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                                        Icons.inventory_2_outlined,
+                                                        color: theme.colorScheme.primary,
+                                                        size: 20,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : Icon(
+                                                    Icons.inventory_2_outlined,
+                                                    color: theme.colorScheme.primary,
+                                                    size: 20,
+                                                  ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  product.name,
+                                                  style: AppTextStyles.bodyBold,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    if (product.barcode.isNotEmpty) ...[
+                                                      const Icon(
+                                                        Icons.qr_code,
+                                                        size: 14,
+                                                        color: Colors.grey,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        product.barcode,
+                                                        style: AppTextStyles.caption.copyWith(
+                                                          fontFamily: 'monospace',
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                    ],
+                                                    Text(
+                                                      Formatters.currency(unitPrice),
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: theme.colorScheme.primary,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '(${product.unit ?? "دانە"})',
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: theme.colorScheme.onSurfaceVariant,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (qtyInCart > 0)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  InkWell(
+                                                    onTap: () {
+                                                      _removeFromCart(product.id);
+                                                    },
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    child: const Padding(
+                                                      padding: EdgeInsets.all(4),
+                                                      child: Icon(Icons.remove, size: 16, color: AppColors.danger),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                                    child: Text(
+                                                      '$qtyInCart',
+                                                      style: AppTextStyles.bodyBold.copyWith(
+                                                        color: theme.colorScheme.primary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  InkWell(
+                                                    onTap: () {
+                                                      _addToCart(product.id);
+                                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text('${product.name} زیادکرا (${qtyInCart + 1})'),
+                                                          backgroundColor: AppColors.success,
+                                                          duration: const Duration(milliseconds: 900),
+                                                        ),
+                                                      );
+                                                    },
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(4),
+                                                      child: Icon(Icons.add, size: 16, color: theme.colorScheme.primary),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          else
+                                            FilledButton.tonalIcon(
+                                              style: FilledButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                minimumSize: const Size(0, 32),
+                                                visualDensity: VisualDensity.compact,
+                                              ),
+                                              onPressed: () {
+                                                _addToCart(product.id);
+                                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('${product.name} زیادکرا بۆ سەبەتە (1)'),
+                                                    backgroundColor: AppColors.success,
+                                                    duration: const Duration(milliseconds: 900),
+                                                  ),
+                                                );
+                                              },
+                                              icon: const Icon(Icons.add, size: 16),
+                                              label: const Text('زیادکردن', style: TextStyle(fontSize: 12)),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   Widget _buildCustomerSelectionDropdown(
     AsyncValue<List<Customer>> customersAsync,
@@ -1517,10 +1613,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         duration: const Duration(seconds: 1),
       ),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchController.clear();
-      _searchFocusNode.requestFocus();
-    });
   }
 
   void _handleBarcodeOrSearchSubmit(
