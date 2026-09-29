@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -49,14 +50,21 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   DateTime? _lastKeyEventTime;
   bool _isProcessing = false;
 
-  final MobileScannerController _scannerController = MobileScannerController(
-    detectionSpeed: DetectionSpeed.normal,
-    facing: CameraFacing.back,
-  );
+  MobileScannerController? _scannerController;
 
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb) {
+      try {
+        _scannerController = MobileScannerController(
+          detectionSpeed: DetectionSpeed.normal,
+          facing: CameraFacing.back,
+        );
+      } catch (e) {
+        debugPrint("Camera scanner initialization skipped: $e");
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _keyboardFocusNode.requestFocus();
     });
@@ -66,7 +74,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   void dispose() {
     _controller.dispose();
     _keyboardFocusNode.dispose();
-    _scannerController.dispose();
+    _scannerController?.dispose();
     super.dispose();
   }
 
@@ -165,60 +173,83 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
 
             // Camera Scanner & Instruction
             Expanded(
-              child: Stack(
-                children: [
-                  MobileScanner(
-                    controller: _scannerController,
-                    onDetect: (capture) {
-                      final List<Barcode> barcodes = capture.barcodes;
-                      for (final barcode in barcodes) {
-                        if (barcode.rawValue != null) {
-                          _onSuccessScan(barcode.rawValue!);
-                          break; // Only scan one
-                        }
-                      }
-                    },
-                    errorBuilder: (context, error, child) {
-                      return Container(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.videocam_off_outlined,
-                              size: 48,
-                              color: theme.colorScheme.primary,
+              child: (_scannerController == null || kIsWeb)
+                  ? Container(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.qr_code_scanner_outlined,
+                            size: 48,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'سکانەری ئامێر یان بەکارهێنانی ئامێری سکانەری بێسیم ئامادەیە. تکایە بارکۆدەکە سکان بکە یان بە دەست بینوسە.',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'کامێرا کارناکات، تکایە ئامێری سکانەر بەکاربهێنە یان بە دەست بینوسە.',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  // Overlay targeting box
-                  Center(
-                    child: Container(
-                      width: 250,
-                      height: 250,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: theme.colorScheme.primary,
-                          width: 3,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
+                    )
+                  : Stack(
+                      children: [
+                        MobileScanner(
+                          controller: _scannerController!,
+                          onDetect: (capture) {
+                            final List<Barcode> barcodes = capture.barcodes;
+                            for (final barcode in barcodes) {
+                              if (barcode.rawValue != null) {
+                                _onSuccessScan(barcode.rawValue!);
+                                break; // Only scan one
+                              }
+                            }
+                          },
+                          errorBuilder: (context, error, child) {
+                            return Container(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.videocam_off_outlined,
+                                    size: 48,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'کامێرا کارناکات، تکایە ئامێری سکانەر بەکاربهێنە یان بە دەست بینوسە.',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        // Overlay targeting box
+                        Center(
+                          child: Container(
+                            width: 250,
+                            height: 250,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: theme.colorScheme.primary,
+                                width: 3,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
 
             // Manual Input Fallback & Action Button
