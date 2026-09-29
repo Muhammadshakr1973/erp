@@ -15,9 +15,11 @@ void main() async {
 
   // Handle standard Flutter framework errors gracefully
   FlutterError.onError = (FlutterErrorDetails details) {
-    final errorStr = details.exception.toString();
-    if (errorStr.contains('text_editing_delta') || errorStr.contains('TextEditingDelta')) {
-      debugPrint('Suppressed text editing delta FlutterError: $errorStr');
+    final errorStr = '${details.exception} ${details.stack}';
+    if (errorStr.contains('text_editing_delta') || 
+        errorStr.contains('TextEditingDelta') ||
+        errorStr.contains('TextEditingValue')) {
+      debugPrint('Suppressed text editing delta FlutterError');
       return;
     }
     FlutterError.presentError(details);
@@ -25,10 +27,11 @@ void main() async {
 
   // Intercept and handle asynchronous errors (such as web promise/rejection unhandled errors)
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    final errorStr = error.toString();
+    final errorStr = '$error $stack';
     // Catch and suppress known non-critical text input and assertion delta errors on web
     if (errorStr.contains('text_editing_delta') || 
         errorStr.contains('TextEditingDelta') || 
+        errorStr.contains('TextEditingValue') ||
         errorStr.contains('AssertionError') || 
         errorStr.contains('Assertion error')) {
       debugPrint('Suppressed asynchronous text editing delta/assertion error: $error');
