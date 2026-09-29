@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
 import '../../orders/providers/orders_provider.dart';
 
@@ -24,6 +26,19 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   final Set<int> _selectedOrderIds = <int>{};
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authProvider).user;
+      if (user != null && (user.isDriver == true || user.role?.name == 'driver')) {
+        setState(() {
+          _selectedDriverId = user.id;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -99,6 +114,8 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currentUser = ref.watch(authProvider).user;
+    final isDriver = currentUser != null && (currentUser.isDriver == true || currentUser.role?.name == 'driver');
     final driversAsync = ref.watch(activeDriversProvider);
     final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
@@ -115,7 +132,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('ناردنی گەشتی نوێ', style: AppTextStyles.h2),
+                  Text(isDriver ? 'دروستکردنی گەشتی نوێ' : 'ناردنی گەشتی نوێ', style: AppTextStyles.h2),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
@@ -134,76 +151,97 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                       // Driver Selection
                       const Text('شۆفێر *', style: AppTextStyles.bodyBold),
                       const SizedBox(height: AppSpacing.xs),
-                      driversAsync.when(
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            child: CircularProgressIndicator(),
+                      if (isDriver)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
                           ),
-                        ),
-                        error: (err, _) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                           child: Row(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'کێشە لە وەرگرتنی لیستی شۆفێرەکان: $err',
-                                  style: AppTextStyles.caption.copyWith(color: AppColors.danger),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh),
-                                onPressed: () => ref.invalidate(activeDriversProvider),
+                              Icon(AppIcons.profile, color: theme.colorScheme.primary),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                currentUser.name,
+                                style: AppTextStyles.bodyBold,
                               ),
                             ],
                           ),
-                        ),
-                        data: (drivers) {
-                          if (drivers.isEmpty) {
-                            return Container(
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.error.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                              ),
-                              child: const Text(
-                                'هیچ شۆفێرێکی چالاک نەدۆزرایەوە لە سیستەمدا.',
-                                style: AppTextStyles.caption,
-                              ),
-                            );
-                          }
-
-                          return DropdownButtonFormField<int>(
-                            initialValue: _selectedDriverId,
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                              ),
-                              hintText: 'شۆفێرێک هەڵبژێرە...',
+                        )
+                      else
+                        driversAsync.when(
+                          loading: () => const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(AppSpacing.md),
+                              child: CircularProgressIndicator(),
                             ),
-                            items: drivers.map((d) {
-                              return DropdownMenuItem<int>(
-                                value: d.id,
-                                child: Text(
-                                  d.phone != null && d.phone!.isNotEmpty
-                                      ? '${d.name} (${d.phone})'
-                                      : d.name,
-                                  style: AppTextStyles.bodyMedium,
+                          ),
+                          error: (err, _) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'کێشە لە وەرگرتنی لیستی شۆفێرەکان: $err',
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.refresh),
+                                  onPressed: () => ref.invalidate(activeDriversProvider),
+                                ),
+                              ],
+                            ),
+                          ),
+                          data: (drivers) {
+                            if (drivers.isEmpty) {
+                              return Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                ),
+                                child: const Text(
+                                  'هیچ شۆفێرێکی چالاک نەدۆزرایەوە لە سیستەمدا.',
+                                  style: AppTextStyles.caption,
                                 ),
                               );
-                            }).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedDriverId = val;
-                              });
-                            },
-                          );
-                        },
-                      ),
+                            }
+
+                            return DropdownButtonFormField<int>(
+                              initialValue: _selectedDriverId,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.sm,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                ),
+                                hintText: 'شۆفێرێک هەڵبژێرە...',
+                              ),
+                              items: drivers.map((d) {
+                                return DropdownMenuItem<int>(
+                                  value: d.id,
+                                  child: Text(
+                                    d.phone != null && d.phone!.isNotEmpty
+                                        ? '${d.name} (${d.phone})'
+                                        : d.name,
+                                    style: AppTextStyles.bodyMedium,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedDriverId = val;
+                                });
+                              },
+                            );
+                          },
+                        ),
                       const SizedBox(height: AppSpacing.md),
 
                       // Date Selection

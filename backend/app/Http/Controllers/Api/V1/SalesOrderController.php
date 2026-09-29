@@ -25,13 +25,16 @@ class SalesOrderController extends Controller
         if ($user->role?->name === 'salesman') {
             $query->where('salesman_id', $user->id);
         } elseif ($user->role?->name === 'driver') {
-            // Drivers can only see orders assigned to their delivery trips
+            // Drivers can see orders assigned to their delivery trips OR orders with status = 'READY'
             $tripOrderIds = \DB::table('delivery_trip_orders')
                 ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
                 ->where('delivery_trips.driver_id', $user->id)
                 ->pluck('sales_order_id')
                 ->toArray();
-            $query->whereIn('id', $tripOrderIds);
+            $query->where(function ($q) use ($tripOrderIds) {
+                $q->whereIn('id', $tripOrderIds)
+                  ->orWhere('status', \App\Models\SalesOrder::STATUS_READY);
+            });
         } elseif ($user->role?->name === 'warehouse') {
             if ($user->warehouse_id) {
                 $query->where('warehouse_id', $user->warehouse_id);

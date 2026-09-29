@@ -72,7 +72,17 @@ class DeliveryTripController extends Controller
     // دروستکردنی گەشت
     public function store(StoreDeliveryTripRequest $request): JsonResponse
     {
-        $trip = $this->deliveryTripService->createTrip($request->validated(), $request->user());
+        $user = $request->user();
+        $validated = $request->validated();
+
+        if ($user->isDriver() && (int)$validated['driver_id'] !== (int)$user->id) {
+            return response()->json([
+                'message' => 'شۆفێر تەنها دەتوانێت گەشت بۆ خۆی دروست بکات.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $trip = $this->deliveryTripService->createTrip($validated, $user);
 
         return response()->json([
             'message' => 'گەشتەکە بەسەرکەوتوویی دروستکرا و پسوڵەکان دران بە شۆفێر',

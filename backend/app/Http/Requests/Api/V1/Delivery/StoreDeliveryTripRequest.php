@@ -13,6 +13,11 @@ class StoreDeliveryTripRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $user = $this->user();
+        if ($user && $user->isDriver() && !$this->filled('driver_id')) {
+            $this->merge(['driver_id' => $user->id]);
+        }
+
         if ($this->has('orders') && !$this->has('order_ids') && is_array($this->orders)) {
             $ids = [];
             foreach ($this->orders as $o) {

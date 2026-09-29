@@ -2,16 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../admin/views/create_delivery_trip_dialog.dart';
 import '../providers/driver_providers.dart';
 
 class TodayTripsScreen extends ConsumerWidget {
   const TodayTripsScreen({super.key});
+
+  void _openCreateTripDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const CreateDeliveryTripDialog(),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,6 +30,21 @@ class TodayTripsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('گەشتەکانی ئەمڕۆ', style: AppTextStyles.h2),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: TextButton.icon(
+              onPressed: () => _openCreateTripDialog(context),
+              icon: const Icon(Icons.add_circle_outline, size: 20),
+              label: const Text('گەشتی نوێ', style: AppTextStyles.bodyBold),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openCreateTripDialog(context),
+        icon: const Icon(Icons.add),
+        label: const Text('دروستکردنی گەشت', style: AppTextStyles.bodyBold),
       ),
       body: tripsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -43,9 +67,26 @@ class TodayTripsScreen extends ConsumerWidget {
         data: (trips) {
           if (trips.isEmpty) {
             return Center(
-              child: Text(
-                'هیچ گەشتێکی چالاک بۆ تۆ بەردەست نییە.',
-                style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.local_shipping_outlined, size: 56, color: Colors.grey),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'هیچ گەشتێکی چالاک بۆ تۆ بەردەست نییە.',
+                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      text: 'دروستکردنی گەشت لە پسوڵە ئامادەکراوەکان',
+                      icon: Icons.add_rounded,
+                      onPressed: () => _openCreateTripDialog(context),
+                    ),
+                  ],
+                ),
               ),
             );
           }

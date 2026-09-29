@@ -173,6 +173,8 @@ class User extends Authenticatable
                 'stock.adjust',
                 'purchases.receive',
                 'orders.view',
+                'delivery.view',
+                'delivery.update',
             ])) {
                 return true;
             }
