@@ -321,7 +321,7 @@ class NumericKeyboardDialog extends ConsumerWidget {
               
               // Custom Numeric Keyboard
               ConstrainedBox(
-                constraints: const BoxConstraints(height: 260),
+                constraints: const BoxConstraints(maxHeight: 260),
                 child: const GlobalNumericKeyboard(isDialog: true),
               ),
             ],
