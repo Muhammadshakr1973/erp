@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../shared/views/map_picker_dialog.dart';
+import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
 class TripOrdersScreen extends ConsumerStatefulWidget {
