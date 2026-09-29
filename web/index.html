@@ -35,16 +35,7 @@
   <script>
     window.addEventListener('load', function(ev) {
       if (window._flutter && window._flutter.loader) {
-        window._flutter.loader.loadEntrypoint({
-          serviceWorker: {
-            serviceWorkerVersion: serviceWorkerVersion,
-          },
-          onEntrypointLoaded: function(engineInitializer) {
-            engineInitializer.initializeEngine().then(function(appRunner) {
-              appRunner.runApp();
-            });
-          }
-        });
+        window._flutter.loader.load();
       }
     });
   </script>
