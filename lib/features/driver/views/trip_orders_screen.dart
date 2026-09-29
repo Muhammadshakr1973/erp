@@ -25,6 +25,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final intParsedId = int.tryParse(widget.tripId) ?? 0;
     final tripDetailAsync = ref.watch(tripDetailProvider(intParsedId));
 
