@@ -121,10 +121,14 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 750),
+        constraints: BoxConstraints(
+          maxWidth: 700,
+          maxHeight: MediaQuery.of(context).size.height * 0.90,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -132,7 +136,14 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(isDriver ? 'دروستکردنی گەشتی نوێ' : 'ناردنی گەشتی نوێ', style: AppTextStyles.h2),
+                  Expanded(
+                    child: Text(
+                      isDriver ? 'دروستکردنی گەشتی نوێ' : 'ناردنی گەشتی نوێ',
+                      style: AppTextStyles.h2,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
@@ -140,7 +151,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                 ],
               ),
               const Divider(),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
 
               // Scrollable Form Body
               Expanded(
@@ -331,9 +342,13 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'پسوڵە ئامادەکراوەکان (${_selectedOrderIds.length} لە ${orders.length} هەڵبژێردراون)',
-                                    style: AppTextStyles.bodyBold,
+                                  Expanded(
+                                    child: Text(
+                                      'پسوڵە ئامادەکراوەکان (${_selectedOrderIds.length} لە ${orders.length} هەڵبژێردراون)',
+                                      style: AppTextStyles.bodyBold,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -384,13 +399,22 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                     ),
                                     child: CheckboxListTile(
                                       value: isSelected,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.sm,
+                                        vertical: 0,
+                                      ),
                                       title: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            order.orderNumber,
-                                            style: AppTextStyles.bodyBold,
+                                          Expanded(
+                                            child: Text(
+                                              order.orderNumber,
+                                              style: AppTextStyles.bodyBold,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
+                                          const SizedBox(width: AppSpacing.xs),
                                           Text(
                                             Formatters.currency(order.totalAmount),
                                             style: AppTextStyles.bodyMedium.copyWith(
@@ -400,8 +424,10 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                         ],
                                       ),
                                       subtitle: Text(
-                                        order.customer?.name ?? 'کڕیاری نەناسراو',
+                                        order.customerName,
                                         style: AppTextStyles.caption,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       onChanged: (bool? checked) {
                                         setState(() {
@@ -427,23 +453,32 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
 
               const SizedBox(height: AppSpacing.md),
               const Divider(),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
 
               // Bottom Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                    child: const Text('پاشگەزبوونەوە'),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  AppButton(
-                    text: _isSubmitting ? 'خەریکی دروستکردن...' : 'دروستکردنی گەشت',
-                    isLoading: _isSubmitting,
-                    onPressed: (_selectedDriverId == null || _selectedOrderIds.isEmpty || _isSubmitting)
-                        ? null
-                        : _submit,
+                  Flexible(
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        TextButton(
+                          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                          child: const Text('پاشگەزبوونەوە'),
+                        ),
+                        AppButton(
+                          text: _isSubmitting ? 'خەریکی دروستکردن...' : 'دروستکردنی گەشت',
+                          isLoading: _isSubmitting,
+                          onPressed: (_selectedDriverId == null || _selectedOrderIds.isEmpty || _isSubmitting)
+                              ? null
+                              : _submit,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

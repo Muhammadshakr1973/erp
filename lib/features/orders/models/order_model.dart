@@ -151,6 +151,36 @@ class OrderModel {
     );
   }
 
+  String get customerName {
+    if (customer == null) return 'کڕیاری نەناسراو';
+    if (customer is Map) return customer['name']?.toString() ?? 'کڕیاری نەناسراو';
+    try {
+      final nameVal = (customer as dynamic).name;
+      if (nameVal != null) return nameVal.toString();
+    } catch (_) {}
+    return 'کڕیاری نەناسراو';
+  }
+
+  String get salesmanName {
+    if (salesman == null) return 'مەندوبی نەناسراو';
+    if (salesman is Map) return salesman['name']?.toString() ?? 'مەندوبی نەناسراو';
+    try {
+      final nameVal = (salesman as dynamic).name;
+      if (nameVal != null) return nameVal.toString();
+    } catch (_) {}
+    return 'مەندوبی نەناسراو';
+  }
+
+  String get warehouseName {
+    if (warehouse == null) return 'کۆگای نەناسراو';
+    if (warehouse is Map) return warehouse['name']?.toString() ?? 'کۆگای نەناسراو';
+    try {
+      final nameVal = (warehouse as dynamic).name;
+      if (nameVal != null) return nameVal.toString();
+    } catch (_) {}
+    return 'کۆگای نەناسراو';
+  }
+
   String get localizedStatus {
     switch (status) {
       case statusDraft:
