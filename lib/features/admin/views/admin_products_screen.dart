@@ -43,7 +43,20 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی کاڵا'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text('سڕینەوەی کاڵا'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
         content: Text('دڵنیایت لە سڕینەوەی "${product.name}"؟'),
         actions: [
           TextButton(
@@ -55,10 +68,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               'بەڵێ',
               style: TextStyle(color: AppColors.danger),
             ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('نەخێر'),
           ),
         ],
       ),

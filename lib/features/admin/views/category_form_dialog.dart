@@ -65,9 +65,20 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-        widget.category == null ? 'زیادکردنی جۆر' : 'دەستکاریکردنی جۆر',
-        style: AppTextStyles.h2,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              widget.category == null ? 'زیادکردنی جۆر' : 'دەستکاریکردنی جۆر',
+              style: AppTextStyles.h2,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          ),
+        ],
       ),
       content: Form(
         key: _formKey,
@@ -78,10 +89,6 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('پاشگەزبوونەوە'),
-        ),
         AppButton(text: 'پاشەکەوت', isLoading: _isLoading, onPressed: _submit),
       ],
     );

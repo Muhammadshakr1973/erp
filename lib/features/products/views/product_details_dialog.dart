@@ -20,7 +20,18 @@ class ProductDetailsDialog extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
         content: Text(
           'دڵنیایت لە سڕینەوەی "${product.name}"؟',
           style: const TextStyle(fontFamily: 'Rudaw'),
@@ -36,10 +47,6 @@ class ProductDetailsDialog extends ConsumerWidget {
               'بەڵێ سڕینەوە',
               style: TextStyle(color: AppColors.danger, fontFamily: 'Rudaw'),
             ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('نەخێر', style: TextStyle(fontFamily: 'Rudaw')),
           ),
         ],
       ),

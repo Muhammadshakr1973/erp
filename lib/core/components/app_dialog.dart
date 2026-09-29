@@ -25,11 +25,22 @@ class AppDialog {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
-          title: Text(
-            title,
-            style: AppTextStyles.h2.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.h2.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+            ],
           ),
           content: Text(
             message,
@@ -40,11 +51,6 @@ class AppDialog {
             ),
           ),
           actions: [
-            AppButton(
-              text: cancelText,
-              type: AppButtonType.text,
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
             AppButton(
               text: confirmText,
               type: isDanger ? AppButtonType.textDanger : AppButtonType.text,
@@ -71,11 +77,22 @@ class AppDialog {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
-          title: Text(
-            title,
-            style: AppTextStyles.h2.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.h2.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
           ),
           content: Text(
             message,

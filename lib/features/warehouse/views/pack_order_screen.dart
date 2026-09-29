@@ -48,14 +48,21 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('کێشە لە پاکەتکردن'),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text('کێشە لە پاکەتکردن'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
             content: Text(e.toString().replaceAll('Exception: ', '')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('باشە'),
-              ),
-            ],
           ),
         );
       }

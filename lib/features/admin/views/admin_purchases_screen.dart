@@ -1083,10 +1083,23 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Text(
-        'وەرگرتنی پسوڵەی کڕین #${widget.order.orderNumber}',
-        style: AppTextStyles.bodyBold,
-        textAlign: TextAlign.right,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'وەرگرتنی پسوڵەی کڕین #${widget.order.orderNumber}',
+              style: AppTextStyles.bodyBold,
+              textAlign: TextAlign.right,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -1164,10 +1177,6 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('پاشگەزبوونەوە'),
-        ),
         ElevatedButton(
           onPressed: _isSubmitting ? null : _submitFullReceive,
           style: ElevatedButton.styleFrom(

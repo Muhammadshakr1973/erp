@@ -222,7 +222,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('زیادکردنی کاتیگۆری نوێ'),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(child: Text('زیادکردنی کاتیگۆری نوێ')),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
           content: TextField(
             autofocus: true,
             decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
@@ -232,10 +241,6 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
             TextButton(
               onPressed: () => Navigator.pop(context, newCategoryName),
               child: const Text('زیادکردن'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('داخستن'),
             ),
           ],
         );
@@ -274,7 +279,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('زیادکردنی کۆمپانیای نوێ'),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(child: Text('زیادکردنی کۆمپانیای نوێ')),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
           content: TextField(
             autofocus: true,
             decoration: const InputDecoration(hintText: 'ناوی کۆمپانیا'),
@@ -284,10 +298,6 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
             TextButton(
               onPressed: () => Navigator.pop(context, newSupplierName),
               child: const Text('زیادکردن'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('داخستن'),
             ),
           ],
         );
@@ -1081,22 +1091,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: isMobile ? 120 : 140,
-                      child: AppButton(
-                        text: 'پاشەکەوت',
-                        isLoading: _isLoading,
-                        onPressed: _submit,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('داخستن'),
-                    ),
-                  ],
+                SizedBox(
+                  width: isMobile ? 120 : 140,
+                  child: AppButton(
+                    text: 'پاشەکەوت',
+                    isLoading: _isLoading,
+                    onPressed: _submit,
+                  ),
                 ),
               ],
             ),

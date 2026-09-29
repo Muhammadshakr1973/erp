@@ -35,7 +35,20 @@ class _CustomerReconciliationDialogState
         (currentUser?.hasPermission('users.manage') ?? false);
 
     return AlertDialog(
-      title: const Text('هاوتاکردنەوەی بالانس', style: AppTextStyles.h2),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Expanded(
+            child: Text('هاوتاکردنەوەی بالانس', style: AppTextStyles.h2),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: reconciliationAsync.when(
@@ -135,10 +148,6 @@ class _CustomerReconciliationDialogState
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('داخستن'),
-        ),
         reconciliationAsync.maybeWhen(
           data: (report) {
             if (!report.isConsistent && canFix) {
@@ -180,15 +189,24 @@ class _CustomerReconciliationDialogState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ئاگاداری ڕاستکردنەوە', style: AppTextStyles.h3),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text('ئاگاداری ڕاستکردنەوە', style: AppTextStyles.h3),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context, false),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
         content: Text(
           'دڵنیایت لە ڕاستکردنەوەی بالانسی کڕیار بۆ بڕی ${Formatters.currency(report.recalculatedBalance)}؟\n\nئەم کردارە تەنها بالانسی ئێستای کڕیارەکە ڕاست دەکاتەوە بۆ ئەوەی هاوتای مێژووی جوڵەکانی (Ledger) بێت.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () => Navigator.pop(context, true),

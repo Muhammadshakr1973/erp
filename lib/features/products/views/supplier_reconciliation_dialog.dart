@@ -169,10 +169,6 @@ class _SupplierReconciliationDialogState
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('داخستن'),
-        ),
         reconciliationAsync.maybeWhen(
           data: (report) => !report.isConsistent
               ? AppButton(

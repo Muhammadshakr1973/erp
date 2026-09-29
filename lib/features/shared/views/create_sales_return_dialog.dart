@@ -445,22 +445,12 @@ class _CreateSalesReturnDialogState
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        AppButton(
-                          text: 'پاشگەزبوونەوە',
-                          type: AppButtonType.text,
-                          onPressed: () => Navigator.of(context).pop(false),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        AppButton(
-                          text: 'تۆمارکردنی گەڕاندنەوە',
-                          isLoading: _isSubmitting,
-                          onPressed: totalQty > 0 && !_isSubmitting
-                              ? _submitReturn
-                              : null,
-                        ),
-                      ],
+                    AppButton(
+                      text: 'تۆمارکردنی گەڕاندنەوە',
+                      isLoading: _isSubmitting,
+                      onPressed: totalQty > 0 && !_isSubmitting
+                          ? _submitReturn
+                          : null,
                     ),
                   ],
                 ),

@@ -553,22 +553,28 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'دڵنیایی لە سڕینەوە',
-          style: TextStyle(fontFamily: 'Rudaw'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'دڵنیایی لە سڕینەوە',
+                style: TextStyle(fontFamily: 'Rudaw'),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
         content: Text(
           'ئایا دڵنیای لە سڕینەوەی ڕاوتی "${route.name}"؟',
           style: const TextStyle(fontFamily: 'Rudaw'),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'پاشگەزبوونەوە',
-              style: TextStyle(fontFamily: 'Rudaw'),
-            ),
-          ),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: AppColors.danger,
@@ -720,9 +726,22 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                widget.route == null ? 'زیادکردنی ڕاوتی نوێ' : 'دەستکاری ڕاوت',
-                style: AppTextStyles.h2,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.route == null ? 'زیادکردنی ڕاوتی نوێ' : 'دەستکاری ڕاوت',
+                      style: AppTextStyles.h2,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.md),
               AppTextField(
@@ -776,26 +795,13 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
                 onChanged: (val) => setState(() => _isActive = val),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'پاشگەزبوونەوە',
-                      style: TextStyle(fontFamily: 'Rudaw'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  SizedBox(
-                    width: 120,
-                    child: AppButton(
-                      text: 'پاشەکەوت',
-                      isLoading: _isLoading,
-                      onPressed: _submit,
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(
+                  text: 'پاشەکەوت',
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                ),
               ),
             ],
           ),
@@ -956,6 +962,12 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
                     style: AppTextStyles.h2,
                   ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -1082,30 +1094,17 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'داخستن',
-                    style: TextStyle(fontFamily: 'Rudaw'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                SizedBox(
-                  width: 120,
-                  child: AppButton(
-                    text: 'دیاریکردن',
-                    isLoading: _isAssigning,
-                    onPressed:
-                        _selectedSalesmanId == null ||
-                            widget.route.salesmen.isNotEmpty
-                        ? null
-                        : _assign,
-                  ),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                text: 'دیاریکردن',
+                isLoading: _isAssigning,
+                onPressed:
+                    _selectedSalesmanId == null ||
+                        widget.route.salesmen.isNotEmpty
+                    ? null
+                    : _assign,
+              ),
             ),
           ],
         ),
@@ -1165,9 +1164,22 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: const Text(
-              'دیاریکردنی کڕیار بۆ ئەم ڕاوتە',
-              style: AppTextStyles.h3,
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'دیاریکردنی کڕیار بۆ ئەم ڕاوتە',
+                    style: AppTextStyles.h3,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
             content: SizedBox(
               width: 400,
@@ -1228,13 +1240,6 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'پاشگەزبوونەوە',
-                  style: TextStyle(fontFamily: 'Rudaw'),
-                ),
-              ),
               ElevatedButton(
                 onPressed: selectedIds.isEmpty
                     ? null
@@ -1293,6 +1298,12 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                   icon: const Icon(Icons.add_link, color: AppColors.info),
                   tooltip: 'زیادکردنی کڕیار بۆ ئەم ڕاوتە',
                   onPressed: _showAssignCustomersDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -1453,18 +1464,6 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                   },
                 ),
               ),
-
-            const SizedBox(height: AppSpacing.md),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'داخستن',
-                  style: TextStyle(fontFamily: 'Rudaw'),
-                ),
-              ),
-            ),
           ],
         ),
       ),

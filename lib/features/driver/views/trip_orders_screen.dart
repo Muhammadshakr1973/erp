@@ -440,7 +440,21 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: const Text('پەسەندکردنی گەیاندن'),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    'پەسەندکردنی گەیاندن',
+                    style: AppTextStyles.h2,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -461,10 +475,6 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('پاشگەزبوونەوە'),
-              ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
                 onPressed: () async {
@@ -522,7 +532,21 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
             return Directionality(
               textDirection: TextDirection.rtl,
               child: AlertDialog(
-                title: const Text('تۆمارکردنی شکستی گەیاندن'),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'تۆمارکردنی شکستی گەیاندن',
+                        style: AppTextStyles.h2,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -567,10 +591,6 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                   ),
                 ),
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('پاشگەزبوونەوە'),
-                  ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
                     onPressed: () {

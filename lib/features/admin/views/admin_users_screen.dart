@@ -104,16 +104,22 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی بەکارهێنەر', style: AppTextStyles.h3),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text('سڕینەوەی بەکارهێنەر', style: AppTextStyles.h3),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
         content: Text('دڵنیایت لە سڕینەوەی بەکارهێنەر "${user.name}"؟'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'پاشگەزبوونەوە',
-              style: TextStyle(fontFamily: 'Rudaw'),
-            ),
-          ),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: AppColors.danger,
@@ -697,6 +703,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         style: AppTextStyles.h2,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                   ],
                 ),
                 const Divider(height: 24),
@@ -930,10 +942,23 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                             showDialog(
                               context: context,
                               builder: (_) => AlertDialog(
-                                title: const Text(
-                                  'کۆدی چوونەژوورەوە',
-                                  style: AppTextStyles.h3,
-                                  textAlign: TextAlign.center,
+                                title: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'کۆدی چوونەژوورەوە',
+                                        style: AppTextStyles.h3,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () => Navigator.pop(context),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ],
                                 ),
                                 content: SizedBox(
                                   width: 200,
@@ -944,15 +969,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                                     size: 200.0,
                                   ),
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text(
-                                      'داخستن',
-                                      style: TextStyle(fontFamily: 'Rudaw'),
-                                    ),
-                                  ),
-                                ],
                               ),
                             );
                           } else {
@@ -1006,25 +1022,13 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      child: const Text(
-                        'پاشگەزبوونەوە',
-                        style: TextStyle(fontFamily: 'Rudaw'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Flexible(
-                      child: AppButton(
-                        text: isEditing ? 'پاشەکەوتکردن' : 'تۆمارکردن',
-                        isLoading: _isLoading,
-                        onPressed: _save,
-                      ),
-                    ),
-                  ],
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    text: isEditing ? 'پاشەکەوتکردن' : 'تۆمارکردن',
+                    isLoading: _isLoading,
+                    onPressed: _save,
+                  ),
                 ),
               ],
             ),

@@ -712,26 +712,12 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Flexible(
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
-                      children: [
-                        TextButton(
-                          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                          child: const Text('پاشگەزبوونەوە'),
-                        ),
-                        AppButton(
-                          text: _isSubmitting ? 'خەریکی دروستکردن...' : 'دروستکردنی گەشت',
-                          isLoading: _isSubmitting,
-                          onPressed: (_selectedDriverId == null || _selectedOrderIds.isEmpty || _isSubmitting)
-                              ? null
-                              : _submit,
-                        ),
-                      ],
-                    ),
+                  AppButton(
+                    text: _isSubmitting ? 'خەریکی دروستکردن...' : 'دروستکردنی گەشت',
+                    isLoading: _isSubmitting,
+                    onPressed: (_selectedDriverId == null || _selectedOrderIds.isEmpty || _isSubmitting)
+                        ? null
+                        : _submit,
                   ),
                 ],
               ),

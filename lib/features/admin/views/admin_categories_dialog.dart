@@ -27,14 +27,23 @@ class AdminCategoriesDialog extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('بەڕێوەبردنی جۆرەکان', style: AppTextStyles.h2),
-                  IconButton(
-                    icon: const Icon(AppIcons.add, color: AppColors.primary),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => const CategoryFormDialog(),
-                      );
-                    },
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(AppIcons.add, color: AppColors.primary),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const CategoryFormDialog(),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -96,14 +105,7 @@ class AdminCategoriesDialog extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('داخستن'),
-                ),
-              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -119,13 +121,18 @@ class AdminCategoriesDialog extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی جۆر'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(child: Text('سڕینەوەی جۆر')),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
         content: Text('دڵنیایت لە سڕینەوەی جۆری "${category.name}"؟'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();

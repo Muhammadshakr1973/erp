@@ -398,22 +398,13 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              SizedBox(
-                width: 140,
-                child: AppButton(
-                  text: 'پاشەکەوت',
-                  isLoading: _isLoading,
-                  onPressed: _submit,
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('پاشگەزبوونەوە'),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: AppButton(
+              text: 'پاشەکەوت',
+              isLoading: _isLoading,
+              onPressed: _submit,
+            ),
           ),
         ],
       ),
