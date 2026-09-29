@@ -25,13 +25,48 @@
   <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
   <!-- Modern Flutter Web Initialization -->
+  <script>
+    window._flutter = window._flutter || {};
+    window._flutter.buildConfig = window._flutter.buildConfig || {
+      builds: [
+        {
+          compileTarget: 'dart2js',
+          renderer: 'canvaskit',
+          mainImport: 'main.dart.js'
+        }
+      ]
+    };
+  </script>
   <script src="flutter.js" defer></script>
 </head>
 <body>
   <script>
     window.addEventListener('load', function(ev) {
       if (window._flutter && window._flutter.loader) {
-        window._flutter.loader.load();
+        if (typeof window._flutter.loader.load === 'function') {
+          window._flutter.loader.load({
+            config: window._flutter.buildConfig
+          }).catch(function(e) {
+            console.warn('Flutter loader.load failed, trying loadEntrypoint fallback:', e);
+            if (typeof window._flutter.loader.loadEntrypoint === 'function') {
+              window._flutter.loader.loadEntrypoint({
+                onEntrypointLoaded: function(engineInitializer) {
+                  engineInitializer.initializeEngine().then(function(appRunner) {
+                    appRunner.runApp();
+                  });
+                }
+              });
+            }
+          });
+        } else if (typeof window._flutter.loader.loadEntrypoint === 'function') {
+          window._flutter.loader.loadEntrypoint({
+            onEntrypointLoaded: function(engineInitializer) {
+              engineInitializer.initializeEngine().then(function(appRunner) {
+                appRunner.runApp();
+              });
+            }
+          });
+        }
       }
     });
   </script>
