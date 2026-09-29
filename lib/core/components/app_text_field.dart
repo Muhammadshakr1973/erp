@@ -80,6 +80,13 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
   @override
   void dispose() {
     _effectiveFocusNode.removeListener(_onFocusChange);
+    try {
+      final keyboardNotifier = ref.read(numericKeyboardProvider.notifier);
+      final keyboardState = ref.read(numericKeyboardProvider);
+      if (keyboardState.controller == _effectiveController) {
+        keyboardNotifier.hideKeyboardOnly();
+      }
+    } catch (_) {}
     _localFocusNode?.dispose();
     _localController?.dispose();
     super.dispose();
@@ -141,7 +148,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     final theme = Theme.of(context);
     final radius = widget.borderRadius ?? BorderRadius.circular(24);
 
-    final bool isReadOnly = widget.readOnly ?? false;
+    final bool isReadOnly = (widget.readOnly ?? false) || _isNumeric;
     final TextInputType effectiveKeyboardType = _isNumeric
         ? TextInputType.none
         : widget.keyboardType;
