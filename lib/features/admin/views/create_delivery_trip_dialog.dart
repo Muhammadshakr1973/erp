@@ -13,6 +13,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
 import '../../orders/providers/orders_provider.dart';
 
+enum TripDatePreset { today, tomorrow, dayAfterTomorrow, custom }
+
 class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
   const CreateDeliveryTripDialog({super.key});
 
@@ -22,7 +24,8 @@ class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
 
 class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDialog> {
   int? _selectedDriverId;
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
+  TripDatePreset _selectedPreset = TripDatePreset.tomorrow;
   final Set<int> _selectedOrderIds = <int>{};
   final TextEditingController _notesController = TextEditingController();
   bool _isSubmitting = false;
@@ -30,12 +33,51 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   @override
   void initState() {
     super.initState();
+    _selectedDate = _getTomorrowDate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(authProvider).user;
       if (user != null && (user.isDriver || user.role.toLowerCase() == 'driver')) {
         setState(() {
           _selectedDriverId = user.id;
         });
+      }
+    });
+  }
+
+  DateTime _getTodayDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  DateTime _getTomorrowDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+  }
+
+  DateTime _getDayAfterTomorrowDate() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day).add(const Duration(days: 2));
+  }
+
+  bool _isSameDay(DateTime d1, DateTime d2) {
+    return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+  }
+
+  void _selectPreset(TripDatePreset preset) {
+    setState(() {
+      _selectedPreset = preset;
+      switch (preset) {
+        case TripDatePreset.today:
+          _selectedDate = _getTodayDate();
+          break;
+        case TripDatePreset.tomorrow:
+          _selectedDate = _getTomorrowDate();
+          break;
+        case TripDatePreset.dayAfterTomorrow:
+          _selectedDate = _getDayAfterTomorrowDate();
+          break;
+        case TripDatePreset.custom:
+          break;
       }
     });
   }
@@ -56,6 +98,15 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        if (_isSameDay(picked, _getTodayDate())) {
+          _selectedPreset = TripDatePreset.today;
+        } else if (_isSameDay(picked, _getTomorrowDate())) {
+          _selectedPreset = TripDatePreset.tomorrow;
+        } else if (_isSameDay(picked, _getDayAfterTomorrowDate())) {
+          _selectedPreset = TripDatePreset.dayAfterTomorrow;
+        } else {
+          _selectedPreset = TripDatePreset.custom;
+        }
       });
     }
   }
@@ -257,6 +308,104 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
 
                       // Date Selection
                       const Text('بەرواری گەشت *', style: AppTextStyles.bodyBold),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectPreset(TripDatePreset.today),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Radio<TripDatePreset>(
+                                      value: TripDatePreset.today,
+                                      groupValue: _selectedPreset,
+                                      onChanged: (val) {
+                                        if (val != null) _selectPreset(val);
+                                      },
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Flexible(
+                                      child: Text(
+                                        'ئەمڕۆ',
+                                        style: AppTextStyles.bodyMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectPreset(TripDatePreset.tomorrow),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Radio<TripDatePreset>(
+                                      value: TripDatePreset.tomorrow,
+                                      groupValue: _selectedPreset,
+                                      onChanged: (val) {
+                                        if (val != null) _selectPreset(val);
+                                      },
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Flexible(
+                                      child: Text(
+                                        'سبەی',
+                                        style: AppTextStyles.bodyMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectPreset(TripDatePreset.dayAfterTomorrow),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Radio<TripDatePreset>(
+                                      value: TripDatePreset.dayAfterTomorrow,
+                                      groupValue: _selectedPreset,
+                                      onChanged: (val) {
+                                        if (val != null) _selectPreset(val);
+                                      },
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Flexible(
+                                      child: Text(
+                                        'دووسبەی',
+                                        style: AppTextStyles.bodyMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                       InkWell(
                         onTap: _pickDate,

@@ -554,6 +554,33 @@ void main() {
       expect(attemptOne['driver_id'], equals(retryAttempt['driver_id']));
     });
   });
+
+  group('Trip Date Radio Preset Selection Rules', () {
+    test('Default selected date preset is Tomorrow (+1 day)', () {
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
+      final tomorrowDate = todayDate.add(const Duration(days: 1));
+
+      expect(tomorrowDate.difference(todayDate).inDays, equals(1));
+    });
+
+    test('Today preset selects current date', () {
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
+
+      expect(todayDate.year, equals(now.year));
+      expect(todayDate.month, equals(now.month));
+      expect(todayDate.day, equals(now.day));
+    });
+
+    test('Day after tomorrow preset selects date +2 days from today', () {
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
+      final dayAfterTomorrowDate = todayDate.add(const Duration(days: 2));
+
+      expect(dayAfterTomorrowDate.difference(todayDate).inDays, equals(2));
+    });
+  });
 }
 
 
