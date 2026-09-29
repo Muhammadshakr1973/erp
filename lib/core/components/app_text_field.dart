@@ -161,6 +161,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         readOnly: isReadOnly,
         showCursor: true,
         enableInteractiveSelection: true,
+        textDirection: _isNumeric ? TextDirection.ltr : null,
         autofocus: widget.autofocus,
         autocorrect: !_isNumeric,
         enableSuggestions: !_isNumeric,

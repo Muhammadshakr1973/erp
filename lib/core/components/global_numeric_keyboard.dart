@@ -273,6 +273,7 @@ class NumericKeyboardDialog extends ConsumerWidget {
                     Text(
                       labelText ?? hintText ?? '',
                       textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl, // Keep Kurdish text right-to-left
                       style: AppTextStyles.bodyBold.copyWith(
                         color: theme.colorScheme.primary,
                         fontSize: 16,
@@ -281,46 +282,50 @@ class NumericKeyboardDialog extends ConsumerWidget {
                     const SizedBox(height: 12),
                   ],
                   
-                  // Input Value Display box
+                  // Input Value Display box (wrapped in Directionality with LTR to ensure left-to-right number and cursor)
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: controller,
                     builder: (context, value, _) {
                       final text = value.text;
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.5),
-                            width: 1.5,
+                      return Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withOpacity(0.5),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                text.isEmpty ? (hintText ?? '0') : text,
-                                style: AppTextStyles.h1.copyWith(
-                                  color: text.isEmpty 
-                                      ? (isDark ? Colors.white38 : Colors.black38)
-                                      : (isDark ? Colors.white : Colors.black87),
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  text.isEmpty ? (hintText ?? '0') : text,
+                                  textDirection: TextDirection.ltr,
+                                  style: AppTextStyles.h1.copyWith(
+                                    color: text.isEmpty 
+                                        ? (isDark ? Colors.white38 : Colors.black38)
+                                        : (isDark ? Colors.white : Colors.black87),
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            // Soft blinking cursor effect
-                            Container(
-                              width: 2,
-                              height: 28,
-                              margin: const EdgeInsets.only(left: 4),
-                              color: theme.colorScheme.primary,
-                            ),
-                          ],
+                              // Soft blinking cursor effect
+                              Container(
+                                width: 2,
+                                height: 28,
+                                margin: const EdgeInsets.only(left: 4),
+                                color: theme.colorScheme.primary,
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
