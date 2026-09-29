@@ -51,33 +51,38 @@ class GlobalNumericKeyboard extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Done Button (Kurdish: تەواو)
-                    TextButton(
-                      onPressed: () {
+                    InkWell(
+                      canRequestFocus: false,
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: () {
                         ref.read(numericKeyboardProvider.notifier).hide();
                       },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'تەواو',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 15,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Text(
+                          'تەواو',
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
                     // Backspace Button
-                    IconButton(
-                      icon: const Icon(Icons.backspace_outlined),
-                      color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.7),
-                      iconSize: 18,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
+                    InkWell(
+                      canRequestFocus: false,
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: () {
                         ref.read(numericKeyboardProvider.notifier).delete();
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Icon(
+                          Icons.backspace_outlined,
+                          color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.7),
+                          size: 18,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -159,6 +164,7 @@ class GlobalNumericKeyboard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(6),
           elevation: 1,
           child: InkWell(
+            canRequestFocus: false,
             borderRadius: BorderRadius.circular(6),
             onTap: () {
               if (label == '-') {

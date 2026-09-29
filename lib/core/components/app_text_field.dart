@@ -141,7 +141,10 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
                       targetAnchor: Alignment.bottomLeft,
                       followerAnchor: Alignment.topLeft,
                       offset: const Offset(0, 4),
-                      child: const GlobalNumericKeyboard(),
+                      child: TapRegion(
+                        groupId: _effectiveFocusNode,
+                        child: const GlobalNumericKeyboard(),
+                      ),
                     ),
                   ),
                 ],
@@ -170,9 +173,19 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         ? TextInputType.none
         : widget.keyboardType;
 
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: TextFormField(
+    return TapRegion(
+      groupId: _effectiveFocusNode,
+      onTapOutside: (event) {
+        // If the user tapped completely outside the input field and its custom keyboard dropdown, unfocus and close it.
+        if (_effectiveFocusNode.hasFocus) {
+          _effectiveFocusNode.unfocus();
+          ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
+          _hideKeyboardOverlay();
+        }
+      },
+      child: CompositedTransformTarget(
+        link: _layerLink,
+        child: TextFormField(
         controller: _effectiveController,
         focusNode: _effectiveFocusNode,
         keyboardType: effectiveKeyboardType,
@@ -239,12 +252,13 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
                 borderRadius: radius,
                 borderSide: const BorderSide(color: AppColors.danger, width: 1),
               ),
-              focusedErrorBorder: OutlineInputBorder(
+               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: radius,
                 borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
               ),
             ),
       ),
+    ),
     );
   }
 }
