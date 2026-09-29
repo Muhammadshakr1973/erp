@@ -46,7 +46,24 @@ class NumericKeyboardState {
 }
 
 class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
+  TextSelection? _lastSelection;
+
   NumericKeyboardNotifier() : super(NumericKeyboardState());
+
+  void _handleControllerSelectionChange() {
+    final controller = state.controller;
+    if (controller != null) {
+      if (!state.isTappingKeyboard) {
+        _lastSelection = controller.selection;
+      }
+    }
+  }
+
+  void _removeListener() {
+    if (state.controller != null) {
+      state.controller!.removeListener(_handleControllerSelectionChange);
+    }
+  }
 
   void register({
     required TextEditingController controller,
@@ -55,15 +72,22 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     required bool signed,
     ValueChanged<String>? onChanged,
   }) {
+    if (state.controller != controller) {
+      _removeListener();
+      controller.addListener(_handleControllerSelectionChange);
+    }
+
     state = NumericKeyboardState(
       controller: controller,
       focusNode: focusNode,
       decimal: decimal,
       signed: signed,
       isVisible: true,
-      isTappingKeyboard: false,
+      isTappingKeyboard: state.isTappingKeyboard, // Preserve tapping status during focus fluctuation
       onChanged: onChanged,
     );
+
+    _lastSelection = controller.selection;
   }
 
   void setTapping(bool tapping) {
@@ -74,10 +98,14 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (state.focusNode != null) {
       state.focusNode!.unfocus();
     }
+    _removeListener();
+    _lastSelection = null;
     state = state.copyWith(isVisible: false);
   }
 
   void hideKeyboardOnly() {
+    _removeListener();
+    _lastSelection = null;
     state = state.copyWith(isVisible: false);
   }
 
@@ -86,7 +114,13 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = controller.selection;
+    final selection = (_lastSelection != null &&
+            _lastSelection!.isValid &&
+            _lastSelection!.start <= text.length &&
+            _lastSelection!.end <= text.length)
+        ? _lastSelection!
+        : controller.selection;
+
     String newText;
     
     // Sanitize cursor position
@@ -105,9 +139,12 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (cursorPosition < 0) cursorPosition = 0;
     if (cursorPosition > newText.length) cursorPosition = newText.length;
 
+    final newSelection = TextSelection.collapsed(offset: cursorPosition);
+    _lastSelection = newSelection;
+
     controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: newSelection,
     );
 
     state.onChanged?.call(newText);
@@ -118,7 +155,12 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = controller.selection;
+    final selection = (_lastSelection != null &&
+            _lastSelection!.isValid &&
+            _lastSelection!.start <= text.length &&
+            _lastSelection!.end <= text.length)
+        ? _lastSelection!
+        : controller.selection;
 
     // Sanitize start and end of selection
     int start = selection.isValid ? selection.start : text.length;
@@ -158,9 +200,12 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (cursorPosition < 0) cursorPosition = 0;
     if (cursorPosition > newText.length) cursorPosition = newText.length;
 
+    final newSelection = TextSelection.collapsed(offset: cursorPosition);
+    _lastSelection = newSelection;
+
     controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: newSelection,
     );
 
     state.onChanged?.call(newText);
@@ -171,7 +216,12 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = controller.selection;
+    final selection = (_lastSelection != null &&
+            _lastSelection!.isValid &&
+            _lastSelection!.start <= text.length &&
+            _lastSelection!.end <= text.length)
+        ? _lastSelection!
+        : controller.selection;
 
     if (text.isEmpty) return;
 
@@ -206,12 +256,21 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (cursorPosition < 0) cursorPosition = 0;
     if (cursorPosition > newText.length) cursorPosition = newText.length;
 
+    final newSelection = TextSelection.collapsed(offset: cursorPosition);
+    _lastSelection = newSelection;
+
     controller.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: cursorPosition),
+      selection: newSelection,
     );
 
     state.onChanged?.call(newText);
+  }
+
+  @override
+  void dispose() {
+    _removeListener();
+    super.dispose();
   }
 }
 
