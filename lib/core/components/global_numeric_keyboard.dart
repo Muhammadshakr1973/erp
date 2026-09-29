@@ -237,94 +237,104 @@ class NumericKeyboardDialog extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       elevation: 0,
-      child: Center(
-        child: Container(
-          width: 320,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isDark ? Colors.white10 : Colors.black12,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Title/Label
-              if (labelText != null || hintText != null) ...[
-                Text(
-                  labelText ?? hintText ?? '',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyBold.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontSize: 16,
-                  ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          Navigator.of(context).maybePop();
+        },
+        child: Center(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {}, // Prevent taps inside the keyboard dialog container from dismissing it
+            child: Container(
+              width: 320,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black12,
+                  width: 1,
                 ),
-                const SizedBox(height: 12),
-              ],
-              
-              // Input Value Display box
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: controller,
-                builder: (context, value, _) {
-                  final text = value.text;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withOpacity(0.5),
-                        width: 1.5,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Title/Label
+                  if (labelText != null || hintText != null) ...[
+                    Text(
+                      labelText ?? hintText ?? '',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontSize: 16,
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            text.isEmpty ? (hintText ?? '0') : text,
-                            style: AppTextStyles.h1.copyWith(
-                              color: text.isEmpty 
-                                  ? (isDark ? Colors.white38 : Colors.black38)
-                                  : (isDark ? Colors.white : Colors.black87),
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  // Input Value Display box
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (context, value, _) {
+                      final text = value.text;
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withOpacity(0.5),
+                            width: 1.5,
                           ),
                         ),
-                        // Soft blinking cursor effect
-                        Container(
-                          width: 2,
-                          height: 28,
-                          margin: const EdgeInsets.only(left: 4),
-                          color: theme.colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                text.isEmpty ? (hintText ?? '0') : text,
+                                style: AppTextStyles.h1.copyWith(
+                                  color: text.isEmpty 
+                                      ? (isDark ? Colors.white38 : Colors.black38)
+                                      : (isDark ? Colors.white : Colors.black87),
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // Soft blinking cursor effect
+                            Container(
+                              width: 2,
+                              height: 28,
+                              margin: const EdgeInsets.only(left: 4),
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Custom Numeric Keyboard
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: const GlobalNumericKeyboard(isDialog: true),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              
-              // Custom Numeric Keyboard
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 260),
-                child: const GlobalNumericKeyboard(isDialog: true),
-              ),
-            ],
+            ),
           ),
         ),
       ),
