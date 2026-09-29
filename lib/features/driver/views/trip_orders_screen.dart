@@ -9,6 +9,7 @@ import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../../shared/views/map_picker_dialog.dart';
 import '../providers/driver_providers.dart';
 
@@ -404,8 +405,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   }
 
   String _formatCurrency(num amount) {
-    return amount.toString().replaceAllMapped(
-        RegExp(r'\B(?=(\d{3})+(?!\n))'), (match) => ',');
+    return Formatters.number(amount);
   }
 
   Future<void> _showDeliverDialog(dynamic tripOrder) async {
