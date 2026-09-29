@@ -70,20 +70,31 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
           int failed = trip.orders.where((o) => o.status == 'FAILED').length;
           int pending = total - delivered - failed;
 
+          final sortedOrders = List<DeliveryTripOrderModel>.from(trip.orders)..sort((a, b) {
+            final routeA = _getOrderRouteName(a);
+            final routeB = _getOrderRouteName(b);
+            final routeComp = routeA.compareTo(routeB);
+            if (routeComp != 0) return routeComp;
+            return a.deliveryOrder.compareTo(b.deliveryOrder);
+          });
+
           return Column(
             children: [
               _buildTripSummary(total, delivered, pending, failed),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: trip.orders.length,
+                  itemCount: sortedOrders.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
-                    final tripOrder = trip.orders[index];
+                    final tripOrder = sortedOrders[index];
                     final order = tripOrder.order;
                     final customerName = _getCustomerName(order?.customer);
                     final isPending = tripOrder.status == 'PENDING';
+                    final routeName = _getOrderRouteName(tripOrder);
+                    final isDark = theme.brightness == Brightness.dark;
+                    final phoneColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E40AF);
 
                     return AppCard(
                       child: Column(
@@ -101,46 +112,61 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
-                              StatusBadge(
-                                label: _getOrderStatusLabel(tripOrder.status),
-                                type: _getOrderStatusBadgeType(tripOrder.status),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.receipt_long_outlined,
-                                size: 16,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'پسوڵەی ژمارە ${order?.orderNumber ?? 'نادیار'}',
-                                  style: AppTextStyles.caption,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF3B82F6).withOpacity(0.5)
+                                        : const Color(0xFF93C5FD),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.alt_route_rounded,
+                                      size: 14,
+                                      color: isDark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      routeName,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? const Color(0xFF93C5FD)
+                                            : const Color(0xFF1D4ED8),
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                           if (_getCustomerPhone(order?.customer).isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.phone_outlined,
                                   size: 16,
-                                  color: AppColors.primary,
+                                  color: phoneColor,
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     _getCustomerPhone(order?.customer),
                                     style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.primary,
+                                      color: phoneColor,
                                       fontWeight: FontWeight.bold,
                                     ),
                                     maxLines: 1,
@@ -270,11 +296,9 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                             ),
                           ],
                           const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.xs,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               FittedBox(
                                 fit: BoxFit.scaleDown,
@@ -301,6 +325,11 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                       onPressed: () => _showFailDialog(tripOrder),
                                     ),
                                   ],
+                                )
+                              else if (!isPending)
+                                StatusBadge(
+                                  label: _getOrderStatusLabel(tripOrder.status),
+                                  type: _getOrderStatusBadgeType(tripOrder.status),
                                 ),
                             ],
                           ),
@@ -321,6 +350,28 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     if (customer == null) return 'کڕیاری نەناسراو';
     if (customer is Map) return customer['name']?.toString() ?? 'کڕیاری نەناسراو';
     return 'کڕیاری نەناسراو';
+  }
+
+  String _getOrderRouteName(DeliveryTripOrderModel tripOrder) {
+    final order = tripOrder.order;
+    if (order != null) {
+      if (order.customer is Map) {
+        final cMap = order.customer as Map;
+        if (cMap['route'] is Map && cMap['route']['name'] != null) {
+          final rName = cMap['route']['name'].toString().trim();
+          if (rName.isNotEmpty) return rName;
+        }
+        if (cMap['route_name'] != null && cMap['route_name'].toString().trim().isNotEmpty) {
+          final rName = cMap['route_name'].toString().trim();
+          if (rName.isNotEmpty) return rName;
+        }
+      }
+      final rName = order.customerRouteName;
+      if (rName.isNotEmpty && rName != 'ڕاوت دیاری نەکراوە') {
+        return rName;
+      }
+    }
+    return 'بێ ڕاوت';
   }
 
   String _getCustomerPhone(dynamic customer) {

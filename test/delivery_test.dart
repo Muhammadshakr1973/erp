@@ -195,6 +195,109 @@ void main() {
       expect(rawList[2].deliveryOrder, equals(3));
     });
 
+    test('Trip orders sequence correctly by customer route name and then delivery_order', () {
+      final orderWithRouteA = DeliveryTripOrderModel(
+        id: 1,
+        deliveryTripId: 10,
+        salesOrderId: 101,
+        status: 'PENDING',
+        deliveryOrder: 2,
+        receivedAmount: 0,
+        order: OrderModel(
+          id: 101,
+          orderNumber: 'ORD-101',
+          customerId: 1,
+          salesmanId: 1,
+          discountAmount: 0,
+          discountPercent: 0,
+          status: 'READY',
+          subtotal: 10000,
+          totalAmount: 10000,
+          totalProfit: 1000,
+          createdAt: '2026-03-02',
+          customer: {
+            'id': 1,
+            'name': 'Customer 1',
+            'route': {'name': 'ڕاوتی سلێمانی'},
+          },
+        ),
+      );
+
+      final orderWithRouteB = DeliveryTripOrderModel(
+        id: 2,
+        deliveryTripId: 10,
+        salesOrderId: 102,
+        status: 'PENDING',
+        deliveryOrder: 1,
+        receivedAmount: 0,
+        order: OrderModel(
+          id: 102,
+          orderNumber: 'ORD-102',
+          customerId: 2,
+          salesmanId: 1,
+          discountAmount: 0,
+          discountPercent: 0,
+          status: 'READY',
+          subtotal: 15000,
+          totalAmount: 15000,
+          totalProfit: 2000,
+          createdAt: '2026-03-02',
+          customer: {
+            'id': 2,
+            'name': 'Customer 2',
+            'route': {'name': 'ڕاوتی هەولێر'},
+          },
+        ),
+      );
+
+      final orderWithRouteASecond = DeliveryTripOrderModel(
+        id: 3,
+        deliveryTripId: 10,
+        salesOrderId: 103,
+        status: 'PENDING',
+        deliveryOrder: 1,
+        receivedAmount: 0,
+        order: OrderModel(
+          id: 103,
+          orderNumber: 'ORD-103',
+          customerId: 3,
+          salesmanId: 1,
+          discountAmount: 0,
+          discountPercent: 0,
+          status: 'READY',
+          subtotal: 12000,
+          totalAmount: 12000,
+          totalProfit: 1500,
+          createdAt: '2026-03-02',
+          customer: {
+            'id': 3,
+            'name': 'Customer 3',
+            'route': {'name': 'ڕاوتی سلێمانی'},
+          },
+        ),
+      );
+
+      final list = [orderWithRouteA, orderWithRouteB, orderWithRouteASecond];
+
+      String getRouteName(DeliveryTripOrderModel o) {
+        return o.order?.customerRouteName ?? 'بێ ڕاوت';
+      }
+
+      list.sort((a, b) {
+        final routeA = getRouteName(a);
+        final routeB = getRouteName(b);
+        final routeComp = routeA.compareTo(routeB);
+        if (routeComp != 0) return routeComp;
+        return a.deliveryOrder.compareTo(b.deliveryOrder);
+      });
+
+      // 'ڕاوتی سلێمانی' comes before 'ڕاوتی هەولێر' in Kurdish/Arabic alphabet (س before ه)
+      // Between order 3 (deliveryOrder: 1) and order 1 (deliveryOrder: 2), order 3 is first
+      expect(list[0].id, equals(3));
+      expect(list[1].id, equals(1));
+      expect(list[2].id, equals(2));
+    });
+
     test('DeliveryTripOrderModel handles null and missing optional fields safely', () {
       final minimalJson = {
         'id': 12,
