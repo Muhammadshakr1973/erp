@@ -90,6 +90,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('users', UserController::class)->middleware('permission:users.manage');
         
         // Orders
+        Route::get('/salesman/dashboard', [SalesOrderController::class, 'salesmanDashboard']);
         Route::get('/orders', [SalesOrderController::class, 'index']);
         Route::post('/orders', [SalesOrderController::class, 'store'])->middleware(['permission:orders.create', 'idempotent']);
         Route::put('/orders/{id}', [SalesOrderController::class, 'update'])->middleware(['permission:orders.create', 'idempotent']);

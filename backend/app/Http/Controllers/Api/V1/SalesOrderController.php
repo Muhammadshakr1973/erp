@@ -301,4 +301,66 @@ class SalesOrderController extends Controller
             'data' => null
         ]);
     }
+
+    public function salesmanDashboard(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $today = now()->toDateString();
+
+        // 1. Today's Route
+        $routeSalesman = \App\Models\RouteSalesman::with('route')
+            ->where('salesman_id', $user->id)
+            ->where('is_active', true)
+            ->where('work_date', $today)
+            ->first();
+
+        if (!$routeSalesman) {
+            $routeSalesman = \App\Models\RouteSalesman::with('route')
+                ->where('salesman_id', $user->id)
+                ->where('is_active', true)
+                ->latest('id')
+                ->first();
+        }
+
+        $routeName = $routeSalesman ? $routeSalesman->route->name : 'گشتی';
+
+        // 2. Today's Sales Amount
+        $todaySalesAmount = (int) \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereDate('created_at', $today)
+            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED)
+            ->sum('total_amount');
+
+        // 3. Visits count
+        $assignedRouteIds = $user->getAssignedRouteIds();
+        $totalCustomersCount = \App\Models\Customer::whereIn('route_id', $assignedRouteIds)
+            ->where('is_active', true)
+            ->count();
+
+        // Fallback if no customers in route
+        if ($totalCustomersCount === 0) {
+            $totalCustomersCount = \App\Models\Customer::where('is_active', true)->count();
+        }
+
+        // Visited customers (had orders or payments today)
+        $orderCustomerIds = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereDate('created_at', $today)
+            ->pluck('customer_id');
+
+        $paymentCustomerIds = \App\Models\CustomerPayment::where('collected_by', $user->id)
+            ->whereDate('created_at', $today)
+            ->pluck('customer_id');
+
+        $visitedCustomerIds = $orderCustomerIds->merge($paymentCustomerIds)->unique()->toArray();
+        $visitedCount = count($visitedCustomerIds);
+
+        return response()->json([
+            'message' => 'داشبۆردی مەندوب',
+            'data' => [
+                'route_name' => $routeName,
+                'today_sales' => $todaySalesAmount,
+                'visited_count' => $visitedCount,
+                'total_visits' => $totalCustomersCount ?: 1,
+            ]
+        ]);
+    }
 }

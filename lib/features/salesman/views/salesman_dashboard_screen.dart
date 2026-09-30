@@ -22,6 +22,7 @@ import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../providers/salesman_dashboard_provider.dart';
 import 'salesman_my_commissions_screen.dart';
 import 'salesman_main_screen.dart';
 
@@ -35,6 +36,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     final ordersAsync = ref.watch(ordersListProvider);
     final syncStatus = ref.watch(syncStatusProvider);
     final syncService = ref.watch(syncServiceProvider);
+    final dashboardAsync = ref.watch(salesmanDashboardProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -42,10 +44,24 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('سڵاو، ${user?.name ?? 'مەندوب'}', style: AppTextStyles.h2),
-            Text(
-              'گەڕەکی ئەمڕۆ: بەختیاری',
-              style: AppTextStyles.caption.copyWith(
-                color: theme.colorScheme.primary,
+            dashboardAsync.when(
+              data: (dashboard) => Text(
+                'گەڕەکی ئەمڕۆ: ${dashboard.routeName}',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              loading: () => Text(
+                'باردەکرێت...',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              error: (_, __) => Text(
+                'گەڕەکی ئەمڕۆ: گشتی',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
           ],
@@ -58,6 +74,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(ordersListProvider);
           ref.invalidate(customerListProvider);
+          ref.invalidate(salesmanDashboardProvider);
           await syncService.syncPendingOperations();
         },
         child: SingleChildScrollView(
@@ -68,38 +85,112 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             children: [
               _buildSyncStatusBanner(context, syncStatus, syncService),
               // Quick Stats
-              Row(
-                children: [
-                  Expanded(
-                    child: AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(AppIcons.order, color: AppColors.info),
-                          const SizedBox(height: 8),
-                          Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
-                          const SizedBox(height: 4),
-                          Text('450,000 د.ع', style: AppTextStyles.h2),
-                        ],
+              dashboardAsync.when(
+                data: (dashboard) => Row(
+                  children: [
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.order, color: AppColors.info),
+                            const SizedBox(height: 8),
+                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text(
+                              Formatters.formatMoney(dashboard.todaySales),
+                              style: AppTextStyles.h2,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(AppIcons.customer, color: AppColors.purple),
-                          const SizedBox(height: 8),
-                          Text('سەردانەکان', style: AppTextStyles.caption),
-                          const SizedBox(height: 4),
-                          Text('12 / 24', style: AppTextStyles.h2),
-                        ],
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.customer, color: AppColors.purple),
+                            const SizedBox(height: 8),
+                            Text('سەردانەکان', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${dashboard.visitedCount} / ${dashboard.totalVisits}',
+                              style: AppTextStyles.h2,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                loading: () => Row(
+                  children: [
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.order, color: AppColors.info),
+                            const SizedBox(height: 8),
+                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text('باردەکرێت...', style: AppTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.customer, color: AppColors.purple),
+                            const SizedBox(height: 8),
+                            Text('سەردانەکان', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text('باردەکرێت...', style: AppTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                error: (err, _) => Row(
+                  children: [
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.order, color: AppColors.info),
+                            const SizedBox(height: 8),
+                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text('هەڵە', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(AppIcons.customer, color: AppColors.purple),
+                            const SizedBox(height: 8),
+                            Text('سەردانەکان', style: AppTextStyles.caption),
+                            const SizedBox(height: 4),
+                            Text('هەڵە', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.sectionGap),
 
