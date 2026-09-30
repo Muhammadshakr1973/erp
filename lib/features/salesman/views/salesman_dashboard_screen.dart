@@ -57,7 +57,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   color: theme.colorScheme.primary,
                 ),
               ),
-              error: (_, __) => Text(
+              error: (_, _) => Text(
                 'گەڕەکی ئەمڕۆ: گشتی',
                 style: AppTextStyles.caption.copyWith(
                   color: theme.colorScheme.primary,
@@ -98,7 +98,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                             Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
                             const SizedBox(height: 4),
                             Text(
-                              Formatters.formatMoney(dashboard.todaySales),
+                              Formatters.currency(dashboard.todaySales),
                               style: AppTextStyles.h2,
                             ),
                           ],
@@ -425,7 +425,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     SyncStatus status,
     SyncService syncService,
   ) {
-    Color bgColor = AppColors.success.withOpacity(0.15);
+    Color bgColor = AppColors.success.withValues(alpha: 0.15);
     Color borderColor = AppColors.success;
     IconData icon = Icons.cloud_done;
     Color textColor = AppColors.success;
@@ -433,14 +433,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
 
     switch (status) {
       case SyncStatus.syncing:
-        bgColor = AppColors.info.withOpacity(0.15);
+        bgColor = AppColors.info.withValues(alpha: 0.15);
         borderColor = AppColors.info;
         icon = Icons.sync;
         textColor = AppColors.info;
         message = 'داتاکان لە هاوکاتکردندان...';
         break;
       case SyncStatus.pending:
-        bgColor = AppColors.warning.withOpacity(0.15);
+        bgColor = AppColors.warning.withValues(alpha: 0.15);
         borderColor = AppColors.warning;
         icon = Icons.cloud_upload;
         textColor = AppColors.warning;
@@ -448,14 +448,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         break;
       case SyncStatus.error:
       case SyncStatus.failed:
-        bgColor = AppColors.danger.withOpacity(0.15);
+        bgColor = AppColors.danger.withValues(alpha: 0.15);
         borderColor = AppColors.danger;
         icon = Icons.sync_problem;
         textColor = AppColors.danger;
         message = 'هەڵە لە هاوکاتکردنی هەندێک داتادا ڕوویدا';
         break;
       case SyncStatus.offline:
-        bgColor = AppColors.warning.withOpacity(0.15);
+        bgColor = AppColors.warning.withValues(alpha: 0.15);
         borderColor = AppColors.warning;
         icon = Icons.cloud_off;
         textColor = AppColors.warning;
@@ -464,7 +464,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       case SyncStatus.synced:
       case SyncStatus.idle:
       case SyncStatus.completed:
-        bgColor = AppColors.success.withOpacity(0.15);
+        bgColor = AppColors.success.withValues(alpha: 0.15);
         borderColor = AppColors.success;
         icon = Icons.cloud_done;
         textColor = AppColors.success;
