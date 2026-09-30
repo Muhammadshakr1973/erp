@@ -356,6 +356,115 @@ class WarehouseController extends Controller
         }
     }
 
+    public function packItems(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.order_item_id' => 'required|integer|exists:sales_order_items,id',
+            'items.*.packed' => 'required|boolean',
+        ]);
+
+        $user = $request->user();
+        $updatedOrders = [];
+
+        try {
+            DB::transaction(function () use ($validated, $user, &$updatedOrders) {
+                foreach ($validated['items'] as $itemData) {
+                    $item = SalesOrderItem::findOrFail($itemData['order_item_id']);
+                    $order = $item->order;
+
+                    if (!$order) {
+                        throw new \Exception("پسوڵە نەدۆزرایەوە.");
+                    }
+
+                    // Check if user is restricted to a warehouse
+                    if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+                        throw new \Exception("تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.");
+                    }
+
+                    // Check if status is CONFIRMED or PACKING
+                    if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
+                        throw new \Exception("تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەتوانرێت دەستکاری بکرێت.");
+                    }
+
+                    $packed = $itemData['packed'];
+
+                    // If already matching requested value, skip to save performance or avoid errors
+                    if ($item->is_packed === $packed) {
+                        continue;
+                    }
+
+                    // If the order status was CONFIRMED, transition to PACKING
+                    if ($order->status === SalesOrder::STATUS_CONFIRMED) {
+                        $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
+                    }
+
+                    if ($packed) {
+                        // Check physical stock in correct warehouse
+                        $warehouseStock = WarehouseStock::lockForUpdate()->where([
+                            'warehouse_id' => $order->warehouse_id,
+                            'product_id' => $item->product_id
+                        ])->first();
+
+                        if (!$warehouseStock || $warehouseStock->quantity < $item->quantity) {
+                            $available = $warehouseStock ? $warehouseStock->quantity : 0;
+                            throw new \Exception("بڕی پێویست لە کۆگادا بەردەست نییە بۆ پاکەتکردن بۆ بەرهەمی '{$item->product->name}'. بڕی داواکراو: {$item->quantity}، بڕی بەردەست: {$available}");
+                        }
+
+                        $item->is_packed = true;
+                        $item->packed_at = now();
+                        $item->packed_by = $user->id;
+                    } else {
+                        $item->is_packed = false;
+                        $item->packed_at = null;
+                        $item->packed_by = null;
+                    }
+
+                    $item->save();
+
+                    // Log audit trail
+                    app(\App\Services\AuditService::class)->log([
+                        'action'      => 'PACK_ITEM',
+                        'entity_type' => 'SalesOrderItem',
+                        'entity_id'   => $item->id,
+                        'table_name'  => 'sales_order_items',
+                        'old_values'  => [
+                            'is_packed' => !$packed,
+                        ],
+                        'new_values'  => [
+                            'order_number' => $order->order_number,
+                            'product_id'   => $item->product_id,
+                            'is_packed'    => $item->is_packed,
+                            'packed_by'    => $user->name,
+                        ],
+                        'description' => $packed ? "کاڵای پسوڵەی {$order->order_number} پاکەت کرا (Bulk)" : "کاڵای پسوڵەی {$order->order_number} لە پاکەتکردن لادرا (Bulk)",
+                        'user'        => $user,
+                    ]);
+
+                    $updatedOrders[$order->id] = $order;
+                }
+            });
+
+            // Broadcast and fresh orders outside transaction
+            foreach ($updatedOrders as $orderId => $order) {
+                $freshOrder = $order->fresh(['customer', 'warehouse', 'items.product']);
+                try {
+                    event(new \App\Events\SalesOrderUpdated($freshOrder, 'pack_item'));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Broadcasting SalesOrderUpdated failed: " . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'message' => 'کردارەکان بە سەرکەوتوویی جێبەجێ کران',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
     public function markReady(Request $request): JsonResponse
     {
         $validated = $request->validate([

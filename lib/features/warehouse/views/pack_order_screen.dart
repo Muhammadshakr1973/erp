@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,21 +31,101 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
   final Set<int> _pendingItemIds = {};
   bool _isSubmittingReady = false;
 
-  Future<void> _togglePack(WarehouseOrderItemModel item, bool value) async {
-    // 1. Instant Optimistic UI Update (0ms delay)
-    setState(() {
-      _optimisticPackedStates[item.id] = value;
-      _pendingItemIds.add(item.id);
+  // 30-Second Timer/Sync variables:
+  final Map<int, bool> _unsavedChanges = {};
+  int _secondsRemaining = 0;
+  bool _timerPausedForRetry = false;
+  bool _isSaving = false;
+  Timer? _debounceTimer;
+  Timer? _countdownTimer;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _triggerDebouncedAutoSave() {
+    _debounceTimer?.cancel();
+    _countdownTimer?.cancel();
+
+    if (mounted) {
+      setState(() {
+        _secondsRemaining = 30;
+        _timerPausedForRetry = false;
+      });
+    }
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_secondsRemaining > 1) {
+          _secondsRemaining--;
+        } else {
+          _secondsRemaining = 0;
+          timer.cancel();
+        }
+      });
     });
 
-    try {
-      await ref.read(warehouseActionsProvider).packItem(item.id, value);
-    } catch (e) {
+    _debounceTimer = Timer(const Duration(seconds: 30), () {
+      _countdownTimer?.cancel();
       if (mounted) {
-        // Rollback state if server returns error
         setState(() {
-          _optimisticPackedStates[item.id] = !value;
+          _secondsRemaining = 0;
         });
+      }
+      _triggerAutoSave();
+    });
+  }
+
+  Future<void> _triggerAutoSave() async {
+    if (_unsavedChanges.isEmpty || _isSaving) return;
+
+    setState(() {
+      _isSaving = true;
+      _timerPausedForRetry = false;
+    });
+
+    final List<Map<String, dynamic>> itemsPayload = _unsavedChanges.entries.map((e) {
+      return {
+        'order_item_id': e.key,
+        'packed': e.value,
+      };
+    }).toList();
+
+    try {
+      await ref.read(warehouseActionsProvider).packItems(itemsPayload);
+      
+      if (mounted) {
+        setState(() {
+          _unsavedChanges.clear();
+          _isSaving = false;
+          _secondsRemaining = 0;
+          _timerPausedForRetry = false;
+        });
+        
+        AppSnackbar.show(
+          context,
+          message: 'نوێکارییەکانی پاکەتکردن بە سەرکەوتوویی پاشەکەوت کران',
+          type: SnackbarType.success,
+        );
+
+        ref.invalidate(ordersToPackProvider);
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+      if (mounted) {
+        setState(() {
+          _timerPausedForRetry = true;
+          _secondsRemaining = 30; // Freeze at 30 for manual retry trigger
+          _isSaving = false;
+        });
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -52,7 +133,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Expanded(
-                  child: Text('کێشە لە پاکەتکردن'),
+                  child: Text('کێشە لە پاشەکەوتکردنی دەستەجەیی'),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -62,21 +143,57 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                 ),
               ],
             ),
-            content: Text(e.toString().replaceAll('Exception: ', '')),
+            content: Text(errorMsg),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _triggerAutoSave();
+                },
+                child: const Text('دووبارە هەوڵبدەرەوە'),
+              ),
+            ],
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _pendingItemIds.remove(item.id);
-        });
+    }
+  }
+
+  void _togglePack(WarehouseOrderItemModel item, bool value) {
+    setState(() {
+      _optimisticPackedStates[item.id] = value;
+      if (item.isPacked == value) {
+        _unsavedChanges.remove(item.id);
+      } else {
+        _unsavedChanges[item.id] = value;
       }
+    });
+
+    if (_unsavedChanges.isNotEmpty) {
+      _triggerDebouncedAutoSave();
+    } else {
+      _debounceTimer?.cancel();
+      _countdownTimer?.cancel();
+      setState(() {
+        _secondsRemaining = 0;
+        _timerPausedForRetry = false;
+      });
     }
   }
 
   Future<void> _submitReady(WarehouseOrderModel order) async {
     if (_isSubmittingReady) return;
+
+    // Force save any pending changes before allowing order readiness
+    if (_unsavedChanges.isNotEmpty) {
+      _debounceTimer?.cancel();
+      _countdownTimer?.cancel();
+      await _triggerAutoSave();
+      if (_unsavedChanges.isNotEmpty) {
+        // If save failed or changes couldn't be uploaded, halt ready submission
+        return;
+      }
+    }
 
     // Check if some items are not packed and confirm partial ready
     final bool hasUnpacked = order.items.any((e) => !(_optimisticPackedStates[e.id] ?? e.isPacked));
@@ -145,7 +262,6 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
   void _onScanBarcode(WarehouseOrderModel order) {
     CameraBarcodeScanner.show(context, (scanned) {
-      // Find item matching product SKU/id or name
       WarehouseOrderItemModel? item;
       for (final i in order.items) {
         if (i.id.toString() == scanned || i.productId.toString() == scanned) {
@@ -155,7 +271,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       }
 
       if (item != null) {
-        final currentPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
+        final currentPacked = _unsavedChanges.containsKey(item.id)
+            ? _unsavedChanges[item.id]!
+            : (_optimisticPackedStates[item.id] ?? item.isPacked);
         if (currentPacked) {
           AppSnackbar.show(
             context,
@@ -176,7 +294,73 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
   }
 
   List<Widget> _buildActions(AsyncValue<List<WarehouseOrderModel>> ordersAsync) {
-    return ordersAsync.maybeWhen(
+    final List<Widget> actionWidgets = [];
+
+    // Red/Orange auto-save countdown timer badge matching the exact project styles
+    if (_secondsRemaining > 0 || _timerPausedForRetry) {
+      actionWidgets.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          child: InkWell(
+            onTap: _timerPausedForRetry ? _triggerAutoSave : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: _timerPausedForRetry
+                    ? AppColors.danger.withValues(alpha: 0.15)
+                    : Colors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _timerPausedForRetry
+                      ? AppColors.danger.withValues(alpha: 0.4)
+                      : Colors.orange.withValues(alpha: 0.4),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _timerPausedForRetry ? Icons.refresh : Icons.timer_outlined,
+                    size: 16,
+                    color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$_secondsRemaining',
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_isSaving) {
+      actionWidgets.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.0),
+          child: Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    ordersAsync.maybeWhen(
       data: (orders) {
         WarehouseOrderModel? foundOrder;
         for (final o in orders) {
@@ -188,30 +372,36 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         }
         if (foundOrder != null) {
           final currentOrder = foundOrder;
-          return [
+          actionWidgets.add(
             IconButton(
               icon: const Icon(AppIcons.scan),
               tooltip: 'سکانی باڕکۆد',
               onPressed: () => _onScanBarcode(currentOrder),
             ),
-          ];
+          );
         }
-        return const [];
       },
-      orElse: () => const [],
+      orElse: () {},
     );
+
+    return actionWidgets;
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          ref.invalidate(ordersToPackProvider);
-        }
-      },
-      child: PermissionGuard(
-        permission: 'stock.pack',
+    return PermissionGuard(
+      permission: 'stock.pack',
+      child: PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
+          if (_debounceTimer?.isActive == true) {
+            _debounceTimer?.cancel();
+            _triggerAutoSave();
+          }
+          if (didPop) {
+            ref.invalidate(ordersToPackProvider);
+          }
+        },
         child: _buildScaffold(context),
       ),
     );
@@ -277,7 +467,11 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           final WarehouseOrderModel currentOrder = foundOrder;
           final int totalItemsCount = currentOrder.items.length;
           final int packedItemsCount = currentOrder.items
-              .where((e) => _optimisticPackedStates[e.id] ?? e.isPacked)
+              .where((e) {
+                return _unsavedChanges.containsKey(e.id)
+                    ? _unsavedChanges[e.id]!
+                    : (_optimisticPackedStates[e.id] ?? e.isPacked);
+              })
               .length;
           final bool isAnyPacked = packedItemsCount > 0;
 
@@ -297,7 +491,12 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                       const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final item = currentOrder.items[index];
-                    final isPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
+                    
+                    // Unsaved local changes take complete priority over server state to prevent active loss
+                    final isPacked = _unsavedChanges.containsKey(item.id)
+                        ? _unsavedChanges[item.id]!
+                        : (_optimisticPackedStates[item.id] ?? item.isPacked);
+                        
                     final isPending = _pendingItemIds.contains(item.id);
 
                     return AppCard(

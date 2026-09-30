@@ -193,6 +193,23 @@ class WarehouseActions {
     }
   }
 
+  Future<void> packItems(List<Map<String, dynamic>> items) async {
+    try {
+      final idempotencyKey = 'pack_items_${DateTime.now().microsecondsSinceEpoch}';
+      await api.client.post(
+        '/warehouse/pack-items',
+        data: {'items': items},
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': idempotencyKey,
+          },
+        ),
+      );
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
   Future<void> markOrderReady(int orderId) async {
     try {
       await api.client.post(

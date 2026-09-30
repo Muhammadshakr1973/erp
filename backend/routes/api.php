@@ -105,6 +105,7 @@ Route::prefix('v1')->group(function () {
         
         Route::get('/warehouse/orders-to-pack', [WarehouseController::class, 'ordersToPack'])->middleware('permission:stock.pack');
         Route::post('/warehouse/pack-item', [WarehouseController::class, 'packItem'])->middleware(['permission:stock.pack', 'idempotent']);
+        Route::post('/warehouse/pack-items', [WarehouseController::class, 'packItems'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::post('/warehouse/mark-ready', [WarehouseController::class, 'markReady'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::get('/warehouse/stock', [WarehouseController::class, 'stockList'])->middleware('permission:stock.view');
         Route::get('/warehouse/transactions', [WarehouseController::class, 'transactions'])->middleware('permission:stock.view');
