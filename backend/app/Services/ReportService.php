@@ -349,13 +349,13 @@ class ReportService
         }
 
         $ordersAgg = (clone $ordersAggQuery)
-            ->selectRaw('
+            ->selectRaw("
                 salesman_id,
                 COUNT(*) as total_orders,
                 SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as delivered_orders,
-                COALESCE(SUM(total_amount), 0) as total_sales,
-                COALESCE(SUM(total_profit), 0) as total_profit
-            ', [SalesOrder::STATUS_DELIVERED])
+                COALESCE(SUM(CASE WHEN status IN ('confirmed', 'delivered') THEN total_amount ELSE 0 END), 0) as total_sales,
+                COALESCE(SUM(CASE WHEN status IN ('confirmed', 'delivered') THEN total_profit ELSE 0 END), 0) as total_profit
+            ", [SalesOrder::STATUS_DELIVERED])
             ->groupBy('salesman_id')
             ->get()
             ->keyBy('salesman_id');
