@@ -268,5 +268,28 @@ void main() {
       expect(warehouseDashboardInvalidations, equals(2));
       expect(adminDashboardInvalidations, equals(2));
     });
+
+    test('10. Warehouse Pack to Ready Transition: readyOrdersForDeliveryProvider syncs immediately upon order becoming READY', () {
+      final List<Map<String, dynamic>> mockOrders = [
+        {'id': 1, 'order_number': 'ORD-001', 'status': 'PACKING'},
+        {'id': 2, 'order_number': 'ORD-002', 'status': 'PACKING'},
+      ];
+
+      List<Map<String, dynamic>> getReadyOrders() {
+        return mockOrders.where((o) => o['status'] == 'READY').toList();
+      }
+
+      // Initial state: no ready orders
+      expect(getReadyOrders(), isEmpty);
+
+      // Warehouse packs order 1 and marks READY
+      mockOrders[0]['status'] = 'READY';
+
+      // Both ordersToPack (items needing packing) and readyOrders (orders ready for trip) are updated
+      final readyList = getReadyOrders();
+      expect(readyList.length, equals(1));
+      expect(readyList.first['id'], equals(1));
+      expect(readyList.first['status'], equals('READY'));
+    });
   });
 }

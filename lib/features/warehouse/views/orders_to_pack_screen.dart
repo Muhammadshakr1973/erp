@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../admin/views/create_delivery_trip_dialog.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../providers/warehouse_provider.dart';
 
 class OrdersToPackScreen extends ConsumerWidget {
@@ -29,6 +30,8 @@ class OrdersToPackScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             child: TextButton.icon(
               onPressed: () {
+                ref.invalidate(ordersListProvider);
+                ref.invalidate(readyOrdersForDeliveryProvider);
                 showDialog(
                   context: context,
                   builder: (_) => const CreateDeliveryTripDialog(),

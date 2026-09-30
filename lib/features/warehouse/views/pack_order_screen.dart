@@ -14,6 +14,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../models/warehouse_order_model.dart';
 import '../providers/warehouse_provider.dart';
 
@@ -248,6 +249,8 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           type: SnackbarType.success,
         );
         ref.invalidate(ordersToPackProvider);
+        ref.invalidate(ordersListProvider);
+        ref.invalidate(readyOrdersForDeliveryProvider);
         Navigator.pop(context);
       }
     } catch (e) {

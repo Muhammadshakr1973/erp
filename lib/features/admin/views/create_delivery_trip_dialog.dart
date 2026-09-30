@@ -35,6 +35,8 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     super.initState();
     _selectedDate = _getTomorrowDate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(readyOrdersForDeliveryProvider);
       final user = ref.read(authProvider).user;
       if (user != null && (user.isDriver || user.role.toLowerCase() == 'driver')) {
         setState(() {
@@ -499,26 +501,41 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        if (isAllSelected) {
-                                          _selectedOrderIds.clear();
-                                        } else {
-                                          _selectedOrderIds.clear();
-                                          for (final o in orders) {
-                                            _selectedOrderIds.add(o.id);
-                                          }
-                                        }
-                                      });
-                                    },
-                                    child: Text(
-                                      isAllSelected ? 'سڕینەوەی هەمووی' : 'هەڵبژاردنی هەمووی',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.refresh, size: 18),
+                                        tooltip: 'نوێکردنەوەی پسوڵەکان',
+                                        onPressed: () {
+                                          ref.invalidate(ordersListProvider);
+                                          ref.invalidate(readyOrdersForDeliveryProvider);
+                                        },
+                                        constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
                                       ),
-                                    ),
+                                      TextButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            if (isAllSelected) {
+                                              _selectedOrderIds.clear();
+                                            } else {
+                                              _selectedOrderIds.clear();
+                                              for (final o in orders) {
+                                                _selectedOrderIds.add(o.id);
+                                              }
+                                            }
+                                          });
+                                        },
+                                        child: Text(
+                                          isAllSelected ? 'سڕینەوەی هەمووی' : 'هەڵبژاردنی هەمووی',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

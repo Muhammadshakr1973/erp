@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 
@@ -217,6 +218,9 @@ class WarehouseActions {
         data: {'order_id': orderId},
       );
       ref.invalidate(ordersToPackProvider);
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(readyOrdersForDeliveryProvider);
+      ref.invalidate(singleOrderProvider(orderId.toString()));
       ref.invalidate(warehouseStocksProvider);
       ref.invalidate(warehouseDashboardProvider);
     } catch (e) {

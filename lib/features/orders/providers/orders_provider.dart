@@ -311,6 +311,21 @@ final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
 /// پسوڵە ئامادەکراوەکان بۆ دابەشکردن و دروستکردنی گەشتی شۆفێر
 /// تەنها ئەو پسوڵانە دەگرێتەوە کە لە دۆخی READY دان
 final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onOrdersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received on readyOrdersForDeliveryProvider: $eventData");
+    ref.invalidate(ordersListProvider);
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+  });
+
   final orders = await ref.watch(ordersListProvider.future);
   return orders
       .where((order) => order.status.toUpperCase() == OrderModel.statusReady)
