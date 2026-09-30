@@ -75,38 +75,6 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     }
   }
 
-  Future<void> _packAll(WarehouseOrderModel order) async {
-    final unpackedItems = order.items.where((item) {
-      final isPacked = _optimisticPackedStates[item.id] ?? item.isPacked;
-      return !isPacked;
-    }).toList();
-
-    if (unpackedItems.isEmpty) return;
-
-    setState(() {
-      for (final item in unpackedItems) {
-        _optimisticPackedStates[item.id] = true;
-        _pendingItemIds.add(item.id);
-      }
-    });
-
-    for (final item in unpackedItems) {
-      ref.read(warehouseActionsProvider).packItem(item.id, true).catchError((e) {
-        if (mounted) {
-          setState(() {
-            _optimisticPackedStates[item.id] = false;
-          });
-        }
-      }).whenComplete(() {
-        if (mounted) {
-          setState(() {
-            _pendingItemIds.remove(item.id);
-          });
-        }
-      });
-    }
-  }
-
   Future<void> _submitReady(WarehouseOrderModel order) async {
     if (_isSubmittingReady) return;
 
@@ -221,11 +189,6 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         if (foundOrder != null) {
           final currentOrder = foundOrder;
           return [
-            IconButton(
-              icon: const Icon(Icons.done_all),
-              tooltip: 'پاکەتکردنی هەمووی',
-              onPressed: () => _packAll(currentOrder),
-            ),
             IconButton(
               icon: const Icon(AppIcons.scan),
               tooltip: 'سکانی باڕکۆد',
