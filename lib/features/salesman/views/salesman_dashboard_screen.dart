@@ -633,101 +633,99 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       children: [
         Text('ئامارەکانی چالاکی', style: AppTextStyles.h2),
         const SizedBox(height: AppSpacing.md),
-        AppCard(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // 1. فرۆشی هەفتەیە (کۆی ٧ ڕۆژی ڕابردوو)
-                _buildStatLine(
-                  context,
-                  title: 'فرۆشی هەفتەیە (کۆی ٧ ڕۆژی ڕابردوو)',
-                  value: Formatters.currency(dashboard.last7DaysSales),
-                  icon: AppIcons.order,
-                  iconColor: AppColors.info,
-                ),
-                const Divider(height: 24),
 
-                // 2. یەکەکانی هەفتە (کۆی ٧ ڕۆژی ڕابردوو)
-                _buildStatLine(
-                  context,
-                  title: 'یەکەکانی هەفتە (کۆی ٧ ڕۆژی ڕابردوو)',
-                  value: '${dashboard.last7DaysUnits} یەکە',
-                  icon: Icons.analytics_rounded,
-                  iconColor: AppColors.purple,
-                ),
-                const Divider(height: 24),
+        // 1. فرۆشی هەفتەیە
+        _buildStatCard(
+          context,
+          title: 'فرۆشی هەفتەیە (کۆی ٧ ڕۆژی ڕابردوو)',
+          value: Formatters.currency(dashboard.last7DaysSales),
+          icon: AppIcons.order,
+          iconColor: AppColors.info,
+        ),
+        const SizedBox(height: AppSpacing.sm),
 
-                // 3. یەکەکانی مانگ (یەکەکانی ئەم مانگەی کە تێیداین لە ١ ی مانگەوە تاوەکو ئەمڕۆ)
-                _buildStatLine(
-                  context,
-                  title: 'یەکەکانی مانگ (١ی مانگ تاوەکو ئەمڕۆ)',
-                  value: '${dashboard.monthUnits} یەکە',
-                  icon: Icons.stars_rounded,
-                  iconColor: AppColors.warning,
-                ),
-                const Divider(height: 24),
+        // 2. یەکەکانی هەفتە
+        _buildStatCard(
+          context,
+          title: 'یەکەکانی هەفتە (کۆی ٧ ڕۆژی ڕابردوو)',
+          value: '${dashboard.last7DaysUnits} یەکە',
+          icon: Icons.analytics_rounded,
+          iconColor: AppColors.purple,
+        ),
+        const SizedBox(height: AppSpacing.sm),
 
-                // 4. کڕیارە نوێکان ، هەفتە ، مانگ
-                _buildStatLine(
-                  context,
-                  title: 'کڕیارە نوێکان (هەفتە / مانگ)',
-                  value: 'هەفتە: ${dashboard.newCustomersWeek}  |  مانگ: ${dashboard.newCustomersMonth}',
-                  icon: AppIcons.customer,
-                  iconColor: AppColors.success,
-                ),
-              ],
-            ),
-          ),
+        // 3. یەکەکانی مانگ
+        _buildStatCard(
+          context,
+          title: 'یەکەکانی مانگ (١ی مانگ تاوەکو ئەمڕۆ)',
+          value: '${dashboard.monthUnits} یەکە',
+          icon: Icons.stars_rounded,
+          iconColor: AppColors.warning,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // 4. کڕیارە نوێکان
+        _buildStatCard(
+          context,
+          title: 'کڕیارە نوێکان (هەفتە / مانگ)',
+          value: 'هەفتە: ${dashboard.newCustomersWeek}  |  مانگ: ${dashboard.newCustomersMonth}',
+          icon: AppIcons.customer,
+          iconColor: AppColors.success,
         ),
       ],
     );
   }
 
-  Widget _buildStatLine(
+  Widget _buildStatCard(
     BuildContext context, {
     required String title,
     required String value,
     required IconData icon,
     required Color iconColor,
   }) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 3),
-              Text(
-                value,
-                style: AppTextStyles.bodyBold.copyWith(
-                  color: iconColor,
-                  fontSize: 15,
-                ),
+              child: Center(
+                child: Icon(icon, color: iconColor, size: 22),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.caption.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: iconColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

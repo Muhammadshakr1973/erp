@@ -329,39 +329,60 @@ class SalesOrderController extends Controller
 
         $routeName = $routeSalesman ? $routeSalesman->route->name : 'گشتی';
 
-        // 2. Today's Sales Amount & Profit Units (1 Unit = 1,000 IQD profit)
-        $todayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
-            ->whereDate('created_at', $today)
-            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+        // 2. Today's Sales Amount & Profit Units (1 Unit = 1,000 IQD profit, ONLY DELIVERED orders)
+        $getDeliveredQuery = function () use ($user) {
+            return \App\Models\SalesOrder::where('salesman_id', $user->id)
+                ->where('status', \App\Models\SalesOrder::STATUS_DELIVERED);
+        };
+
+        $todayOrders = $getDeliveredQuery()
+            ->where(function ($q) use ($today) {
+                $q->whereDate('delivered_at', $today)
+                  ->orWhere(function ($q2) use ($today) {
+                      $q2->whereNull('delivered_at')->whereDate('created_at', $today);
+                  });
+            });
 
         $todaySalesAmount = (int) $todayOrders->sum('total_amount');
         $todayProfitSum = (int) $todayOrders->sum('total_profit');
         $todayUnits = (int) round($todayProfitSum / 1000);
 
-        // 3. Last 7 Days Sales Amount & Profit Units
-        $last7DaysOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
-            ->whereDate('created_at', '>=', $sevenDaysAgo)
-            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+        // 3. Last 7 Days Sales Amount & Profit Units (ONLY DELIVERED orders)
+        $last7DaysOrders = $getDeliveredQuery()
+            ->where(function ($q) use ($sevenDaysAgo) {
+                $q->whereDate('delivered_at', '>=', $sevenDaysAgo)
+                  ->orWhere(function ($q2) use ($sevenDaysAgo) {
+                      $q2->whereNull('delivered_at')->whereDate('created_at', '>=', $sevenDaysAgo);
+                  });
+            });
 
         $last7DaysSalesAmount = (int) $last7DaysOrders->sum('total_amount');
         $last7DaysProfitSum = (int) $last7DaysOrders->sum('total_profit');
         $last7DaysUnits = (int) round($last7DaysProfitSum / 1000);
 
-        // Month-to-date profit units (from 1st of current month until end of today)
-        $monthOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
-            ->whereBetween('created_at', [$startOfMonth, now()->endOfDay()->toDateTimeString()])
-            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+        // Month-to-date profit units (from 1st of current month until end of today, ONLY DELIVERED orders)
+        $monthOrders = $getDeliveredQuery()
+            ->where(function ($q) use ($startOfMonth) {
+                $q->where('delivered_at', '>=', $startOfMonth)
+                  ->orWhere(function ($q2) use ($startOfMonth) {
+                      $q2->whereNull('delivered_at')->where('created_at', '>=', $startOfMonth);
+                  });
+            });
 
         $monthProfitSum = (int) $monthOrders->sum('total_profit');
         $monthUnits = (int) round($monthProfitSum / 1000);
 
-        // 4. Weekly Chart Data (Last 7 Days)
+        // 4. Weekly Chart Data (Last 7 Days, ONLY DELIVERED orders)
         $weeklyChartData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->toDateString();
-            $dayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
-                ->whereDate('created_at', $date)
-                ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+            $dayOrders = $getDeliveredQuery()
+                ->where(function ($q) use ($date) {
+                    $q->whereDate('delivered_at', $date)
+                      ->orWhere(function ($q2) use ($date) {
+                          $q2->whereNull('delivered_at')->whereDate('created_at', $date);
+                      });
+                });
 
             $daySales = (int) $dayOrders->sum('total_amount');
             $dayProfit = (int) $dayOrders->sum('total_profit');
