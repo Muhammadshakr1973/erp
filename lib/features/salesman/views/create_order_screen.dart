@@ -57,6 +57,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   bool _hasSavedOnce = false;
   bool _isSaving = false;
 
+  Timer? _countdownTimer;
+  int _secondsRemaining = 0;
+
   String? _lastChangedField;
   final Map<String, String> _fieldStates = {}; // field_name -> 'saving' | 'success' | 'error'
   final Map<String, String> _fieldErrors = {}; // field_name -> error message
@@ -267,6 +270,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void dispose() {
     _unsubscribeFromOrderPusher();
     _debounceTimer?.cancel();
+    _countdownTimer?.cancel();
     _notesController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -701,17 +705,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _lastChangedField = null;
       }
     } catch (e) {
-      if (mounted && _lastChangedField != null) {
-        final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-        _setFieldState(_lastChangedField!, 'error', error: errorMsg);
+      final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+      if (mounted) {
+        if (_lastChangedField != null) {
+          _setFieldState(_lastChangedField!, 'error', error: errorMsg);
+        }
         
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('پاشەکەوتکردن سەرکەوتوو نەبوو: $errorMsg'),
-            backgroundColor: AppColors.danger,
-          ),
+        final productsAsync = ref.read(productsListProvider);
+        final allProducts = productsAsync.asData?.value ?? <ProductModel>[];
+
+        _showFailedSavePersistentDialog(
+          customerName: _selectedCustomer?.name ?? 'کڕیاری نادیار',
+          items: itemsList,
+          allProducts: allProducts,
+          errorMessage: errorMsg,
         );
+
         _lastChangedField = null;
       }
     } finally {
@@ -723,7 +732,227 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
   }
 
+  void _showFailedSavePersistentDialog({
+    required String customerName,
+    required List<Map<String, dynamic>> items,
+    required List<ProductModel> allProducts,
+    required String errorMessage,
+  }) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must dismiss manually
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: theme.colorScheme.surface,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.error_outline,
+                          color: AppColors.danger,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'کێشە لە پاشەکەوتکردنی خۆکار',
+                          style: AppTextStyles.h3.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Error details container
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.danger.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      'هەڵەی سیستەم: $errorMessage',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Invoice Details Title
+                  Text(
+                    'زانیارییەکانی پسوڵە:',
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Customer row
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 18, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'ناوی کڕیار: $customerName',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Products title
+                  Text(
+                    'لیستی کاڵاکان و بڕی نێردراو:',
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Product items list
+                  Flexible(
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: items.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 6),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final prodId = item['product_id'] as int;
+                          final qty = item['quantity'] as int;
+                          final product = allProducts
+                              .where((p) => p.id == prodId)
+                              .firstOrNull;
+                          final prodName = product?.name ?? 'کاڵای نادیار (کۆد: $prodId)';
+                          final unit = product?.unit ?? 'دانە';
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    prodName,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$qty $unit',
+                                    style: AppTextStyles.bodyBold.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text(
+                      'تێگەیشتم / داخستن',
+                      style: TextStyle(
+                        fontFamily: 'Rudaw',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _triggerAutoSave() {
+    _debounceTimer?.cancel();
+    _countdownTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _secondsRemaining = 0;
+      });
+    }
     final productsAsync = ref.read(productsListProvider);
     final warehousesAsync = ref.read(warehouseListProvider);
     if (productsAsync.asData != null && warehousesAsync.asData != null) {
@@ -733,7 +962,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _triggerDebouncedAutoSave() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
+    _countdownTimer?.cancel();
+
+    if (mounted) {
+      setState(() {
+        _secondsRemaining = 30;
+      });
+    }
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_secondsRemaining > 1) {
+          _secondsRemaining--;
+        } else {
+          _secondsRemaining = 0;
+          timer.cancel();
+        }
+      });
+    });
+
+    _debounceTimer = Timer(const Duration(seconds: 30), () {
+      _countdownTimer?.cancel();
+      if (mounted) {
+        setState(() {
+          _secondsRemaining = 0;
+        });
+      }
       _triggerAutoSave();
     });
   }
@@ -780,6 +1038,40 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               ),
               const SizedBox(width: 8),
               _buildPriceTypeBadge(),
+              if (_secondsRemaining > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 14,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'کاش: $_secondsRemaining چرکە',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: Colors.orange,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (_isSaving) ...[
                 const SizedBox(width: 8),
                 const SizedBox(
