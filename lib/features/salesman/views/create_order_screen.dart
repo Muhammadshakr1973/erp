@@ -60,7 +60,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
   bool _timerPausedForRetry = false;
-  bool _saveFailed = false;
   int _failureCount = 0;
 
   String? _lastChangedField;
@@ -712,7 +711,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         setState(() {
           _failureCount = 0;
           _timerPausedForRetry = false;
-          _saveFailed = false;
         });
         if (_lastChangedField != null) {
           _setFieldState(_lastChangedField!, 'success');
@@ -725,7 +723,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         setState(() {
           _timerPausedForRetry = true;
           _secondsRemaining = 30; // Freeze at 30 for manual retry trigger
-          _saveFailed = true;
           _failureCount++;
         });
 
@@ -767,9 +764,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     showDialog(
       context: context,
       barrierDismissible: false, // User must dismiss manually
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (BuildContext builderContext, setDialogState) {
             final theme = Theme.of(context);
             int? retryingProductId;
 
@@ -841,7 +838,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     setState(() {
                       _failureCount = 0;
                       _timerPausedForRetry = false;
-                      _saveFailed = false;
                       _secondsRemaining = 0;
                     });
                     Navigator.pop(context);
@@ -892,7 +888,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 setState(() {
                   _failureCount = 0;
                   _timerPausedForRetry = false;
-                  _saveFailed = false;
                   _secondsRemaining = 0;
                 });
                 Navigator.pop(context);
@@ -1075,7 +1070,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                             size: 20,
                                           ),
                                           tooltip: 'تەنها ناردنی ئەم کاڵایە',
-                                          dense: true,
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
                                           onPressed: () => retrySingleItem(prodId, qty),
@@ -1088,7 +1082,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                             size: 20,
                                           ),
                                           tooltip: 'سڕینەوە لە پسوڵە',
-                                          dense: true,
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
                                           onPressed: () => deleteSingleItem(prodId),
@@ -1133,7 +1126,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           ),
                         ),
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                         },
                         icon: const Icon(Icons.close, size: 18),
                         label: const Text(
