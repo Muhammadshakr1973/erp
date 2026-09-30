@@ -17,15 +17,24 @@ import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/reports_provider.dart';
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
+  int? _activeSalesmanTooltipId;
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
     final dashboardAsync = ref.watch(dashboardProvider);
+    final salesmenReportAsync = ref.watch(salesBySalesmanReportProvider(const {}));
 
     return Scaffold(
       appBar: AppBar(
@@ -76,6 +85,7 @@ class AdminDashboardScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dashboardProvider);
+          ref.invalidate(salesBySalesmanReportProvider(const {}));
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -147,6 +157,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                     );
                   },
                 ),
+              ),
+              const SizedBox(height: AppSpacing.sectionGap),
+
+              // Salesmen Profit Bar Chart (real-time data)
+              salesmenReportAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => const SizedBox.shrink(),
+                data: (reportData) => _buildSalesmanProfitChart(context, reportData.salesmen),
               ),
               const SizedBox(height: AppSpacing.sectionGap),
 
@@ -448,6 +466,279 @@ class AdminDashboardScreen extends ConsumerWidget {
               backgroundColor: theme.colorScheme.surfaceContainer,
               color: AppColors.success,
               borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSalesmanProfitChart(BuildContext context, List<dynamic> salesmen) {
+    final theme = Theme.of(context);
+    
+    // Filter salesmen with profit > 0
+    final chartSalesmen = salesmen.where((s) => s.totalProfit > 0).toList();
+    
+    if (chartSalesmen.isEmpty) {
+      return const SizedBox.shrink(); // Hide the chart if no salesman has profit > 0 this month
+    }
+    
+    // Find the maximum profit to scale the chart dynamically
+    final maxProfit = chartSalesmen.map((s) => s.totalProfit as num).reduce((a, b) => a > b ? a : b);
+    
+    // Determine the ceiling for y-axis
+    final double yMax = maxProfit == 0 
+        ? 100000 
+        : ((maxProfit / 20000).ceil() * 20000).toDouble();
+        
+    final yInterval = yMax / 4;
+    final yLabels = List.generate(5, (index) => yMax - (index * yInterval));
+    
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 24),
+                    SizedBox(width: 8),
+                    Text(
+                      'قازانجی پسوڵەی مەندوبەکان',
+                      style: AppTextStyles.bodyBold,
+                    ),
+                  ],
+                ),
+                Text(
+                  'دیناری عێراقی',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
+            // Interactive Tooltip Info Box
+            if (_activeSalesmanTooltipId != null) () {
+              final activeSalesman = chartSalesmen.firstWhere(
+                (s) => s.salesmanId == _activeSalesmanTooltipId,
+                orElse: () => chartSalesmen.first,
+              );
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: theme.cardColor.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Text(
+                      activeSalesman.salesmanName,
+                      style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.success,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'قازانج: ${Formatters.currency(activeSalesman.totalProfit)}',
+                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'پسوڵەکان: ${activeSalesman.deliveredOrders}',
+                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }() ?? const SizedBox.shrink(),
+            
+            // The Bar Chart Row
+            SizedBox(
+              height: 200,
+              child: Row(
+                children: [
+                  // Y-Axis Labels Column
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: yLabels.map((val) {
+                      return SizedBox(
+                        width: 70,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Text(
+                            Formatters.number(val),
+                            textAlign: TextAlign.end,
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // Grid and Bars Viewport (wrapped in horizontal scroll in case of many salesmen)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: IntrinsicWidth(
+                        child: Stack(
+                          children: [
+                            // 1. Gridlines
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: List.generate(5, (index) {
+                                return Expanded(
+                                  child: Container(
+                                    width: (chartSalesmen.length * 72.0 + 32.0).clamp(200.0, 1000.0),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: Colors.grey.withValues(alpha: 0.15),
+                                          width: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                            
+                            // 2. Bars Row
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: chartSalesmen.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final s = entry.value;
+                                  
+                                  // Height percentage based on profit
+                                  final double profitPct = s.totalProfit / yMax;
+                                  
+                                  // Ensure height is clamped properly
+                                  final double heightPctClamped = profitPct.clamp(0.01, 1.0);
+                                  
+                                  final isSelected = s.salesmanId == _activeSalesmanTooltipId;
+                                  final barColor = index % 2 == 0 ? AppColors.primary : AppColors.success;
+                                  
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        if (_activeSalesmanTooltipId == s.salesmanId) {
+                                          _activeSalesmanTooltipId = null;
+                                        } else {
+                                          _activeSalesmanTooltipId = s.salesmanId;
+                                        }
+                                      });
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 12.0),
+                                      width: 48,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: Align(
+                                              alignment: Alignment.bottomCenter,
+                                              child: FractionallySizedBox(
+                                                heightFactor: heightPctClamped,
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        barColor,
+                                                        barColor.withValues(alpha: 0.8),
+                                                      ],
+                                                      begin: Alignment.topCenter,
+                                                      end: Alignment.bottomCenter,
+                                                    ),
+                                                    borderRadius: const BorderRadius.only(
+                                                      topLeft: Radius.circular(6),
+                                                      topRight: Radius.circular(6),
+                                                    ),
+                                                    border: isSelected
+                                                        ? Border.all(color: Colors.white, width: 2)
+                                                        : null,
+                                                    boxShadow: [
+                                                      if (isSelected)
+                                                        BoxShadow(
+                                                          color: barColor.withValues(alpha: 0.5),
+                                                          blurRadius: 8,
+                                                          spreadRadius: 2,
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            s.salesmanName,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                              color: isSelected ? theme.colorScheme.primary : null,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
