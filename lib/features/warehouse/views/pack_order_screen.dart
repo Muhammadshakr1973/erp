@@ -159,7 +159,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     }
   }
 
-  void _togglePack(WarehouseOrderItemModel item, bool value) {
+  void _togglePack(WarehouseOrderItemModel item, bool value, List<WarehouseOrderItemModel> allItems) {
     setState(() {
       _optimisticPackedStates[item.id] = value;
       if (item.isPacked == value) {
@@ -169,7 +169,22 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       }
     });
 
-    if (_unsavedChanges.isNotEmpty) {
+    // Check if ALL items in the entire order are packed (using the latest state including unsaved changes)
+    final bool allPacked = allItems.every((e) {
+      return _unsavedChanges.containsKey(e.id)
+          ? _unsavedChanges[e.id]!
+          : (_optimisticPackedStates[e.id] ?? e.isPacked);
+    });
+
+    if (allPacked && _unsavedChanges.isNotEmpty) {
+      _debounceTimer?.cancel();
+      _countdownTimer?.cancel();
+      setState(() {
+        _secondsRemaining = 0;
+        _timerPausedForRetry = false;
+      });
+      _triggerAutoSave();
+    } else if (_unsavedChanges.isNotEmpty) {
       _triggerDebouncedAutoSave();
     } else {
       _debounceTimer?.cancel();
@@ -281,7 +296,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
             type: SnackbarType.info,
           );
         } else {
-          _togglePack(item, true);
+          _togglePack(item, true, order.items);
         }
       } else {
         AppSnackbar.show(
@@ -508,7 +523,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                             checkColor: Colors.white,
                             onChanged: (value) {
                               if (value != null) {
-                                _togglePack(item, value);
+                                _togglePack(item, value, currentOrder.items);
                               }
                             },
                           ),
