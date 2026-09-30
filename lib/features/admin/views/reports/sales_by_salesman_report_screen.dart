@@ -372,10 +372,13 @@ class _SalesBySalesmanReportScreenState
             
             // Interactive Tooltip Info Box (matches screenshot tooltip look)
             if (_activeSalesmanTooltipId != null) () {
-              final activeSalesman = chartSalesmen.firstWhere(
-                (s) => s.salesmanId == _activeSalesmanTooltipId,
-                orElse: () => chartSalesmen.first,
-              );
+              dynamic activeSalesman = chartSalesmen.first;
+              for (final s in chartSalesmen) {
+                if (s.salesmanId == _activeSalesmanTooltipId) {
+                  activeSalesman = s;
+                  break;
+                }
+              }
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.md),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
