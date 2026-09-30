@@ -1155,7 +1155,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       setState(() {
         _secondsRemaining = 0;
         _timerPausedForRetry = false;
-        _saveFailed = false;
       });
     }
     final productsAsync = ref.read(productsListProvider);
@@ -1173,7 +1172,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       setState(() {
         _secondsRemaining = 30;
         _timerPausedForRetry = false;
-        _saveFailed = false;
       });
     }
 
