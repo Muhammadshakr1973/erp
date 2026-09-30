@@ -473,7 +473,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                     : (_optimisticPackedStates[e.id] ?? e.isPacked);
               })
               .length;
-          final bool isAnyPacked = packedItemsCount > 0;
+          final bool isAllPacked = packedItemsCount == totalItemsCount;
 
           return Column(
             children: [
@@ -568,7 +568,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                   },
                 ),
               ),
-              _buildBottomAction(theme, currentOrder, isAnyPacked),
+              _buildBottomAction(theme, currentOrder, isAllPacked),
             ],
           );
         },
@@ -626,8 +626,11 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
   Widget _buildBottomAction(
     ThemeData theme,
     WarehouseOrderModel order,
-    bool isAnyPacked,
+    bool isAllPacked,
   ) {
+    if (!isAllPacked) {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
       decoration: BoxDecoration(
@@ -645,7 +648,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
             ? const Center(child: CircularProgressIndicator())
             : AppButton(
                 text: 'پسوڵەکە ئامادەیە (Ready)',
-                onPressed: isAnyPacked ? () => _submitReady(order) : null,
+                onPressed: () => _submitReady(order),
                 size: AppButtonSize.lg,
               ),
       ),
