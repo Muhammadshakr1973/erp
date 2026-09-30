@@ -157,6 +157,24 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           _cartNotes[item.productId] = item.notes!;
         }
       }
+
+      // Clear all local error and saving states since we populated the pristine server-state!
+      _fieldStates.removeWhere((key, value) => 
+        key.startsWith('product_qty_') || 
+        key.startsWith('product_note_') ||
+        key == 'customer' ||
+        key == 'warehouse' ||
+        key == 'discount' ||
+        key == 'order_notes'
+      );
+      _fieldErrors.removeWhere((key, value) => 
+        key.startsWith('product_qty_') || 
+        key.startsWith('product_note_') ||
+        key == 'customer' ||
+        key == 'warehouse' ||
+        key == 'discount' ||
+        key == 'order_notes'
+      );
     });
     _subscribeToOrderPusher(order.id);
     _loadCustomerById(order.customerId);
@@ -711,6 +729,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         setState(() {
           _failureCount = 0;
           _timerPausedForRetry = false;
+          _fieldStates.removeWhere((key, value) => 
+            key.startsWith('product_qty_') || 
+            key.startsWith('product_note_') ||
+            key == 'customer' ||
+            key == 'warehouse' ||
+            key == 'discount' ||
+            key == 'order_notes'
+          );
+          _fieldErrors.removeWhere((key, value) => 
+            key.startsWith('product_qty_') || 
+            key.startsWith('product_note_') ||
+            key == 'customer' ||
+            key == 'warehouse' ||
+            key == 'discount' ||
+            key == 'order_notes'
+          );
         });
         if (_lastChangedField != null) {
           _setFieldState(_lastChangedField!, 'success');
@@ -839,6 +873,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       _failureCount = 0;
                       _timerPausedForRetry = false;
                       _secondsRemaining = 0;
+                      _fieldStates.removeWhere((key, value) => 
+                        key.startsWith('product_qty_') || 
+                        key.startsWith('product_note_') ||
+                        key == 'customer' ||
+                        key == 'warehouse' ||
+                        key == 'discount' ||
+                        key == 'order_notes'
+                      );
+                      _fieldErrors.removeWhere((key, value) => 
+                        key.startsWith('product_qty_') || 
+                        key.startsWith('product_note_') ||
+                        key == 'customer' ||
+                        key == 'warehouse' ||
+                        key == 'discount' ||
+                        key == 'order_notes'
+                      );
                     });
                     Navigator.pop(context);
                     AppSnackbar.show(
@@ -889,6 +939,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   _failureCount = 0;
                   _timerPausedForRetry = false;
                   _secondsRemaining = 0;
+                  _fieldStates.removeWhere((key, value) => 
+                    key.startsWith('product_qty_') || 
+                    key.startsWith('product_note_') ||
+                    key == 'customer' ||
+                    key == 'warehouse' ||
+                    key == 'discount' ||
+                    key == 'order_notes'
+                  );
+                  _fieldErrors.removeWhere((key, value) => 
+                    key.startsWith('product_qty_') || 
+                    key.startsWith('product_note_') ||
+                    key == 'customer' ||
+                    key == 'warehouse' ||
+                    key == 'discount' ||
+                    key == 'order_notes'
+                  );
                 });
                 Navigator.pop(context);
               }
