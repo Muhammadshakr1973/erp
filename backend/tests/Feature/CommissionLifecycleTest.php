@@ -974,4 +974,158 @@ class CommissionLifecycleTest extends TestCase
         $this->assertEquals(450000, $commission->commission_amount);
         $this->assertEquals(0, $commission->commission_rate);
     }
+
+    /**
+     * Test that commissions strictly ignore orders with statuses other than DELIVERED.
+     */
+    public function test_commission_strictly_ignores_non_delivered_orders(): void
+    {
+        $this->actingAs($this->admin);
+
+        // 1. Order in PACKING status
+        SalesOrder::create([
+            'order_number'    => 'SO-PACKING-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_PACKING,
+            'total_amount'    => 500000,
+            'total_cost'      => 300000,
+            'total_profit'    => 200000,
+        ]);
+
+        // 2. Order in READY status
+        SalesOrder::create([
+            'order_number'    => 'SO-READY-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_READY,
+            'total_amount'    => 500000,
+            'total_cost'      => 300000,
+            'total_profit'    => 200000,
+        ]);
+
+        // 3. Order in IN_DELIVERY status
+        SalesOrder::create([
+            'order_number'    => 'SO-INDELIVERY-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_IN_DELIVERY,
+            'total_amount'    => 500000,
+            'total_cost'      => 300000,
+            'total_profit'    => 200000,
+        ]);
+
+        // 4. Order in CANCELLED status
+        SalesOrder::create([
+            'order_number'    => 'SO-CANCELLED-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_CANCELLED,
+            'total_amount'    => 500000,
+            'total_cost'      => 300000,
+            'total_profit'    => 200000,
+        ]);
+
+        // 5. Only ONE DELIVERED order
+        SalesOrder::create([
+            'order_number'    => 'SO-DELIVERED-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'total_amount'    => 100000,
+            'total_cost'      => 80000,
+            'total_profit'    => 20000,
+            'delivered_at'    => '2026-08-15 14:00:00',
+        ]);
+
+        $response = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+
+        $response->assertStatus(201);
+        $commissionId = $response->json('data.id');
+
+        $commission = SalesmanCommission::with('details')->findOrFail($commissionId);
+
+        // Only the delivered order should be included
+        $this->assertEquals(100000, $commission->total_sales);
+        $this->assertEquals(20000, $commission->total_profit);
+        $this->assertEquals(1000, $commission->commission_amount); // 5% of 20,000
+        $this->assertCount(1, $commission->details);
+    }
+
+    /**
+     * Test CommissionUpdated event is dispatched and paid status is properly visible to salesman.
+     */
+    public function test_commission_broadcast_event_and_salesman_paid_visibility(): void
+    {
+        \Illuminate\Support\Facades\Event::fake([
+            \App\Events\CommissionUpdated::class,
+        ]);
+
+        $this->actingAs($this->admin);
+
+        $order = SalesOrder::create([
+            'order_number'    => 'SO-COMM-PAID-001',
+            'salesman_id'     => $this->salesman->id,
+            'customer_id'     => $this->customer->id,
+            'warehouse_id'    => $this->warehouse->id,
+            'status'          => SalesOrder::STATUS_DELIVERED,
+            'total_amount'    => 100000,
+            'total_cost'      => 60000,
+            'total_profit'    => 40000,
+            'delivered_at'    => '2026-08-10 12:00:00',
+        ]);
+
+        // Calculate
+        $calcRes = $this->postJson('/api/v1/commissions/calculate', [
+            'salesman_id' => $this->salesman->id,
+            'period_from' => '2026-08-01',
+            'period_to'   => '2026-08-31',
+        ]);
+        $calcRes->assertStatus(201);
+        $commissionId = $calcRes->json('data.id');
+
+        \Illuminate\Support\Facades\Event::assertDispatched(\App\Events\CommissionUpdated::class, function ($e) use ($commissionId) {
+            return $e->commission->id === $commissionId && $e->actionType === 'calculated';
+        });
+
+        // Approve
+        $this->postJson("/api/v1/commissions/{$commissionId}/approve")->assertStatus(200);
+
+        \Illuminate\Support\Facades\Event::assertDispatched(\App\Events\CommissionUpdated::class, function ($e) use ($commissionId) {
+            return $e->commission->id === $commissionId && $e->actionType === 'approved';
+        });
+
+        // Pay
+        $payRes = $this->postJson("/api/v1/commissions/{$commissionId}/pay", [
+            'payment_method' => 'cash',
+            'notes'          => 'Paid in full cash',
+        ]);
+        $payRes->assertStatus(200);
+
+        \Illuminate\Support\Facades\Event::assertDispatched(\App\Events\CommissionUpdated::class, function ($e) use ($commissionId) {
+            return $e->commission->id === $commissionId && $e->actionType === 'paid';
+        });
+
+        // Now authenticate as the salesman and check my-commissions endpoint
+        $this->actingAs($this->salesman);
+        $myCommissionsRes = $this->getJson('/api/v1/commissions/my-commissions');
+        $myCommissionsRes->assertStatus(200);
+
+        $data = $myCommissionsRes->json('data');
+        $this->assertNotEmpty($data);
+        $first = $data['data'][0] ?? $data[0];
+        $this->assertEquals('paid', strtolower($first['status']));
+        $this->assertEquals(2000, $first['commission_amount']); // 5% of 40,000
+        $this->assertEquals('cash', $first['payment_method']);
+        $this->assertNotNull($first['paid_at']);
+    }
 }

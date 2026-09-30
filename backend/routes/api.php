@@ -134,7 +134,7 @@ Route::prefix('v1')->group(function () {
         
         // Commissions Lifecycle & Reports (Admin / Owner privileges + Salesman self-view)
         Route::get('/commissions', [CommissionController::class, 'index'])->middleware('permission:users.manage');
-        Route::get('/commissions/summary', [CommissionController::class, 'summary'])->middleware('permission:users.manage');
+        Route::get('/commissions/summary', [CommissionController::class, 'summary']);
         Route::get('/commissions/preview', [CommissionController::class, 'preview'])->middleware('permission:users.manage');
         Route::get('/commissions/my-commissions', [CommissionController::class, 'myCommissions']);
         Route::get('/commissions/{id}', [CommissionController::class, 'show']);

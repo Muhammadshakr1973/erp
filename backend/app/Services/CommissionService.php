@@ -67,13 +67,22 @@ class CommissionService
 
         $orders = SalesOrder::with(['customer:id,name,phone', 'items'])
             ->where('salesman_id', $salesman->id)
-            ->where('status', SalesOrder::STATUS_DELIVERED)
-            ->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
+            ->whereIn('status', [SalesOrder::STATUS_DELIVERED, 'delivered', 'DELIVERED'])
+            ->where(function ($q) use ($periodFrom, $periodTo) {
+                $q->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
+                  ->orWhere(function ($sub) use ($periodFrom, $periodTo) {
+                      $sub->whereNull('delivered_at')
+                          ->whereBetween('created_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59']);
+                  });
+            })
             ->whereDoesntHave('commissionDetail.commission', function ($q) {
                 $q->whereIn('status', [
                     SalesmanCommission::STATUS_CALCULATED,
                     SalesmanCommission::STATUS_APPROVED,
                     SalesmanCommission::STATUS_PAID,
+                    'calculated',
+                    'approved',
+                    'paid',
                 ]);
             })
             ->orderBy('delivered_at')
@@ -186,13 +195,22 @@ class CommissionService
 
             // هێنانی پسوڵە گەیندراوە شایستەکان کە پێشتر لە هیچ کۆمسیۆنێکی چالاکدا بەکارنەهاتوون
             $orders = SalesOrder::where('salesman_id', $salesman->id)
-                ->where('status', SalesOrder::STATUS_DELIVERED)
-                ->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
+                ->whereIn('status', [SalesOrder::STATUS_DELIVERED, 'delivered', 'DELIVERED'])
+                ->where(function ($q) use ($periodFrom, $periodTo) {
+                    $q->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
+                      ->orWhere(function ($sub) use ($periodFrom, $periodTo) {
+                          $sub->whereNull('delivered_at')
+                              ->whereBetween('created_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59']);
+                      });
+                })
                 ->whereDoesntHave('commissionDetail.commission', function ($q) {
                     $q->whereIn('status', [
                         SalesmanCommission::STATUS_CALCULATED,
                         SalesmanCommission::STATUS_APPROVED,
                         SalesmanCommission::STATUS_PAID,
+                        'calculated',
+                        'approved',
+                        'paid',
                     ]);
                 })
                 ->lockForUpdate()
@@ -285,6 +303,9 @@ class CommissionService
         // Notify salesman and owner after commission calculation commits
         app(NotificationService::class)->notifyCommissionCalculated($result);
 
+        // Broadcast real-time Pusher event
+        event(new \App\Events\CommissionUpdated($result, 'calculated'));
+
         return $result;
     }
 
@@ -353,7 +374,12 @@ class CommissionService
                 'user'        => $user,
             ]);
 
-            return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver']);
+            $res = $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver']);
+            
+            // Broadcast real-time Pusher event
+            event(new \App\Events\CommissionUpdated($res, 'approved'));
+
+            return $res;
         });
     }
 
@@ -436,6 +462,9 @@ class CommissionService
         // Notify salesman after commission payment commits
         app(NotificationService::class)->notifyCommissionPaid($result);
 
+        // Broadcast real-time Pusher event
+        event(new \App\Events\CommissionUpdated($result, 'paid'));
+
         return $result;
     }
 
@@ -452,7 +481,7 @@ class CommissionService
             ]);
         }
 
-        return DB::transaction(function () use ($commissionId, $user, $reason) {
+        $result = DB::transaction(function () use ($commissionId, $user, $reason) {
             $commission = SalesmanCommission::with(['salesman', 'details'])->lockForUpdate()->findOrFail($commissionId);
 
             if ($commission->status === SalesmanCommission::STATUS_CANCELLED) {
@@ -498,6 +527,11 @@ class CommissionService
 
             return $commission->load(['salesman', 'details.order.customer', 'calculator', 'approver', 'payer', 'canceller']);
         });
+
+        // Broadcast real-time Pusher event
+        event(new \App\Events\CommissionUpdated($result, 'cancelled'));
+
+        return $result;
     }
 
     /**

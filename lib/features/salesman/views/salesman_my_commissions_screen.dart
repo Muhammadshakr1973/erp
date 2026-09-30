@@ -8,6 +8,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../shared/models/commission_model.dart';
 import '../../admin/views/providers/commission_provider.dart';
 
@@ -32,7 +34,7 @@ final myCommissionsProvider =
           } else if (resData is List) {
             items = resData;
           } else {
-            throw FormatException(
+            throw const FormatException(
               'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed my-commissions response payload)',
             );
           }
@@ -51,6 +53,24 @@ final myCommissionsProvider =
       }
     });
 
+final myCommissionSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/commissions/summary');
+    if (response.statusCode == 200) {
+      final resData = response.data['data'] ?? response.data;
+      if (resData is Map<String, dynamic>) {
+        return resData;
+      } else if (resData is Map) {
+        return Map<String, dynamic>.from(resData);
+      }
+    }
+    return {};
+  } catch (e) {
+    return {};
+  }
+});
+
 class SalesmanMyCommissionsScreen extends ConsumerStatefulWidget {
   const SalesmanMyCommissionsScreen({super.key});
 
@@ -63,8 +83,42 @@ class _SalesmanMyCommissionsScreenState
     extends ConsumerState<SalesmanMyCommissionsScreen> {
   String? _selectedStatus;
 
+  @override
+  void initState() {
+    super.initState();
+    _setupPusherListener();
+  }
+
+  void _setupPusherListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pusher = ref.read(pusherServiceProvider);
+      final user = ref.read(authProvider).user;
+      
+      pusher.subscribeToChannel('commissions', _onCommissionPusherEvent);
+      if (user != null) {
+        pusher.subscribeToChannel('private-user-notifications.${user.id}', _onCommissionPusherEvent);
+      }
+    });
+  }
+
+  void _onCommissionPusherEvent(Map<String, dynamic> data) {
+    ref.invalidate(myCommissionsProvider);
+    ref.invalidate(myCommissionSummaryProvider);
+  }
+
+  @override
+  void dispose() {
+    final pusher = ref.read(pusherServiceProvider);
+    final user = ref.read(authProvider).user;
+    pusher.unsubscribeFromChannel('commissions', _onCommissionPusherEvent);
+    if (user != null) {
+      pusher.unsubscribeFromChannel('private-user-notifications.${user.id}', _onCommissionPusherEvent);
+    }
+    super.dispose();
+  }
+
   String _formatCurrency(num amount) {
-    return '${Formatters.currency(amount)}';
+    return Formatters.currency(amount);
   }
 
   Widget _buildStatusChip(String status) {
@@ -74,30 +128,30 @@ class _SalesmanMyCommissionsScreenState
 
     switch (status.toLowerCase()) {
       case 'approved':
-        bg = AppColors.info.withOpacity(0.15);
+        bg = AppColors.info.withValues(alpha: 0.15);
         fg = AppColors.info;
         label = 'پەسەندکراو';
         break;
       case 'paid':
-        bg = AppColors.success.withOpacity(0.15);
+        bg = AppColors.success.withValues(alpha: 0.15);
         fg = AppColors.success;
         label = 'دراوە';
         break;
       case 'cancelled':
-        bg = AppColors.danger.withOpacity(0.15);
+        bg = AppColors.danger.withValues(alpha: 0.15);
         fg = AppColors.danger;
         label = 'هەڵوەشێنراوە';
         break;
       case 'calculated':
       default:
-        bg = AppColors.warning.withOpacity(0.15);
+        bg = AppColors.warning.withValues(alpha: 0.15);
         fg = AppColors.warning;
         label = 'هەژمارکراو';
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
@@ -110,140 +164,265 @@ class _SalesmanMyCommissionsScreenState
   }
 
   void _showDetailsModal(BuildContext context, CommissionModel commission) {
+    final isPaid = commission.status.toLowerCase() == 'paid';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollController) => Padding(
-          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'وردەکاری کۆمسیۆنی #${commission.id}',
-                    style: AppTextStyles.h3,
-                  ),
-                  _buildStatusChip(commission.status),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'ماوە: ${commission.periodFrom} تا ${commission.periodTo}',
-                style: AppTextStyles.bodyMedium,
-              ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('کۆی فرۆشتن:'),
-                  Text(
-                    _formatCurrency(commission.totalSales),
-                    style: AppTextStyles.bodyBold,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('کۆی قازانج:'),
-                  Text(
-                    _formatCurrency(commission.totalProfit),
-                    style: const TextStyle(
-                      color: AppColors.success,
-                      fontWeight: FontWeight.bold,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          maxChildSize: 0.95,
+          minChildSize: 0.45,
+          expand: false,
+          builder: (_, scrollController) => Padding(
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            child: ListView(
+              controller: scrollController,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('ڕێژەی کۆمسیۆن:'),
-                  Text(
-                    '${commission.commissionRate}%',
-                    style: AppTextStyles.bodyBold,
-                  ),
-                ],
-              ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('بڕی کۆمسیۆنی شایستە:', style: AppTextStyles.h3),
-                  Text(
-                    _formatCurrency(commission.commissionAmount),
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
-              if (commission.paidAt != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'بەرواری وەرگرتن: ${commission.paidAt!.split("T").first} (${commission.paymentMethod ?? 'کاش'})',
-                  style: const TextStyle(color: AppColors.success),
                 ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              const Text('پسوڵە شایستەکان:', style: AppTextStyles.bodyBold),
-              const SizedBox(height: AppSpacing.sm),
-              if (commission.details.isEmpty)
-                const Text('وردەکاری پسوڵەکان بەردەست نییە')
-              else
-                ...commission.details.map(
-                  (d) => AppCard(
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'وردەکاری کۆمسیۆنی #${commission.id}',
+                      style: AppTextStyles.h2,
+                    ),
+                    _buildStatusChip(commission.status),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'ماوە: ${commission.periodFrom} تا ${commission.periodTo}',
+                  style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Paid Banner if paid
+                if (isPaid) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                    ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              d.orderNumber ?? 'پسوڵەی #${d.salesOrderId}',
-                              style: AppTextStyles.bodyBold,
-                            ),
-                            Text(
-                              d.customerName ?? 'کڕیار',
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _formatCurrency(d.commissionAmount),
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                        const Icon(Icons.verified, color: AppColors.success, size: 28),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'پارەی ئەم کۆمسیۆنە بە سەرکەوتوویی دراوە',
+                                style: TextStyle(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'قازانج: ${_formatCurrency(d.profitAmount)}',
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                'بڕی دراو: ${_formatCurrency(commission.commissionAmount)} | بەروار: ${commission.paidAt != null ? commission.paidAt!.split("T").first : 'نادیار'} (${commission.paymentMethod ?? 'کاش'})',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // Financial Breakdown Card
+                AppCard(
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('کۆی فرۆشتن (پسوڵە گەیەنراوەکان):'),
+                          Text(
+                            _formatCurrency(commission.totalSales),
+                            style: AppTextStyles.bodyBold,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('کۆی قازانجی بەدەستهاتوو:'),
+                          Text(
+                            _formatCurrency(commission.totalProfit),
+                            style: const TextStyle(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('ڕێژەی کۆمسیۆن:'),
+                          Text(
+                            '${commission.commissionRate}%',
+                            style: AppTextStyles.bodyBold,
+                          ),
+                        ],
+                      ),
+                      if (commission.fixedAmount > 0) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('مووچە / بڕی سابت:'),
+                            Text(
+                              _formatCurrency(commission.fixedAmount),
+                              style: AppTextStyles.bodyBold,
+                            ),
+                          ],
+                        ),
+                      ],
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isPaid ? 'بڕی کۆمسیۆنی دراو:' : 'بڕی کۆمسیۆنی شایستە:',
+                            style: AppTextStyles.h3,
+                          ),
+                          Text(
+                            _formatCurrency(commission.commissionAmount),
+                            style: TextStyle(
+                              color: isPaid ? AppColors.success : AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (commission.notes != null && commission.notes!.isNotEmpty) ...[
+                        const Divider(height: 16),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            'تێبینی: ${commission.notes}',
+                            style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-            ],
+                const SizedBox(height: AppSpacing.lg),
+
+                // Delivered Orders Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'پسوڵە گەیەنراوە شایستەکان (${commission.details.length})',
+                      style: AppTextStyles.h3,
+                    ),
+                    const Text(
+                      'تەنها گەیەنراوەکان هەژمارکراون',
+                      style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (commission.details.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    alignment: Alignment.center,
+                    child: const Text('هیچ پسوڵەیەک تۆمار نەکراوە'),
+                  )
+                else
+                  ...commission.details.map(
+                    (d) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: AppCard(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      d.orderNumber ?? 'پسوڵەی #${d.salesOrderId}',
+                                      style: AppTextStyles.bodyBold,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  d.customerName ?? 'کڕیار',
+                                  style: AppTextStyles.caption,
+                                ),
+                                Text(
+                                  'فرۆش: ${_formatCurrency(d.salesAmount)}',
+                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _formatCurrency(d.commissionAmount),
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'قازانج: ${_formatCurrency(d.profitAmount)}',
+                                  style: const TextStyle(
+                                    color: AppColors.success,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+            ),
           ),
         ),
       ),
@@ -253,82 +432,245 @@ class _SalesmanMyCommissionsScreenState
   @override
   Widget build(BuildContext context) {
     final commissionsAsync = ref.watch(myCommissionsProvider(_selectedStatus));
+    final summaryAsync = ref.watch(myCommissionSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('کۆمسیۆنەکانم', style: AppTextStyles.h2),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        child: Column(
-          children: [
-            // Filter Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('گشتی'),
-                    selected:
-                        _selectedStatus == null || _selectedStatus == 'ALL',
-                    onSelected: (selected) =>
-                        setState(() => _selectedStatus = null),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('هەژمارکراو'),
-                    selected: _selectedStatus == 'calculated',
-                    onSelected: (selected) => setState(
-                      () => _selectedStatus = selected ? 'calculated' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('پەسەندکراو'),
-                    selected: _selectedStatus == 'approved',
-                    onSelected: (selected) => setState(
-                      () => _selectedStatus = selected ? 'approved' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('دراوە'),
-                    selected: _selectedStatus == 'paid',
-                    onSelected: (selected) => setState(
-                      () => _selectedStatus = selected ? 'paid' : null,
-                    ),
-                  ),
-                ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(myCommissionsProvider);
+          ref.invalidate(myCommissionSummaryProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Summary KPI Cards for Salesman
+              summaryAsync.when(
+                data: (summary) {
+                  final paid = summary['paid'] as Map<String, dynamic>? ?? {};
+                  final calculated = summary['calculated'] as Map<String, dynamic>? ?? {};
+                  final approved = summary['approved'] as Map<String, dynamic>? ?? {};
+                  
+                  final paidAmount = (paid['amount'] as num?)?.toInt() ?? 0;
+                  final pendingAmount = ((calculated['amount'] as num?)?.toInt() ?? 0) +
+                      ((approved['amount'] as num?)?.toInt() ?? 0);
+                  final paidCount = (paid['count'] as num?)?.toInt() ?? 0;
+
+                  return Row(
+                    children: [
+                      // Paid Commissions Card (Prominently Highlighted)
+                      Expanded(
+                        child: AppCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'کۆمسیۆنی دراو',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _formatCurrency(paidAmount),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.success,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$paidCount کۆمسیۆنی دراو',
+                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Pending / Calculated Commissions Card
+                      Expanded(
+                        child: AppCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'چاوەڕوانکراو',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: AppColors.warning,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warning.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.hourglass_top, color: AppColors.warning, size: 16),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _formatCurrency(pendingAmount),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.warning,
+                                ),
+                                textDirection: TextDirection.ltr,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'هەژمارکراو / پەسەندکراو',
+                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Expanded(
-              child: commissionsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: AppSpacing.md),
+
+              // Filter Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('هەمووی'),
+                      selected:
+                          _selectedStatus == null || _selectedStatus == 'ALL',
+                      onSelected: (selected) =>
+                          setState(() => _selectedStatus = null),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                          SizedBox(width: 4),
+                          Text('دراوە'),
+                        ],
+                      ),
+                      selected: _selectedStatus == 'paid',
+                      onSelected: (selected) => setState(
+                        () => _selectedStatus = selected ? 'paid' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('پەسەندکراو'),
+                      selected: _selectedStatus == 'approved',
+                      onSelected: (selected) => setState(
+                        () => _selectedStatus = selected ? 'approved' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('هەژمارکراو'),
+                      selected: _selectedStatus == 'calculated',
+                      onSelected: (selected) => setState(
+                        () => _selectedStatus = selected ? 'calculated' : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // List of Commissions
+              commissionsAsync.when(
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
                 error: (e, st) => Center(
-                  child: ErrorState(
-                    title: 'هەڵەیەک ڕوویدا',
-                    message: Formatters.cleanError(e),
-                    retryText: 'دووبارە هەوڵبدەرەوە',
-                    onRetry: () => ref.invalidate(myCommissionsProvider),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: ErrorState(
+                      title: 'هەڵەیەک ڕوویدا',
+                      message: Formatters.cleanError(e),
+                      retryText: 'دووبارە هەوڵبدەرەوە',
+                      onRetry: () {
+                        ref.invalidate(myCommissionsProvider);
+                        ref.invalidate(myCommissionSummaryProvider);
+                      },
+                    ),
                   ),
                 ),
                 data: (commissions) {
                   if (commissions.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'هیچ تۆمارێکی کۆمسیۆن نەدۆزرایەوە',
-                        style: AppTextStyles.h3,
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 60),
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'هیچ تۆمارێکی کۆمسیۆن نەدۆزرایەوە',
+                            style: AppTextStyles.h3,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'کۆمسیۆن تەنها لەسەر ئەو پسوڵانە هەژمار دەکرێت کە بە تەواوی گەیەنراون.',
+                            style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     );
                   }
 
                   return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: commissions.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final c = commissions[index];
+                      final isPaid = c.status.toLowerCase() == 'paid';
+
                       return AppCard(
                         onTap: () => _showDetailsModal(context, c),
                         child: Column(
@@ -349,7 +691,32 @@ class _SalesmanMyCommissionsScreenState
                               'ماوە: ${c.periodFrom} تا ${c.periodTo}',
                               style: AppTextStyles.caption,
                             ),
-                            const Divider(),
+                            if (isPaid && c.paidAt != null) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.check, size: 14, color: AppColors.success),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'دراوە لە: ${c.paidAt!.split("T").first} (${c.paymentMethod ?? 'کاش'})',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.success,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const Divider(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -357,23 +724,40 @@ class _SalesmanMyCommissionsScreenState
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'قازانج: ${_formatCurrency(c.totalProfit)}',
+                                      'فرۆش: ${_formatCurrency(c.totalSales)}',
                                       style: AppTextStyles.caption,
                                     ),
                                     Text(
-                                      'ڕێژە: ${c.commissionRate}%',
-                                      style: AppTextStyles.caption,
+                                      'قازانج: ${_formatCurrency(c.totalProfit)} (${c.commissionRate}%)',
+                                      style: const TextStyle(
+                                        color: AppColors.success,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  _formatCurrency(c.commissionAmount),
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                  textDirection: TextDirection.ltr,
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _formatCurrency(c.commissionAmount),
+                                      style: TextStyle(
+                                        color: isPaid ? AppColors.success : AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      textDirection: TextDirection.ltr,
+                                    ),
+                                    Text(
+                                      isPaid ? 'دراوە' : 'شایستە',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isPaid ? AppColors.success : AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -384,8 +768,8 @@ class _SalesmanMyCommissionsScreenState
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

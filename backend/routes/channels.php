@@ -71,6 +71,10 @@ Broadcast::channel('delivery-trips', function (User $user) {
     return (bool) $user->is_active;
 });
 
+Broadcast::channel('commissions', function (User $user) {
+    return (bool) $user->is_active;
+});
+
 Broadcast::channel('user-notifications.{userId}', function (User $user, int $userId) {
     return (int) $user->id === (int) $userId;
 });

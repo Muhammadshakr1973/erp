@@ -152,7 +152,13 @@ class CommissionController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
-        $summary = $this->commissionService->getCommissionSummary($request->all());
+        $user = $request->user();
+        $filters = $request->all();
+        if ($user && !$user->isAdmin() && !$user->isOwner()) {
+            $filters['salesman_id'] = $user->id;
+        }
+
+        $summary = $this->commissionService->getCommissionSummary($filters);
 
         return response()->json([
             'message' => 'پوختەی ئاماری کۆمسیۆنەکان',

@@ -633,44 +633,47 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       children: [
         Text('ئامارەکانی چالاکی', style: AppTextStyles.h2),
         const SizedBox(height: AppSpacing.md),
-
-        // 1. فرۆشی هەفتەیە
-        _buildStatCard(
-          context,
-          title: 'فرۆشی هەفتەیە (کۆی ٧ ڕۆژی ڕابردوو)',
-          value: Formatters.currency(dashboard.last7DaysSales),
-          icon: AppIcons.order,
-          iconColor: AppColors.info,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // 2. یەکەکانی هەفتە
-        _buildStatCard(
-          context,
-          title: 'یەکەکانی هەفتە (کۆی ٧ ڕۆژی ڕابردوو)',
-          value: '${dashboard.last7DaysUnits} یەکە',
-          icon: Icons.analytics_rounded,
-          iconColor: AppColors.purple,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // 3. یەکەکانی مانگ
-        _buildStatCard(
-          context,
-          title: 'یەکەکانی مانگ (١ی مانگ تاوەکو ئەمڕۆ)',
-          value: '${dashboard.monthUnits} یەکە',
-          icon: Icons.stars_rounded,
-          iconColor: AppColors.warning,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // 4. کڕیارە نوێکان
-        _buildStatCard(
-          context,
-          title: 'کڕیارە نوێکان (هەفتە / مانگ)',
-          value: 'هەفتە: ${dashboard.newCustomersWeek}  |  مانگ: ${dashboard.newCustomersMonth}',
-          icon: AppIcons.customer,
-          iconColor: AppColors.success,
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.35,
+          children: [
+            // 1. فرۆشی هەفتە
+            _buildStatCard(
+              context,
+              title: 'فرۆشی هەفتە',
+              value: Formatters.currency(dashboard.last7DaysSales),
+              icon: AppIcons.order,
+              iconColor: AppColors.info,
+            ),
+            // 2. یەکەکانی هەفتە
+            _buildStatCard(
+              context,
+              title: 'یەکەکانی هەفتە',
+              value: '${dashboard.last7DaysUnits} یەکە',
+              icon: Icons.analytics_rounded,
+              iconColor: AppColors.purple,
+            ),
+            // 3. یەکەکانی مانگ
+            _buildStatCard(
+              context,
+              title: 'یەکەکانی مانگ',
+              value: '${dashboard.monthUnits} یەکە',
+              icon: Icons.stars_rounded,
+              iconColor: AppColors.warning,
+            ),
+            // 4. کڕیارە نوێکان
+            _buildStatCard(
+              context,
+              title: 'کڕیارە نوێکان',
+              value: 'هەفتە: ${dashboard.newCustomersWeek} | مانگ: ${dashboard.newCustomersMonth}',
+              icon: AppIcons.customer,
+              iconColor: AppColors.success,
+            ),
+          ],
         ),
       ],
     );
@@ -684,47 +687,56 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     required Color iconColor,
   }) {
     return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
               ),
-              child: Center(
-                child: Icon(icon, color: iconColor, size: 22),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.caption.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: iconColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: AppTextStyles.bodyBold.copyWith(
-                      color: iconColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
