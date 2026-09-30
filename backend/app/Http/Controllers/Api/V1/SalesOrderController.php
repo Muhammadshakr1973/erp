@@ -306,6 +306,11 @@ class SalesOrderController extends Controller
     {
         $user = $request->user();
         $today = now()->toDateString();
+        $sevenDaysAgo = now()->subDays(6)->toDateString();
+        $startOfWeek = now()->startOfWeek()->toDateTimeString();
+        $endOfWeek = now()->endOfWeek()->toDateTimeString();
+        $startOfMonth = now()->startOfMonth()->toDateTimeString();
+        $endOfMonth = now()->endOfMonth()->toDateTimeString();
 
         // 1. Today's Route
         $routeSalesman = \App\Models\RouteSalesman::with('route')
@@ -324,42 +329,75 @@ class SalesOrderController extends Controller
 
         $routeName = $routeSalesman ? $routeSalesman->route->name : 'گشتی';
 
-        // 2. Today's Sales Amount
-        $todaySalesAmount = (int) \App\Models\SalesOrder::where('salesman_id', $user->id)
+        // 2. Today's Sales Amount & Profit Units (1 Unit = 1,000 IQD profit)
+        $todayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
             ->whereDate('created_at', $today)
-            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED)
-            ->sum('total_amount');
+            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
 
-        // 3. Visits count
-        $assignedRouteIds = $user->getAssignedRouteIds();
-        $totalCustomersCount = \App\Models\Customer::whereIn('route_id', $assignedRouteIds)
-            ->where('is_active', true)
-            ->count();
+        $todaySalesAmount = (int) $todayOrders->sum('total_amount');
+        $todayProfitSum = (int) $todayOrders->sum('total_profit');
+        $todayUnits = (int) round($todayProfitSum / 1000);
 
-        // Fallback if no customers in route
-        if ($totalCustomersCount === 0) {
-            $totalCustomersCount = \App\Models\Customer::where('is_active', true)->count();
+        // 3. Last 7 Days Profit Units
+        $last7DaysOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereDate('created_at', '>=', $sevenDaysAgo)
+            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+
+        $last7DaysProfitSum = (int) $last7DaysOrders->sum('total_profit');
+        $last7DaysUnits = (int) round($last7DaysProfitSum / 1000);
+
+        // 4. Weekly Chart Data (Last 7 Days)
+        $weeklyChartData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $dayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
+                ->whereDate('created_at', $date)
+                ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+
+            $daySales = (int) $dayOrders->sum('total_amount');
+            $dayProfit = (int) $dayOrders->sum('total_profit');
+            $dayUnits = (int) round($dayProfit / 1000);
+
+            // Short Kurdish day names
+            $dayNameMap = [
+                'Mon' => 'دووشەممە',
+                'Tue' => 'سێشەممە',
+                'Wed' => 'چوارشەممە',
+                'Thu' => 'پێنجشەممە',
+                'Fri' => 'جومعە',
+                'Sat' => 'شەممە',
+                'Sun' => 'یەکشەممە',
+            ];
+            $englishDay = \Carbon\Carbon::parse($date)->format('D');
+            $dayLabel = $dayNameMap[$englishDay] ?? $englishDay;
+
+            $weeklyChartData[] = [
+                'date' => $date,
+                'label' => $dayLabel,
+                'sales' => $daySales,
+                'units' => $dayUnits,
+            ];
         }
 
-        // Visited customers (had orders or payments today)
-        $orderCustomerIds = \App\Models\SalesOrder::where('salesman_id', $user->id)
-            ->whereDate('created_at', $today)
-            ->pluck('customer_id');
+        // 5. New Customers added by salesman
+        $newCustomersWeek = \App\Models\Customer::where('created_by', $user->id)
+            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+            ->count();
 
-        $paymentCustomerIds = \App\Models\CustomerPayment::where('collected_by', $user->id)
-            ->whereDate('created_at', $today)
-            ->pluck('customer_id');
-
-        $visitedCustomerIds = $orderCustomerIds->merge($paymentCustomerIds)->unique()->toArray();
-        $visitedCount = count($visitedCustomerIds);
+        $newCustomersMonth = \App\Models\Customer::where('created_by', $user->id)
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->count();
 
         return response()->json([
             'message' => 'داشبۆردی مەندوب',
             'data' => [
                 'route_name' => $routeName,
                 'today_sales' => $todaySalesAmount,
-                'visited_count' => $visitedCount,
-                'total_visits' => $totalCustomersCount ?: 1,
+                'today_units' => $todayUnits,
+                'last_7_days_units' => $last7DaysUnits,
+                'new_customers_week' => $newCustomersWeek,
+                'new_customers_month' => $newCustomersMonth,
+                'weekly_chart_data' => $weeklyChartData,
             ]
         ]);
     }

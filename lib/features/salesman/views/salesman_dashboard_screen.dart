@@ -84,112 +84,23 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSyncStatusBanner(context, syncStatus, syncService),
-              // Quick Stats
+              // Quick Stats & Chart
               dashboardAsync.when(
-                data: (dashboard) => Row(
-                  children: [
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.order, color: AppColors.info),
-                            const SizedBox(height: 8),
-                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text(
-                              Formatters.currency(dashboard.todaySales),
-                              style: AppTextStyles.h2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.customer, color: AppColors.purple),
-                            const SizedBox(height: 8),
-                            Text('سەردانەکان', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${dashboard.visitedCount} / ${dashboard.totalVisits}',
-                              style: AppTextStyles.h2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                data: (dashboard) => _buildSalesmanDashboardStats(context, dashboard),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32.0),
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
-                loading: () => Row(
-                  children: [
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.order, color: AppColors.info),
-                            const SizedBox(height: 8),
-                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text('باردەکرێت...', style: AppTextStyles.caption),
-                          ],
-                        ),
-                      ),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Text(
+                      'هەڵە لە بارکردنی ئامارەکاندا هەیە: ${Formatters.cleanError(err)}',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.customer, color: AppColors.purple),
-                            const SizedBox(height: 8),
-                            Text('سەردانەکان', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text('باردەکرێت...', style: AppTextStyles.caption),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                error: (err, _) => Row(
-                  children: [
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.order, color: AppColors.info),
-                            const SizedBox(height: 8),
-                            Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text('هەڵە', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(AppIcons.customer, color: AppColors.purple),
-                            const SizedBox(height: 8),
-                            Text('سەردانەکان', style: AppTextStyles.caption),
-                            const SizedBox(height: 4),
-                            Text('هەڵە', style: AppTextStyles.caption.copyWith(color: AppColors.danger)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sectionGap),
@@ -713,6 +624,191 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSalesmanDashboardStats(BuildContext context, SalesmanDashboardData dashboard) {
+    final maxSales = dashboard.weeklyChartData
+        .map((e) => e.sales)
+        .fold(0, (max, v) => v > max ? v : max);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Row 1: Today's Sales & Today's Units
+        Row(
+          children: [
+            Expanded(
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(AppIcons.order, color: AppColors.info),
+                    const SizedBox(height: 8),
+                    Text('فرۆشتنی ئەمڕۆ', style: AppTextStyles.caption),
+                    const SizedBox(height: 4),
+                    Text(
+                      Formatters.currency(dashboard.todaySales),
+                      style: AppTextStyles.h2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.stars_rounded, color: AppColors.warning),
+                    const SizedBox(height: 8),
+                    Text('یەکەکانی ئەمڕۆ', style: AppTextStyles.caption),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${dashboard.todayUnits} یەکە',
+                      style: AppTextStyles.h2.copyWith(color: AppColors.warning),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // Row 2: 7 Days Units & New Customers
+        Row(
+          children: [
+            Expanded(
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.analytics_rounded, color: AppColors.purple),
+                    const SizedBox(height: 8),
+                    Text('یەکەکانی ٧ ڕۆژی ڕابردوو', style: AppTextStyles.caption),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${dashboard.last7DaysUnits} یەکە',
+                      style: AppTextStyles.h2.copyWith(color: AppColors.purple),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(AppIcons.customer, color: AppColors.success),
+                    const SizedBox(height: 8),
+                    Text('کڕیارە نوێکان', style: AppTextStyles.caption),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          'هەفتە: ${dashboard.newCustomersWeek}',
+                          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'مانگ: ${dashboard.newCustomersMonth}',
+                          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sectionGap),
+
+        // Chart Section: 7-day visual chart
+        Text('چاڕتی چالاکی ٧ ڕۆژی ڕابردوو', style: AppTextStyles.h2),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.info,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('فرۆشتن', style: AppTextStyles.caption),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.warning,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text('یەکە', style: AppTextStyles.caption),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 150,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: dashboard.weeklyChartData.map((item) {
+                      final heightFactor = maxSales > 0 ? (item.sales / maxSales).clamp(0.12, 1.0) : 0.12;
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${item.units}ی',
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 20,
+                            height: 90 * heightFactor,
+                            decoration: BoxDecoration(
+                              color: AppColors.info,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            item.label,
+                            style: AppTextStyles.caption.copyWith(fontSize: 10),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
