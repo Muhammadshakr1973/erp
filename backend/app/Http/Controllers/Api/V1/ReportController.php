@@ -25,14 +25,14 @@ class ReportController extends Controller
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
-        // 1. Monthly sales from confirmed/delivered orders
+        // 1. Monthly sales from confirmed/delivered orders using authoritative order_date
         $monthlySales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->sum('total_amount');
 
-        // 2. Monthly profit
+        // 2. Monthly profit using authoritative order_date
         $monthlyProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->sum('total_profit');
 
         // 3. Outstanding customer receivables
