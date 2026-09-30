@@ -338,13 +338,22 @@ class SalesOrderController extends Controller
         $todayProfitSum = (int) $todayOrders->sum('total_profit');
         $todayUnits = (int) round($todayProfitSum / 1000);
 
-        // 3. Last 7 Days Profit Units
+        // 3. Last 7 Days Sales Amount & Profit Units
         $last7DaysOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
             ->whereDate('created_at', '>=', $sevenDaysAgo)
             ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
 
+        $last7DaysSalesAmount = (int) $last7DaysOrders->sum('total_amount');
         $last7DaysProfitSum = (int) $last7DaysOrders->sum('total_profit');
         $last7DaysUnits = (int) round($last7DaysProfitSum / 1000);
+
+        // Month-to-date profit units (from 1st of current month until end of today)
+        $monthOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereBetween('created_at', [$startOfMonth, now()->endOfDay()->toDateTimeString()])
+            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+
+        $monthProfitSum = (int) $monthOrders->sum('total_profit');
+        $monthUnits = (int) round($monthProfitSum / 1000);
 
         // 4. Weekly Chart Data (Last 7 Days)
         $weeklyChartData = [];
@@ -394,7 +403,9 @@ class SalesOrderController extends Controller
                 'route_name' => $routeName,
                 'today_sales' => $todaySalesAmount,
                 'today_units' => $todayUnits,
+                'last_7_days_sales' => $last7DaysSalesAmount,
                 'last_7_days_units' => $last7DaysUnits,
+                'month_units' => $monthUnits,
                 'new_customers_week' => $newCustomersWeek,
                 'new_customers_month' => $newCustomersMonth,
                 'weekly_chart_data' => $weeklyChartData,

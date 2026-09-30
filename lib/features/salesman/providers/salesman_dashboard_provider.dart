@@ -31,7 +31,9 @@ class SalesmanDashboardData {
   final String routeName;
   final int todaySales;
   final int todayUnits;
+  final int last7DaysSales;
   final int last7DaysUnits;
+  final int monthUnits;
   final int newCustomersWeek;
   final int newCustomersMonth;
   final List<WeeklyChartItem> weeklyChartData;
@@ -40,7 +42,9 @@ class SalesmanDashboardData {
     required this.routeName,
     required this.todaySales,
     required this.todayUnits,
+    required this.last7DaysSales,
     required this.last7DaysUnits,
+    required this.monthUnits,
     required this.newCustomersWeek,
     required this.newCustomersMonth,
     required this.weeklyChartData,
@@ -52,7 +56,13 @@ class SalesmanDashboardData {
       routeName: json['route_name']?.toString() ?? 'گشتی',
       todaySales: (json['today_sales'] is num) ? (json['today_sales'] as num).toInt() : 0,
       todayUnits: (json['today_units'] is num) ? (json['today_units'] as num).toInt() : 0,
+      last7DaysSales: (json['last_7_days_sales'] is num)
+          ? (json['last_7_days_sales'] as num).toInt()
+          : ((json['weekly_sales'] is num) ? (json['weekly_sales'] as num).toInt() : 0),
       last7DaysUnits: (json['last_7_days_units'] is num) ? (json['last_7_days_units'] as num).toInt() : 0,
+      monthUnits: (json['month_units'] is num)
+          ? (json['month_units'] as num).toInt()
+          : ((json['this_month_units'] is num) ? (json['this_month_units'] as num).toInt() : 0),
       newCustomersWeek: (json['new_customers_week'] is num) ? (json['new_customers_week'] as num).toInt() : 0,
       newCustomersMonth: (json['new_customers_month'] is num) ? (json['new_customers_month'] as num).toInt() : 0,
       weeklyChartData: rawChart
