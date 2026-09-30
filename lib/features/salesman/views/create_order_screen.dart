@@ -59,6 +59,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
+  bool _timerPausedForRetry = false;
+  bool _saveFailed = false;
+  int _failureCount = 0;
 
   String? _lastChangedField;
   final Map<String, String> _fieldStates = {}; // field_name -> 'saving' | 'success' | 'error'
@@ -636,8 +639,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Future<void> _autoSaveOrder(
-    AsyncValue<List<WarehouseModel>> warehousesAsync,
-  ) async {
+    AsyncValue<List<WarehouseModel>> warehousesAsync, {
+    List<Map<String, dynamic>>? customItems,
+  }) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
 
     final warehouses = warehousesAsync.asData!.value;
@@ -651,13 +655,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             : warehouses.first.id);
 
     final List<Map<String, dynamic>> itemsList = [];
-    _cart.forEach((productId, qty) {
-      itemsList.add({
-        'product_id': productId,
-        'quantity': qty,
-        'notes': _cartNotes[productId],
+    if (customItems != null) {
+      itemsList.addAll(customItems);
+    } else {
+      _cart.forEach((productId, qty) {
+        itemsList.add({
+          'product_id': productId,
+          'quantity': qty,
+          'notes': _cartNotes[productId],
+        });
       });
-    });
+    }
 
     final String sharedKey = _sharedKey ?? 'order_${DateTime.now().microsecondsSinceEpoch}';
     final int version = _currentVersion;
@@ -700,13 +708,27 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _subscribeToOrderPusher(createdOrder.id);
       }
 
-      if (mounted && _lastChangedField != null) {
-        _setFieldState(_lastChangedField!, 'success');
-        _lastChangedField = null;
+      if (mounted) {
+        setState(() {
+          _failureCount = 0;
+          _timerPausedForRetry = false;
+          _saveFailed = false;
+        });
+        if (_lastChangedField != null) {
+          _setFieldState(_lastChangedField!, 'success');
+          _lastChangedField = null;
+        }
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (mounted) {
+        setState(() {
+          _timerPausedForRetry = true;
+          _secondsRemaining = 30; // Freeze at 30 for manual retry trigger
+          _saveFailed = true;
+          _failureCount++;
+        });
+
         if (_lastChangedField != null) {
           _setFieldState(_lastChangedField!, 'error', error: errorMsg);
         }
@@ -740,206 +762,394 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }) {
     if (!mounted) return;
 
+    final List<Map<String, dynamic>> localItems = List.from(items);
+
     showDialog(
       context: context,
       barrierDismissible: false, // User must dismiss manually
       builder: (BuildContext context) {
-        final theme = Theme.of(context);
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: theme.colorScheme.surface,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final theme = Theme.of(context);
+            int? retryingProductId;
+
+            Future<void> retrySingleItem(int prodId, int qty) async {
+              setDialogState(() {
+                retryingProductId = prodId;
+              });
+
+              try {
+                final List<Map<String, dynamic>> itemsToSave = [];
+                _cart.forEach((id, q) {
+                  final isFailed = localItems.any((item) => item['product_id'] == id);
+                  if (!isFailed || id == prodId) {
+                    itemsToSave.add({
+                      'product_id': id,
+                      'quantity': q,
+                      'notes': _cartNotes[id],
+                    });
+                  }
+                });
+
+                final warehousesAsync = ref.read(warehouseListProvider);
+                final warehouses = warehousesAsync.asData?.value ?? [];
+                final warehouseId = _selectedWarehouseId ??
+                    (warehouses.any((w) => w.isMain)
+                        ? warehouses.firstWhere((w) => w.isMain).id
+                        : warehouses.isNotEmpty ? warehouses.first.id : 1);
+
+                final payload = {
+                  'customer_id': _selectedCustomer!.id,
+                  'warehouse_id': warehouseId,
+                  'status': 'PACKING',
+                  'discount_type': _discountType,
+                  'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
+                  'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
+                  'shared_key': _sharedKey ?? 'order_${DateTime.now().microsecondsSinceEpoch}',
+                  'version': _currentVersion,
+                  'notes': _notesController.text.trim().isEmpty
+                      ? null
+                      : _notesController.text.trim(),
+                  'items': itemsToSave,
+                };
+
+                if (_hasSavedOnce && _serverOrderId != null) {
+                  final updatedOrder = await ref
+                      .read(orderActionsProvider)
+                      .updateOrder(_serverOrderId!, payload);
+                  _currentVersion = updatedOrder.version;
+                } else {
+                  final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
+                  _serverOrderId = createdOrder.id;
+                  _currentVersion = createdOrder.version;
+                  _hasSavedOnce = true;
+                  _subscribeToOrderPusher(createdOrder.id);
+                }
+
+                if (mounted) {
+                  setState(() {
+                    _fieldStates.remove('product_qty_$prodId');
+                    _fieldErrors.remove('product_qty_$prodId');
+                  });
+
+                  setDialogState(() {
+                    localItems.removeWhere((item) => item['product_id'] == prodId);
+                    retryingProductId = null;
+                  });
+
+                  if (localItems.isEmpty) {
+                    setState(() {
+                      _failureCount = 0;
+                      _timerPausedForRetry = false;
+                      _saveFailed = false;
+                      _secondsRemaining = 0;
+                    });
+                    Navigator.pop(context);
+                    AppSnackbar.show(
+                      context,
+                      message: 'هەموو کاڵاکان بە سەرکەوتوویی پاشەکەوتکران',
+                      type: SnackbarType.success,
+                    );
+                  } else {
+                    AppSnackbar.show(
+                      context,
+                      message: 'کاڵاکە بە سەرکەوتوویی پاشەکەوتکرا',
+                      type: SnackbarType.success,
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+                  setDialogState(() {
+                    retryingProductId = null;
+                  });
+                  AppSnackbar.show(
+                    context,
+                    message: 'پاشەکەوتکردنی کاڵاکە سەرکەوتوو نەبوو: $errorMsg',
+                    type: SnackbarType.error,
+                  );
+                }
+              }
+            }
+
+            void deleteSingleItem(int prodId) {
+              setState(() {
+                _cart.remove(prodId);
+                _cartNotes.remove(prodId);
+              });
+              setDialogState(() {
+                localItems.removeWhere((item) => item['product_id'] == prodId);
+              });
+
+              AppSnackbar.show(
+                context,
+                message: 'کاڵاکە لە پسوڵە سڕایەوە',
+                type: SnackbarType.info,
+              );
+
+              if (localItems.isEmpty) {
+                setState(() {
+                  _failureCount = 0;
+                  _timerPausedForRetry = false;
+                  _saveFailed = false;
+                  _secondsRemaining = 0;
+                });
+                Navigator.pop(context);
+              }
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: theme.colorScheme.surface,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.error_outline,
+                              color: AppColors.danger,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'کێشە لە پاشەکەوتکردنی خۆکار',
+                              style: AppTextStyles.h3.copyWith(
+                                color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Error details container
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: AppColors.danger.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.danger.withValues(alpha: 0.2),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.error_outline,
-                          color: AppColors.danger,
-                          size: 28,
+                        child: Text(
+                          'هەڵەی سیستەم: $errorMessage',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'کێشە لە پاشەکەوتکردنی خۆکار',
-                          style: AppTextStyles.h3.copyWith(
-                            color: theme.colorScheme.onSurface,
+                      const SizedBox(height: 16),
+
+                      // Invoice Details Title
+                      Text(
+                        'زانیارییەکانی پسوڵە:',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Customer row
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_outline, size: 18, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'ناوی کڕیار: $customerName',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Products title
+                      Text(
+                        _failureCount >= 2
+                            ? 'لیستی کاڵاکان (کرداری یەک بە یەک یان سڕینەوە):'
+                            : 'لیستی کاڵاکان و بڕی نێردراو:',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Product items list
+                      Flexible(
+                        child: Container(
+                          constraints: const BoxConstraints(maxHeight: 180),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: localItems.length,
+                            separatorBuilder: (context, index) => const SizedBox(height: 6),
+                            itemBuilder: (context, index) {
+                              final item = localItems[index];
+                              final prodId = item['product_id'] as int;
+                              final qty = item['quantity'] as int;
+                              final product = allProducts
+                                  .where((p) => p.id == prodId)
+                                  .firstOrNull;
+                              final prodName = product?.name ?? 'کاڵای نادیار (کۆد: $prodId)';
+                              final unit = product?.unit ?? 'دانە';
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            prodName,
+                                            style: AppTextStyles.bodyMedium.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$qty $unit',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: theme.colorScheme.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (_failureCount >= 2) ...[
+                                      if (retryingProductId == prodId)
+                                        const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                          ),
+                                        )
+                                      else ...[
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.cloud_upload_outlined,
+                                            color: AppColors.success,
+                                            size: 20,
+                                          ),
+                                          tooltip: 'تەنها ناردنی ئەم کاڵایە',
+                                          dense: true,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () => retrySingleItem(prodId, qty),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: AppColors.danger,
+                                            size: 20,
+                                          ),
+                                          tooltip: 'سڕینەوە لە پسوڵە',
+                                          dense: true,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () => deleteSingleItem(prodId),
+                                        ),
+                                      ],
+                                    ] else ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '$qty $unit',
+                                          style: AppTextStyles.bodyBold.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Action Buttons
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text(
+                          'تێگەیشتم / داخستن',
+                          style: TextStyle(
+                            fontFamily: 'Rudaw',
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Error details container
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppColors.danger.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Text(
-                      'هەڵەی سیستەم: $errorMessage',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Invoice Details Title
-                  Text(
-                    'زانیارییەکانی پسوڵە:',
-                    style: AppTextStyles.bodyBold.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Customer row
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.person_outline, size: 18, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'ناوی کڕیار: $customerName',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Products title
-                  Text(
-                    'لیستی کاڵاکان و بڕی نێردراو:',
-                    style: AppTextStyles.bodyBold.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Product items list
-                  Flexible(
-                    child: Container(
-                      constraints: const BoxConstraints(maxHeight: 180),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: items.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 6),
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          final prodId = item['product_id'] as int;
-                          final qty = item['quantity'] as int;
-                          final product = allProducts
-                              .where((p) => p.id == prodId)
-                              .firstOrNull;
-                          final prodName = product?.name ?? 'کاڵای نادیار (کۆد: $prodId)';
-                          final unit = product?.unit ?? 'دانە';
-
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainer,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    prodName,
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '$qty $unit',
-                                    style: AppTextStyles.bodyBold.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Action Buttons
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text(
-                      'تێگەیشتم / داخستن',
-                      style: TextStyle(
-                        fontFamily: 'Rudaw',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -951,6 +1161,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (mounted) {
       setState(() {
         _secondsRemaining = 0;
+        _timerPausedForRetry = false;
+        _saveFailed = false;
       });
     }
     final productsAsync = ref.read(productsListProvider);
@@ -967,6 +1179,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (mounted) {
       setState(() {
         _secondsRemaining = 30;
+        _timerPausedForRetry = false;
+        _saveFailed = false;
       });
     }
 
@@ -1038,37 +1252,45 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               ),
               const SizedBox(width: 8),
               _buildPriceTypeBadge(),
-              if (_secondsRemaining > 0) ...[
+              if (_secondsRemaining > 0 || _timerPausedForRetry) ...[
                 const SizedBox(width: 8),
-                Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.4),
+                InkWell(
+                  onTap: _timerPausedForRetry ? _triggerAutoSave : null,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: _timerPausedForRetry
+                          ? AppColors.danger.withValues(alpha: 0.15)
+                          : Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _timerPausedForRetry
+                            ? AppColors.danger.withValues(alpha: 0.4)
+                            : Colors.orange.withValues(alpha: 0.4),
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        size: 14,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'کاش: $_secondsRemaining چرکە',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: Colors.orange,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _timerPausedForRetry ? Icons.refresh : Icons.timer_outlined,
+                          size: 16,
+                          color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_secondsRemaining',
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
