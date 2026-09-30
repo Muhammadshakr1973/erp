@@ -1195,10 +1195,28 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   child: InkWell(
                                     onTap: () {
                                       _addToCart(product.id);
+                                      _searchController.clear();
+                                      _searchFocusNode.unfocus();
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (mounted) {
+                                          _searchFocusNode.requestFocus();
+                                        }
+                                      });
                                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text('${product.name} زیادکرا بۆ سەبەتە (${qtyInCart + 1})'),
+                                          backgroundColor: AppColors.success,
+                                          duration: const Duration(milliseconds: 900),
+                                        ),
+                                      );
+                                    },
+                                    onLongPress: () {
+                                      _addToCart(product.id);
+                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('${product.name} زیادکرا (${qtyInCart + 1})'),
                                           backgroundColor: AppColors.success,
                                           duration: const Duration(milliseconds: 900),
                                         ),
@@ -1294,76 +1312,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           const SizedBox(width: 8),
                                           if (qtyInCart > 0)
                                             Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                                                borderRadius: BorderRadius.circular(20),
+                                                borderRadius: BorderRadius.circular(12),
                                                 border: Border.all(
                                                   color: theme.colorScheme.primary.withValues(alpha: 0.5),
                                                 ),
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  InkWell(
-                                                    onTap: () {
-                                                      _removeFromCart(product.id);
-                                                    },
-                                                    borderRadius: BorderRadius.circular(16),
-                                                    child: const Padding(
-                                                      padding: EdgeInsets.all(4),
-                                                      child: Icon(Icons.remove, size: 16, color: AppColors.danger),
-                                                    ),
-                                                  ),
-                                                  Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                                                    child: Text(
-                                                      '$qtyInCart',
-                                                      style: AppTextStyles.bodyBold.copyWith(
-                                                        color: theme.colorScheme.primary,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  InkWell(
-                                                    onTap: () {
-                                                      _addToCart(product.id);
-                                                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text('${product.name} زیادکرا (${qtyInCart + 1})'),
-                                                          backgroundColor: AppColors.success,
-                                                          duration: const Duration(milliseconds: 900),
-                                                        ),
-                                                      );
-                                                    },
-                                                    borderRadius: BorderRadius.circular(16),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.all(4),
-                                                      child: Icon(Icons.add, size: 16, color: theme.colorScheme.primary),
-                                                    ),
-                                                  ),
-                                                ],
+                                              child: Text(
+                                                '$qtyInCart دانە',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: theme.colorScheme.primary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            )
-                                          else
-                                            FilledButton.tonalIcon(
-                                              style: FilledButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                                minimumSize: const Size(0, 32),
-                                                visualDensity: VisualDensity.compact,
-                                              ),
-                                              onPressed: () {
-                                                _addToCart(product.id);
-                                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('${product.name} زیادکرا بۆ سەبەتە (1)'),
-                                                    backgroundColor: AppColors.success,
-                                                    duration: const Duration(milliseconds: 900),
-                                                  ),
-                                                );
-                                              },
-                                              icon: const Icon(Icons.add, size: 16),
-                                              label: const Text('زیادکردن', style: TextStyle(fontSize: 12)),
                                             ),
                                         ],
                                       ),
