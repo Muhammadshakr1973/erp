@@ -35,59 +35,67 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('وردەکاری گەشت #$intParsedId', style: AppTextStyles.h2),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_outlined),
-            onPressed: () => ref.invalidate(tripDetailProvider(intParsedId)),
-          ),
-        ],
       ),
-      body: tripDetailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'کێشەیەک لە بارکردنی گەشتەکە ڕوویدا',
-                  style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(tripDetailProvider(intParsedId));
+          await ref.read(tripDetailProvider(intParsedId).future);
+        },
+        child: tripDetailAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'کێشەیەک لە بارکردنی گەشتەکە ڕوویدا',
+                          style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(err.toString(), style: AppTextStyles.caption),
+                        const SizedBox(height: AppSpacing.md),
+                        ElevatedButton(
+                          onPressed: () => ref.invalidate(tripDetailProvider(intParsedId)),
+                          child: const Text('دووبارە هەوڵبدەرەوە'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(err.toString(), style: AppTextStyles.caption),
-                const SizedBox(height: AppSpacing.md),
-                ElevatedButton(
-                  onPressed: () => ref.invalidate(tripDetailProvider(intParsedId)),
-                  child: const Text('دووبارە هەوڵبدەرەوە'),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-        data: (trip) {
-          int total = trip.orders.length;
-          int delivered = trip.orders.where((o) => o.status == 'DELIVERED').length;
-          int failed = trip.orders.where((o) => o.status == 'FAILED').length;
-          int pending = total - delivered - failed;
-
-          final sortedOrders = List<DeliveryTripOrderModel>.from(trip.orders)..sort((a, b) {
-            final routeA = _getOrderRouteName(a);
-            final routeB = _getOrderRouteName(b);
-            final routeComp = routeA.compareTo(routeB);
-            if (routeComp != 0) return routeComp;
-            return a.deliveryOrder.compareTo(b.deliveryOrder);
-          });
-
-          return Column(
-            children: [
-              _buildTripSummary(total, delivered, pending, failed),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: sortedOrders.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
+          data: (trip) {
+            int total = trip.orders.length;
+            int delivered = trip.orders.where((o) => o.status == 'DELIVERED').length;
+            int failed = trip.orders.where((o) => o.status == 'FAILED').length;
+            int pending = total - delivered - failed;
+  
+            final sortedOrders = List<DeliveryTripOrderModel>.from(trip.orders)..sort((a, b) {
+              final routeA = _getOrderRouteName(a);
+              final routeB = _getOrderRouteName(b);
+              final routeComp = routeA.compareTo(routeB);
+              if (routeComp != 0) return routeComp;
+              return a.deliveryOrder.compareTo(b.deliveryOrder);
+            });
+  
+            return Column(
+              children: [
+                _buildTripSummary(total, delivered, pending, failed),
+                Expanded(
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                    itemCount: sortedOrders.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final tripOrder = sortedOrders[index];
                     final order = tripOrder.order;
@@ -344,8 +352,9 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _getCustomerName(dynamic customer) {
     if (customer == null) return 'کڕیاری نەناسراو';

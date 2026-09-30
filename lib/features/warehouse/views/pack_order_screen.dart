@@ -436,74 +436,88 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
         ),
         actions: _buildActions(ordersAsync),
       ),
-      body: ordersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Center(
-                child: ErrorState(
-                  title: 'هەڵەیەک ڕوویدا لە بارکردنی پسوڵە',
-                  message: Formatters.cleanError(err),
-                  retryText: 'دووبارە هەوڵبدەرەوە',
-                  onRetry: () => ref.invalidate(ordersToPackProvider),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(ordersToPackProvider);
+          await ref.read(ordersToPackProvider.future);
+        },
+        child: ordersAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: ErrorState(
+                    title: 'هەڵەیەک ڕوویدا لە بارکردنی پسوڵە',
+                    message: Formatters.cleanError(err),
+                    retryText: 'دووبارە هەوڵبدەرەوە',
+                    onRetry: () => ref.invalidate(ordersToPackProvider),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        data: (orders) {
-          WarehouseOrderModel? foundOrder;
-          for (final o in orders) {
-            if (o.id.toString() == widget.orderId ||
-                o.orderNumber == widget.orderId) {
-              foundOrder = o;
-              break;
+          data: (orders) {
+            WarehouseOrderModel? foundOrder;
+            for (final o in orders) {
+              if (o.id.toString() == widget.orderId ||
+                  o.orderNumber == widget.orderId) {
+                foundOrder = o;
+                break;
+              }
             }
-          }
-
-          if (foundOrder == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: EmptyState(
-                  title: 'پسوڵەکە نەدۆزرایەوە',
-                  message: 'پێدەچێت ئەم پسوڵەیە پێشتر ئامادەکرابێت یان گوازرابێتەوە.',
-                  icon: Icons.check_circle_outline,
-                  buttonText: 'گەڕانەوە بۆ لای پسوڵەکان',
-                  onAction: () => Navigator.pop(context),
+  
+            if (foundOrder == null) {
+              return LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: EmptyState(
+                          title: 'پسوڵەکە نەدۆزرایەوە',
+                          message: 'پێدەچێت ئەم پسوڵەیە پێشتر ئامادەکرابێت یان گوازرابێتەوە.',
+                          icon: Icons.check_circle_outline,
+                          buttonText: 'گەڕانەوە بۆ لای پسوڵەکان',
+                          onAction: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            );
-          }
-
-          final WarehouseOrderModel currentOrder = foundOrder;
-          final int totalItemsCount = currentOrder.items.length;
-          final int packedItemsCount = currentOrder.items
-              .where((e) {
-                return _unsavedChanges.containsKey(e.id)
-                    ? _unsavedChanges[e.id]!
-                    : (_optimisticPackedStates[e.id] ?? e.isPacked);
-              })
-              .length;
-          final bool isAllPacked = packedItemsCount == totalItemsCount;
-
-          return Column(
-            children: [
-              _buildOrderSummary(
-                theme,
-                currentOrder,
-                packedItemsCount,
-                totalItemsCount,
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: currentOrder.items.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
+              );
+            }
+  
+            final WarehouseOrderModel currentOrder = foundOrder;
+            final int totalItemsCount = currentOrder.items.length;
+            final int packedItemsCount = currentOrder.items
+                .where((e) {
+                  return _unsavedChanges.containsKey(e.id)
+                      ? _unsavedChanges[e.id]!
+                      : (_optimisticPackedStates[e.id] ?? e.isPacked);
+                })
+                .length;
+            final bool isAllPacked = packedItemsCount == totalItemsCount;
+  
+            return Column(
+              children: [
+                _buildOrderSummary(
+                  theme,
+                  currentOrder,
+                  packedItemsCount,
+                  totalItemsCount,
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                    itemCount: currentOrder.items.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
                     final item = currentOrder.items[index];
                     
@@ -588,8 +602,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildOrderSummary(
     ThemeData theme,

@@ -176,14 +176,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
             tooltip: 'زیادکردنی کڕیار',
             onPressed: () => _showAddCustomerDialog(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () {
-              ref.invalidate(filteredCustomerListProvider);
-              ref.invalidate(customerListProvider);
-            },
-          ),
         ],
       ),
       body: Column(

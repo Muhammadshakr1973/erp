@@ -38,10 +38,6 @@ class OrdersToPackScreen extends ConsumerWidget {
               label: const Text('دروستکردنی گەشت', style: AppTextStyles.bodyBold),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.refresh(ordersToPackProvider),
-          ),
         ],
       ),
       body: RefreshIndicator(

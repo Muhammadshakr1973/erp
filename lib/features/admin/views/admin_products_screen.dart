@@ -158,10 +158,6 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(productsListProvider),
-          ),
         ],
       ),
       body: Column(

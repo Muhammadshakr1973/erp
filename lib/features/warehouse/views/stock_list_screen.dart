@@ -382,10 +382,6 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.refresh(warehouseStocksProvider),
-          ),
         ],
       ),
       body: RefreshIndicator(

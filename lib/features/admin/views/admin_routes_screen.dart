@@ -216,44 +216,74 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
 
             // Route List / Grid
             Expanded(
-              child: routesAsync.when(
-                data: (routes) {
-                  final filteredRoutes = routes.where((r) {
-                    final nameMatch = r.name.toLowerCase().contains(
-                      _searchQuery,
-                    );
-                    return nameMatch;
-                  }).toList();
-
-                  if (filteredRoutes.isEmpty) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.alt_route, size: 64, color: Colors.grey),
-                          SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'هیچ ڕاوتێک نەدۆزرایەوە',
-                            style: AppTextStyles.bodyBold,
+              child: RefreshIndicator(
+                onRefresh: () async => ref.invalidate(routeListProvider),
+                child: routesAsync.when(
+                  data: (routes) {
+                    final filteredRoutes = routes.where((r) {
+                      final nameMatch = r.name.toLowerCase().contains(
+                        _searchQuery,
+                      );
+                      return nameMatch;
+                    }).toList();
+  
+                    if (filteredRoutes.isEmpty) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.alt_route, size: 64, color: Colors.grey),
+                                  SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'هیچ ڕاوتێک نەدۆزرایەوە',
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ],
+                        ),
+                      );
+                    }
+  
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    int crossAxisCount = 1;
+                    if (screenWidth >= 1024) {
+                      crossAxisCount = 3;
+                    } else if (screenWidth >= 600) {
+                      crossAxisCount = 2;
+                    }
+  
+                    if (crossAxisCount == 1) {
+                      return ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: filteredRoutes.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          return _buildRouteCard(
+                            context,
+                            filteredRoutes[index],
+                            theme,
+                          );
+                        },
+                      );
+                    }
+  
+                    return GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: AppSpacing.md,
+                        mainAxisSpacing: AppSpacing.sm,
+                        mainAxisExtent: 116,
                       ),
-                    );
-                  }
-
-                  final screenWidth = MediaQuery.of(context).size.width;
-                  int crossAxisCount = 1;
-                  if (screenWidth >= 1024) {
-                    crossAxisCount = 3;
-                  } else if (screenWidth >= 600) {
-                    crossAxisCount = 2;
-                  }
-
-                  if (crossAxisCount == 1) {
-                    return ListView.separated(
                       itemCount: filteredRoutes.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         return _buildRouteCard(
                           context,
@@ -262,54 +292,45 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                         );
                       },
                     );
-                  }
-
-                  return GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: AppSpacing.md,
-                      mainAxisSpacing: AppSpacing.sm,
-                      mainAxisExtent: 116,
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'بارکردنی ڕاوتەکان سەرکەوتوو نەبوو:\n${err.toString().replaceFirst('Exception: ', '')}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Rudaw',
+                                  color: Colors.red,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              ElevatedButton.icon(
+                                onPressed: () => ref.invalidate(routeListProvider),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text(
+                                  'دووبارە بارکردنەوە',
+                                  style: TextStyle(fontFamily: 'Rudaw'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    itemCount: filteredRoutes.length,
-                    itemBuilder: (context, index) {
-                      return _buildRouteCard(
-                        context,
-                        filteredRoutes[index],
-                        theme,
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'بارکردنی ڕاوتەکان سەرکەوتوو نەبوو:\n${err.toString().replaceFirst('Exception: ', '')}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Rudaw',
-                          color: Colors.red,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.invalidate(routeListProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text(
-                          'دووبارە بارکردنەوە',
-                          style: TextStyle(fontFamily: 'Rudaw'),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ),

@@ -775,66 +775,86 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   Widget _buildSuppliersTab(BuildContext context) {
     final suppliersAsync = ref.watch(suppliersListProvider);
 
-    return suppliersAsync.when(
-      data: (suppliers) {
-        if (suppliers.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.store_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.outline,
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(suppliersListProvider),
+      child: suppliersAsync.when(
+        data: (suppliers) {
+          if (suppliers.isEmpty) {
+            return LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.store_outlined,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        const Text(
+                          'هیچ کۆمپانیایەک نییە',
+                          style: AppTextStyles.bodyBold,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton.icon(
+                          onPressed: () => _showAddSupplierDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('زیادکردنی کۆمپانیا'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                const Text(
-                  'هیچ کۆمپانیایەک نییە',
-                  style: AppTextStyles.bodyBold,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextButton.icon(
-                  onPressed: () => _showAddSupplierDialog(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('زیادکردنی کۆمپانیا'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final screenWidth = MediaQuery.of(context).size.width;
-        int crossAxisCount = 1;
-        if (screenWidth >= 1024) {
-          crossAxisCount = 3;
-        } else if (screenWidth >= 600) {
-          crossAxisCount = 2;
-        }
-
-        final bool isMobileOrTablet = screenWidth < AppBreakpoints.desktopMin;
-
-        return GridView.builder(
-          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-          itemCount: suppliers.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.sm,
-            mainAxisExtent: isMobileOrTablet ? 98 : 82,
-          ),
-          itemBuilder: (context, index) =>
-              _buildSupplierCard(
-                context,
-                suppliers[index],
-                isMobileOrTablet: isMobileOrTablet,
               ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Text(
-          'شکست لە هێنانی زانیارییەکان: $error',
-          style: const TextStyle(color: AppColors.danger),
+            );
+          }
+
+          final screenWidth = MediaQuery.of(context).size.width;
+          int crossAxisCount = 1;
+          if (screenWidth >= 1024) {
+            crossAxisCount = 3;
+          } else if (screenWidth >= 600) {
+            crossAxisCount = 2;
+          }
+
+          final bool isMobileOrTablet = screenWidth < AppBreakpoints.desktopMin;
+
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            itemCount: suppliers.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: AppSpacing.sm,
+              mainAxisExtent: isMobileOrTablet ? 98 : 82,
+            ),
+            itemBuilder: (context, index) =>
+                _buildSupplierCard(
+                  context,
+                  suppliers[index],
+                  isMobileOrTablet: isMobileOrTablet,
+                ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Text(
+                  'شکست لە هێنانی زانیارییەکان: $error',
+                  style: const TextStyle(color: AppColors.danger),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

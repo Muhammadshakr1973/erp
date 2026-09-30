@@ -51,15 +51,6 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () {
-              ref.invalidate(ordersListProvider);
-              ref.invalidate(customerListProvider);
-              syncService.syncPendingOperations();
-            },
-          ),
           const NotificationBadgeButton(),
         ],
       ),

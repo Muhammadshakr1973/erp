@@ -33,12 +33,6 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                 NewOrderCreationDialog.show(context);
               },
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                ref.invalidate(ordersListProvider);
-              },
-            ),
           ],
           bottom: const TabBar(
             tabs: [

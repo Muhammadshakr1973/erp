@@ -38,13 +38,6 @@ class _SalesReturnsListScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('کاڵا گەڕێندراوەکان', style: AppTextStyles.h2),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () => ref.invalidate(salesReturnsListProvider),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(salesReturnsListProvider),

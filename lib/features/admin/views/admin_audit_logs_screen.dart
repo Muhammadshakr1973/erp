@@ -16,12 +16,6 @@ class AdminAuditLogsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('تۆماری گۆڕانکارییەکان (Audit Logs)'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.refresh(auditLogsProvider),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {

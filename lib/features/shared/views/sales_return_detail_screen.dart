@@ -27,13 +27,6 @@ class SalesReturnDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('گەڕاندنەوەی #$returnId', style: AppTextStyles.h2),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () => ref.invalidate(singleSalesReturnProvider(returnId)),
-          ),
-        ],
       ),
       body: returnAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

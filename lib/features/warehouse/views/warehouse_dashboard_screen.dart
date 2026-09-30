@@ -33,15 +33,6 @@ class WarehouseDashboardScreen extends ConsumerWidget {
           error: (err, stack) => const Text('کۆگا', style: AppTextStyles.h2),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () {
-              ref.invalidate(warehouseDashboardProvider);
-              ref.invalidate(ordersToPackProvider);
-              ref.invalidate(warehouseStocksProvider);
-            },
-          ),
           const NotificationBadgeButton(),
         ],
       ),

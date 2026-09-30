@@ -67,11 +67,6 @@ class AdminDeliveryTripsScreen extends ConsumerWidget {
         title: const Text('گەشتەکانی گەیاندن', style: AppTextStyles.h2),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'نوێکردنەوە',
-            onPressed: () => ref.invalidate(driverTripsProvider),
-          ),
-          IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'ناردنی گەشتی نوێ',
             onPressed: () => _openCreateTripDialog(context),

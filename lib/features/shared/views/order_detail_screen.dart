@@ -130,58 +130,77 @@ class OrderDetailScreen extends ConsumerWidget {
             tooltip: 'کاڵا ڕاگەڕێندراوەکان',
             onPressed: () => context.push('/sales-returns'),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(singleOrderProvider(orderId)),
-          ),
         ],
       ),
-      body: orderAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('هەڵەیەک ڕوویدا لە بارکردنی زانیاری پسوڵە'),
-              const SizedBox(height: AppSpacing.md),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(singleOrderProvider(orderId)),
-                child: const Text('دووبارە هەوڵبدەرەوە'),
-              ),
-            ],
-          ),
-        ),
-        data: (order) {
-          if (order == null) {
-            return const Center(child: Text('هیچ پسوڵەیەک نەدۆزرایەوە'));
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-            child: isDesktop
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(singleOrderProvider(orderId));
+          await ref.read(singleOrderProvider(orderId).future);
+        },
+        child: orderAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildMainContent(context, order),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        flex: 1,
-                        child: _buildSidePanel(context, ref, order),
-                      ),
-                    ],
-                  )
-                : Column(
-                    children: [
-                      _buildMainContent(context, order),
+                      const Text('هەڵەیەک ڕوویدا لە بارکردنی زانیاری پسوڵە'),
                       const SizedBox(height: AppSpacing.md),
-                      _buildSidePanel(context, ref, order),
+                      ElevatedButton(
+                        onPressed: () => ref.invalidate(singleOrderProvider(orderId)),
+                        child: const Text('دووبارە هەوڵبدەرەوە'),
+                      ),
                     ],
                   ),
-          );
-        },
+                ),
+              ),
+            ),
+          ),
+          data: (order) {
+            if (order == null) {
+              return LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: const Center(child: Text('هیچ پسوڵەیەک نەدۆزرایەوە')),
+                  ),
+                ),
+              );
+            }
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+              child: isDesktop
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildMainContent(context, order),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          flex: 1,
+                          child: _buildSidePanel(context, ref, order),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _buildMainContent(context, order),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildSidePanel(context, ref, order),
+                      ],
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -74,13 +74,6 @@ class AdminOrdersScreen extends ConsumerWidget {
                 AdminOrderFilterDialog.show(context);
               },
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'نوێکردنەوە',
-              onPressed: () {
-                ref.invalidate(ordersListProvider);
-              },
-            ),
           ],
           bottom: const TabBar(
             tabs: [
