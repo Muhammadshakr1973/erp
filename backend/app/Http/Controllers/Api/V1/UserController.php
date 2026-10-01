@@ -38,7 +38,7 @@ class UserController extends Controller
                 'max:20',
                 Rule::unique('users')->whereNull('deleted_at')
             ],
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:4',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'fixed_salary' => 'nullable|integer|min:0',
@@ -151,7 +151,7 @@ class UserController extends Controller
                 'max:20',
                 Rule::unique('users')->ignore($id)->whereNull('deleted_at')
             ],
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:4',
             'role_id' => 'required|exists:roles,id',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'fixed_salary' => 'nullable|integer|min:0',

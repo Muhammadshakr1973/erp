@@ -16,7 +16,7 @@ class LoginRequest extends FormRequest
         return [
             // لە داتابەیسەکەت phone بەکاردێت بۆ لۆگین بەپێی سیدەرەکانت
             'phone' => ['required_without:barcode', 'string'],
-            'password' => ['required_without:barcode', 'string', 'min:6'],
+            'password' => ['required_without:barcode', 'string', 'min:4'],
             'barcode' => ['nullable', 'string'],
             'device_name' => ['nullable', 'string'], // بۆ نموونە: iPhone 14 یان Web
         ];

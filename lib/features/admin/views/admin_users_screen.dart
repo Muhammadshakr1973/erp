@@ -893,7 +893,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   controller: _passwordController,
                   labelText: isEditing
                       ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)'
-                      : 'وشەی تێپەڕ (لانی کەم ٦ پیت)',
+                      : 'وشەی تێپەڕ (لانی کەم ٤ پیت)',
                   obscureText: _obscurePassword,
                   prefixIcon: Icons.lock_outline,
                   suffixIcon: IconButton(
@@ -913,8 +913,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     if (!isEditing && (val == null || val.isEmpty)) {
                       return 'تکایە وشەی تێپەڕ بنووسە';
                     }
-                    if (val != null && val.isNotEmpty && val.length < 6) {
-                      return 'پێویستە لانی کەم ٦ پیت بێت';
+                    if (val != null && val.isNotEmpty && val.length < 4) {
+                      return 'پێویستە لانی کەم ٤ پیت بێت';
                     }
                     return null;
                   },
