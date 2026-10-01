@@ -5,6 +5,7 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
+import 'package:share_plus/share_plus.dart';
 
 void saveAndDownloadImage(Uint8List bytes, String fileName) {
   try {
@@ -111,11 +112,27 @@ void printImage(Uint8List bytes) {
   }
 }
 
-void shareImage(Uint8List bytes, String fileName, {String? text}) {
-  final blob = html.Blob([bytes], 'image/png');
-  final file = html.File([blob], fileName, {'type': 'image/png'});
-  
+Future<void> shareImage(Uint8List bytes, String fileName, {String? text}) async {
   try {
+    final xFile = XFile.fromData(
+      bytes,
+      name: fileName,
+      mimeType: 'image/png',
+    );
+    final result = await Share.shareXFiles(
+      [xFile],
+      text: text ?? 'کۆدی چوونەژوورەوەی GARDI ERP',
+    );
+    if (result.status == ShareResultStatus.success) {
+      return;
+    }
+  } catch (e) {
+    debugPrint('share_plus error on web: $e');
+  }
+
+  try {
+    final blob = html.Blob([bytes], 'image/png');
+    final file = html.File([blob], fileName, {'type': 'image/png'});
     final navigator = js.context['navigator'];
     if (navigator != null) {
       final jsNavigator = js.JsObject.fromBrowserObject(navigator);
@@ -125,32 +142,14 @@ void shareImage(Uint8List bytes, String fileName, {String? text}) {
           'title': 'Gardi QR Code',
           'text': text ?? 'کۆدی چوونەژوورەوەی GARDI ERP',
         });
-        if (jsNavigator.callMethod('canShare', [shareData]) == true) {
-          jsNavigator.callMethod('share', [shareData]);
-          return;
-        }
-
-        // Try text-only share if file share is not supported
-        final shareDataText = js.JsObject.jsify({
-          'title': 'Gardi QR Code',
-          'text': text != null ? 'کۆدی چوونەژوورەوە: $text' : 'کۆدی چوونەژوورەوەی GARDI ERP',
-        });
-        if (jsNavigator.callMethod('canShare', [shareDataText]) == true) {
-          jsNavigator.callMethod('share', [shareDataText]);
-          return;
-        }
+        jsNavigator.callMethod('share', [shareData]);
+        return;
       }
     }
   } catch (e) {
     debugPrint('Share not supported: $e');
   }
-  
-  // Do NOT fall back to downloading! Open WhatsApp share or text share fallback
-  if (text != null && text.isNotEmpty) {
-    try {
-      final encodedText = Uri.encodeComponent('کۆدی چوونەژوورەوەی GARDI ERP: $text');
-      html.window.open('https://api.whatsapp.com/send?text=$encodedText', '_blank');
-    } catch (_) {}
-  }
+
+  saveAndDownloadImage(bytes, fileName);
 }
 

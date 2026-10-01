@@ -62,14 +62,26 @@ class ApiClient {
         if (errors.isNotEmpty) {
           final firstError = errors.values.first;
           if (firstError is List && firstError.isNotEmpty) {
-            return firstError.first.toString();
+            final str = firstError.first.toString();
+            if (str.toLowerCase().contains('phone') && (str.toLowerCase().contains('taken') || str.toLowerCase().contains('unique') || str.toLowerCase().contains('already'))) {
+              return 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
+            }
+            return str;
           } else if (firstError != null) {
-            return firstError.toString();
+            final str = firstError.toString();
+            if (str.toLowerCase().contains('phone') && (str.toLowerCase().contains('taken') || str.toLowerCase().contains('unique') || str.toLowerCase().contains('already'))) {
+              return 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
+            }
+            return str;
           }
         }
       }
       if (data['message'] != null && data['message'].toString().isNotEmpty) {
-        return data['message'].toString();
+        final msg = data['message'].toString();
+        if (msg.toLowerCase().contains('phone') && (msg.toLowerCase().contains('taken') || msg.toLowerCase().contains('unique') || msg.toLowerCase().contains('already'))) {
+          return 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
+        }
+        return msg;
       }
     }
     return defaultMsg;

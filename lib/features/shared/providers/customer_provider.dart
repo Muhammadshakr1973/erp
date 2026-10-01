@@ -236,6 +236,9 @@ class CustomerActions {
 
     try {
       final response = await api.client.post('/customers', data: payload);
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+      }
       final resData = response.data;
       if (resData is Map && resData['data'] is Map) {
         final createdCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
@@ -277,6 +280,9 @@ class CustomerActions {
 
     try {
       final response = await api.client.put('/customers/$id', data: payload);
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+      }
       final resData = response.data;
       if (resData is Map && resData['data'] is Map) {
         final updatedCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));

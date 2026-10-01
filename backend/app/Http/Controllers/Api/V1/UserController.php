@@ -52,6 +52,15 @@ class UserController extends Controller
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'image_url' => 'nullable|string|max:2048',
             'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
+        ], [
+            'name.required' => 'تکایە ناوی بەکارهێنەر بنووسە',
+            'phone.required' => 'تکایە ژمارەی مۆبایل بنووسە',
+            'phone.unique' => 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە',
+            'password.required' => 'تکایە وشەی تێپەڕ بنووسە',
+            'password.min' => 'پێویستە وشەی تێپەڕ لانی کەم ٤ پیت بێت',
+            'role_id.required' => 'تکایە ڕۆڵی بەکارهێنەر دیاری بکە',
+            'role_id.exists' => 'ڕۆڵی دیاریکراو لە سیستەمدا بەردەست نییە',
+            'barcode.unique' => 'ئەم بارکۆدە پێشتر بەکارهاتووە',
         ]);
 
         $user = User::create([
@@ -165,6 +174,14 @@ class UserController extends Controller
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'image_url' => 'nullable|string|max:2048',
             'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
+        ], [
+            'name.required' => 'تکایە ناوی بەکارهێنەر بنووسە',
+            'phone.required' => 'تکایە ژمارەی مۆبایل بنووسە',
+            'phone.unique' => 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە',
+            'password.min' => 'پێویستە وشەی تێپەڕ لانی کەم ٤ پیت بێت',
+            'role_id.required' => 'تکایە ڕۆڵی بەکارهێنەر دیاری بکە',
+            'role_id.exists' => 'ڕۆڵی دیاریکراو لە سیستەمدا بەردەست نییە',
+            'barcode.unique' => 'ئەم بارکۆدە پێشتر بەکارهاتووە',
         ]);
 
         $updateData = [

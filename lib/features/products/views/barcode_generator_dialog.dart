@@ -136,10 +136,20 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     }
   }
 
-  void _handleShare() {
-    final text = _barcodeController.text.trim();
-    Clipboard.setData(ClipboardData(text: text));
-    _showSnackbar('بارکۆدی "$text" کۆپیکرا بۆ Clipboard');
+  void _handleShare() async {
+    final bytes = await _captureImage();
+    final code = _barcodeController.text.trim();
+    if (bytes != null) {
+      final name = _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : (widget.product?.name ?? 'barcode');
+      final cleanedName = name.replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_');
+      shareBarcode(bytes, 'gardi_label_${cleanedName}_$code.png', text: 'کۆدی بارکۆد: $code');
+      _showSnackbar('دەتوانیت ئاپەکە هەڵبژێریت بۆ ناردنی وێنەی بارکۆدەکە');
+    } else {
+      Clipboard.setData(ClipboardData(text: code));
+      _showSnackbar('بارکۆدی "$code" کۆپیکرا بۆ Clipboard');
+    }
   }
 
   void _showSnackbar(String message, {bool isError = false}) {

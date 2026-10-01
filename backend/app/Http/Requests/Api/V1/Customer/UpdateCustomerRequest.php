@@ -46,4 +46,12 @@ class UpdateCustomerRequest extends FormRequest
             'is_active'  => ['boolean'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'تکایە ناوی کڕیار بنووسە',
+            'phone.unique' => 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە',
+        ];
+    }
 }

@@ -1,14 +1,22 @@
 // platform stub for non-web environments
 import 'dart:typed_data';
+import 'package:share_plus/share_plus.dart';
 
 void saveAndDownloadImage(Uint8List bytes, String fileName) {
-  // No-op or native share/save logic could go here if needed.
+  Share.shareXFiles(
+    [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+  );
 }
 
 void shareImage(Uint8List bytes, String fileName, {String? text}) {
-  // No-op or native sharing logic could go here if needed.
+  Share.shareXFiles(
+    [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+    text: text,
+  );
 }
 
 void printImage(Uint8List bytes) {
-  // No-op or native printing logic could go here if needed.
+  Share.shareXFiles(
+    [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+  );
 }

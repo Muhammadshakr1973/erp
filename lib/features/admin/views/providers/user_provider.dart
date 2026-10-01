@@ -68,7 +68,7 @@ class UserActions {
     List<Map<String, dynamic>>? routePlans,
   }) async {
     try {
-      await api.client.post(
+      final response = await api.client.post(
         '/users',
         data: {
           'name': name,
@@ -85,6 +85,9 @@ class UserActions {
           if (routePlans != null) 'route_plans': routePlans,
         },
       );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+      }
       ref.invalidate(userAdminProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -107,7 +110,7 @@ class UserActions {
     List<Map<String, dynamic>>? routePlans,
   }) async {
     try {
-      await api.client.put(
+      final response = await api.client.put(
         '/users/$id',
         data: {
           'name': name,
@@ -124,6 +127,9 @@ class UserActions {
           if (routePlans != null) 'route_plans': routePlans,
         },
       );
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+      }
       ref.invalidate(userAdminProvider);
     } catch (e) {
       throw Exception(api.parseError(e));

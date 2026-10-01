@@ -456,6 +456,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   bool _isActive = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _phoneError;
 
   String _selectedRoutingCycle = '1_week';
   Map<String, int?> _routeAssignments = {}; // Key: 'weekNumber_dayOfWeek', Value: routeId
@@ -642,7 +643,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _phoneError = null;
+    });
 
     try {
       final name = _nameController.text.trim();
@@ -743,10 +747,33 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      final errStr = e.toString();
+      final isPhoneError = errStr.contains('پێشتر بەکارهاتووە') ||
+          errStr.toLowerCase().contains('phone') ||
+          errStr.toLowerCase().contains('taken') ||
+          errStr.toLowerCase().contains('unique');
+
+      if (isPhoneError) {
+        setState(() {
+          _phoneError = 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
+        });
+        _formKey.currentState?.validate();
+        if (_phoneKey.currentContext != null) {
+          Scrollable.ensureVisible(
+            _phoneKey.currentContext!,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            alignment: 0.1,
+          );
+        }
+      }
+
       if (mounted) {
         AppSnackbar.show(
           context,
-          message: 'هەڵە: $e',
+          message: isPhoneError
+              ? 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە، تکایە ژمارەیەکی تر بنووسە'
+              : 'هەڵە: $e',
           type: SnackbarType.error,
         );
       }
@@ -1001,9 +1028,23 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   labelText: 'ژمارەی مۆبایل',
                   prefixIcon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
-                  validator: (val) => val == null || val.isEmpty
-                      ? 'تکایە ژمارەی مۆبایل بنووسە'
-                      : null,
+                  errorText: _phoneError,
+                  onChanged: (val) {
+                    if (_phoneError != null) {
+                      setState(() {
+                        _phoneError = null;
+                      });
+                    }
+                  },
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'تکایە ژمارەی مۆبایل بنووسە';
+                    }
+                    if (_phoneError != null) {
+                      return _phoneError;
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -1408,23 +1449,25 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     final bytes = _qrBytes ?? await _generateQrBytes();
     if (mounted) setState(() => _isGenerating = false);
 
-    await Clipboard.setData(ClipboardData(text: widget.text));
-
     if (bytes != null) {
       _qrBytes = bytes;
-      shareBarcode(bytes, 'gardi_qr_${widget.text}.png', text: widget.text);
+      shareBarcode(
+        bytes,
+        'gardi_qr_${widget.text}.png',
+        text: 'کۆدی چوونەژوورەوە: ${widget.text}',
+      );
       if (mounted) {
         AppSnackbar.show(
           context,
-          message: 'کۆدەکە کۆپیکرا بۆ Clipboard و وێنەی کۆدەکە ئامادەکرا',
+          message: 'دەتوانیت ئاپەکە هەڵبژێریت بۆ ناردنی وێنەی کۆدەکە',
           type: SnackbarType.success,
         );
       }
     } else if (mounted) {
       AppSnackbar.show(
         context,
-        message: 'کۆدەکە کۆپیکرا بۆ Clipboard',
-        type: SnackbarType.success,
+        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
+        type: SnackbarType.error,
       );
     }
   }

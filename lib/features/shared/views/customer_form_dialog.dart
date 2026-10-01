@@ -32,6 +32,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   final _paymentFormKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isPaying = false;
+  String? _phoneError;
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
@@ -101,7 +102,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _phoneError = null;
+    });
 
     try {
       final actions = ref.read(customerActionsProvider);
@@ -166,10 +170,25 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         );
       }
     } catch (e) {
+      final errStr = e.toString();
+      final isPhoneError = errStr.contains('پێشتر بەکارهاتووە') ||
+          errStr.toLowerCase().contains('phone') ||
+          errStr.toLowerCase().contains('taken') ||
+          errStr.toLowerCase().contains('unique');
+
+      if (isPhoneError) {
+        setState(() {
+          _phoneError = 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
+        });
+        _formKey.currentState?.validate();
+      }
+
       if (mounted) {
         AppSnackbar.show(
           context,
-          message: 'کێشە لە پاشەکەوتکردن: $e',
+          message: isPhoneError
+              ? 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە، تکایە ژمارەیەکی تر بنووسە'
+              : 'کێشە لە پاشەکەوتکردن: $e',
           type: SnackbarType.error,
         );
       }
@@ -412,7 +431,6 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Widget _buildProfileFormFields(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -439,6 +457,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   hintText: '0750 ...',
                   prefixIcon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
+                  errorText: _phoneError,
+                  onChanged: (val) {
+                    if (_phoneError != null) {
+                      setState(() {
+                        _phoneError = null;
+                      });
+                    }
+                  },
+                  validator: (val) {
+                    if (_phoneError != null) {
+                      return _phoneError;
+                    }
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
