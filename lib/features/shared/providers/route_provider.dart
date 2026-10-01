@@ -68,6 +68,9 @@ class RouteActions {
           'is_active': isActive,
         },
       );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw response.data ?? 'هەڵەیەک ڕوویدا';
+      }
       ref.invalidate(routeListProvider);
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {
@@ -96,6 +99,9 @@ class RouteActions {
           if (isActive != null) 'is_active': isActive,
         },
       );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw response.data ?? 'هەڵەیەک ڕوویدا';
+      }
       ref.invalidate(routeListProvider);
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {

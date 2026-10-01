@@ -83,68 +83,15 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
             routesAsync.maybeWhen(
               data: (routes) {
                 final totalRoutes = routes.length;
-                final activeRoutes = routes.where((r) => r.isActive).length;
                 final totalCustomers = routes.fold<int>(
                   0,
                   (sum, r) => sum + r.customersCount,
-                );
-                final totalSalesmenAssigned = routes.fold<int>(
-                  0,
-                  (sum, r) => sum + r.salesmen.length,
                 );
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     final isCompact = constraints.maxWidth < 720;
-                    if (isCompact) {
-                      return Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  'کۆی ڕاوتەکان',
-                                  '$totalRoutes',
-                                  Icons.alt_route,
-                                  theme.colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: _buildStatCard(
-                                  'ڕاوتی چالاک',
-                                  '$activeRoutes',
-                                  Icons.check_circle_outline,
-                                  AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  'کۆی کڕیارەکان',
-                                  '$totalCustomers',
-                                  Icons.storefront,
-                                  AppColors.info,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: _buildStatCard(
-                                  'مەندوبە دابەشکراوەکان',
-                                  '$totalSalesmenAssigned',
-                                  Icons.badge_outlined,
-                                  AppColors.warning,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
+                    final spacing = isCompact ? AppSpacing.sm : AppSpacing.md;
 
                     return Row(
                       children: [
@@ -156,31 +103,13 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                             theme.colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: _buildStatCard(
-                            'ڕاوتی چالاک',
-                            '$activeRoutes',
-                            Icons.check_circle_outline,
-                            AppColors.success,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: spacing),
                         Expanded(
                           child: _buildStatCard(
                             'کۆی کڕیارەکان',
                             '$totalCustomers',
                             Icons.storefront,
                             AppColors.info,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: _buildStatCard(
-                            'مەندوبە دابەشکراوەکان',
-                            '$totalSalesmenAssigned',
-                            Icons.badge_outlined,
-                            AppColors.warning,
                           ),
                         ),
                       ],
@@ -770,9 +699,23 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
                 labelText: 'ناوی ڕاوت / گەڕەک',
                 hintText: 'بۆ نموونە: گەڕەکی ڕزگاری',
                 prefixIcon: Icons.alt_route,
-                validator: (val) => val == null || val.isEmpty
-                    ? 'تکایە ناوی ڕاوت بنووسە'
-                    : null,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'تکایە ناوی ڕاوت بنووسە';
+                  }
+                  final trimmedVal = val.trim().toLowerCase();
+                  final routes = ref.read(routeListProvider).value ?? [];
+                  final isDuplicate = routes.any((r) {
+                    if (widget.route != null && r.id == widget.route!.id) {
+                      return false;
+                    }
+                    return r.name.trim().toLowerCase() == trimmedVal;
+                  });
+                  if (isDuplicate) {
+                    return 'ئەم ناوی ڕاوتە پێشتر تۆمارکراوە';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: AppSpacing.md),
