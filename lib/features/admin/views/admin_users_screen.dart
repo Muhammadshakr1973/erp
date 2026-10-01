@@ -33,6 +33,7 @@ class AdminUsersScreen extends ConsumerStatefulWidget {
 class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedRoleFilter = 'salesman';
 
   @override
   void initState() {
@@ -48,6 +49,25 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  String _getFilterDisplayName(String filter) {
+    switch (filter.toLowerCase()) {
+      case 'salesman':
+        return 'تەنها مەندوبەکان';
+      case 'all':
+        return 'هەموو بەکارهێنەران';
+      case 'admin':
+        return 'بەڕێوەبەران';
+      case 'warehouse':
+        return 'کۆگاداران';
+      case 'driver':
+        return 'شۆفێران';
+      case 'owner':
+        return 'خاوەن کار';
+      default:
+        return filter;
+    }
   }
 
   String _getRoleDisplayName(String role) {
@@ -178,7 +198,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
       body: Column(
         children: [
-          // Search Bar
+          // Search Bar & Role Filter
           Padding(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: Row(
@@ -190,6 +210,249 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         'گەڕان بەدوای بەکارهێنەر (ناو، مۆبایل، ئیمەیڵ)...',
                     prefixIcon: Icons.search,
                   ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                PopupMenuButton<String>(
+                  initialValue: _selectedRoleFilter,
+                  onSelected: (value) {
+                    setState(() {
+                      _selectedRoleFilter = value;
+                    });
+                  },
+                  tooltip: 'فلتەرکردنی بەکارهێنەران',
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                  child: Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _selectedRoleFilter != 'all'
+                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.7)
+                          : theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedRoleFilter != 'all'
+                            ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                            : theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          size: 20,
+                          color: _selectedRoleFilter != 'all'
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _getFilterDisplayName(_selectedRoleFilter),
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: _selectedRoleFilter != 'all'
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          size: 20,
+                          color: _selectedRoleFilter != 'all'
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'salesman',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.badge_outlined,
+                            size: 20,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'تەنها مەندوبەکان',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'salesman'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'salesman')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'all',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.people_alt_outlined,
+                            size: 20,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'هەموو بەکارهێنەران',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'all'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'all')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem<String>(
+                      value: 'admin',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.admin_panel_settings_outlined,
+                            size: 20,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'بەڕێوەبەران (Admin)',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'admin'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'admin')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'warehouse',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.inventory_2_outlined,
+                            size: 20,
+                            color: Colors.brown,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'کۆگاداران (Warehouse)',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'warehouse'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'warehouse')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'driver',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.local_shipping_outlined,
+                            size: 20,
+                            color: Colors.teal,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'شۆفێران (Driver)',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'driver'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'driver')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'owner',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.security_outlined,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'خاوەن کار (Owner)',
+                              style: TextStyle(
+                                fontFamily: 'Rudaw',
+                                fontWeight: _selectedRoleFilter == 'owner'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (_selectedRoleFilter == 'owner')
+                            Icon(
+                              Icons.check,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -212,26 +475,38 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 final List<dynamic> roles = data['roles'] ?? [];
 
                 final filteredUsers = users.where((u) {
-                  final nameMatch = u.name.toLowerCase().contains(_searchQuery);
-                  final phoneMatch = u.phone.toLowerCase().contains(
-                    _searchQuery,
-                  );
-                  return nameMatch || phoneMatch;
+                  // Role Filter
+                  if (_selectedRoleFilter != 'all') {
+                    if (u.role.toLowerCase() != _selectedRoleFilter.toLowerCase()) {
+                      return false;
+                    }
+                  }
+
+                  // Search Filter
+                  if (_searchQuery.isNotEmpty) {
+                    final nameMatch = u.name.toLowerCase().contains(_searchQuery);
+                    final phoneMatch = u.phone.toLowerCase().contains(_searchQuery);
+                    return nameMatch || phoneMatch;
+                  }
+
+                  return true;
                 }).toList();
 
                 if (filteredUsers.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.people_outline,
                           size: 64,
                           color: Colors.grey,
                         ),
-                        SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'هیچ بەکارهێنەرێک نەدۆزرایەوە',
+                          _selectedRoleFilter == 'salesman'
+                              ? 'هیچ مەندوبێک نەدۆزرایەوە'
+                              : 'هیچ بەکارهێنەرێک نەدۆزرایەوە',
                           style: AppTextStyles.bodyBold,
                         ),
                       ],
