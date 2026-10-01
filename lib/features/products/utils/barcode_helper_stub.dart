@@ -17,6 +17,6 @@ void shareImage(Uint8List bytes, String fileName, {String? text}) {
 
 void printImage(Uint8List bytes) {
   Share.shareXFiles(
-    [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+    [XFile.fromData(bytes, name: 'gardi_barcode.png', mimeType: 'image/png')],
   );
 }
