@@ -18,6 +18,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
+import '../../shared/providers/route_provider.dart';
 import 'providers/user_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
@@ -713,7 +714,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           ),
                         )
                       : DropdownButtonFormField<int>(
-                          value: selectedRouteId,
+                          initialValue: selectedRouteId,
                           isDense: true,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1171,7 +1172,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   const SizedBox(height: AppSpacing.sm),
                   
                   DropdownButtonFormField<String>(
-                    value: _selectedRoutingCycle,
+                    initialValue: _selectedRoutingCycle,
                     decoration: InputDecoration(
                       labelText: 'خولی دیاریکردنی ڕاوت',
                       prefixIcon: const Icon(Icons.loop_outlined),
