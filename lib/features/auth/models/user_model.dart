@@ -1,3 +1,30 @@
+class UserRoutePlan {
+  final int id;
+  final int routeId;
+  final String routeName;
+  final String? dayOfWeek;
+  final int weekNumber;
+
+  UserRoutePlan({
+    required this.id,
+    required this.routeId,
+    required this.routeName,
+    this.dayOfWeek,
+    required this.weekNumber,
+  });
+
+  factory UserRoutePlan.fromJson(Map<String, dynamic> json) {
+    final routeMap = json['route'] as Map<String, dynamic>?;
+    return UserRoutePlan(
+      id: json['id'] ?? 0,
+      routeId: json['route_id'] ?? 0,
+      routeName: routeMap?['name']?.toString() ?? 'گشتی',
+      dayOfWeek: json['day_of_week']?.toString(),
+      weekNumber: json['week_number'] ?? 1,
+    );
+  }
+}
+
 class UserModel {
   final int id;
   final String name;
@@ -11,6 +38,8 @@ class UserModel {
   final int? warehouseId;
   final List<String>? permissions;
   final String? imageUrl;
+  final String? routingCycle;
+  final List<UserRoutePlan> routePlans;
 
   UserModel({
     required this.id,
@@ -25,6 +54,8 @@ class UserModel {
     this.warehouseId,
     this.permissions,
     this.imageUrl,
+    this.routingCycle,
+    this.routePlans = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -60,6 +91,11 @@ class UserModel {
       fixedSal = int.tryParse(json['fixed_salary'].toString());
     }
 
+    final rawPlans = json['route_salesmen'] as List? ?? [];
+    final parsedPlans = rawPlans
+        .map((item) => UserRoutePlan.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
     return UserModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -75,6 +111,8 @@ class UserModel {
       warehouseId: json['warehouse_id'],
       permissions: parsedPermissions,
       imageUrl: json['image_url'],
+      routingCycle: json['routing_cycle']?.toString(),
+      routePlans: parsedPlans,
     );
   }
 
@@ -92,6 +130,7 @@ class UserModel {
       'warehouse_id': warehouseId,
       'permissions': permissions,
       'image_url': imageUrl,
+      'routing_cycle': routingCycle,
     };
   }
 

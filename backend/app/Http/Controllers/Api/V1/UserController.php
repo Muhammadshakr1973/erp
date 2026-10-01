@@ -14,7 +14,9 @@ class UserController extends Controller
 {
     public function index(): JsonResponse
     {
-        $users = User::with('role')->get();
+        $users = User::with(['role', 'routeSalesmen' => function ($query) {
+            $query->whereNull('work_date')->with('route');
+        }])->get();
         $roles = Role::all();
 
         return response()->json([
@@ -48,7 +50,8 @@ class UserController extends Controller
             ],
             'is_active' => 'nullable|boolean',
             'warehouse_id' => 'nullable|exists:warehouses,id',
-            'image_url' => 'nullable|string|max:2048'
+            'image_url' => 'nullable|string|max:2048',
+            'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
         ]);
 
         $user = User::create([
@@ -62,11 +65,61 @@ class UserController extends Controller
             'is_active' => $validated['is_active'] ?? true,
             'warehouse_id' => $validated['warehouse_id'] ?? null,
             'image_url' => $validated['image_url'] ?? null,
+            'routing_cycle' => $validated['routing_cycle'] ?? '1_week',
         ]);
+
+        // Save routing schedule if provided and user is a salesman
+        if ($user->isSalesman() && $request->has('route_plans')) {
+            $routePlans = $request->input('route_plans');
+            if (is_array($routePlans)) {
+                foreach ($routePlans as $plan) {
+                    $day = $plan['day_of_week'] ?? null;
+                    $week = $plan['week_number'] ?? 1;
+                    $routeId = $plan['route_id'] ?? null;
+                    
+                    if (!$day) continue;
+
+                    $kurdishToEnglishMap = [
+                        'شەممە' => 'Saturday',
+                        'یەکشەممە' => 'Sunday',
+                        'دووشەممە' => 'Monday',
+                        'سێشەممە' => 'Tuesday',
+                        'چوارشەممە' => 'Wednesday',
+                        'پێنجشەممە' => 'Thursday',
+                        'هەینی' => 'Friday',
+                        'جومعە' => 'Friday',
+                    ];
+                    if (isset($kurdishToEnglishMap[$day])) {
+                        $day = $kurdishToEnglishMap[$day];
+                    }
+
+                    if (empty($routeId)) {
+                        \App\Models\RouteSalesman::where('salesman_id', $user->id)
+                            ->where('day_of_week', $day)
+                            ->where('week_number', $week)
+                            ->delete();
+                    } else {
+                        \App\Models\RouteSalesman::updateOrCreate(
+                            [
+                                'salesman_id' => $user->id,
+                                'day_of_week' => $day,
+                                'week_number' => $week,
+                            ],
+                            [
+                                'route_id' => $routeId,
+                                'work_date' => null,
+                                'is_active' => true,
+                                'assigned_by' => $request->user()?->id,
+                            ]
+                        );
+                    }
+                }
+            }
+        }
 
         return response()->json([
             'message' => 'بەکارهێنەر بە سەرکەوتوویی زیادکرا',
-            'data' => $user->load('role')
+            'data' => $user->load(['role', 'routeSalesmen.route'])
         ], 201);
     }
 
@@ -110,7 +163,8 @@ class UserController extends Controller
             ],
             'is_active' => 'nullable|boolean',
             'warehouse_id' => 'nullable|exists:warehouses,id',
-            'image_url' => 'nullable|string|max:2048'
+            'image_url' => 'nullable|string|max:2048',
+            'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
         ]);
 
         $updateData = [
@@ -137,6 +191,9 @@ class UserController extends Controller
         if (array_key_exists('image_url', $validated)) {
             $updateData['image_url'] = $validated['image_url'];
         }
+        if (array_key_exists('routing_cycle', $validated)) {
+            $updateData['routing_cycle'] = $validated['routing_cycle'] ?? '1_week';
+        }
 
         if (!empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
@@ -144,9 +201,58 @@ class UserController extends Controller
 
         $user->update($updateData);
 
+        // Save routing schedule if provided and user is a salesman
+        if ($user->isSalesman() && $request->has('route_plans')) {
+            $routePlans = $request->input('route_plans');
+            if (is_array($routePlans)) {
+                foreach ($routePlans as $plan) {
+                    $day = $plan['day_of_week'] ?? null;
+                    $week = $plan['week_number'] ?? 1;
+                    $routeId = $plan['route_id'] ?? null;
+                    
+                    if (!$day) continue;
+
+                    $kurdishToEnglishMap = [
+                        'شەممە' => 'Saturday',
+                        'یەکشەممە' => 'Sunday',
+                        'دووشەممە' => 'Monday',
+                        'سێشەممە' => 'Tuesday',
+                        'چوارشەممە' => 'Wednesday',
+                        'پێنجشەممە' => 'Thursday',
+                        'هەینی' => 'Friday',
+                        'جومعە' => 'Friday',
+                    ];
+                    if (isset($kurdishToEnglishMap[$day])) {
+                        $day = $kurdishToEnglishMap[$day];
+                    }
+
+                    if (empty($routeId)) {
+                        \App\Models\RouteSalesman::where('salesman_id', $user->id)
+                            ->where('day_of_week', $day)
+                            ->where('week_number', $week)
+                            ->delete();
+                    } else {
+                        \App\Models\RouteSalesman::updateOrCreate(
+                            [
+                                'salesman_id' => $user->id,
+                                'day_of_week' => $day,
+                                'week_number' => $week,
+                            ],
+                            [
+                                'route_id' => $routeId,
+                                'work_date' => null,
+                                'is_active' => true,
+                                'assigned_by' => $request->user()?->id,
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'message' => 'بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە',
-            'data' => $user->load('role')
+            'data' => $user->load(['role', 'routeSalesmen.route'])
         ]);
     }
 

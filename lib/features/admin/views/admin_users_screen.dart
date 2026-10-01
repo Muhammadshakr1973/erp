@@ -444,6 +444,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  String _selectedRoutingCycle = '1_week';
+  Map<String, int?> _routeAssignments = {}; // Key: 'weekNumber_dayOfWeek', Value: routeId
+
   String _generateRandomString(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     final rnd = Random();
@@ -497,6 +500,15 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
     _isActive = widget.user?.isActive ?? true;
     _selectedWarehouseId = widget.user?.warehouseId;
+
+    _selectedRoutingCycle = widget.user?.routingCycle ?? '1_week';
+    _routeAssignments = {};
+    if (widget.user != null) {
+      for (var plan in widget.user!.routePlans) {
+        final key = '${plan.weekNumber}_${plan.dayOfWeek}';
+        _routeAssignments[key] = plan.routeId;
+      }
+    }
   }
 
   @override
@@ -571,6 +583,20 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
       final warehouseId = isWarehouseSelected ? _selectedWarehouseId : null;
 
+      final List<Map<String, dynamic>> routePlansPayload = [];
+      if (isSalesmanSelected) {
+        _routeAssignments.forEach((key, routeId) {
+          final parts = key.split('_');
+          final week = int.parse(parts[0]);
+          final day = parts[1];
+          routePlansPayload.add({
+            'day_of_week': day,
+            'week_number': week,
+            'route_id': routeId, // nullable
+          });
+        });
+      }
+
       if (widget.user == null) {
         // Add
         await ref
@@ -586,6 +612,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               isActive: _isActive,
               warehouseId: warehouseId,
               imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
+              routingCycle: isSalesmanSelected ? _selectedRoutingCycle : null,
+              routePlans: isSalesmanSelected ? routePlansPayload : null,
             );
         if (mounted) {
           AppSnackbar.show(
@@ -610,6 +638,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               isActive: _isActive,
               warehouseId: warehouseId,
               imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
+              routingCycle: isSalesmanSelected ? _selectedRoutingCycle : null,
+              routePlans: isSalesmanSelected ? routePlansPayload : null,
             );
         if (mounted) {
           AppSnackbar.show(
@@ -631,6 +661,119 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  List<Widget> _buildRoutingScheduleEditor(BuildContext context) {
+    final routesAsync = ref.watch(routeListProvider);
+    final theme = Theme.of(context);
+    
+    return routesAsync.maybeWhen(
+      data: (routes) {
+        final List<Map<String, String>> days = [
+          {'key': 'Saturday', 'label': 'شەممە'},
+          {'key': 'Sunday', 'label': 'یەکشەممە'},
+          {'key': 'Monday', 'label': 'دووشەممە'},
+          {'key': 'Tuesday', 'label': 'سێشەممە'},
+          {'key': 'Wednesday', 'label': 'چوارشەممە'},
+          {'key': 'Thursday', 'label': 'پێنجشەممە'},
+          {'key': 'Friday', 'label': 'هەینی (پشوو - نەگۆڕ)'},
+        ];
+
+        Widget buildDayRow(int weekNum, Map<String, String> day) {
+          final isFriday = (day['key'] == 'Friday');
+          final assignmentKey = '${weekNum}_${day['key']}';
+          final selectedRouteId = _routeAssignments[assignmentKey];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 90,
+                  child: Text(
+                    day['label']!,
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: isFriday ? Colors.grey : theme.colorScheme.primary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: isFriday
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'پشوو (نەگۆڕ)',
+                            style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Rudaw'),
+                          ),
+                        )
+                      : DropdownButtonFormField<int>(
+                          value: selectedRouteId,
+                          isDense: true,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          hint: const Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey)),
+                          items: [
+                            const DropdownMenuItem<int>(
+                              value: null,
+                              child: Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey)),
+                            ),
+                            ...routes.map((r) {
+                              return DropdownMenuItem<int>(
+                                value: r.id,
+                                child: Text(r.name, style: const TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                              );
+                            }),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _routeAssignments[assignmentKey] = val;
+                            });
+                          },
+                        ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (_selectedRoutingCycle == '2_weeks') {
+          return [
+            const Text('هەفتەی یەکەم (Week 1)', style: AppTextStyles.bodyBold),
+            const SizedBox(height: 4),
+            ...days.map((day) => buildDayRow(1, day)),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(),
+            const SizedBox(height: AppSpacing.xs),
+            const Text('هەفتەی دووەم (Week 2)', style: AppTextStyles.bodyBold),
+            const SizedBox(height: 4),
+            ...days.map((day) => buildDayRow(2, day)),
+          ];
+        }
+
+        // 1 week
+        return [
+          ...days.map((day) => buildDayRow(1, day)),
+        ];
+      },
+      orElse: () => [
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -1020,6 +1163,42 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   onChanged: (val) => setState(() => _isActive = val),
                   activeThumbColor: AppColors.primary,
                 ),
+                const SizedBox(height: AppSpacing.md),
+
+                if (isSalesmanSelected) ...[
+                  const Divider(height: 32),
+                  const Text('ڕێکخستنی پلانی ڕێڕەو (ڕاوتەکان)', style: AppTextStyles.h2),
+                  const SizedBox(height: AppSpacing.sm),
+                  
+                  DropdownButtonFormField<String>(
+                    value: _selectedRoutingCycle,
+                    decoration: InputDecoration(
+                      labelText: 'خولی دیاریکردنی ڕاوت',
+                      prefixIcon: const Icon(Icons.loop_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: '1_week',
+                        child: Text('یەک هەفتەیی (1-Week)', style: TextStyle(fontFamily: 'Rudaw')),
+                      ),
+                      DropdownMenuItem(
+                        value: '2_weeks',
+                        child: Text('دوو هەفتەیی (2-Weeks)', style: TextStyle(fontFamily: 'Rudaw')),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedRoutingCycle = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  ..._buildRoutingScheduleEditor(context),
+                ],
                 const SizedBox(height: AppSpacing.lg),
 
                 SizedBox(

@@ -25,7 +25,8 @@ class User extends Authenticatable
         'is_active',
         'last_login_at',
         'warehouse_id',
-        'image_url'
+        'image_url',
+        'routing_cycle'
     ];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = [
@@ -34,7 +35,8 @@ class User extends Authenticatable
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
         'password' => 'hashed',
-        'warehouse_id' => 'integer'
+        'warehouse_id' => 'integer',
+        'routing_cycle' => 'string'
     ];
 
     public function role(): BelongsTo

@@ -64,6 +64,8 @@ class UserActions {
     bool? isActive,
     int? warehouseId,
     String? imageUrl,
+    String? routingCycle,
+    List<Map<String, dynamic>>? routePlans,
   }) async {
     try {
       await api.client.post(
@@ -79,6 +81,8 @@ class UserActions {
           if (isActive != null) 'is_active': isActive,
           if (warehouseId != null) 'warehouse_id': warehouseId,
           if (imageUrl != null) 'image_url': imageUrl,
+          if (routingCycle != null) 'routing_cycle': routingCycle,
+          if (routePlans != null) 'route_plans': routePlans,
         },
       );
       ref.invalidate(userAdminProvider);
@@ -99,6 +103,8 @@ class UserActions {
     bool? isActive,
     int? warehouseId,
     String? imageUrl,
+    String? routingCycle,
+    List<Map<String, dynamic>>? routePlans,
   }) async {
     try {
       await api.client.put(
@@ -114,6 +120,8 @@ class UserActions {
           if (isActive != null) 'is_active': isActive,
           'warehouse_id': warehouseId,
           'image_url': imageUrl,
+          if (routingCycle != null) 'routing_cycle': routingCycle,
+          if (routePlans != null) 'route_plans': routePlans,
         },
       );
       ref.invalidate(userAdminProvider);
