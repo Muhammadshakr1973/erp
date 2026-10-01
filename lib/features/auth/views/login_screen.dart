@@ -128,6 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'وشەی نهێنی بنووسە',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleLogin(),
                     prefixIcon: Icons.lock,

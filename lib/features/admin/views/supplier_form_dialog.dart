@@ -313,6 +313,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
             controller: _phoneController,
             labelText: 'ژمارەی مۆبایل',
             hintText: '0750 ...',
+            keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: AppSpacing.md),
           AppTextField(

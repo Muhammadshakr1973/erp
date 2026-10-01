@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
+import 'dart:js_util' as js_util;
 
 void saveAndDownloadImage(Uint8List bytes, String fileName) {
   final blob = html.Blob([bytes], 'image/png');
@@ -96,5 +97,30 @@ void printImage(Uint8List bytes) {
     html.Url.revokeObjectUrl(htmlUrl);
     html.Url.revokeObjectUrl(imageUrl);
   });
+}
+
+void shareImage(Uint8List bytes, String fileName) {
+  final blob = html.Blob([bytes], 'image/png');
+  final file = html.File([blob], fileName, {'type': 'image/png'});
+  
+  final navigator = html.window.navigator;
+  if (js_util.hasProperty(navigator, 'share')) {
+    try {
+      final data = js_util.newObject();
+      js_util.setProperty(data, 'files', [file]);
+      js_util.setProperty(data, 'title', 'Gardi QR Code');
+      js_util.setProperty(data, 'text', 'کۆدی چوونەژوورەوەی GARDI ERP');
+      
+      if (js_util.callMethod(navigator, 'canShare', [data]) == true) {
+        js_util.callMethod(navigator, 'share', [data]);
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  
+  // Fallback to downloading
+  saveAndDownloadImage(bytes, fileName);
 }
 

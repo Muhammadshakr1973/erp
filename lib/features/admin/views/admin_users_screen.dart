@@ -1,7 +1,9 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pos_app/features/products/utils/barcode_helper.dart';
 
 import 'dart:math';
 
@@ -884,6 +886,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   controller: _phoneController,
                   labelText: 'ژمارەی مۆبایل',
                   prefixIcon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
                   validator: (val) => val == null || val.isEmpty
                       ? 'تکایە ژمارەی مۆبایل بنووسە'
                       : null,
@@ -897,6 +900,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       : 'وشەی تێپەڕ (لانی کەم ٤ پیت)',
                   obscureText: _obscurePassword,
                   prefixIcon: Icons.lock_outline,
+                  keyboardType: TextInputType.number,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -1086,35 +1090,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           if (text.isNotEmpty) {
                             showDialog(
                               context: context,
-                              builder: (_) => AlertDialog(
-                                title: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Expanded(
-                                      child: Text(
-                                        'کۆدی چوونەژوورەوە',
-                                        style: AppTextStyles.h3,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: () => Navigator.pop(context),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                  ],
-                                ),
-                                content: SizedBox(
-                                  width: 200,
-                                  height: 200,
-                                  child: QrImageView(
-                                    data: text,
-                                    version: QrVersions.auto,
-                                    size: 200.0,
-                                  ),
-                                ),
-                              ),
+                              builder: (_) => _LoginQrCodeDialog(text: text),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1215,6 +1191,222 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginQrCodeDialog extends StatefulWidget {
+  final String text;
+
+  const _LoginQrCodeDialog({Key? key, required this.text}) : super(key: key);
+
+  @override
+  State<_LoginQrCodeDialog> createState() => _LoginQrCodeDialogState();
+}
+
+class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
+  bool _isProcessing = false;
+
+  Future<Uint8List?> _generateQrBytes() async {
+    try {
+      final qrValidationResult = QrValidator.validate(
+        data: widget.text,
+        version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.L,
+      );
+      if (qrValidationResult.status == QrValidationStatus.valid) {
+        final qrCode = qrValidationResult.qrCode;
+        final painter = QrPainter.withQr(
+          qr: qrCode!,
+          color: const Color(0xFF0F172A),
+          emptyColor: const Color(0xFFFFFFFF),
+          gapless: true,
+        );
+        final imageData = await painter.toImageData(512.0);
+        return imageData?.buffer.asUint8List();
+      }
+    } catch (e) {
+      debugPrint('Error generating QR: $e');
+    }
+    return null;
+  }
+
+  void _handleDownload() async {
+    setState(() => _isProcessing = true);
+    final bytes = await _generateQrBytes();
+    setState(() => _isProcessing = false);
+
+    if (bytes != null) {
+      downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
+      AppSnackbar.show(
+        context,
+        message: 'وێنەی بارکۆدەکە بە سەرکەوتوویی دابەزی',
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  void _handleShare() async {
+    setState(() => _isProcessing = true);
+    final bytes = await _generateQrBytes();
+    setState(() => _isProcessing = false);
+
+    if (bytes != null) {
+      shareBarcode(bytes, 'gardi_qr_${widget.text}.png');
+    } else {
+      AppSnackbar.show(
+        context,
+        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  void _handleCopy() {
+    Clipboard.setData(ClipboardData(text: widget.text));
+    AppSnackbar.show(
+      context,
+      message: 'کۆدەکە کۆپیکرا بۆ Clipboard',
+      type: SnackbarType.success,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: Container(
+        width: 320,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'کۆدی چوونەژوورەوە',
+                    style: AppTextStyles.h2.copyWith(
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: QrImageView(
+                data: widget.text,
+                version: QrVersions.auto,
+                size: 200.0,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Color(0xFF0F172A),
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.text,
+                      style: TextStyle(
+                        fontFamily: 'Rudaw',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white90 : const Color(0xFF334155),
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: _handleCopy,
+                    color: theme.colorScheme.primary,
+                    tooltip: 'کۆپیکردنی کۆدەکە',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    text: 'دابەزاندن',
+                    icon: Icons.download_outlined,
+                    onPressed: _isProcessing ? null : _handleDownload,
+                    isLoading: _isProcessing,
+                    type: AppButtonType.primary,
+                    size: AppButtonSize.md,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AppButton(
+                    text: 'ناردن (شەیر)',
+                    icon: Icons.share_outlined,
+                    onPressed: _isProcessing ? null : _handleShare,
+                    isLoading: _isProcessing,
+                    type: AppButtonType.outline,
+                    size: AppButtonSize.md,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

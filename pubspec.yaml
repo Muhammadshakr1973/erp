@@ -47,5 +47,5 @@ flutter:
     - family: Rudaw
       fonts:
         - asset: assets/fonts/rudawregular2.ttf
-        - asset: assets/fonts/rudawbold.ttf
+        - asset: assets/fonts/rudawregular2.ttf
           weight: 700
