@@ -1443,35 +1443,6 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     }
   }
 
-  Future<void> _handleShare() async {
-    if (_isGenerating && _qrBytes == null) return;
-    setState(() => _isGenerating = true);
-    final bytes = _qrBytes ?? await _generateQrBytes();
-    if (mounted) setState(() => _isGenerating = false);
-
-    if (bytes != null) {
-      _qrBytes = bytes;
-      shareBarcode(
-        bytes,
-        'gardi_qr_${widget.text}.png',
-        text: 'کۆدی چوونەژوورەوە: ${widget.text}',
-      );
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'دەتوانیت ئاپەکە هەڵبژێریت بۆ ناردنی وێنەی کۆدەکە',
-          type: SnackbarType.success,
-        );
-      }
-    } else if (mounted) {
-      AppSnackbar.show(
-        context,
-        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
   void _handleCopy() {
     Clipboard.setData(ClipboardData(text: widget.text));
     if (!mounted) return;
@@ -1584,30 +1555,16 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: AppButton(
-                    text: 'دابەزاندن',
-                    icon: Icons.download_outlined,
-                    onPressed: _isGenerating ? null : _handleDownload,
-                    isLoading: _isGenerating,
-                    type: AppButtonType.primary,
-                    size: AppButtonSize.md,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppButton(
-                    text: 'ناردن (شەیر)',
-                    icon: Icons.share_outlined,
-                    onPressed: _isGenerating ? null : _handleShare,
-                    isLoading: _isGenerating,
-                    type: AppButtonType.outline,
-                    size: AppButtonSize.md,
-                  ),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                text: 'دابەزاندن',
+                icon: Icons.download_outlined,
+                onPressed: _isGenerating ? null : _handleDownload,
+                isLoading: _isGenerating,
+                type: AppButtonType.primary,
+                size: AppButtonSize.md,
+              ),
             ),
           ],
         ),
