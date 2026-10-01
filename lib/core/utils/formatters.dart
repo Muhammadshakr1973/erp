@@ -3,9 +3,15 @@ import '../network/api_constants.dart';
 
 class Formatters {
   static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
+  static final NumberFormat _unitFormat = NumberFormat('#,##0.##', 'en_US');
 
   static String currency(num amount) {
     return '${_currencyFormat.format(amount)} د.ع';
+  }
+
+  static String units(num amount) {
+    final unitValue = amount / 1000.0;
+    return '${_unitFormat.format(unitValue)} یەکە';
   }
 
   static String number(num value) {

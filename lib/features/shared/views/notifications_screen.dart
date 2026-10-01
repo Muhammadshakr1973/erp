@@ -308,6 +308,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     AppNotification notification,
   ) {
     final theme = Theme.of(context);
+    final adaptiveColor = notification.iconColorAdaptive(context);
 
     return AppCard(
       onTap: () => _handleNotificationTap(notification),
@@ -318,12 +319,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: notification.iconColor.withValues(alpha: 0.12),
+              color: adaptiveColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(
               notification.iconData,
-              color: notification.iconColor,
+              color: adaptiveColor,
               size: 22,
             ),
           ),
@@ -357,8 +358,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                         width: 9,
                         height: 9,
                         margin: const EdgeInsets.only(right: 6),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -389,7 +390,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                     Text(
                       notification.typeLabelKurdish,
                       style: AppTextStyles.caption.copyWith(
-                        color: notification.iconColor,
+                        color: adaptiveColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

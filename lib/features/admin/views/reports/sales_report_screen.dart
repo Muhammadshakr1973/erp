@@ -168,17 +168,17 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                                   ),
                                   margin: const EdgeInsets.only(left: 6),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     _selectedStatus == 'DELIVERED'
                                         ? 'گەیەنراوە'
                                         : (_selectedStatus ?? ''),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ),
@@ -191,10 +191,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'پاککردنەوە',
                                   style: TextStyle(
-                                    color: AppColors.danger,
+                                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -204,14 +204,14 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Icon(
                                   _isFilterExpanded
                                       ? Icons.keyboard_arrow_up
                                       : Icons.keyboard_arrow_down,
-                                  color: AppColors.primary,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 18,
                                 ),
                               ),
@@ -235,9 +235,9 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
+                              color: Theme.of(context).colorScheme.surface,
                               border: Border.all(
-                                color: AppColors.borderLight.withValues(alpha: 0.4),
+                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -249,7 +249,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                                   child: Text(
                                     '${_startDate?.toIso8601String().split('T').first ?? ''}  بۆ  ${_endDate?.toIso8601String().split('T').first ?? ''}',
                                     style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textSecondaryLight,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

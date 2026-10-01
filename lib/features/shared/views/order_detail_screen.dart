@@ -255,8 +255,8 @@ class OrderDetailScreen extends ConsumerWidget {
                                 : Icons.inventory_2_outlined,
                             size: 20,
                             color: item.isPacked
-                                ? AppColors.success
-                                : Colors.grey,
+                                ? (theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -266,7 +266,10 @@ class OrderDetailScreen extends ConsumerWidget {
                       ),
                       subtitle: Text(
                         '${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە   •   ${Formatters.currency(item.unitPrice)}',
-                        style: AppTextStyles.caption.copyWith(fontSize: 11),
+                        style: AppTextStyles.caption.copyWith(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -281,7 +284,7 @@ class OrderDetailScreen extends ConsumerWidget {
                             '${item.quantity.toInt()} ${item.productUnit ?? 'دانە'}',
                             style: AppTextStyles.caption.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondaryLight,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -431,11 +434,12 @@ class OrderDetailScreen extends ConsumerWidget {
             children: [
               const Text('زانیاری پسوڵە', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.md),
-              _buildInfoRow('کڕیار', customerName),
-              _buildInfoRow('ناونیشان', customerAddress),
-              _buildInfoRow('مەندوب', salesmanName),
-              _buildInfoRow('کۆگا', warehouseName),
+              _buildInfoRow(context, 'کڕیار', customerName),
+              _buildInfoRow(context, 'ناونیشان', customerAddress),
+              _buildInfoRow(context, 'مەندوب', salesmanName),
+              _buildInfoRow(context, 'کۆگا', warehouseName),
               _buildInfoRow(
+                context,
                 'بەروار',
                 order.createdAt.split('T').first,
               ),
@@ -481,10 +485,12 @@ class OrderDetailScreen extends ConsumerWidget {
               const Text('کورتەی دارایی', style: AppTextStyles.h3),
               const SizedBox(height: AppSpacing.md),
               _buildInfoRow(
+                context,
                 'کۆی گشتی',
                 Formatters.currency(order.totalAmount),
               ),
               _buildInfoRow(
+                context,
                 'داشکاندن',
                 Formatters.currency(order.discountAmount),
               ),
@@ -521,7 +527,8 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -529,7 +536,9 @@ class OrderDetailScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           Text(value, style: AppTextStyles.bodyBold),
         ],

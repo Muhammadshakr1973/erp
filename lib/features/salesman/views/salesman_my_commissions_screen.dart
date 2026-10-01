@@ -286,13 +286,13 @@ class _SalesmanMyCommissionsScreenState
                         children: [
                           const Expanded(
                             child: Text(
-                              'کۆی قازانجی بەدەستهاتوو:',
+                              'کۆی یەکە:',
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            _formatCurrency(commission.totalProfit),
+                            Formatters.units(commission.totalProfit),
                             style: const TextStyle(
                               color: AppColors.success,
                               fontWeight: FontWeight.bold,
@@ -354,7 +354,9 @@ class _SalesmanMyCommissionsScreenState
                           Text(
                             _formatCurrency(commission.commissionAmount),
                             style: TextStyle(
-                              color: isPaid ? AppColors.success : AppColors.primary,
+                              color: isPaid 
+                                  ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
+                                  : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -458,8 +460,8 @@ class _SalesmanMyCommissionsScreenState
                               children: [
                                 Text(
                                   _formatCurrency(d.commissionAmount),
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
+                                  style: TextStyle(
+                                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
@@ -467,7 +469,7 @@ class _SalesmanMyCommissionsScreenState
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'قازانج: ${_formatCurrency(d.profitAmount)}',
+                                  Formatters.units(d.profitAmount),
                                   style: const TextStyle(
                                     color: AppColors.success,
                                     fontSize: 11,
@@ -790,7 +792,7 @@ class _SalesmanMyCommissionsScreenState
                                       style: AppTextStyles.caption,
                                     ),
                                     Text(
-                                      'قازانج: ${_formatCurrency(c.totalProfit)} (${c.commissionRate}%)',
+                                      '${Formatters.units(c.totalProfit)} (${c.commissionRate}%)',
                                       style: const TextStyle(
                                         color: AppColors.success,
                                         fontSize: 11,
@@ -805,7 +807,9 @@ class _SalesmanMyCommissionsScreenState
                                     Text(
                                       _formatCurrency(c.commissionAmount),
                                       style: TextStyle(
-                                        color: isPaid ? AppColors.success : AppColors.primary,
+                                        color: isPaid 
+                                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
+                                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
@@ -815,7 +819,9 @@ class _SalesmanMyCommissionsScreenState
                                       isPaid ? 'دراوە' : 'شایستە',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isPaid ? AppColors.success : AppColors.primary,
+                                        color: isPaid 
+                                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
+                                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

@@ -125,7 +125,7 @@ class AppNotification {
   Color get iconColor {
     switch (type.toLowerCase()) {
       case 'order':
-        return AppColors.primary;
+        return AppColors.info;
       case 'payment':
         return AppColors.success;
       case 'stock':
@@ -136,7 +136,26 @@ class AppNotification {
         return AppColors.purple;
       case 'system':
       default:
-        return AppColors.textSecondaryLight;
+        return AppColors.textSecondary;
+    }
+  }
+
+  Color iconColorAdaptive(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    switch (type.toLowerCase()) {
+      case 'order':
+        return isDark ? AppColors.primaryDark : AppColors.primary;
+      case 'payment':
+        return isDark ? AppColors.successDark : AppColors.success;
+      case 'stock':
+        return isDark ? AppColors.warningDark : AppColors.warning;
+      case 'commission':
+        return isDark ? AppColors.infoDark : AppColors.info;
+      case 'customer':
+        return isDark ? AppColors.purpleDark : AppColors.purple;
+      case 'system':
+      default:
+        return isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     }
   }
 }

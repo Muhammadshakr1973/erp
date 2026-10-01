@@ -367,36 +367,41 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   }
 
   Widget _buildKpiCard(String title, String value, Color color, double width) {
-    return SizedBox(
-      width: width,
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondaryLight,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                value,
-                style: AppTextStyles.h3.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SizedBox(
+          width: width,
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textDirection: TextDirection.ltr,
-              ),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    value,
+                    style: AppTextStyles.h3.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

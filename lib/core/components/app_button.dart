@@ -60,10 +60,10 @@ class AppButton extends StatelessWidget {
     switch (type) {
       case AppButtonType.primary:
         backgroundColor = theme.colorScheme.primary;
-        textColor = theme.colorScheme.onPrimary;
+        textColor = isDark ? const Color(0xFF0F172A) : Colors.white;
         break;
       case AppButtonType.secondary:
-        backgroundColor = theme.colorScheme.surfaceContainerHighest;
+        backgroundColor = isDark ? AppColors.surfaceContainerDark : AppColors.primaryLight;
         textColor = theme.colorScheme.primary;
         break;
       case AppButtonType.outline:
@@ -76,19 +76,19 @@ class AppButton extends StatelessWidget {
         textColor = theme.colorScheme.primary;
         break;
       case AppButtonType.danger:
-        backgroundColor = theme.colorScheme.error;
-        textColor = theme.colorScheme.onError;
+        backgroundColor = isDark ? const Color(0xFFDC2626) : theme.colorScheme.error;
+        textColor = Colors.white;
         break;
       case AppButtonType.textDanger:
         backgroundColor = Colors.transparent;
-        textColor = theme.colorScheme.error;
+        textColor = isDark ? AppColors.dangerDark : theme.colorScheme.error;
         break;
     }
 
     if (isDisabled && type != AppButtonType.text && type != AppButtonType.textDanger) {
       backgroundColor = isDark ? AppColors.borderDark : AppColors.borderLight;
       textColor = isDark
-          ? AppColors.textDisabledLight
+          ? AppColors.textDisabledDark
           : AppColors.textDisabledLight;
       borderColor = Colors.transparent;
     }
@@ -98,6 +98,7 @@ class AppButton extends StatelessWidget {
       style: AppTextStyles.button.copyWith(
         color: textColor,
         fontSize: size == AppButtonSize.sm ? 13 : 15,
+        fontWeight: FontWeight.bold,
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,

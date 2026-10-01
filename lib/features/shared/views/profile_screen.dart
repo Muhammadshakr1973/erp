@@ -97,11 +97,12 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sectionGap),
           AppButton(
             text: 'چوونەدەرەوە',
+            icon: Icons.logout_rounded,
+            type: AppButtonType.danger,
             onPressed: () {
               ref.read(authProvider.notifier).logout();
               context.go('/login');
             },
-            // Using outline or danger style manually if needed, otherwise secondary
             size: AppButtonSize.lg,
           ),
         ],

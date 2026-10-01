@@ -127,7 +127,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           value: dashboard.monthlySales.toInt().toString(),
                           currency: 'د.ع',
                           icon: AppIcons.order,
-                          color: AppColors.primary,
+                          color: theme.colorScheme.primary,
                         ),
                         _buildStatCard(
                           context: context,
@@ -135,7 +135,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           value: dashboard.monthlyProfit.toInt().toString(),
                           currency: 'د.ع',
                           icon: Icons.trending_up,
-                          color: AppColors.success,
+                          color: theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success,
                         ),
                         _buildStatCard(
                           context: context,
@@ -143,7 +143,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           value: dashboard.totalReceivables.toInt().toString(),
                           currency: 'د.ع',
                           icon: AppIcons.customerDebt,
-                          color: AppColors.danger,
+                          color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                         ),
                         _buildStatCard(
                           context: context,
@@ -151,7 +151,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           value: dashboard.monthlyCollected.toInt().toString(),
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
-                          color: AppColors.info,
+                          color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
                         ),
                       ],
                     );
@@ -389,12 +389,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     if (salesRatio > 0)
                       Expanded(
                         flex: (salesRatio * 100).toInt(),
-                        child: Container(color: AppColors.primary),
+                        child: Container(color: theme.colorScheme.primary),
                       ),
                     if (debtRatio > 0)
                       Expanded(
                         flex: (debtRatio * 100).toInt(),
-                        child: Container(color: AppColors.danger),
+                        child: Container(color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger),
                       ),
                   ],
                 ),
@@ -411,7 +411,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: theme.colorScheme.primary,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -428,7 +428,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: AppColors.danger,
+                        color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -503,11 +503,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 24),
-                    SizedBox(width: 8),
-                    Text(
+                    Icon(Icons.bar_chart_rounded, color: theme.colorScheme.primary, size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
                       'قازانجی پسوڵەی مەندوبەکان',
                       style: AppTextStyles.bodyBold,
                     ),
@@ -515,7 +515,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
                 Text(
                   'دیناری عێراقی',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -534,9 +536,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 margin: const EdgeInsets.only(bottom: AppSpacing.md),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: theme.cardColor.withValues(alpha: 0.8),
+                  color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.1),
@@ -550,15 +552,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   children: [
                     Text(
                       activeSalesman.salesmanName,
-                      style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                      style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
                     ),
                     Row(
                       children: [
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.success,
+                          decoration: BoxDecoration(
+                            color: theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -574,8 +576,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                         ),

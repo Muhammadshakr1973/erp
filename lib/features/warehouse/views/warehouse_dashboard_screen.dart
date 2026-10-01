@@ -243,10 +243,10 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 child: Icon(icon, color: color, size: 22),
               ),
               if (onTap != null)
-                const Icon(
+                Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: AppColors.textSecondaryLight,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
             ],
           ),
@@ -271,7 +271,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               Text(
                 subtitle,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondaryLight,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
                 maxLines: 1,

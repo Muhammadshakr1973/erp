@@ -219,5 +219,15 @@ void main() {
       expect((updatedProduct.stocks[0]['quantity'] as int), 45);
       expect((updatedProduct.stocks[0]['reserved_quantity'] as int), 10);
     });
+
+    test('Formatters.units formats IQD profit amounts to units divided by 1000', () {
+      expect(Formatters.units(15000), '15 یەکە');
+      expect(Formatters.units(25500), '25.5 یەکە');
+      expect(Formatters.units(79500), '79.5 یەکە');
+      expect(Formatters.units(42000), '42 یەکە');
+      expect(Formatters.units(13000), '13 یەکە');
+      expect(Formatters.units(0), '0 یەکە');
+      expect(Formatters.units(25550), '25.55 یەکە');
+    });
   });
 }

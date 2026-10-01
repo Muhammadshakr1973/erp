@@ -36,7 +36,7 @@ class EmptyState extends StatelessWidget {
             icon,
             size: 64,
             color: isDark
-                ? AppColors.textDisabledLight
+                ? AppColors.textDisabledDark
                 : AppColors.textDisabledLight,
           ),
           const SizedBox(height: 16),
