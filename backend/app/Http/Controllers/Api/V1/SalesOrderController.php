@@ -315,11 +315,22 @@ class SalesOrderController extends Controller
         $endOfLastMonth = now()->subMonthNoOverflow()->endOfMonth()->toDateTimeString();
 
         // 1. Today's Route
+        // First check specific work_date
         $routeSalesman = \App\Models\RouteSalesman::with('route')
             ->where('salesman_id', $user->id)
             ->where('is_active', true)
             ->where('work_date', $today)
             ->first();
+
+        // If not found, check recurring day of week
+        if (!$routeSalesman) {
+            $currentDayOfWeek = now()->format('l'); // 'Saturday', 'Sunday', etc.
+            $routeSalesman = \App\Models\RouteSalesman::with('route')
+                ->where('salesman_id', $user->id)
+                ->where('is_active', true)
+                ->where('day_of_week', $currentDayOfWeek)
+                ->first();
+        }
 
         if (!$routeSalesman) {
             $routeSalesman = \App\Models\RouteSalesman::with('route')
@@ -330,6 +341,40 @@ class SalesOrderController extends Controller
         }
 
         $routeName = $routeSalesman ? $routeSalesman->route->name : 'گشتی';
+        $todayRouteId = $routeSalesman ? $routeSalesman->route_id : null;
+
+        // Fetch today's route customers and visit completions
+        $todayOrderCustomerIds = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereDate('created_at', $today)
+            ->pluck('customer_id')
+            ->toArray();
+
+        $todayPaymentCustomerIds = \App\Models\CustomerPayment::where('collected_by', $user->id)
+            ->whereDate('created_at', $today)
+            ->pluck('customer_id')
+            ->toArray();
+
+        $todayRouteCustomers = [];
+        if ($todayRouteId) {
+            $customers = \App\Models\Customer::where('route_id', $todayRouteId)
+                ->where('is_active', true)
+                ->orderBy('visit_order')
+                ->orderBy('name')
+                ->select('id', 'name', 'phone', 'address', 'current_balance', 'visit_order')
+                ->get();
+
+            foreach ($customers as $customer) {
+                $todayRouteCustomers[] = [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'phone' => $customer->phone,
+                    'address' => $customer->address,
+                    'current_balance' => (int) $customer->current_balance,
+                    'visit_order' => (int) $customer->visit_order,
+                    'visited' => in_array($customer->id, $todayOrderCustomerIds) || in_array($customer->id, $todayPaymentCustomerIds)
+                ];
+            }
+        }
 
         // 2. Today's Sales Amount & Profit Units (1 Unit = 1,000 IQD profit, ONLY DELIVERED orders)
         $getDeliveredQuery = function () use ($user) {
@@ -436,6 +481,8 @@ class SalesOrderController extends Controller
             'message' => 'داشبۆردی مەندوب',
             'data' => [
                 'route_name' => $routeName,
+                'today_route_id' => $todayRouteId,
+                'today_route_customers' => $todayRouteCustomers,
                 'today_sales' => $todaySalesAmount,
                 'today_units' => $todayUnits,
                 'last_7_days_sales' => $last7DaysSalesAmount,

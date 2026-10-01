@@ -27,8 +27,42 @@ class WeeklyChartItem {
   }
 }
 
+class DashboardCustomer {
+  final int id;
+  final String name;
+  final String? phone;
+  final String? address;
+  final int currentBalance;
+  final int visitOrder;
+  final bool visited;
+
+  DashboardCustomer({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.address,
+    required this.currentBalance,
+    required this.visitOrder,
+    required this.visited,
+  });
+
+  factory DashboardCustomer.fromJson(Map<String, dynamic> json) {
+    return DashboardCustomer(
+      id: (json['id'] is num) ? (json['id'] as num).toInt() : 0,
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      address: json['address']?.toString(),
+      currentBalance: (json['current_balance'] is num) ? (json['current_balance'] as num).toInt() : 0,
+      visitOrder: (json['visit_order'] is num) ? (json['visit_order'] as num).toInt() : 0,
+      visited: json['visited'] == true || json['visited'] == 1,
+    );
+  }
+}
+
 class SalesmanDashboardData {
   final String routeName;
+  final int? todayRouteId;
+  final List<DashboardCustomer> todayRouteCustomers;
   final int todaySales;
   final int todayUnits;
   final int last7DaysSales;
@@ -41,6 +75,8 @@ class SalesmanDashboardData {
 
   SalesmanDashboardData({
     required this.routeName,
+    this.todayRouteId,
+    this.todayRouteCustomers = const [],
     required this.todaySales,
     required this.todayUnits,
     required this.last7DaysSales,
@@ -54,8 +90,14 @@ class SalesmanDashboardData {
 
   factory SalesmanDashboardData.fromJson(Map<String, dynamic> json) {
     final rawChart = json['weekly_chart_data'] as List? ?? [];
+    final rawCustomers = json['today_route_customers'] as List? ?? [];
+    
     return SalesmanDashboardData(
       routeName: json['route_name']?.toString() ?? 'گشتی',
+      todayRouteId: json['today_route_id'] != null ? (json['today_route_id'] as num).toInt() : null,
+      todayRouteCustomers: rawCustomers
+          .map((item) => DashboardCustomer.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       todaySales: (json['today_sales'] is num) ? (json['today_sales'] as num).toInt() : 0,
       todayUnits: (json['today_units'] is num) ? (json['today_units'] as num).toInt() : 0,
       last7DaysSales: (json['last_7_days_sales'] is num)

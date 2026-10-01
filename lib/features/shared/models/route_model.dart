@@ -19,6 +19,7 @@ class AssignedSalesmanInfo {
   final String name;
   final String? phone;
   final String? workDate;
+  final String? dayOfWeek;
 
   AssignedSalesmanInfo({
     required this.id,
@@ -26,6 +27,7 @@ class AssignedSalesmanInfo {
     required this.name,
     this.phone,
     this.workDate,
+    this.dayOfWeek,
   });
 
   factory AssignedSalesmanInfo.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,7 @@ class AssignedSalesmanInfo {
       name: salesmanMap?['name']?.toString() ?? json['name']?.toString() ?? '',
       phone: salesmanMap?['phone']?.toString() ?? json['phone']?.toString(),
       workDate: json['work_date']?.toString(),
+      dayOfWeek: json['day_of_week']?.toString(),
     );
   }
 }

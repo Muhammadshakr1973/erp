@@ -86,7 +86,13 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               _buildSyncStatusBanner(context, syncStatus, syncService),
               // Quick Stats & Chart
               dashboardAsync.when(
-                data: (dashboard) => _buildSalesmanDashboardStats(context, dashboard),
+                data: (dashboard) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSalesmanDashboardStats(context, dashboard),
+                    _buildTodayVisitPlan(context, ref, dashboard),
+                  ],
+                ),
                 loading: () => const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 32.0),
@@ -674,6 +680,135 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               iconColor: AppColors.success,
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTodayVisitPlan(BuildContext context, WidgetRef ref, SalesmanDashboardData dashboard) {
+    final theme = Theme.of(context);
+    final customers = dashboard.todayRouteCustomers;
+    
+    if (customers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    final visitedCount = customers.where((c) => c.visited).length;
+    final totalCount = customers.length;
+    final progress = totalCount > 0 ? visitedCount / totalCount : 0.0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.sectionGap),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('پلانی سەردانی ئەمڕۆ', style: AppTextStyles.h2),
+            Text(
+              '$visitedCount لە $totalCount کڕیار سەردانکراون',
+              style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        
+        // Progress Bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 10,
+            backgroundColor: theme.colorScheme.outlineVariant,
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        
+        // Customer visit list
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: customers.length,
+          separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final customer = customers[index];
+            
+            return AppCard(
+              onTap: () {
+                context.push('/customer/${customer.id}');
+              },
+              borderSide: customer.visited 
+                ? const BorderSide(color: AppColors.success, width: 1.5)
+                : null,
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: customer.visited 
+                        ? AppColors.success.withValues(alpha: 0.1) 
+                        : theme.colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: customer.visited
+                        ? const Icon(Icons.check, color: AppColors.success, size: 18)
+                        : Text(
+                            '${customer.visitOrder}',
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontSize: 12,
+                            ),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer.name,
+                          style: AppTextStyles.bodyBold,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          customer.address ?? 'بێ ناونیشان',
+                          style: AppTextStyles.caption,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        Formatters.currency(customer.currentBalance),
+                        style: AppTextStyles.caption.copyWith(
+                          color: customer.currentBalance > 0 ? AppColors.danger : Colors.grey,
+                          fontFamily: 'Rudaw',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        customer.visited ? 'سەردانکراوە' : 'سەردان نەکراوە',
+                        style: AppTextStyles.caption.copyWith(
+                          color: customer.visited ? AppColors.success : Colors.grey,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );

@@ -855,11 +855,20 @@ class _ManageSalesmenDialog extends ConsumerStatefulWidget {
 }
 
 class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
-  int? _selectedSalesmanId;
   List<Map<String, dynamic>> _salesmenList = [];
   bool _isLoadingSalesmen = true;
   bool _isAssigning = false;
   String? _errorMessage;
+
+  final List<Map<String, String>> _daysOfWeek = [
+    {'key': 'Saturday', 'label': 'ڕۆژی شەممە'},
+    {'key': 'Sunday', 'label': 'ڕۆژی یەکشەممە'},
+    {'key': 'Monday', 'label': 'ڕۆژی دووشەممە'},
+    {'key': 'Tuesday', 'label': 'ڕۆژی سێشەممە'},
+    {'key': 'Wednesday', 'label': 'ڕۆژی چوارشەممە'},
+    {'key': 'Thursday', 'label': 'ڕۆژی پێنجشەممە'},
+    {'key': 'Friday', 'label': 'ڕۆژی جومعە'},
+  ];
 
   @override
   void initState() {
@@ -886,35 +895,23 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
     }
   }
 
-  Future<void> _assign() async {
-    if (_selectedSalesmanId == null) return;
-    if (widget.route.salesmen.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'ڕاوت ناتوانێت لە ١ مەندوب زیاتری هەبێت. تکایە سەرەتا مەندوبە کۆنەکە بسڕەوە.',
-            style: TextStyle(fontFamily: 'Rudaw'),
-          ),
-        ),
-      );
-      return;
-    }
+  Future<void> _assignDay(String dayKey, int salesmanId) async {
     setState(() => _isAssigning = true);
 
     try {
       await ref
           .read(routeActionsProvider)
-          .assignSalesman(widget.route.id, _selectedSalesmanId!);
+          .assignSalesman(widget.route.id, salesmanId, dayOfWeek: dayKey);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'مەندوب بەسەرکەوتوویی بۆ ڕاوتەکە دیاریکرا',
+              'مەندوب بەسەرکەوتوویی بۆ ئەم ڕۆژە دیاریکرا',
               style: TextStyle(fontFamily: 'Rudaw'),
             ),
+            backgroundColor: AppColors.success,
           ),
         );
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -924,6 +921,7 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
               'کێشە: $e',
               style: const TextStyle(fontFamily: 'Rudaw'),
             ),
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -932,21 +930,21 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
     }
   }
 
-  Future<void> _remove(int salesmanId) async {
+  Future<void> _removeDay(int salesmanId, String dayKey) async {
     try {
       await ref
           .read(routeActionsProvider)
-          .removeSalesman(widget.route.id, salesmanId);
+          .removeSalesman(widget.route.id, salesmanId, dayOfWeek: dayKey);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'دیاریکردنی مەندوب سڕایەوە',
+              'دیاریکردنی مەندوب بۆ ئەم ڕۆژە سڕایەوە',
               style: TextStyle(fontFamily: 'Rudaw'),
             ),
+            backgroundColor: AppColors.success,
           ),
         );
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -964,170 +962,174 @@ class _ManageSalesmenDialogState extends ConsumerState<_ManageSalesmenDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: 480,
+        width: 550,
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.badge, color: AppColors.info),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'دیاریکردنی مەندوب بۆ ڕاوتی ${widget.route.name}',
-                    style: AppTextStyles.h2,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            // Currently Assigned Salesmen
-            const Text(
-              'مەندوبە چالاکەکانی ئەم ڕاوتە:',
-              style: AppTextStyles.bodyBold,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-
-            if (widget.route.salesmen.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  'هیچ مەندوبێک بۆ ئەم ڕاوتە دیاری نەکراوە.',
-                  style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
-                ),
-              )
-            else
-              Column(
-                children: widget.route.salesmen.map((s) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.person, size: 20),
-                      ),
-                      title: Text(
-                        s.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Rudaw',
-                        ),
-                      ),
-                      subtitle: Text(
-                        s.phone ?? '',
-                        style: const TextStyle(fontFamily: 'Rudaw'),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
-                        ),
-                        onPressed: () => _remove(s.salesmanId),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-            const Divider(height: 24),
-
-            const Text(
-              'دیاریکردنی مەندوبی نوێ:',
-              style: AppTextStyles.bodyBold,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-
-            if (_isLoadingSalesmen)
-              const Center(child: CircularProgressIndicator())
-            else if (_errorMessage != null)
-              Column(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    'شکست لە هێنانی مەندوبەکان:\n$_errorMessage',
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontFamily: 'Rudaw',
+                  const Icon(Icons.calendar_today_outlined, color: AppColors.info),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'پلانی هەفتانەی ڕاوتی ${widget.route.name}',
+                      style: AppTextStyles.h2,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _loadSalesmen,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text(
-                      'دووبارە هەوڵبدەرەوە',
-                      style: TextStyle(fontFamily: 'Rudaw'),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
-              )
-            else if (_salesmenList.isEmpty)
+              ),
+              const SizedBox(height: AppSpacing.md),
               const Text(
-                'هیچ مەندوبێک لە سیستەمەکەدا بەردەست نییە.',
-                style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
-              )
-            else ...[
-              DropdownButtonFormField<int>(
-                value: _selectedSalesmanId,
-                decoration: InputDecoration(
-                  labelText: 'مەندوب هەڵبژێرە',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                'مەندوب بۆ هەر ڕۆژێکی هەفتە دیاری بکە:',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              
+              if (_isLoadingSalesmen)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: CircularProgressIndicator(),
                   ),
-                  enabled: widget.route.salesmen.isEmpty,
-                ),
-                items: _salesmenList.map((s) {
-                  return DropdownMenuItem<int>(
-                    value: s['id'],
-                    child: Text(
-                      '${s['name']} (${s['phone'] ?? ''})',
-                      style: const TextStyle(fontFamily: 'Rudaw'),
+                )
+              else if (_errorMessage != null)
+                Column(
+                  children: [
+                    Text(
+                      'شکست لە هێنانی لیستی مەندوبەکان:\n$_errorMessage',
+                      style: const TextStyle(color: Colors.red, fontFamily: 'Rudaw'),
                     ),
-                  );
-                }).toList(),
-                onChanged: widget.route.salesmen.isEmpty
-                    ? (val) => setState(() => _selectedSalesmanId = val)
-                    : null,
-              ),
-              if (widget.route.salesmen.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  '⚠️ ئەم ڕاوتە پێشتر مەندوبێکی بۆ دیاریکراوە. تکایە سەرەتا مەندوبەکەی پێشوو بسڕەوە.',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 11,
-                    fontFamily: 'Rudaw',
-                  ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: _loadSalesmen,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('دووبارە هەوڵبدەرەوە', style: TextStyle(fontFamily: 'Rudaw')),
+                    ),
+                  ],
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _daysOfWeek.length,
+                  separatorBuilder: (context, index) => const Divider(height: 12),
+                  itemBuilder: (context, index) {
+                    final day = _daysOfWeek[index];
+                    
+                    AssignedSalesmanInfo? assignedSalesman;
+                    for (var s in widget.route.salesmen) {
+                      if (s.dayOfWeek == day['key']) {
+                        assignedSalesman = s;
+                        break;
+                      }
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          // Day Label
+                          SizedBox(
+                            width: 120,
+                            child: Text(
+                              day['label']!,
+                              style: AppTextStyles.bodyBold.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          
+                          // Assignment details or Dropdown
+                          Expanded(
+                            child: assignedSalesman != null
+                                ? Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              assignedSalesman.name,
+                                              style: AppTextStyles.bodyBold,
+                                            ),
+                                            if (assignedSalesman.phone != null)
+                                              Text(
+                                                assignedSalesman.phone!,
+                                                style: AppTextStyles.caption,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                        onPressed: () => _removeDay(assignedSalesman!.salesmanId, day['key']!),
+                                        tooltip: 'سڕینەوەی مەندوب',
+                                      ),
+                                    ],
+                                  )
+                                : _salesmenList.isEmpty
+                                    ? const Text(
+                                        'هیچ مەندوبێک نییە',
+                                        style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Rudaw'),
+                                      )
+                                    : DropdownButtonHideUnderline(
+                                        child: DropdownButton<int>(
+                                          hint: const Text(
+                                            'مەندوبێک دیاری بکە',
+                                            style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey),
+                                          ),
+                                          isDense: true,
+                                          items: _salesmenList.map((s) {
+                                            return DropdownMenuItem<int>(
+                                              value: s['id'],
+                                              child: Text(
+                                                s['name'],
+                                                style: const TextStyle(fontSize: 13, fontFamily: 'Rudaw'),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: _isAssigning
+                                              ? null
+                                              : (val) {
+                                                  if (val != null) {
+                                                    _assignDay(day['key']!, val);
+                                                  }
+                                                },
+                                        ),
+                                      ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ],
-
-            const SizedBox(height: AppSpacing.lg),
-
-            SizedBox(
-              width: double.infinity,
-              child: AppButton(
-                text: 'دیاریکردن',
-                isLoading: _isAssigning,
-                onPressed:
-                    _selectedSalesmanId == null ||
-                        widget.route.salesmen.isNotEmpty
-                    ? null
-                    : _assign,
+                
+              const SizedBox(height: AppSpacing.lg),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppButton(
+                  text: 'داخستن',
+                  onPressed: () => Navigator.pop(context),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

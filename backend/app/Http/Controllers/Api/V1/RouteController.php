@@ -98,6 +98,7 @@ class RouteController extends Controller
         $validated = $request->validate([
             'salesman_id' => 'required|exists:users,id',
             'work_date' => 'nullable|date',
+            'day_of_week' => 'nullable|string|in:Saturday,Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,شەممە,یەکشەممە,دووشەممە,سێشەممە,چوارشەممە,پێنجشەممە,هەینی,جومعە',
         ]);
 
         $salesman = User::where('id', $validated['salesman_id'])
@@ -113,19 +114,51 @@ class RouteController extends Controller
             ], 422);
         }
 
-        $workDate = $request->input('work_date') ?? now()->toDateString();
+        $dayOfWeek = $request->input('day_of_week');
 
-        $assignment = RouteSalesman::updateOrCreate(
-            [
-                'route_id' => $route->id,
-                'work_date' => $workDate,
-            ],
-            [
-                'salesman_id' => $validated['salesman_id'],
-                'is_active' => true,
-                'assigned_by' => $request->user()?->id,
-            ]
-        );
+        if ($dayOfWeek) {
+            $kurdishToEnglishMap = [
+                'شەممە' => 'Saturday',
+                'یەکشەممە' => 'Sunday',
+                'دووشەممە' => 'Monday',
+                'سێشەممە' => 'Tuesday',
+                'چوارشەممە' => 'Wednesday',
+                'پێنجشەممە' => 'Thursday',
+                'هەینی' => 'Friday',
+                'جومعە' => 'Friday',
+            ];
+            if (isset($kurdishToEnglishMap[$dayOfWeek])) {
+                $dayOfWeek = $kurdishToEnglishMap[$dayOfWeek];
+            }
+
+            $assignment = RouteSalesman::updateOrCreate(
+                [
+                    'salesman_id' => $validated['salesman_id'],
+                    'day_of_week' => $dayOfWeek,
+                ],
+                [
+                    'route_id' => $route->id,
+                    'work_date' => null,
+                    'is_active' => true,
+                    'assigned_by' => $request->user()?->id,
+                ]
+            );
+        } else {
+            $workDate = $request->input('work_date') ?? now()->toDateString();
+
+            $assignment = RouteSalesman::updateOrCreate(
+                [
+                    'route_id' => $route->id,
+                    'work_date' => $workDate,
+                ],
+                [
+                    'salesman_id' => $validated['salesman_id'],
+                    'day_of_week' => null,
+                    'is_active' => true,
+                    'assigned_by' => $request->user()?->id,
+                ]
+            );
+        }
 
         return response()->json([
             'message' => 'مەندوب بەسەرکەوتوویی بۆ ئەم ڕاوتە دیاریکرا',
@@ -133,11 +166,32 @@ class RouteController extends Controller
         ], 200);
     }
 
-    public function removeSalesman(Route $route, $salesmanId): JsonResponse
+    public function removeSalesman(Request $request, Route $route, $salesmanId): JsonResponse
     {
-        RouteSalesman::where('route_id', $route->id)
-            ->where('salesman_id', $salesmanId)
-            ->delete();
+        $query = RouteSalesman::where('route_id', $route->id)
+            ->where('salesman_id', $salesmanId);
+
+        if ($request->has('day_of_week')) {
+            $dayOfWeek = $request->input('day_of_week');
+            $kurdishToEnglishMap = [
+                'شەممە' => 'Saturday',
+                'یەکشەممە' => 'Sunday',
+                'دووشەممە' => 'Monday',
+                'سێشەممە' => 'Tuesday',
+                'چوارشەممە' => 'Wednesday',
+                'پێنجشەممە' => 'Thursday',
+                'هەینی' => 'Friday',
+                'جومعە' => 'Friday',
+            ];
+            if (isset($kurdishToEnglishMap[$dayOfWeek])) {
+                $dayOfWeek = $kurdishToEnglishMap[$dayOfWeek];
+            }
+            $query->where('day_of_week', $dayOfWeek);
+        } elseif ($request->has('work_date')) {
+            $query->where('work_date', $request->input('work_date'));
+        }
+
+        $query->delete();
 
         return response()->json([
             'message' => 'دیاریکردنی مەندوب سڕایەوە'

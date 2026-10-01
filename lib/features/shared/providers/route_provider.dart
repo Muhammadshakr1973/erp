@@ -122,6 +122,7 @@ class RouteActions {
     int routeId,
     int salesmanId, {
     String? workDate,
+    String? dayOfWeek,
   }) async {
     try {
       await api.client.post(
@@ -129,6 +130,7 @@ class RouteActions {
         data: {
           'salesman_id': salesmanId,
           if (workDate != null) 'work_date': workDate,
+          if (dayOfWeek != null) 'day_of_week': dayOfWeek,
         },
       );
       ref.invalidate(routeListProvider);
@@ -137,9 +139,14 @@ class RouteActions {
     }
   }
 
-  Future<void> removeSalesman(int routeId, int salesmanId) async {
+  Future<void> removeSalesman(int routeId, int salesmanId, {String? dayOfWeek}) async {
     try {
-      await api.client.delete('/routes/$routeId/remove-salesman/$salesmanId');
+      await api.client.delete(
+        '/routes/$routeId/remove-salesman/$salesmanId',
+        queryParameters: {
+          if (dayOfWeek != null) 'day_of_week': dayOfWeek,
+        },
+      );
       ref.invalidate(routeListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));

@@ -9,13 +9,13 @@ class RouteSalesman extends Model
 {
     use HasFactory;
     protected $table = 'route_salesmen';
-    protected $fillable = ['route_id', 'salesman_id', 'is_active', 'work_date', 'assigned_by'];
+    protected $fillable = ['route_id', 'salesman_id', 'is_active', 'work_date', 'day_of_week', 'assigned_by'];
     protected $casts = ['is_active' => 'boolean', 'assigned_at' => 'datetime'];
 
     protected static function booted()
     {
         static::saving(function ($item) {
-            if (empty($item->work_date)) {
+            if (empty($item->work_date) && empty($item->day_of_week)) {
                 $item->work_date = now()->toDateString();
             }
         });
