@@ -738,8 +738,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               onTap: () {
                 context.push('/customer/${customer.id}');
               },
-              borderSide: customer.visited 
-                ? const BorderSide(color: AppColors.success, width: 1.5)
+              color: customer.visited 
+                ? Colors.green.withValues(alpha: 0.05)
                 : null,
               child: Row(
                 children: [
