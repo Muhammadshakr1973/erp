@@ -162,11 +162,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   builder: (context, constraints) {
                     int crossAxisCount = 2;
                     if (constraints.maxWidth >= 1200) {
-                      crossAxisCount = 5;
+                      crossAxisCount = 4;
                     } else if (constraints.maxWidth >= 900) {
-                      crossAxisCount = 3;
+                      crossAxisCount = 4;
                     } else if (constraints.maxWidth >= 600) {
-                      crossAxisCount = 3;
+                      crossAxisCount = 2;
                     }
 
                     return GridView.count(
@@ -208,25 +208,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
-                        ),
-                        _buildStatCard(
-                          context: context,
-                          title: 'پلانی ئەمڕۆی مەندوب',
-                          value: routesAsync.maybeWhen(
-                            data: (routes) => '${_getTodayAssignments(routes).length} مەندوب',
-                            orElse: () => '... مەندوب',
-                          ),
-                          icon: Icons.assignment_outlined,
-                          color: theme.colorScheme.secondary,
-                          onTap: () {
-                            if (_todayPlanKey.currentContext != null) {
-                              Scrollable.ensureVisible(
-                                _todayPlanKey.currentContext!,
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          },
                         ),
                       ],
                     );
