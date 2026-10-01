@@ -53,8 +53,12 @@ class CustomerService
             $query->where('current_balance', '>', 0);
         }
 
-        // دانانی بەشەکان بە ٢٠ کڕیار بۆ هەر پەڕەیەک (Pagination)
-        return $query->paginate(20);
+        // دانانی بەشەکان بەپێی per_page (یان ٢٠ بە دیفۆڵت)
+        $perPage = !empty($filters['per_page']) ? (int)$filters['per_page'] : 20;
+        if ($perPage <= 0 || $perPage > 500) {
+            $perPage = 20;
+        }
+        return $query->paginate($perPage);
     }
 
     public function createCustomer(array $data, int $userId): Customer

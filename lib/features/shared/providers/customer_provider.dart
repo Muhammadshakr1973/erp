@@ -15,12 +15,14 @@ class CustomerFilters {
   final int? routeId;
   final bool onlyDebtors;
   final String searchQuery;
+  final int? perPage;
 
   const CustomerFilters({
     this.page = 1,
     this.routeId,
     this.onlyDebtors = false,
     this.searchQuery = '',
+    this.perPage,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +31,7 @@ class CustomerFilters {
       if (routeId != null) 'route_id': routeId,
       if (onlyDebtors) 'has_debt': 'true',
       if (searchQuery.isNotEmpty) 'search': searchQuery,
+      if (perPage != null) 'per_page': perPage,
     };
   }
 
@@ -39,11 +42,12 @@ class CustomerFilters {
         other.page == page &&
         other.routeId == routeId &&
         other.onlyDebtors == onlyDebtors &&
-        other.searchQuery == searchQuery;
+        other.searchQuery == searchQuery &&
+        other.perPage == perPage;
   }
 
   @override
-  int get hashCode => Object.hash(page, routeId, onlyDebtors, searchQuery);
+  int get hashCode => Object.hash(page, routeId, onlyDebtors, searchQuery, perPage);
 }
 
 final filteredCustomerListProvider =
@@ -103,7 +107,7 @@ final filteredCustomerListProvider =
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) async {
   final paginated = await ref.watch(
-    filteredCustomerListProvider(const CustomerFilters()).future,
+    filteredCustomerListProvider(const CustomerFilters(perPage: 100)).future,
   );
   return paginated.data;
 });

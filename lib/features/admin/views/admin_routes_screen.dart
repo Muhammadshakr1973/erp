@@ -781,119 +781,11 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
   }
 
   Future<void> _showAssignCustomersDialog() async {
-    final customersAsync = ref.read(customerListProvider);
-    List<int> selectedIds = [];
-
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(
-                  child: Text(
-                    'دیاریکردنی کڕیار بۆ ئەم ڕاوتە',
-                    style: AppTextStyles.h3,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: 400,
-              height: 350,
-              child: customersAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) =>
-                    Center(child: Text('کێشە لە هێنانی کڕیارەکان: $err')),
-                data: (allCustomers) {
-                  final assignable = allCustomers
-                      .where((c) => c.routeId != widget.route.id)
-                      .toList();
-
-                  if (assignable.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.',
-                        style: TextStyle(fontFamily: 'Rudaw'),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: assignable.length,
-                    itemBuilder: (context, index) {
-                      final c = assignable[index];
-                      final isSelected = selectedIds.contains(c.id);
-
-                      return CheckboxListTile(
-                        value: isSelected,
-                        title: Text(
-                          c.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
-                          ),
-                        ),
-                        subtitle: Text(
-                          c.phone ?? '',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'Rudaw',
-                          ),
-                        ),
-                        onChanged: (val) {
-                          setStateDialog(() {
-                            if (val == true) {
-                              selectedIds.add(c.id);
-                            } else {
-                              selectedIds.remove(c.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: selectedIds.isEmpty
-                    ? null
-                    : () async {
-                        try {
-                          await ref
-                              .read(routeActionsProvider)
-                              .assignCustomers(widget.route.id, selectedIds);
-                          Navigator.pop(context);
-                          _loadCustomers();
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'کێشە: $e',
-                                style: const TextStyle(fontFamily: 'Rudaw'),
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                child: const Text(
-                  'دیاریکردن',
-                  style: TextStyle(fontFamily: 'Rudaw'),
-                ),
-              ),
-            ],
-          );
-        },
+      builder: (context) => _AssignCustomersDialog(
+        route: widget.route,
+        onAssigned: _loadCustomers,
       ),
     );
   }
@@ -1092,6 +984,210 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AssignCustomersDialog extends ConsumerStatefulWidget {
+  final RouteModel route;
+  final VoidCallback onAssigned;
+
+  const _AssignCustomersDialog({
+    required this.route,
+    required this.onAssigned,
+  });
+
+  @override
+  ConsumerState<_AssignCustomersDialog> createState() =>
+      __AssignCustomersDialogState();
+}
+
+class __AssignCustomersDialogState
+    extends ConsumerState<_AssignCustomersDialog> {
+  final List<int> _selectedIds = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final customersAsync = ref.watch(customerListProvider);
+
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'دیاریکردنی کڕیار بۆ ئەم ڕاوتە',
+              style: AppTextStyles.h3,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 450,
+        height: 420,
+        child: Column(
+          children: [
+            AppTextField(
+              controller: _searchController,
+              hintText: 'گەڕان بەپێی ناوی کڕیار یان تەلەفۆن...',
+              prefixIcon: Icons.search,
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: customersAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'کێشە لە هێنانی کڕیارەکان:\n${err.toString().replaceFirst('Exception: ', '')}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontFamily: 'Rudaw',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => ref.invalidate(customerListProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text(
+                          'دووبارە بارکردنەوە',
+                          style: TextStyle(fontFamily: 'Rudaw'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                data: (allCustomers) {
+                  final assignable = allCustomers.where((c) {
+                    if (c.routeId == widget.route.id) return false;
+                    if (_searchQuery.isEmpty) return true;
+                    final nameMatch =
+                        c.name.toLowerCase().contains(_searchQuery);
+                    final phoneMatch =
+                        (c.phone ?? '').toLowerCase().contains(_searchQuery);
+                    return nameMatch || phoneMatch;
+                  }).toList();
+
+                  if (assignable.isEmpty) {
+                    return Center(
+                      child: Text(
+                        _searchQuery.isNotEmpty
+                            ? 'هیچ کڕیارێک نەدۆزرایەوە بەم گەڕانە'
+                            : 'هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.',
+                        style: const TextStyle(
+                          fontFamily: 'Rudaw',
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: assignable.length,
+                    itemBuilder: (context, index) {
+                      final c = assignable[index];
+                      final isSelected = _selectedIds.contains(c.id);
+
+                      return CheckboxListTile(
+                        value: isSelected,
+                        title: Text(
+                          c.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${c.phone ?? ''}${c.address != null && c.address!.isNotEmpty ? " - ${c.address}" : ""}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'Rudaw',
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedIds.add(c.id);
+                            } else {
+                              _selectedIds.remove(c.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        ElevatedButton(
+          onPressed: (_selectedIds.isEmpty || _isSubmitting)
+              ? null
+              : () async {
+                  setState(() => _isSubmitting = true);
+                  try {
+                    await ref
+                        .read(routeActionsProvider)
+                        .assignCustomers(widget.route.id, _selectedIds);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      widget.onAssigned();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      setState(() => _isSubmitting = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'کێشە: ${e.toString().replaceFirst("Exception: ", "")}',
+                            style: const TextStyle(fontFamily: 'Rudaw'),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  _selectedIds.isEmpty
+                      ? 'دیاریکردن'
+                      : 'دیاریکردن (${_selectedIds.length})',
+                  style: const TextStyle(fontFamily: 'Rudaw'),
+                ),
+        ),
+      ],
     );
   }
 }
