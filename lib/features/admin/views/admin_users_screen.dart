@@ -1081,25 +1081,45 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           orElse: () => <UserModel>[],
         );
 
+        // Find route IDs assigned in plans of ALL other salesmen
+        final Set<int> otherSalesmenAssignedRouteIds = {};
+        for (final u in allUsers) {
+          if (u.id != widget.user?.id && u.role.toLowerCase() == 'salesman') {
+            for (final plan in u.routePlans) {
+              if (plan.routeId > 0) {
+                otherSalesmenAssignedRouteIds.add(plan.routeId);
+              }
+            }
+          }
+        }
+
         Widget buildDayRow(int weekNum, Map<String, String> day) {
           final isFriday = (day['key'] == 'Friday');
           final assignmentKey = '${weekNum}_${day['key']}';
           final selectedRouteId = _routeAssignments[assignmentKey];
 
-          // Find routes assigned to OTHER salesmen for this specific week and day
-          final Set<int> otherAssignedRouteIds = {};
-          for (final u in allUsers) {
-            if (u.id != widget.user?.id && u.role.toLowerCase() == 'salesman') {
-              for (final plan in u.routePlans) {
-                if (plan.weekNumber == weekNum && plan.dayOfWeek == day['key']) {
-                  otherAssignedRouteIds.add(plan.routeId);
-                }
-              }
+          // Collect route IDs assigned to THIS salesman on OTHER days/weeks in current dialog state
+          final Set<int> currentSalesmanOtherDaysRouteIds = {};
+          _routeAssignments.forEach((k, v) {
+            if (k != assignmentKey && v != null) {
+              currentSalesmanOtherDaysRouteIds.add(v);
             }
-          }
+          });
 
-          // Filter out routes that are already assigned to other salesmen
-          final filteredRoutes = routes.where((r) => !otherAssignedRouteIds.contains(r.id)).toList();
+          // Filter out routes already assigned to other salesmen OR to this salesman on another day in the plan
+          final filteredRoutes = routes.where((r) {
+            // Always keep the currently selected route for this specific day row so dropdown is valid
+            if (selectedRouteId != null && r.id == selectedRouteId) {
+              return true;
+            }
+            if (otherSalesmenAssignedRouteIds.contains(r.id)) {
+              return false;
+            }
+            if (currentSalesmanOtherDaysRouteIds.contains(r.id)) {
+              return false;
+            }
+            return true;
+          }).toList();
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
