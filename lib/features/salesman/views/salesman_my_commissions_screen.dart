@@ -266,10 +266,17 @@ class _SalesmanMyCommissionsScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('کۆی فرۆشتن (پسوڵە گەیەنراوەکان):'),
+                          const Expanded(
+                            child: Text(
+                              'کۆی فرۆشتن (پسوڵە گەیەنراوەکان):',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             _formatCurrency(commission.totalSales),
                             style: AppTextStyles.bodyBold,
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
@@ -277,13 +284,20 @@ class _SalesmanMyCommissionsScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('کۆی قازانجی بەدەستهاتوو:'),
+                          const Expanded(
+                            child: Text(
+                              'کۆی قازانجی بەدەستهاتوو:',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             _formatCurrency(commission.totalProfit),
                             style: const TextStyle(
                               color: AppColors.success,
                               fontWeight: FontWeight.bold,
                             ),
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
@@ -291,10 +305,17 @@ class _SalesmanMyCommissionsScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('ڕێژەی کۆمسیۆن:'),
+                          const Expanded(
+                            child: Text(
+                              'ڕێژەی کۆمسیۆن:',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             '${commission.commissionRate}%',
                             style: AppTextStyles.bodyBold,
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
@@ -303,10 +324,17 @@ class _SalesmanMyCommissionsScreenState
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('مووچە / بڕی سابت:'),
+                            const Expanded(
+                              child: Text(
+                                'مووچە / بڕی سابت:',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Text(
                               _formatCurrency(commission.fixedAmount),
                               style: AppTextStyles.bodyBold,
+                              textDirection: TextDirection.ltr,
                             ),
                           ],
                         ),
@@ -315,10 +343,14 @@ class _SalesmanMyCommissionsScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            isPaid ? 'بڕی کۆمسیۆنی دراو:' : 'بڕی کۆمسیۆنی شایستە:',
-                            style: AppTextStyles.h3,
+                          Expanded(
+                            child: Text(
+                              isPaid ? 'بڕی کۆمسیۆنی دراو:' : 'بڕی کۆمسیۆنی شایستە:',
+                              style: AppTextStyles.h3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             _formatCurrency(commission.commissionAmount),
                             style: TextStyle(
@@ -326,6 +358,7 @@ class _SalesmanMyCommissionsScreenState
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
@@ -348,13 +381,28 @@ class _SalesmanMyCommissionsScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'پسوڵە گەیەنراوە شایستەکان (${commission.details.length})',
-                      style: AppTextStyles.h3,
+                    Expanded(
+                      child: Text(
+                        'پسوڵە گەیەنراوە شایستەکان (${commission.details.length})',
+                        style: AppTextStyles.h3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const Text(
-                      'تەنها گەیەنراوەکان هەژمارکراون',
-                      style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'تەنها گەیەنراوەکان هەژمارکراون',
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -373,30 +421,38 @@ class _SalesmanMyCommissionsScreenState
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.check_circle, color: AppColors.success, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      d.orderNumber ?? 'پسوڵەی #${d.salesOrderId}',
-                                      style: AppTextStyles.bodyBold,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  d.customerName ?? 'کڕیار',
-                                  style: AppTextStyles.caption,
-                                ),
-                                Text(
-                                  'فرۆش: ${_formatCurrency(d.salesAmount)}',
-                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
-                                ),
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          d.orderNumber ?? 'پسوڵەی #${d.salesOrderId}',
+                                          style: AppTextStyles.bodyBold,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    d.customerName ?? 'کڕیار',
+                                    style: AppTextStyles.caption,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'فرۆش: ${_formatCurrency(d.salesAmount)}',
+                                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
@@ -407,6 +463,7 @@ class _SalesmanMyCommissionsScreenState
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
+                                  textDirection: TextDirection.ltr,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -416,6 +473,7 @@ class _SalesmanMyCommissionsScreenState
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                  textDirection: TextDirection.ltr,
                                 ),
                               ],
                             ),
