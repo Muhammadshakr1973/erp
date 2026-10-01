@@ -1267,6 +1267,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
             dataModuleShape: QrDataModuleShape.square,
             color: Color(0xFF0F172A),
           ),
+          emptyColor: const Color(0xFFFFFFFF),
           gapless: true,
         );
         final imageData = await painter.toImageData(512.0);
@@ -1278,15 +1279,23 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     return null;
   }
 
-  void _handleDownload() {
-    if (_qrBytes != null) {
-      downloadBarcode(_qrBytes!, 'gardi_qr_${widget.text}.png');
-      AppSnackbar.show(
-        context,
-        message: 'وێنەی بارکۆدەکە بە سەرکەوتوویی دابەزی',
-        type: SnackbarType.success,
-      );
-    } else if (!_isGenerating) {
+  Future<void> _handleDownload() async {
+    if (_isGenerating && _qrBytes == null) return;
+    setState(() => _isGenerating = true);
+    final bytes = _qrBytes ?? await _generateQrBytes();
+    if (mounted) setState(() => _isGenerating = false);
+
+    if (bytes != null) {
+      _qrBytes = bytes;
+      downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'وێنەی کۆدەکە (QR) بە سەرکەوتوویی دابەزی',
+          type: SnackbarType.success,
+        );
+      }
+    } else if (mounted) {
       AppSnackbar.show(
         context,
         message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
@@ -1295,14 +1304,29 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     }
   }
 
-  void _handleShare() {
-    if (_qrBytes != null) {
-      shareBarcode(_qrBytes!, 'gardi_qr_${widget.text}.png');
-    } else if (!_isGenerating) {
+  Future<void> _handleShare() async {
+    if (_isGenerating && _qrBytes == null) return;
+    setState(() => _isGenerating = true);
+    final bytes = _qrBytes ?? await _generateQrBytes();
+    if (mounted) setState(() => _isGenerating = false);
+
+    await Clipboard.setData(ClipboardData(text: widget.text));
+
+    if (bytes != null) {
+      _qrBytes = bytes;
+      shareBarcode(bytes, 'gardi_qr_${widget.text}.png', text: widget.text);
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'کۆدەکە کۆپیکرا بۆ Clipboard و وێنەی کۆدەکە ئامادەکرا',
+          type: SnackbarType.success,
+        );
+      }
+    } else if (mounted) {
       AppSnackbar.show(
         context,
-        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
-        type: SnackbarType.error,
+        message: 'کۆدەکە کۆپیکرا بۆ Clipboard',
+        type: SnackbarType.success,
       );
     }
   }

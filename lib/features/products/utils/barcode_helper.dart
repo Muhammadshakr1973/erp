@@ -8,8 +8,8 @@ void downloadBarcode(Uint8List bytes, String fileName) {
   helper.saveAndDownloadImage(bytes, fileName);
 }
 
-void shareBarcode(Uint8List bytes, String fileName) {
-  helper.shareImage(bytes, fileName);
+void shareBarcode(Uint8List bytes, String fileName, {String? text}) {
+  helper.shareImage(bytes, fileName, text: text);
 }
 
 void printBarcode(Uint8List bytes) {

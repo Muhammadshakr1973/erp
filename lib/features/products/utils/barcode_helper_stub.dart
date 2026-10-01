@@ -5,7 +5,7 @@ void saveAndDownloadImage(Uint8List bytes, String fileName) {
   // No-op or native share/save logic could go here if needed.
 }
 
-void shareImage(Uint8List bytes, String fileName) {
+void shareImage(Uint8List bytes, String fileName, {String? text}) {
   // No-op or native sharing logic could go here if needed.
 }
 
