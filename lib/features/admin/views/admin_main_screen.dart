@@ -24,13 +24,13 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
 
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
+    const AdminUsersScreen(),
+    const AdminRoutesScreen(),
+    const AdminReportsScreen(),
     const AdminOrdersScreen(),
     const AdminCustomersScreen(),
-    const AdminRoutesScreen(),
     const AdminPurchasesScreen(),
     const AdminProductsScreen(),
-    const AdminReportsScreen(),
-    const AdminUsersScreen(),
   ];
 
   @override
@@ -42,7 +42,7 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
           _currentIndex = index;
         });
       },
-      mobilePrimaryIndices: const [0, 2, 4],
+      mobilePrimaryIndices: const [0, 1, 2, 3],
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(_screens.length, (index) {
@@ -59,19 +59,19 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
       ),
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
+        NavigationDestination(icon: Icon(Icons.people), label: 'بەکارهێنەران'),
+        NavigationDestination(icon: Icon(Icons.alt_route), label: 'ڕاوتەکان'),
+        NavigationDestination(icon: Icon(Icons.bar_chart), label: 'ڕاپۆرت'),
         NavigationDestination(icon: Icon(AppIcons.order), label: 'پسوڵەکان'),
         NavigationDestination(
           icon: Icon(AppIcons.customers),
           label: 'کڕیارەکان',
         ),
-        NavigationDestination(icon: Icon(Icons.alt_route), label: 'ڕاوتەکان'),
         NavigationDestination(icon: Icon(Icons.store), label: 'کۆمپانیا'),
         NavigationDestination(
           icon: Icon(Icons.inventory_2_outlined),
           label: 'کاڵاکان',
         ),
-        NavigationDestination(icon: Icon(Icons.bar_chart), label: 'ڕاپۆرت'),
-        NavigationDestination(icon: Icon(Icons.people), label: 'بەکارهێنەران'),
       ],
     );
   }
