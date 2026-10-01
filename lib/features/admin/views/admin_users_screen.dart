@@ -470,7 +470,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     _commissionRateController = TextEditingController(
       text: widget.user?.commissionRate != null
           ? widget.user!.commissionRate!.toString()
-          : '0.0',
+          : '',
     );
     _fixedSalaryController = TextEditingController(
       text: widget.user?.fixedSalary != null && widget.user!.fixedSalary != 0
@@ -668,6 +668,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
   List<Widget> _buildRoutingScheduleEditor(BuildContext context) {
     final routesAsync = ref.watch(routeListProvider);
+    final userAdminAsync = ref.watch(userAdminProvider);
     final theme = Theme.of(context);
     
     return routesAsync.maybeWhen(
@@ -682,10 +683,31 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           {'key': 'Friday', 'label': 'هەینی (پشوو - نەگۆڕ)'},
         ];
 
+        // Gather route plans of ALL other salesmen from userAdminAsync
+        final List<UserModel> allUsers = userAdminAsync.maybeWhen(
+          data: (data) => (data['users'] as List<dynamic>?)?.cast<UserModel>() ?? [],
+          orElse: () => <UserModel>[],
+        );
+
         Widget buildDayRow(int weekNum, Map<String, String> day) {
           final isFriday = (day['key'] == 'Friday');
           final assignmentKey = '${weekNum}_${day['key']}';
           final selectedRouteId = _routeAssignments[assignmentKey];
+
+          // Find routes assigned to OTHER salesmen for this specific week and day
+          final Set<int> otherAssignedRouteIds = {};
+          for (final u in allUsers) {
+            if (u.id != widget.user?.id && u.role.toLowerCase() == 'salesman') {
+              for (final plan in u.routePlans) {
+                if (plan.weekNumber == weekNum && plan.dayOfWeek == day['key']) {
+                  otherAssignedRouteIds.add(plan.routeId);
+                }
+              }
+            }
+          }
+
+          // Filter out routes that are already assigned to other salesmen
+          final filteredRoutes = routes.where((r) => !otherAssignedRouteIds.contains(r.id)).toList();
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -730,7 +752,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                               value: null,
                               child: Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey)),
                             ),
-                            ...routes.map((r) {
+                            ...filteredRoutes.map((r) {
                               return DropdownMenuItem<int>(
                                 value: r.id,
                                 child: Text(r.name, style: const TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
@@ -985,7 +1007,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           ),
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'تکایە ڕێژە دیاری بکە (یان ٠)';
+                              return null; // Empty is allowed, defaults to 0.0
                             }
                             final parsed = double.tryParse(val.trim());
                             if (parsed == null || parsed < 0 || parsed > 100) {
@@ -1207,7 +1229,24 @@ class _LoginQrCodeDialog extends StatefulWidget {
 }
 
 class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
-  bool _isProcessing = false;
+  Uint8List? _qrBytes;
+  bool _isGenerating = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _preGenerateQr();
+  }
+
+  Future<void> _preGenerateQr() async {
+    final bytes = await _generateQrBytes();
+    if (mounted) {
+      setState(() {
+        _qrBytes = bytes;
+        _isGenerating = false;
+      });
+    }
+  }
 
   Future<Uint8List?> _generateQrBytes() async {
     try {
@@ -1239,21 +1278,15 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     return null;
   }
 
-  void _handleDownload() async {
-    setState(() => _isProcessing = true);
-    final bytes = await _generateQrBytes();
-    setState(() => _isProcessing = false);
-
-    if (bytes != null) {
-      downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
-      if (!mounted) return;
+  void _handleDownload() {
+    if (_qrBytes != null) {
+      downloadBarcode(_qrBytes!, 'gardi_qr_${widget.text}.png');
       AppSnackbar.show(
         context,
         message: 'وێنەی بارکۆدەکە بە سەرکەوتوویی دابەزی',
         type: SnackbarType.success,
       );
-    } else {
-      if (!mounted) return;
+    } else if (!_isGenerating) {
       AppSnackbar.show(
         context,
         message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
@@ -1262,15 +1295,10 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     }
   }
 
-  void _handleShare() async {
-    setState(() => _isProcessing = true);
-    final bytes = await _generateQrBytes();
-    setState(() => _isProcessing = false);
-
-    if (bytes != null) {
-      shareBarcode(bytes, 'gardi_qr_${widget.text}.png');
-    } else {
-      if (!mounted) return;
+  void _handleShare() {
+    if (_qrBytes != null) {
+      shareBarcode(_qrBytes!, 'gardi_qr_${widget.text}.png');
+    } else if (!_isGenerating) {
       AppSnackbar.show(
         context,
         message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
@@ -1397,8 +1425,8 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
                   child: AppButton(
                     text: 'دابەزاندن',
                     icon: Icons.download_outlined,
-                    onPressed: _isProcessing ? null : _handleDownload,
-                    isLoading: _isProcessing,
+                    onPressed: _isGenerating ? null : _handleDownload,
+                    isLoading: _isGenerating,
                     type: AppButtonType.primary,
                     size: AppButtonSize.md,
                   ),
@@ -1408,8 +1436,8 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
                   child: AppButton(
                     text: 'ناردن (شەیر)',
                     icon: Icons.share_outlined,
-                    onPressed: _isProcessing ? null : _handleShare,
-                    isLoading: _isProcessing,
+                    onPressed: _isGenerating ? null : _handleShare,
+                    isLoading: _isGenerating,
                     type: AppButtonType.outline,
                     size: AppButtonSize.md,
                   ),
