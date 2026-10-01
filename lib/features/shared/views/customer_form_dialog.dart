@@ -771,7 +771,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       return const SizedBox.shrink();
     }
 
-    final ledgerAsync = ref.watch(customerDebtsReportProvider(_ledgerFilters));
+    final ledgerAsync = ref.watch(customerLedgerProvider(_ledgerFilters));
 
     return Column(
       children: [
