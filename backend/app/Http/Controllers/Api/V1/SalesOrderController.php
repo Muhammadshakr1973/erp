@@ -311,6 +311,8 @@ class SalesOrderController extends Controller
         $endOfWeek = now()->endOfWeek()->toDateTimeString();
         $startOfMonth = now()->startOfMonth()->toDateTimeString();
         $endOfMonth = now()->endOfMonth()->toDateTimeString();
+        $startOfLastMonth = now()->subMonthNoOverflow()->startOfMonth()->toDateTimeString();
+        $endOfLastMonth = now()->subMonthNoOverflow()->endOfMonth()->toDateTimeString();
 
         // 1. Today's Route
         $routeSalesman = \App\Models\RouteSalesman::with('route')
@@ -362,15 +364,27 @@ class SalesOrderController extends Controller
 
         // Month-to-date profit units (from 1st of current month until end of today, ONLY DELIVERED orders)
         $monthOrders = $getDeliveredQuery()
-            ->where(function ($q) use ($startOfMonth) {
-                $q->where('delivered_at', '>=', $startOfMonth)
-                  ->orWhere(function ($q2) use ($startOfMonth) {
-                      $q2->whereNull('delivered_at')->where('created_at', '>=', $startOfMonth);
+            ->where(function ($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('delivered_at', [$startOfMonth, $endOfMonth])
+                  ->orWhere(function ($q2) use ($startOfMonth, $endOfMonth) {
+                      $q2->whereNull('delivered_at')->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
                   });
             });
 
         $monthProfitSum = (int) $monthOrders->sum('total_profit');
         $monthUnits = (int) round($monthProfitSum / 1000);
+
+        // Previous month profit units (from 1st of last month to end of last month, ONLY DELIVERED orders)
+        $lastMonthOrders = $getDeliveredQuery()
+            ->where(function ($q) use ($startOfLastMonth, $endOfLastMonth) {
+                $q->whereBetween('delivered_at', [$startOfLastMonth, $endOfLastMonth])
+                  ->orWhere(function ($q2) use ($startOfLastMonth, $endOfLastMonth) {
+                      $q2->whereNull('delivered_at')->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth]);
+                  });
+            });
+
+        $lastMonthProfitSum = (int) $lastMonthOrders->sum('total_profit');
+        $lastMonthUnits = (int) round($lastMonthProfitSum / 1000);
 
         // 4. Weekly Chart Data (Last 7 Days, ONLY DELIVERED orders)
         $weeklyChartData = [];
@@ -427,6 +441,7 @@ class SalesOrderController extends Controller
                 'last_7_days_sales' => $last7DaysSalesAmount,
                 'last_7_days_units' => $last7DaysUnits,
                 'month_units' => $monthUnits,
+                'last_month_units' => $lastMonthUnits,
                 'new_customers_week' => $newCustomersWeek,
                 'new_customers_month' => $newCustomersMonth,
                 'weekly_chart_data' => $weeklyChartData,

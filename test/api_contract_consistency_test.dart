@@ -10,6 +10,7 @@ import 'package:pos_app/features/products/models/supplier_ledger_model.dart';
 import 'package:pos_app/features/shared/models/customer_ledger_model.dart';
 import 'package:pos_app/features/shared/models/commission_model.dart';
 import 'package:pos_app/features/admin/models/purchase_requirement_model.dart';
+import 'package:pos_app/features/salesman/providers/salesman_dashboard_provider.dart';
 
 void main() {
   group('API Contract Consistency & Response Parsing Tests', () {
@@ -302,6 +303,41 @@ void main() {
       expect(req.supplierName, equals('Darya Co'));
       expect(req.requiredQuantity, equals(100));
       expect(req.isUrgent, isTrue);
+    });
+
+    test('Salesman Dashboard Data JSON Contract Verification', () {
+      final json = {
+        'route_name': 'گەڕەکی نەورۆز',
+        'today_sales': 150000,
+        'today_units': 15,
+        'last_7_days_sales': 500000,
+        'last_7_days_units': 50,
+        'month_units': 120,
+        'last_month_units': 95,
+        'new_customers_week': 3,
+        'new_customers_month': 12,
+        'weekly_chart_data': [
+          {
+            'date': '2026-10-01',
+            'label': 'پێنجشەممە',
+            'sales': 150000,
+            'units': 15,
+          }
+        ],
+      };
+
+      final data = SalesmanDashboardData.fromJson(json);
+      expect(data.routeName, equals('گەڕەکی نەورۆز'));
+      expect(data.todaySales, equals(150000));
+      expect(data.todayUnits, equals(15));
+      expect(data.last7DaysSales, equals(500000));
+      expect(data.last7DaysUnits, equals(50));
+      expect(data.monthUnits, equals(120));
+      expect(data.lastMonthUnits, equals(95));
+      expect(data.newCustomersWeek, equals(3));
+      expect(data.newCustomersMonth, equals(12));
+      expect(data.weeklyChartData.length, equals(1));
+      expect(data.weeklyChartData.first.label, equals('پێنجشەممە'));
     });
 
     test('Live Production Base URL & Endpoint Contract', () {

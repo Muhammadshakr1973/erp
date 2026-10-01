@@ -1327,5 +1327,65 @@ class SalesOrderTest extends TestCase
         $order->refresh();
         $this->assertEquals(2, $order->version);
     }
+
+    /** @test */
+    public function it_returns_salesman_dashboard_stats_including_last_month_units()
+    {
+        // 1. Create a delivered order for current month (profit: 50,000 -> 50 units)
+        SalesOrder::create([
+            'order_number' => 'ORD-THIS-MONTH',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'subtotal' => 100000,
+            'total_amount' => 100000,
+            'discount_amount' => 0,
+            'discount_percent' => 0,
+            'discount_type' => 'PERCENT',
+            'total_profit' => 50000,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'delivered_at' => now()->startOfMonth()->addDays(2),
+            'created_at' => now()->startOfMonth()->addDays(2),
+        ]);
+
+        // 2. Create a delivered order for last month (profit: 30,000 -> 30 units)
+        SalesOrder::create([
+            'order_number' => 'ORD-LAST-MONTH',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'subtotal' => 60000,
+            'total_amount' => 60000,
+            'discount_amount' => 0,
+            'discount_percent' => 0,
+            'discount_type' => 'PERCENT',
+            'total_profit' => 30000,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'delivered_at' => now()->subMonthNoOverflow()->startOfMonth()->addDays(5),
+            'created_at' => now()->subMonthNoOverflow()->startOfMonth()->addDays(5),
+        ]);
+
+        // 3. Call salesman dashboard endpoint
+        $response = $this->actingAs($this->salesman)->getJson('/api/v1/salesman/dashboard');
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'message',
+            'data' => [
+                'route_name',
+                'today_sales',
+                'today_units',
+                'last_7_days_sales',
+                'last_7_days_units',
+                'month_units',
+                'last_month_units',
+                'new_customers_week',
+                'new_customers_month',
+                'weekly_chart_data',
+            ]
+        ]);
+
+        $this->assertEquals(50, $response->json('data.month_units'));
+        $this->assertEquals(30, $response->json('data.last_month_units'));
+    }
 }
 

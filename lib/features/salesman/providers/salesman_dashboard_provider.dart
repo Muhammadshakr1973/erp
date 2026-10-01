@@ -34,6 +34,7 @@ class SalesmanDashboardData {
   final int last7DaysSales;
   final int last7DaysUnits;
   final int monthUnits;
+  final int lastMonthUnits;
   final int newCustomersWeek;
   final int newCustomersMonth;
   final List<WeeklyChartItem> weeklyChartData;
@@ -45,6 +46,7 @@ class SalesmanDashboardData {
     required this.last7DaysSales,
     required this.last7DaysUnits,
     required this.monthUnits,
+    this.lastMonthUnits = 0,
     required this.newCustomersWeek,
     required this.newCustomersMonth,
     required this.weeklyChartData,
@@ -63,6 +65,9 @@ class SalesmanDashboardData {
       monthUnits: (json['month_units'] is num)
           ? (json['month_units'] as num).toInt()
           : ((json['this_month_units'] is num) ? (json['this_month_units'] as num).toInt() : 0),
+      lastMonthUnits: (json['last_month_units'] is num)
+          ? (json['last_month_units'] as num).toInt()
+          : ((json['previous_month_units'] is num) ? (json['previous_month_units'] as num).toInt() : 0),
       newCustomersWeek: (json['new_customers_week'] is num) ? (json['new_customers_week'] as num).toInt() : 0,
       newCustomersMonth: (json['new_customers_month'] is num) ? (json['new_customers_month'] as num).toInt() : 0,
       weeklyChartData: rawChart

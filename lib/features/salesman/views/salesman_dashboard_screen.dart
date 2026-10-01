@@ -661,7 +661,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             _buildStatCard(
               context,
               title: 'یەکەکانی مانگ',
-              value: '${dashboard.monthUnits} یەکە',
+              value: 'ئەم مانگە: ${dashboard.monthUnits} | ڕابردوو: ${dashboard.lastMonthUnits}',
               icon: Icons.stars_rounded,
               iconColor: AppColors.warning,
             ),
