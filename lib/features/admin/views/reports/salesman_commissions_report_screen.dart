@@ -160,16 +160,97 @@ class _SalesmanCommissionsReportScreenState
             }
           }
 
+          Widget buildPreviewRow(
+            String label,
+            String value, {
+            TextStyle? valueStyle,
+            TextStyle? labelStyle,
+          }) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: labelStyle ?? AppTextStyles.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      value,
+                      style: valueStyle ?? AppTextStyles.bodyBold,
+                      textDirection: TextDirection.ltr,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final eligibleCount =
+              previewData != null
+                  ? (previewData!['eligible_orders_count'] as num?)?.toInt() ?? 0
+                  : 0;
+          final totalSales =
+              previewData != null
+                  ? (previewData!['total_sales'] as num?)?.toInt() ?? 0
+                  : 0;
+          final totalProfit =
+              previewData != null
+                  ? (previewData!['total_profit'] as num?)?.toInt() ?? 0
+                  : 0;
+          final commRate =
+              previewData != null
+                  ? (previewData!['commission_rate'] as num?)?.toDouble() ?? 0.0
+                  : 0.0;
+          final percentageComm =
+              previewData != null
+                  ? (previewData!['percentage_commission'] as num?)?.toInt() ??
+                      ((totalProfit * commRate) / 100).round()
+                  : 0;
+          final fixedAmount =
+              previewData != null
+                  ? (previewData!['fixed_amount'] ??
+                          previewData!['fixed_salary'] as num?)
+                          ?.toInt() ??
+                      0
+                  : 0;
+          final estimatedCommission =
+              previewData != null
+                  ? (previewData!['estimated_commission'] as num?)?.toInt() ??
+                      (fixedAmount + percentageComm)
+                  : 0;
+
+          final canSubmit =
+              previewData != null &&
+              !isPreviewing &&
+              (eligibleCount > 0 || estimatedCommission > 0 || fixedAmount > 0);
+
           return AlertDialog(
             title: const Row(
               children: [
                 Icon(Icons.calculate, color: AppColors.primary),
                 SizedBox(width: 8),
-                Text('هەژمارکردنی کۆمسیۆنی مەندوب', style: AppTextStyles.h3),
+                Expanded(
+                  child: Text(
+                    'هەژمارکردنی کۆمسیۆنی مەندوب',
+                    style: AppTextStyles.h3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-            content: SizedBox(
-              width: 550,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 550,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -221,6 +302,7 @@ class _SalesmanCommissionsReportScreenState
                               ),
                               child: Text(
                                 dialogStart.toIso8601String().split('T').first,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -249,6 +331,7 @@ class _SalesmanCommissionsReportScreenState
                               ),
                               child: Text(
                                 dialogEnd.toIso8601String().split('T').first,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -309,80 +392,103 @@ class _SalesmanCommissionsReportScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'ئەنجامی پێشبینیکردن:',
-                              style: AppTextStyles.bodyBold,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            const Row(
                               children: [
-                                const Text('ژمارەی پسوڵە گەیندراوەکان:'),
-                                Text(
-                                  '${previewData!['eligible_orders_count'] ?? 0}',
-                                  style: AppTextStyles.bodyBold,
+                                Icon(
+                                  Icons.insights,
+                                  size: 18,
+                                  color: AppColors.primary,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('کۆی فرۆشتن:'),
-                                Text(
-                                  _formatCurrency(
-                                    previewData!['total_sales'] ?? 0,
-                                  ),
-                                  style: AppTextStyles.bodyMedium,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('کۆی قازانج:'),
-                                Text(
-                                  _formatCurrency(
-                                    previewData!['total_profit'] ?? 0,
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.bold,
+                                SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'ئەنجامی پێشبینیکردن و هەژمارکردن:',
+                                    style: AppTextStyles.bodyBold,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('ڕێژەی کۆمسیۆن:'),
-                                Text(
-                                  '${previewData!['commission_rate'] ?? 0}%',
-                                  style: AppTextStyles.bodyBold,
-                                ),
-                              ],
+                            const SizedBox(height: 8),
+                            buildPreviewRow(
+                              'ژمارەی پسوڵە گەیەندراوەکان:',
+                              '$eligibleCount',
                             ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'کۆمسیۆنی هەژمارکراو:',
-                                  style: AppTextStyles.h3,
+                            buildPreviewRow(
+                              'کۆی فرۆشتن:',
+                              _formatCurrency(totalSales),
+                            ),
+                            buildPreviewRow(
+                              'کۆی قازانج:',
+                              _formatCurrency(totalProfit),
+                              valueStyle: const TextStyle(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            buildPreviewRow(
+                              'ڕێژەی کۆمسیۆن:',
+                              '$commRate%',
+                            ),
+                            buildPreviewRow(
+                              'کۆمسیۆنی فرۆشتن (ڕێژەیی):',
+                              _formatCurrency(percentageComm),
+                              valueStyle: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (fixedAmount > 0)
+                              buildPreviewRow(
+                                'مووچەی بنەڕەتی (سابت):',
+                                _formatCurrency(fixedAmount),
+                                valueStyle: const TextStyle(
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                Text(
-                                  _formatCurrency(
-                                    previewData!['estimated_commission'] ?? 0,
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
+                              ),
+                            if (eligibleCount == 0 && fixedAmount > 0) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
                                 ),
-                              ],
+                                decoration: BoxDecoration(
+                                  color: AppColors.info.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 16,
+                                      color: AppColors.info,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'هیچ پسوڵەیەکی گەیەندراو لەم ماوەیەدا نییە؛ کۆی هەژمارکراو مووچەی سابتی مەندوبە.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.info,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const Divider(height: 16),
+                            buildPreviewRow(
+                              'کۆی گشتی شایستە:',
+                              _formatCurrency(estimatedCommission),
+                              labelStyle: AppTextStyles.h3,
+                              valueStyle: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                           ],
                         ),
@@ -399,12 +505,7 @@ class _SalesmanCommissionsReportScreenState
               ),
               AppButton(
                 text: 'چەسپاندن و هەژمارکردن',
-                onPressed:
-                    (previewData != null &&
-                        !isPreviewing &&
-                        (previewData!['eligible_orders_count'] ?? 0) > 0)
-                    ? submitCalculation
-                    : null,
+                onPressed: canSubmit ? submitCalculation : null,
               ),
             ],
           );
@@ -420,15 +521,22 @@ class _SalesmanCommissionsReportScreenState
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'وردەکاری کۆمسیۆنی #${commission.id}',
-              style: AppTextStyles.h3,
+            Expanded(
+              child: Text(
+                'وردەکاری کۆمسیۆنی #${commission.id}',
+                style: AppTextStyles.h3,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             _buildStatusChip(commission.status),
           ],
         ),
-        content: SizedBox(
-          width: 700,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 700,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,12 +547,17 @@ class _SalesmanCommissionsReportScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'مەندوب: ${commission.salesmanName}',
-                            style: AppTextStyles.bodyBold,
+                          Expanded(
+                            child: Text(
+                              'مەندوب: ${commission.salesmanName}',
+                              style: AppTextStyles.bodyBold,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             'ماوە: ${commission.periodFrom} تا ${commission.periodTo}',
+                            style: AppTextStyles.caption,
                           ),
                         ],
                       ),
@@ -452,21 +565,45 @@ class _SalesmanCommissionsReportScreenState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'کۆی فرۆشتن: ${_formatCurrency(commission.totalSales)}',
+                          Expanded(
+                            child: Text(
+                              'کۆی فرۆشتن: ${_formatCurrency(commission.totalSales)}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             'کۆی قازانج: ${_formatCurrency(commission.totalProfit)}',
                             style: const TextStyle(color: AppColors.success),
                           ),
+                          const SizedBox(width: 8),
                           Text('ڕێژە: ${commission.commissionRate}%'),
                         ],
                       ),
+                      if (commission.fixedAmount > 0) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('مووچەی بنەڕەتی (سابت):'),
+                            Text(
+                              _formatCurrency(commission.fixedAmount),
+                              style: const TextStyle(
+                                color: AppColors.info,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textDirection: TextDirection.ltr,
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('بڕی کۆمسیۆن:', style: AppTextStyles.h3),
+                          const Expanded(
+                            child: Text('بڕی کۆمسیۆنی شایستە:', style: AppTextStyles.h3),
+                          ),
                           Text(
                             _formatCurrency(commission.commissionAmount),
                             style: const TextStyle(
@@ -474,24 +611,29 @@ class _SalesmanCommissionsReportScreenState
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
+                            textDirection: TextDirection.ltr,
                           ),
                         ],
                       ),
                       if (commission.calculatedByName != null) ...[
                         const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
                           children: [
                             Text(
                               'هەژمارکراوە لەلایەن: ${commission.calculatedByName}',
+                              style: AppTextStyles.caption,
                             ),
                             if (commission.approvedByName != null)
                               Text(
                                 'پەسەندکراوە لەلایەن: ${commission.approvedByName}',
+                                style: AppTextStyles.caption,
                               ),
                             if (commission.paidByName != null)
                               Text(
                                 'دراوە لەلایەن: ${commission.paidByName} (${commission.paymentMethod ?? 'کاش'})',
+                                style: AppTextStyles.caption,
                               ),
                           ],
                         ),
@@ -527,7 +669,7 @@ class _SalesmanCommissionsReportScreenState
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (commission.details.isEmpty)
-                  const Text('هیچ وردەکارییەکی پسوڵە نییە')
+                  const Text('هیچ پسوڵەیەکی گەیەندراو لەم کۆمسیۆنەدا نییە')
                 else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,

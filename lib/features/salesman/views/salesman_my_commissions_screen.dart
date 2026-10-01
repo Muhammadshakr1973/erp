@@ -199,10 +199,14 @@ class _SalesmanMyCommissionsScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'وردەکاری کۆمسیۆنی #${commission.id}',
-                      style: AppTextStyles.h2,
+                    Expanded(
+                      child: Text(
+                        'وردەکاری کۆمسیۆنی #${commission.id}',
+                        style: AppTextStyles.h2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     _buildStatusChip(commission.status),
                   ],
                 ),

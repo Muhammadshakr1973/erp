@@ -72,6 +72,11 @@ class CommissionService
                 $q->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
                   ->orWhere(function ($sub) use ($periodFrom, $periodTo) {
                       $sub->whereNull('delivered_at')
+                          ->whereBetween('order_date', [$periodFrom, $periodTo]);
+                  })
+                  ->orWhere(function ($sub2) use ($periodFrom, $periodTo) {
+                      $sub2->whereNull('delivered_at')
+                          ->whereNull('order_date')
                           ->whereBetween('created_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59']);
                   });
             })
@@ -200,6 +205,11 @@ class CommissionService
                     $q->whereBetween('delivered_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59'])
                       ->orWhere(function ($sub) use ($periodFrom, $periodTo) {
                           $sub->whereNull('delivered_at')
+                              ->whereBetween('order_date', [$periodFrom, $periodTo]);
+                      })
+                      ->orWhere(function ($sub2) use ($periodFrom, $periodTo) {
+                          $sub2->whereNull('delivered_at')
+                              ->whereNull('order_date')
                               ->whereBetween('created_at', [$periodFrom . ' 00:00:00', $periodTo . ' 23:59:59']);
                       });
                 })
