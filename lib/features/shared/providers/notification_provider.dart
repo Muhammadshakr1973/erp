@@ -59,7 +59,8 @@ class NotificationsNotifier
         final newNotification = AppNotification.fromJson(Map<String, dynamic>.from(notificationJson));
         
         // Filter out unauthorized notifications for warehouse role
-        if (_userRole != null && _userRole!.toLowerCase() == 'warehouse') {
+        final userRole = _userRole;
+        if (userRole != null && userRole.toLowerCase() == 'warehouse') {
           final type = newNotification.type.toLowerCase();
           if (type == 'customer' || type == 'commission' || type == 'payment') {
             return;
@@ -70,7 +71,8 @@ class NotificationsNotifier
         if (currentList.any((n) => n.id == newNotification.id)) return;
 
         final List<AppNotification> updatedList;
-        if (_filterType == null || _filterType!.isEmpty || newNotification.type.toLowerCase() == _filterType!.toLowerCase()) {
+        final filterType = _filterType;
+        if (filterType == null || filterType.isEmpty || newNotification.type.toLowerCase() == filterType.toLowerCase()) {
           updatedList = [newNotification, ...currentList];
         } else {
           updatedList = currentList;
@@ -125,7 +127,7 @@ class NotificationsNotifier
             .toList();
 
         // Client-side safety filter for warehouse role
-        if (_userRole != null && _userRole!.toLowerCase() == 'warehouse') {
+        if (userRole != null && userRole.toLowerCase() == 'warehouse') {
           items = items.where((n) {
             final type = n.type.toLowerCase();
             return type != 'customer' && type != 'commission' && type != 'payment';

@@ -42,6 +42,7 @@ class ReportService
 
         // Single SQL query for complete summary metrics
         $summaryData = (clone $query)
+            ->withoutEagerLoads()
             ->selectRaw("
                 COUNT(*) as total_orders_count,
                 SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as total_delivered_count,
@@ -440,7 +441,7 @@ class ReportService
     public function getCustomerDebtsReport(array $filters): array
     {
         // 1. Authoritative Customer Balances Summary (Single aggregated query)
-        $customerQuery = Customer::query()->with('route:id,name');
+        $customerQuery = Customer::query();
 
         if (!empty($filters['customer_id'])) {
             $customerQuery->where('id', $filters['customer_id']);
@@ -452,11 +453,13 @@ class ReportService
             $customerQuery->where('current_balance', '>', 0);
         }
 
-        $custSummary = (clone $customerQuery)->selectRaw('
-            COUNT(*) as total_customers,
-            SUM(CASE WHEN current_balance > 0 THEN 1 ELSE 0 END) as customers_with_debt,
-            COALESCE(SUM(current_balance), 0) as total_outstanding_debt
-        ')->first();
+        $custSummary = (clone $customerQuery)
+            ->withoutEagerLoads()
+            ->selectRaw('
+                COUNT(*) as total_customers,
+                SUM(CASE WHEN current_balance > 0 THEN 1 ELSE 0 END) as customers_with_debt,
+                COALESCE(SUM(current_balance), 0) as total_outstanding_debt
+            ')->first();
 
         $totalCustomersCount = (int) ($custSummary->total_customers ?? 0);
         $customersWithDebtCount = (int) ($custSummary->customers_with_debt ?? 0);
@@ -488,10 +491,12 @@ class ReportService
             $ledgerQuery->where('entry_type', $filters['entry_type']);
         }
 
-        $ledgerSummary = (clone $ledgerQuery)->selectRaw('
-            COALESCE(SUM(debit), 0) as total_debit,
-            COALESCE(SUM(credit), 0) as total_credit
-        ')->first();
+        $ledgerSummary = (clone $ledgerQuery)
+            ->withoutEagerLoads()
+            ->selectRaw('
+                COALESCE(SUM(debit), 0) as total_debit,
+                COALESCE(SUM(credit), 0) as total_credit
+            ')->first();
 
         $totalDebitInPeriod = (int) ($ledgerSummary->total_debit ?? 0);
         $totalCreditInPeriod = (int) ($ledgerSummary->total_credit ?? 0);
@@ -527,7 +532,9 @@ class ReportService
             $supplierQuery->where('current_balance', '>', 0);
         }
 
-        $supSummary = (clone $supplierQuery)->selectRaw('
+        $supSummary = (clone $supplierQuery)
+            ->withoutEagerLoads()
+            ->selectRaw('
             COUNT(*) as total_suppliers,
             SUM(CASE WHEN current_balance > 0 THEN 1 ELSE 0 END) as suppliers_with_debt,
             COALESCE(SUM(current_balance), 0) as total_outstanding_payables
@@ -559,7 +566,9 @@ class ReportService
             $ledgerQuery->where('entry_type', $filters['entry_type']);
         }
 
-        $ledgerSummary = (clone $ledgerQuery)->selectRaw('
+        $ledgerSummary = (clone $ledgerQuery)
+            ->withoutEagerLoads()
+            ->selectRaw('
             COALESCE(SUM(debit), 0) as total_debit,
             COALESCE(SUM(credit), 0) as total_credit
         ')->first();
@@ -610,7 +619,9 @@ class ReportService
                 $query->where('payment_method', strtolower($filters['payment_method']));
             }
 
-            $summaryData = (clone $query)->selectRaw("
+            $summaryData = (clone $query)
+                ->withoutEagerLoads()
+                ->selectRaw("
                 COUNT(*) as total_count,
                 COALESCE(SUM(amount), 0) as total_amount,
                 COALESCE(SUM(CASE WHEN LOWER(payment_method) = 'cash' THEN amount ELSE 0 END), 0) as cash_total,
@@ -675,7 +686,9 @@ class ReportService
             $query->where('payment_method', strtoupper($filters['payment_method']));
         }
 
-        $summaryData = (clone $query)->selectRaw("
+        $summaryData = (clone $query)
+            ->withoutEagerLoads()
+            ->selectRaw("
             COUNT(*) as total_count,
             COALESCE(SUM(amount), 0) as total_amount,
             COALESCE(SUM(CASE WHEN UPPER(payment_method) = 'CASH' THEN amount ELSE 0 END), 0) as cash_total,
@@ -804,7 +817,9 @@ class ReportService
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        $summaryData = (clone $query)->selectRaw('
+        $summaryData = (clone $query)
+            ->withoutEagerLoads()
+            ->selectRaw('
             COUNT(*) as total_transactions,
             COALESCE(SUM(CASE WHEN quantity_change > 0 THEN quantity_change ELSE 0 END), 0) as total_in_qty,
             COALESCE(SUM(CASE WHEN quantity_change < 0 THEN ABS(quantity_change) ELSE 0 END), 0) as total_out_qty
@@ -854,7 +869,9 @@ class ReportService
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        $summaryData = (clone $query)->selectRaw("
+        $summaryData = (clone $query)
+            ->withoutEagerLoads()
+            ->selectRaw("
             COUNT(*) as total_transfers,
             SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_transfers
         ")->first();
