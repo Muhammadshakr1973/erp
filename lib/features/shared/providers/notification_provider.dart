@@ -31,19 +31,24 @@ class NotificationsNotifier
   final ApiClient _api;
   final Ref _ref;
   final String? _filterType;
+  final PusherService _pusherService;
+  final String? _userRole;
+  String? _subscribedChannelName;
 
   NotificationsNotifier(this._api, this._ref, this._filterType)
-    : super(const AsyncValue.loading()) {
+    : _pusherService = _ref.read(pusherServiceProvider),
+      _userRole = _ref.read(authProvider).user?.role,
+      super(const AsyncValue.loading()) {
     loadNotifications();
     _subscribeToLiveNotifications();
   }
 
   void _subscribeToLiveNotifications() {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
+    final user = _ref.read(authProvider).user;
     if (user != null) {
       final channelName = 'private-user-notifications.${user.id}';
-      _ref.read(pusherServiceProvider).subscribeToChannel(channelName, _onLiveNotificationReceived);
+      _subscribedChannelName = channelName;
+      _pusherService.subscribeToChannel(channelName, _onLiveNotificationReceived);
     }
   }
 
@@ -54,8 +59,7 @@ class NotificationsNotifier
         final newNotification = AppNotification.fromJson(Map<String, dynamic>.from(notificationJson));
         
         // Filter out unauthorized notifications for warehouse role
-        final user = _ref.read(authProvider).user;
-        if (user != null && user.role.toLowerCase() == 'warehouse') {
+        if (_userRole != null && _userRole!.toLowerCase() == 'warehouse') {
           final type = newNotification.type.toLowerCase();
           if (type == 'customer' || type == 'commission' || type == 'payment') {
             return;
@@ -88,11 +92,9 @@ class NotificationsNotifier
 
   @override
   void dispose() {
-    final authState = _ref.read(authProvider);
-    final user = authState.user;
-    if (user != null) {
-      final channelName = 'private-user-notifications.${user.id}';
-      _ref.read(pusherServiceProvider).unsubscribeFromChannel(channelName, _onLiveNotificationReceived);
+    final channelName = _subscribedChannelName;
+    if (channelName != null) {
+      _pusherService.unsubscribeFromChannel(channelName, _onLiveNotificationReceived);
     }
     super.dispose();
   }
@@ -123,8 +125,7 @@ class NotificationsNotifier
             .toList();
 
         // Client-side safety filter for warehouse role
-        final user = _ref.read(authProvider).user;
-        if (user != null && user.role.toLowerCase() == 'warehouse') {
+        if (_userRole != null && _userRole!.toLowerCase() == 'warehouse') {
           items = items.where((n) {
             final type = n.type.toLowerCase();
             return type != 'customer' && type != 'commission' && type != 'payment';
