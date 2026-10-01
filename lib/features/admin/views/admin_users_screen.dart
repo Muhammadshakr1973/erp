@@ -779,6 +779,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isEditing = widget.user != null;
     final rolesList = widget.roles ?? [];
 
