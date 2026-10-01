@@ -105,8 +105,9 @@ class NotificationsNotifier
     state = const AsyncValue.loading();
     try {
       final queryParams = <String, dynamic>{'per_page': 50};
-      if (_filterType != null && _filterType!.isNotEmpty) {
-        queryParams['type'] = _filterType;
+      final filterType = _filterType;
+      if (filterType != null && filterType.isNotEmpty) {
+        queryParams['type'] = filterType;
       }
 
       final response = await _api.client.get(
@@ -127,6 +128,7 @@ class NotificationsNotifier
             .toList();
 
         // Client-side safety filter for warehouse role
+        final userRole = _userRole;
         if (userRole != null && userRole.toLowerCase() == 'warehouse') {
           items = items.where((n) {
             final type = n.type.toLowerCase();
