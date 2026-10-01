@@ -1200,7 +1200,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 class _LoginQrCodeDialog extends StatefulWidget {
   final String text;
 
-  const _LoginQrCodeDialog({Key? key, required this.text}) : super(key: key);
+  const _LoginQrCodeDialog({super.key, required this.text});
 
   @override
   State<_LoginQrCodeDialog> createState() => _LoginQrCodeDialogState();
@@ -1220,8 +1220,14 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
         final qrCode = qrValidationResult.qrCode;
         final painter = QrPainter.withQr(
           qr: qrCode!,
-          color: const Color(0xFF0F172A),
-          emptyColor: const Color(0xFFFFFFFF),
+          eyeStyle: const QrEyeStyle(
+            eyeShape: QrEyeShape.square,
+            color: Color(0xFF0F172A),
+          ),
+          dataModuleStyle: const QrDataModuleStyle(
+            dataModuleShape: QrDataModuleShape.square,
+            color: Color(0xFF0F172A),
+          ),
           gapless: true,
         );
         final imageData = await painter.toImageData(512.0);
@@ -1240,12 +1246,14 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
 
     if (bytes != null) {
       downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         message: 'وێنەی بارکۆدەکە بە سەرکەوتوویی دابەزی',
         type: SnackbarType.success,
       );
     } else {
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
@@ -1262,6 +1270,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
     if (bytes != null) {
       shareBarcode(bytes, 'gardi_qr_${widget.text}.png');
     } else {
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
@@ -1272,6 +1281,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
 
   void _handleCopy() {
     Clipboard.setData(ClipboardData(text: widget.text));
+    if (!mounted) return;
     AppSnackbar.show(
       context,
       message: 'کۆدەکە کۆپیکرا بۆ Clipboard',
@@ -1326,7 +1336,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -1362,7 +1372,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
                         fontFamily: 'Rudaw',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white90 : const Color(0xFF334155),
+                        color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF334155),
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,

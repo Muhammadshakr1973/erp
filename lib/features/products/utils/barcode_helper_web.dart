@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
-import 'dart:js_util' as js_util;
+import 'dart:js' as js;
 
 void saveAndDownloadImage(Uint8List bytes, String fileName) {
   final blob = html.Blob([bytes], 'image/png');
@@ -103,21 +103,24 @@ void shareImage(Uint8List bytes, String fileName) {
   final blob = html.Blob([bytes], 'image/png');
   final file = html.File([blob], fileName, {'type': 'image/png'});
   
-  final navigator = html.window.navigator;
-  if (js_util.hasProperty(navigator, 'share')) {
-    try {
-      final data = js_util.newObject();
-      js_util.setProperty(data, 'files', [file]);
-      js_util.setProperty(data, 'title', 'Gardi QR Code');
-      js_util.setProperty(data, 'text', 'کۆدی چوونەژوورەوەی GARDI ERP');
-      
-      if (js_util.callMethod(navigator, 'canShare', [data]) == true) {
-        js_util.callMethod(navigator, 'share', [data]);
-        return;
+  try {
+    final navigator = js.context['navigator'];
+    if (navigator != null) {
+      final jsNavigator = js.JsObject.fromBrowserObject(navigator);
+      if (jsNavigator.hasProperty('share')) {
+        final shareData = js.JsObject.jsify({
+          'files': [file],
+          'title': 'Gardi QR Code',
+          'text': 'کۆدی چوونەژوورەوەی GARDI ERP'
+        });
+        if (jsNavigator.callMethod('canShare', [shareData]) == true) {
+          jsNavigator.callMethod('share', [shareData]);
+          return;
+        }
       }
-    } catch (e) {
-      // ignore
     }
+  } catch (e) {
+    // ignore
   }
   
   // Fallback to downloading
