@@ -433,6 +433,16 @@ class UserFormDialog extends ConsumerStatefulWidget {
 
 class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
+
+  final GlobalKey _nameKey = GlobalKey();
+  final GlobalKey _phoneKey = GlobalKey();
+  final GlobalKey _passwordKey = GlobalKey();
+  final GlobalKey _roleKey = GlobalKey();
+  final GlobalKey _salaryKey = GlobalKey();
+  final GlobalKey _commissionKey = GlobalKey();
+  final GlobalKey _warehouseKey = GlobalKey();
+
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _passwordController;
@@ -516,6 +526,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -544,12 +555,90 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    final isFormValid = _formKey.currentState!.validate();
+
+    final List<GlobalKey> invalidKeys = [];
+
+    if (_nameController.text.trim().isEmpty) {
+      invalidKeys.add(_nameKey);
+    }
+
+    if (_phoneController.text.trim().isEmpty) {
+      invalidKeys.add(_phoneKey);
+    }
+
+    final isEditing = widget.user != null;
+    final pass = _passwordController.text;
+    if ((!isEditing && pass.isEmpty) || (pass.isNotEmpty && pass.length < 4)) {
+      invalidKeys.add(_passwordKey);
+    }
 
     if (_selectedRoleId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ تکایە ڕۆڵی بەکارهێنەر دیاری بکە')),
+      invalidKeys.add(_roleKey);
+    }
+
+    // Find if selected role is salesman or warehouse
+    bool isSalesmanSelected = false;
+    bool isWarehouseSelected = false;
+    final roles = widget.roles ?? [];
+    if (_selectedRoleId != null && roles.isNotEmpty) {
+      final matched = roles.firstWhere(
+        (r) => r['id'] == _selectedRoleId,
+        orElse: () => null,
       );
+      if (matched != null) {
+        final rName = matched['name'].toString().toLowerCase();
+        if (rName == 'salesman') isSalesmanSelected = true;
+        if (rName == 'warehouse') isWarehouseSelected = true;
+      }
+    }
+
+    final salaryText = _fixedSalaryController.text.trim();
+    if (salaryText.isNotEmpty) {
+      final parsed = int.tryParse(salaryText);
+      if (parsed == null || parsed < 0) {
+        invalidKeys.add(_salaryKey);
+      }
+    }
+
+    if (isSalesmanSelected) {
+      final commText = _commissionRateController.text.trim();
+      if (commText.isNotEmpty) {
+        final parsed = double.tryParse(commText);
+        if (parsed == null || parsed < 0 || parsed > 100) {
+          invalidKeys.add(_commissionKey);
+        }
+      }
+    }
+
+    if (isWarehouseSelected && _selectedWarehouseId == null) {
+      invalidKeys.add(_warehouseKey);
+    }
+
+    if (invalidKeys.isNotEmpty || !isFormValid) {
+      if (invalidKeys.length == 1) {
+        final key = invalidKeys.first;
+        if (key.currentContext != null) {
+          Scrollable.ensureVisible(
+            key.currentContext!,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            alignment: 0.1,
+          );
+        }
+      } else {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+
+      if (_selectedRoleId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ تکایە ڕۆڵی بەکارهێنەر دیاری بکە')),
+        );
+      }
       return;
     }
 
@@ -848,6 +937,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         constraints: const BoxConstraints(maxWidth: 500),
         padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: Form(
             key: _formKey,
             child: Column(
@@ -896,6 +986,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.sm),
 
                 AppTextField(
+                  key: _nameKey,
                   controller: _nameController,
                   labelText: 'ناوی تەواو',
                   prefixIcon: Icons.person_outline,
@@ -905,6 +996,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(
+                  key: _phoneKey,
                   controller: _phoneController,
                   labelText: 'ژمارەی مۆبایل',
                   prefixIcon: Icons.phone_outlined,
@@ -916,6 +1008,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(
+                  key: _passwordKey,
                   controller: _passwordController,
                   labelText: isEditing
                       ? 'وشەی تێپەڕی نوێ (ئەگەر دەتەوێت بیگۆڕیت)'
@@ -949,6 +1042,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 const SizedBox(height: AppSpacing.md),
 
                 DropdownButtonFormField<int>(
+                  key: _roleKey,
                   initialValue: _selectedRoleId,
                   decoration: InputDecoration(
                     labelText: 'ڕۆڵی بەکارهێنەر',
@@ -980,6 +1074,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     children: [
                       Expanded(
                         child: AppTextField(
+                          key: _salaryKey,
                           controller: _fixedSalaryController,
                           labelText: 'مووچەی سابتی مانگانە (د.ع)',
                           prefixIcon: Icons.attach_money_outlined,
@@ -999,6 +1094,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: AppTextField(
+                          key: _commissionKey,
                           controller: _commissionRateController,
                           labelText: 'ڕێژەی کۆمسیۆن (%)',
                           prefixIcon: Icons.percent_outlined,
@@ -1022,6 +1118,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   const SizedBox(height: AppSpacing.md),
                 ] else ...[
                   AppTextField(
+                    key: _salaryKey,
                     controller: _fixedSalaryController,
                     labelText: 'مووچەی سابتی مانگانە (د.ع)',
                     prefixIcon: Icons.attach_money_outlined,
@@ -1044,6 +1141,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   warehousesAsync.when(
                     data: (warehouses) {
                       return DropdownButtonFormField<int>(
+                        key: _warehouseKey,
                         initialValue: _selectedWarehouseId,
                         decoration: InputDecoration(
                           labelText: 'کۆگای دیاریکراو',

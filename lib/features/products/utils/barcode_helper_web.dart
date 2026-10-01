@@ -129,13 +129,28 @@ void shareImage(Uint8List bytes, String fileName, {String? text}) {
           jsNavigator.callMethod('share', [shareData]);
           return;
         }
+
+        // Try text-only share if file share is not supported
+        final shareDataText = js.JsObject.jsify({
+          'title': 'Gardi QR Code',
+          'text': text != null ? 'کۆدی چوونەژوورەوە: $text' : 'کۆدی چوونەژوورەوەی GARDI ERP',
+        });
+        if (jsNavigator.callMethod('canShare', [shareDataText]) == true) {
+          jsNavigator.callMethod('share', [shareDataText]);
+          return;
+        }
       }
     }
   } catch (e) {
-    debugPrint('Share not supported, falling back to download: $e');
+    debugPrint('Share not supported: $e');
   }
   
-  // Fallback to downloading
-  saveAndDownloadImage(bytes, fileName);
+  // Do NOT fall back to downloading! Open WhatsApp share or text share fallback
+  if (text != null && text.isNotEmpty) {
+    try {
+      final encodedText = Uri.encodeComponent('کۆدی چوونەژوورەوەی GARDI ERP: $text');
+      html.window.open('https://api.whatsapp.com/send?text=$encodedText', '_blank');
+    } catch (_) {}
+  }
 }
 
