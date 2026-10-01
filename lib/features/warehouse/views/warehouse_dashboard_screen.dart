@@ -166,6 +166,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 childAspectRatio: childAspectRatio,
                 children: [
                   _buildInteractiveStatCard(
+                    context,
                     title: 'چاوەڕوانی پاکەتکردن',
                     value: data.pendingPackingCount.toString(),
                     subtitle: 'داواکاری بۆ ئامادەکردن',
@@ -176,6 +177,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     },
                   ),
                   _buildInteractiveStatCard(
+                    context,
                     title: 'ئامادەکراوی ئەمڕۆ',
                     value: data.readyTodayCount.toString(),
                     subtitle: 'پسوڵەی تەواوکراو',
@@ -184,6 +186,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     onTap: null,
                   ),
                   _buildInteractiveStatCard(
+                    context,
                     title: 'کاڵای کەمبوو',
                     value: data.lowStockCount.toString(),
                     subtitle: 'لەژێر ئاستی کەمینە',
@@ -213,7 +216,8 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInteractiveStatCard({
+  Widget _buildInteractiveStatCard(
+    BuildContext context, {
     required String title,
     required String value,
     required String subtitle,

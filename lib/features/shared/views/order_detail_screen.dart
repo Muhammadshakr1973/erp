@@ -236,6 +236,7 @@ class OrderDetailScreen extends ConsumerWidget {
                   itemCount: order.items.length,
                   separatorBuilder: (context, index) => const Divider(),
                   itemBuilder: (context, index) {
+                    final theme = Theme.of(context);
                     final item = order.items[index];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
