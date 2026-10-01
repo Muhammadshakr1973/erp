@@ -471,9 +471,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           : '0.0',
     );
     _fixedSalaryController = TextEditingController(
-      text: widget.user?.fixedSalary != null
+      text: widget.user?.fixedSalary != null && widget.user!.fixedSalary != 0
           ? widget.user!.fixedSalary!.toString()
-          : '0',
+          : '',
     );
     _barcodeController = TextEditingController(text: widget.user?.barcode);
     _imageUrlController = TextEditingController(text: widget.user?.imageUrl);
@@ -835,7 +835,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       isEditing
                           ? Icons.edit_outlined
                           : Icons.person_add_alt_1_outlined,
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 28,
                     ),
                     const SizedBox(width: 8),
@@ -901,7 +901,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       _obscurePassword
                           ? Icons.visibility
                           : Icons.visibility_off,
-                      color: AppColors.primary,
+                      color: theme.colorScheme.primary,
                     ),
                     onPressed: () {
                       setState(() {
@@ -959,7 +959,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           keyboardType: TextInputType.number,
                           validator: (val) {
                             if (val == null || val.isEmpty) {
-                              return 'تکایە بڕ بنووسە (یان ٠)';
+                              return null;
                             }
                             final parsed = int.tryParse(val.trim());
                             if (parsed == null || parsed < 0) {
@@ -1001,7 +1001,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     keyboardType: TextInputType.number,
                     validator: (val) {
                       if (val == null || val.isEmpty) {
-                        return 'تکایە بڕ بنووسە (یان ٠)';
+                        return null;
                       }
                       final parsed = int.tryParse(val.trim());
                       if (parsed == null || parsed < 0) {
@@ -1060,7 +1060,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                AppTextField(
+                 AppTextField(
                   controller: _barcodeController,
                   labelText: 'بارکۆدی ناسنامە (ئارەزوومەندانە)',
                   suffixIcon: Row(
@@ -1068,7 +1068,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.autorenew),
-                        color: AppColors.primary,
+                        color: theme.colorScheme.primary,
                         tooltip: 'دروستکردنی کۆدی هەڕەمەکی',
                         onPressed: () {
                           setState(() {
@@ -1078,7 +1078,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.qr_code_2),
-                        color: AppColors.primary,
+                        color: theme.colorScheme.primary,
                         tooltip: 'پیشاندانی QR Code',
                         onPressed: () {
                           final text = _barcodeController.text.trim();
@@ -1128,7 +1128,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.qr_code_scanner),
-                        color: AppColors.primary,
+                        color: theme.colorScheme.primary,
                         tooltip: 'سکانی QR Code',
                         onPressed: () {
                           CameraBarcodeScanner.show(context, (barcode) {
@@ -1162,7 +1162,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ),
                   value: _isActive,
                   onChanged: (val) => setState(() => _isActive = val),
-                  activeThumbColor: AppColors.primary,
+                  activeThumbColor: theme.colorScheme.primary,
+                  activeTrackColor: theme.colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
