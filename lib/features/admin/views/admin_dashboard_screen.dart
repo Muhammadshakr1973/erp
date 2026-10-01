@@ -1,5 +1,6 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +16,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../shared/providers/route_provider.dart';
+import '../../shared/models/route_model.dart';
 import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
@@ -28,6 +31,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int? _activeSalesmanTooltipId;
+  final GlobalKey _todayPlanKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +39,55 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final theme = Theme.of(context);
     final dashboardAsync = ref.watch(dashboardProvider);
     final salesmenReportAsync = ref.watch(salesBySalesmanReportProvider(const {}));
+    final routesAsync = ref.watch(routeListProvider);
+
+    // Local function to compute today's assignments
+    List<_TodayAssignment> _getTodayAssignments(List<RouteModel> routes) {
+      final now = DateTime.now();
+      final englishDays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday'
+      ];
+      final todayDayName = englishDays[now.weekday - 1];
+      final todayDateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final englishToKurdishMap = {
+        'Saturday': 'شەممە',
+        'Sunday': 'یەکشەممە',
+        'Monday': 'دووشەممە',
+        'Tuesday': 'سێشەممە',
+        'Wednesday': 'چوارشەممە',
+        'Thursday': 'پێنجشەممە',
+        'Friday': 'هەینی',
+      };
+      final todayKurdishName = englishToKurdishMap[todayDayName] ?? '';
+
+      final list = <_TodayAssignment>[];
+      for (final route in routes) {
+        for (final salesman in route.salesmen) {
+          final isTodayDate = salesman.workDate != null &&
+              salesman.workDate!.trim() == todayDateStr;
+          final isTodayDay = salesman.dayOfWeek != null &&
+              (salesman.dayOfWeek == todayDayName ||
+                  salesman.dayOfWeek == todayKurdishName);
+
+          if (isTodayDate || isTodayDay) {
+            list.add(_TodayAssignment(
+              salesmanName: salesman.name,
+              salesmanPhone: salesman.phone,
+              routeName: route.name,
+              routeColor: route.color,
+              customersCount: route.customersCount,
+            ));
+          }
+        }
+      }
+      return list;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -86,6 +139,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         onRefresh: () async {
           ref.invalidate(dashboardProvider);
           ref.invalidate(salesBySalesmanReportProvider(const {}));
+          ref.invalidate(routeListProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -107,8 +161,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 data: (dashboard) => LayoutBuilder(
                   builder: (context, constraints) {
                     int crossAxisCount = 2;
-                    if (constraints.maxWidth >= 1024) {
-                      crossAxisCount = 4;
+                    if (constraints.maxWidth >= 1200) {
+                      crossAxisCount = 5;
+                    } else if (constraints.maxWidth >= 900) {
+                      crossAxisCount = 3;
                     } else if (constraints.maxWidth >= 600) {
                       crossAxisCount = 3;
                     }
@@ -153,12 +209,49 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
                         ),
+                        _buildStatCard(
+                          context: context,
+                          title: 'پلانی ئەمڕۆی مەندوب',
+                          value: routesAsync.maybeWhen(
+                            data: (routes) => '${_getTodayAssignments(routes).length} مەندوب',
+                            orElse: () => '... مەندوب',
+                          ),
+                          icon: Icons.assignment_outlined,
+                          color: theme.colorScheme.secondary,
+                          onTap: () {
+                            if (_todayPlanKey.currentContext != null) {
+                              Scrollable.ensureVisible(
+                                _todayPlanKey.currentContext!,
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                        ),
                       ],
                     );
                   },
                 ),
               ),
               const SizedBox(height: AppSpacing.sectionGap),
+
+              // Today's Salesmen Plan Section
+              routesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Container(
+                  key: _todayPlanKey,
+                  child: Center(
+                    child: Text(
+                      'هەڵەیەک لە بارکردنی پلانی مەندوبەکاندا هەیە: ${Formatters.cleanError(error)}',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                    ),
+                  ),
+                ),
+                data: (routes) {
+                  final assignments = _getTodayAssignments(routes);
+                  return _buildTodaySalesmenPlanList(context, assignments);
+                },
+              ),
 
               // Salesmen Profit Bar Chart (real-time data)
               salesmenReportAsync.when(
@@ -313,42 +406,51 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     String? currency,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: color, size: 24),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: AppRadius.radiusSm,
-                ),
-                child: Icon(Icons.arrow_upward, color: color, size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(title, style: AppTextStyles.caption),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(value, style: AppTextStyles.h2),
-              if (currency != null) ...[
-                const SizedBox(width: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(currency, style: AppTextStyles.caption),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.radiusMd,
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.radiusSm,
+                  ),
+                  child: Icon(
+                    onTap != null ? Icons.arrow_downward : Icons.arrow_upward,
+                    color: color,
+                    size: 16,
+                  ),
                 ),
               ],
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: AppTextStyles.caption),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(value, style: AppTextStyles.h2),
+                if (currency != null) ...[
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(currency, style: AppTextStyles.caption),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -750,4 +852,179 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
     );
   }
+
+  Widget _buildTodaySalesmenPlanList(BuildContext context, List<_TodayAssignment> assignments) {
+    final theme = Theme.of(context);
+    return Container(
+      key: _todayPlanKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.assignment_outlined, color: theme.colorScheme.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'پلانی ئەمڕۆی مەندوب',
+                    style: AppTextStyles.h2,
+                  ),
+                ],
+              ),
+              if (assignments.isNotEmpty)
+                Text(
+                  '${assignments.length} ڕێڕەوی چالاک',
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (assignments.isEmpty)
+            AppCard(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 36,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'هیچ مەندوبێک بۆ ئەمڕۆ ڕانەسپیراوە',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: assignments.length,
+              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final assignment = assignments[index];
+                
+                Color? routeColor;
+                if (assignment.routeColor != null && assignment.routeColor!.isNotEmpty) {
+                  try {
+                    final hexStr = assignment.routeColor!.replaceAll('#', '');
+                    routeColor = Color(int.parse('FF$hexStr', radix: 16));
+                  } catch (_) {
+                    routeColor = theme.colorScheme.primary;
+                  }
+                } else {
+                  routeColor = theme.colorScheme.primary;
+                }
+
+                return AppCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: routeColor,
+                          borderRadius: AppRadius.radiusSm,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              assignment.salesmanName,
+                              style: AppTextStyles.bodyBold,
+                            ),
+                            const SizedBox(height: 4),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'ڕێڕەو: ${assignment.routeName}',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '·',
+                                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'کڕیاران: ${assignment.customersCount}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontFamily: 'Rudaw',
+                                    ),
+                                  ),
+                                  if (assignment.salesmanPhone != null && assignment.salesmanPhone!.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '·',
+                                      style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      assignment.salesmanPhone!,
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (assignment.salesmanPhone != null && assignment.salesmanPhone!.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.phone_outlined, size: 20),
+                          color: theme.colorScheme.primary,
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: assignment.salesmanPhone!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('ژمارەی تەلەفۆن کۆپیکرا: ${assignment.salesmanPhone}'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayAssignment {
+  final String salesmanName;
+  final String? salesmanPhone;
+  final String routeName;
+  final String? routeColor;
+  final int customersCount;
+
+  _TodayAssignment({
+    required this.salesmanName,
+    this.salesmanPhone,
+    required this.routeName,
+    this.routeColor,
+    required this.customersCount,
+  });
 }
