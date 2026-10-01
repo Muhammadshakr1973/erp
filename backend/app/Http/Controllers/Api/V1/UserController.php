@@ -158,7 +158,7 @@ class UserController extends Controller
                 'required',
                 'string',
                 'max:20',
-                Rule::unique('users')->ignore($id)->whereNull('deleted_at')
+                Rule::unique('users')->ignore($user->id)->whereNull('deleted_at')
             ],
             'password' => 'nullable|string|min:4',
             'role_id' => 'required|exists:roles,id',
@@ -168,7 +168,7 @@ class UserController extends Controller
                 'nullable',
                 'string',
                 'max:50',
-                Rule::unique('users')->ignore($id)->whereNull('deleted_at')
+                Rule::unique('users')->ignore($user->id)->whereNull('deleted_at')
             ],
             'is_active' => 'nullable|boolean',
             'warehouse_id' => 'nullable|exists:warehouses,id',

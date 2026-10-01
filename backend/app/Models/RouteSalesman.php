@@ -9,7 +9,7 @@ class RouteSalesman extends Model
 {
     use HasFactory;
     protected $table = 'route_salesmen';
-    protected $fillable = ['route_id', 'salesman_id', 'is_active', 'work_date', 'day_of_week', 'assigned_by'];
+    protected $fillable = ['route_id', 'salesman_id', 'is_active', 'work_date', 'day_of_week', 'week_number', 'assigned_by'];
     protected $casts = ['is_active' => 'boolean', 'assigned_at' => 'datetime'];
 
     protected static function booted()

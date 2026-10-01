@@ -1023,10 +1023,11 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       final errStr = e.toString();
-      final isPhoneError = errStr.contains('پێشتر بەکارهاتووە') ||
-          errStr.toLowerCase().contains('phone') ||
-          errStr.toLowerCase().contains('taken') ||
-          errStr.toLowerCase().contains('unique');
+      final isPhoneError = errStr.contains('ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە') ||
+          (errStr.toLowerCase().contains('phone') &&
+              (errStr.toLowerCase().contains('unique') ||
+                  errStr.toLowerCase().contains('taken') ||
+                  errStr.toLowerCase().contains('already')));
 
       if (isPhoneError) {
         setState(() {
