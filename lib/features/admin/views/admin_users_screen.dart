@@ -960,11 +960,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           final parts = key.split('_');
           final week = int.parse(parts[0]);
           final day = parts[1];
-          routePlansPayload.add({
-            'day_of_week': day,
-            'week_number': week,
-            'route_id': routeId, // nullable
-          });
+          
+          if (_selectedRoutingCycle == '1_week' && week > 1) {
+            // If cycle is 1_week, clear any Week 2 assignments so they are deleted from the DB
+            routePlansPayload.add({
+              'day_of_week': day,
+              'week_number': week,
+              'route_id': null,
+            });
+          } else {
+            routePlansPayload.add({
+              'day_of_week': day,
+              'week_number': week,
+              'route_id': routeId, // nullable
+            });
+          }
         });
       }
 

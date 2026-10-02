@@ -111,7 +111,29 @@ class User extends Authenticatable
         if ($this->isAdmin() || $this->isOwner()) {
             return Route::pluck('id')->toArray();
         }
-        return $this->routeSalesmen()->where('is_active', true)->pluck('route_id')->toArray();
+
+        $today = now()->toDateString();
+        $cycle = $this->routing_cycle ?? '1_week';
+
+        return $this->routeSalesmen()
+            ->where('is_active', true)
+            ->where(function ($query) use ($today, $cycle) {
+                // 1. Specific override for today
+                $query->where('work_date', $today)
+                // 2. Or recurring schedule within the active routing cycle
+                ->orWhere(function ($q) use ($cycle) {
+                    $q->whereNull('work_date')
+                      ->whereNotNull('day_of_week');
+                    if ($cycle === '1_week') {
+                        $q->where('week_number', 1);
+                    } else {
+                        $q->whereIn('week_number', [1, 2]);
+                    }
+                });
+            })
+            ->distinct()
+            ->pluck('route_id')
+            ->toArray();
     }
 
     public function getTodayRouteId(): ?int
