@@ -132,7 +132,7 @@ class _CustomerSelectionDialogState
                         child: Row(
                           children: [
                             Icon(
-                              AppIcons.route,
+                              Icons.alt_route,
                               size: 18,
                               color: theme.colorScheme.primary,
                             ),
