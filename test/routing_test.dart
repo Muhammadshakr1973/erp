@@ -21,7 +21,7 @@ void main() {
       container.read(driverTabIndexProvider.notifier).state = 1;
 
       // Reset
-      resetAllNavigationTabsWithRef(container);
+      resetAllNavigationTabsWithContainer(container);
 
       // Validate all restored to index 0 ('سەرەکی')
       expect(container.read(adminTabIndexProvider), equals(0));

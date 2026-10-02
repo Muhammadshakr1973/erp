@@ -34,7 +34,7 @@ void main() {
       expect(container.read(driverTabIndexProvider), equals(2));
 
       // Execute tab reset
-      resetAllNavigationTabsWithRef(container);
+      resetAllNavigationTabsWithContainer(container);
 
       // Verify all tabs returned to index 0 (سەرەکی)
       expect(container.read(adminTabIndexProvider), equals(0),

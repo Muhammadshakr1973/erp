@@ -23,3 +23,11 @@ void resetAllNavigationTabsWithRef(Ref ref) {
   ref.read(warehouseTabIndexProvider.notifier).state = 0;
   ref.read(driverTabIndexProvider.notifier).state = 0;
 }
+
+/// Resets all navigation tab providers to 0 ('سەرەکی') using ProviderContainer.
+void resetAllNavigationTabsWithContainer(ProviderContainer container) {
+  container.read(adminTabIndexProvider.notifier).state = 0;
+  container.read(salesmanTabIndexProvider.notifier).state = 0;
+  container.read(warehouseTabIndexProvider.notifier).state = 0;
+  container.read(driverTabIndexProvider.notifier).state = 0;
+}
