@@ -316,40 +316,19 @@ class SalesOrderController extends Controller
 
         // 1. Today's Route
         $currentDayOfWeek = now()->format('l'); // 'Saturday', 'Sunday', etc.
-        $routeSalesman = null;
         $isHoliday = ($currentDayOfWeek === 'Friday');
 
         if ($isHoliday) {
             $routeName = 'پشوو';
             $todayRouteId = null;
         } else {
-            // First check specific override work_date
-            $routeSalesman = \App\Models\RouteSalesman::with('route')
-                ->where('salesman_id', $user->id)
-                ->where('is_active', true)
-                ->where('work_date', $today)
-                ->first();
-
-            // If not found, check recurring day of week by cycle
-            if (!$routeSalesman) {
-                $cycle = $user->routing_cycle ?? '1_week';
-                $weekNumber = 1;
-
-                if ($cycle === '2_weeks') {
-                    // Current calendar week odd/even calculation
-                    $weekNumber = (now()->weekOfYear % 2 === 0) ? 2 : 1;
-                }
-
-                $routeSalesman = \App\Models\RouteSalesman::with('route')
-                    ->where('salesman_id', $user->id)
-                    ->where('is_active', true)
-                    ->where('day_of_week', $currentDayOfWeek)
-                    ->where('week_number', $weekNumber)
-                    ->first();
+            $todayRouteId = $user->getTodayRouteId();
+            if ($todayRouteId) {
+                $routeObj = \App\Models\Route::find($todayRouteId);
+                $routeName = $routeObj ? $routeObj->name : 'گشتی';
+            } else {
+                $routeName = 'پشوو';
             }
-
-            $routeName = $routeSalesman ? $routeSalesman->route->name : 'گشتی';
-            $todayRouteId = $routeSalesman ? $routeSalesman->route_id : null;
         }
 
         // Fetch today's route customers and visit completions

@@ -32,6 +32,12 @@ class CustomerService
                 $q->whereIn('route_id', $routeIds)
                   ->orWhereIn('id', $directCustomerIds);
             });
+
+            // Order today's route customers first
+            $todayRouteId = $user->getTodayRouteId();
+            if ($todayRouteId) {
+                $query->orderByRaw("CASE WHEN route_id = ? THEN 0 ELSE 1 END", [$todayRouteId]);
+            }
         }
 
         // فلتەرکردن بەپێی گەڕەک ئەگەر نێردرابوو

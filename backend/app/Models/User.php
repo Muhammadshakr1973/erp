@@ -114,6 +114,38 @@ class User extends Authenticatable
         return $this->routeSalesmen()->where('is_active', true)->pluck('route_id')->toArray();
     }
 
+    public function getTodayRouteId(): ?int
+    {
+        $today = now()->toDateString();
+        $currentDayOfWeek = now()->format('l');
+
+        if ($currentDayOfWeek === 'Friday') {
+            return null;
+        }
+
+        // Specific override work_date
+        $routeSalesman = $this->routeSalesmen()
+            ->where('is_active', true)
+            ->where('work_date', $today)
+            ->first();
+
+        if (!$routeSalesman) {
+            $cycle = $this->routing_cycle ?? '1_week';
+            $weekNumber = 1;
+            if ($cycle === '2_weeks') {
+                $weekNumber = (now()->weekOfYear % 2 === 0) ? 2 : 1;
+            }
+
+            $routeSalesman = $this->routeSalesmen()
+                ->where('is_active', true)
+                ->where('day_of_week', $currentDayOfWeek)
+                ->where('week_number', $weekNumber)
+                ->first();
+        }
+
+        return $routeSalesman ? $routeSalesman->route_id : null;
+    }
+
     public function hasCustomerAccess($customer): bool
     {
         if ($this->isAdmin() || $this->isOwner()) {

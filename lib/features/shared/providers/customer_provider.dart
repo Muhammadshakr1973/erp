@@ -107,7 +107,7 @@ final filteredCustomerListProvider =
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) async {
   final paginated = await ref.watch(
-    filteredCustomerListProvider(const CustomerFilters(perPage: 100)).future,
+    filteredCustomerListProvider(const CustomerFilters(perPage: 500)).future,
   );
   return paginated.data;
 });
