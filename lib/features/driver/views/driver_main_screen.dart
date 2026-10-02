@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import 'driver_dashboard_screen.dart';
 import 'today_trips_screen.dart';
 import '../../shared/views/profile_screen.dart';
+
+export '../../../core/router/navigation_tabs_provider.dart';
 
 class DriverMainScreen extends ConsumerStatefulWidget {
   const DriverMainScreen({super.key});
@@ -15,8 +18,6 @@ class DriverMainScreen extends ConsumerStatefulWidget {
 }
 
 class _DriverMainScreenState extends ConsumerState<DriverMainScreen> {
-  int _currentIndex = 0;
-
   final List<Widget> _screens = [
     const DriverDashboardScreen(),
     const TodayTripsScreen(),
@@ -24,18 +25,28 @@ class _DriverMainScreenState extends ConsumerState<DriverMainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(driverTabIndexProvider.notifier).state = 0;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final currentIndex = ref.watch(driverTabIndexProvider);
+
     return ResponsiveShell(
-      currentIndex: _currentIndex,
+      currentIndex: currentIndex,
       onDestinationSelected: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
+        ref.read(driverTabIndexProvider.notifier).state = index;
       },
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: List.generate(_screens.length, (index) {
-          final isSelected = index == _currentIndex;
+          final isSelected = index == currentIndex;
           return Visibility(
             visible: isSelected,
             maintainState: true,

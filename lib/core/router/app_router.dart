@@ -23,6 +23,7 @@ import '../../features/admin/views/admin_delivery_trips_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
+import 'navigation_tabs_provider.dart';
 
 class RouterTransitionNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -65,8 +66,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isGoingToLogin ? null : '/login';
       }
 
-      // If logged in and trying to go to login, redirect to role dashboard
+      // If logged in and trying to go to login, redirect to role dashboard and ensure tab is 0 (سەرەکی)
       if (isGoingToLogin) {
+        resetAllNavigationTabsWithRef(ref);
         return _getDashboardForRole(authState.user!.role);
       }
 

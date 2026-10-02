@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api_client.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../models/user_model.dart';
 
@@ -81,6 +82,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('auth_token', token);
         await prefs.setString('current_user', jsonEncode(user.toJson()));
 
+        // Always reset navigation tabs to 0 ('سەرەکی') upon login
+        resetAllNavigationTabsWithRef(ref);
+
         state = state.copyWith(isLoading: false, user: user);
         return true;
       } else {
@@ -124,6 +128,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('auth_token', token);
         await prefs.setString('current_user', jsonEncode(user.toJson()));
 
+        // Always reset navigation tabs to 0 ('سەرەکی') upon barcode login
+        resetAllNavigationTabsWithRef(ref);
+
         state = state.copyWith(isLoading: false, user: user);
         return true;
       } else {
@@ -152,6 +159,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('current_user');
+
+    // Reset all navigation tabs to 0 ('سەرەکی') upon logout
+    resetAllNavigationTabsWithRef(ref);
 
     state = AuthState(); // Reset state
   }

@@ -6,6 +6,7 @@ import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../providers/auth_provider.dart';
@@ -47,6 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(phone, password);
 
     if (success && mounted) {
+      resetAllNavigationTabs(ref);
       final user = ref.read(authProvider).user;
       if (user != null) {
         if (user.role == 'admin' || user.role == 'owner') {
@@ -170,6 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         if (!mounted) return;
 
                         if (success) {
+                          resetAllNavigationTabs(ref);
                           final user = ref.read(authProvider).user;
                           if (user != null) {
                             if (user.role == 'admin' || user.role == 'owner') {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_customers_screen.dart';
@@ -12,6 +13,8 @@ import 'admin_products_screen.dart';
 import 'admin_reports_screen.dart';
 import 'admin_users_screen.dart';
 
+export '../../../core/router/navigation_tabs_provider.dart';
+
 class AdminMainScreen extends ConsumerStatefulWidget {
   const AdminMainScreen({super.key});
 
@@ -20,8 +23,6 @@ class AdminMainScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
-  int _currentIndex = 0;
-
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
     const AdminUsersScreen(),
@@ -34,19 +35,29 @@ class _AdminMainScreenState extends ConsumerState<AdminMainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(adminTabIndexProvider.notifier).state = 0;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final currentIndex = ref.watch(adminTabIndexProvider);
+
     return ResponsiveShell(
-      currentIndex: _currentIndex,
+      currentIndex: currentIndex,
       onDestinationSelected: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
+        ref.read(adminTabIndexProvider.notifier).state = index;
       },
       mobilePrimaryIndices: const [0, 1, 2, 3],
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: List.generate(_screens.length, (index) {
-          final isSelected = index == _currentIndex;
+          final isSelected = index == currentIndex;
           return Visibility(
             visible: isSelected,
             maintainState: true,

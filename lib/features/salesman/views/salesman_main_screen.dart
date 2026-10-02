@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import 'salesman_dashboard_screen.dart';
 import 'today_customers_screen.dart';
 import 'salesman_orders_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
-final salesmanTabIndexProvider = StateProvider<int>((ref) => 0);
+export '../../../core/router/navigation_tabs_provider.dart';
 
 class SalesmanMainScreen extends ConsumerStatefulWidget {
   const SalesmanMainScreen({super.key});
@@ -24,6 +25,16 @@ class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
     const SalesmanOrdersScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(salesmanTabIndexProvider.notifier).state = 0;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

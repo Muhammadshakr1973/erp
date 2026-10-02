@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 import 'warehouse_dashboard_screen.dart';
 import 'orders_to_pack_screen.dart';
 import 'stock_list_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
-final warehouseTabIndexProvider = StateProvider<int>((ref) => 0);
+export '../../../core/router/navigation_tabs_provider.dart';
+
 final warehouseLowStockFilterProvider = StateProvider<bool>((ref) => false);
 
 class WarehouseMainScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,16 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
     const StockListScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(warehouseTabIndexProvider.notifier).state = 0;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
