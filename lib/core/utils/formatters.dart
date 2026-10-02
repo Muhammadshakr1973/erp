@@ -22,6 +22,44 @@ class Formatters {
     return DateFormat('yyyy/MM/dd').format(date);
   }
 
+  static String kurdishDayAndDate(String dateStr) {
+    final parsed = DateTime.tryParse(dateStr);
+    if (parsed == null) return dateStr;
+    
+    String dayName;
+    switch (parsed.weekday) {
+      case DateTime.monday:
+        dayName = 'دووشەممە';
+        break;
+      case DateTime.tuesday:
+        dayName = 'سێشەممە';
+        break;
+      case DateTime.wednesday:
+        dayName = 'چوارشەممە';
+        break;
+      case DateTime.thursday:
+        dayName = 'پێنجشەممە';
+        break;
+      case DateTime.friday:
+        dayName = 'هەینی';
+        break;
+      case DateTime.saturday:
+        dayName = 'شەممە';
+        break;
+      case DateTime.sunday:
+        dayName = 'یەکشەممە';
+        break;
+      default:
+        dayName = '';
+    }
+
+    final dateFormatted = DateFormat('yyyy/MM/dd').format(parsed);
+    if (dayName.isNotEmpty) {
+      return '$dayName • $dateFormatted';
+    }
+    return dateFormatted;
+  }
+
   static String dateTime(DateTime date) {
     return DateFormat('yyyy/MM/dd HH:mm').format(date);
   }

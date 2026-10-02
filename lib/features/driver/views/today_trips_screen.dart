@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../providers/driver_providers.dart';
 
 class TodayTripsScreen extends ConsumerWidget {
@@ -104,7 +105,7 @@ class TodayTripsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${trip.orders.length} پسوڵە • ${trip.tripDate}',
+                              '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
                               style: AppTextStyles.caption,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

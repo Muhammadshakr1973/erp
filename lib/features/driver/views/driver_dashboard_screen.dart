@@ -161,7 +161,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: Text(
-                              '${trip.orders.length} پسوڵە • ${trip.tripDate}',
+                              '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
                               style: AppTextStyles.caption,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
