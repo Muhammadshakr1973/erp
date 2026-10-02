@@ -78,7 +78,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           !(role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
-      if (location.startsWith('/salesman') && role != 'salesman') {
+      if (location.startsWith('/salesman') &&
+          !(role == 'salesman' || role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
       if (location.startsWith('/warehouse') && role != 'warehouse') {

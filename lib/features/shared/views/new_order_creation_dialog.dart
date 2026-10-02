@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_snackbar.dart';
@@ -9,17 +10,22 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/customer.dart';
 import '../providers/warehouse_provider.dart';
+import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import 'customer_selection_dialog.dart';
 
 class NewOrderCreationDialog extends ConsumerStatefulWidget {
   const NewOrderCreationDialog({super.key});
 
-  static Future<void> show(BuildContext context) {
-    return showDialog<void>(
+  static Future<OrderModel?> show(BuildContext context) async {
+    final createdOrder = await showDialog<OrderModel>(
       context: context,
       builder: (context) => const NewOrderCreationDialog(),
     );
+    if (createdOrder != null && context.mounted) {
+      context.push('/salesman/create-order', extra: createdOrder);
+    }
+    return createdOrder;
   }
 
   @override
@@ -164,14 +170,14 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
                       };
 
                       try {
-                        await ref.read(orderActionsProvider).createOrder(payload);
+                        final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
                         if (context.mounted) {
                           AppSnackbar.show(
                             context,
                             message: 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
                             type: SnackbarType.success,
                           );
-                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(createdOrder);
                         }
                       } catch (e) {
                         if (context.mounted) {
