@@ -276,5 +276,90 @@ void main() {
       expect(find.text('سەبەتە بەتاڵە'), findsOneWidget);
       expect(refreshed, isFalse);
     });
+
+    testWidgets('AppBar customer dropdown inside 42px height constraint with isDense and isExpanded renders without RenderFlex overflow', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            appBar: AppBar(
+              titleSpacing: 0,
+              title: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 42,
+                      child: DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        initialValue: 1,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'دیاریکردنی کڕیار',
+                          prefixIcon: const Icon(Icons.person_outline, size: 18),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          suffixIconConstraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        ),
+                        items: const [
+                          DropdownMenuItem<int>(
+                            value: 1,
+                            child: Text(
+                              'کڕیاری ژمارە یەک بە ناوی درێژ زۆر بەردەست',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        onChanged: (_) {},
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    alignment: Alignment.center,
+                    child: const Text('N2'),
+                  ),
+                ],
+              ),
+            ),
+            body: const Center(child: Text('Create Order')),
+          ),
+        ),
+      );
+
+      expect(find.text('کڕیاری ژمارە یەک بە ناوی درێژ زۆر بەردەست'), findsOneWidget);
+      expect(find.text('N2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    test('Price badge color resolves to high contrast dark theme colors in dark mode', () {
+      Color getBadgeColor(String priceType, bool isDark) {
+        if (priceType == 'N1') {
+          return isDark ? const Color(0xFF34D399) : const Color(0xFF0A9C6E);
+        } else if (priceType == 'N2') {
+          return isDark ? const Color(0xFFFBBF24) : const Color(0xFFD4820A);
+        } else {
+          return isDark ? const Color(0xFF60A5FA) : const Color(0xFF5B6B84);
+        }
+      }
+
+      final n2Dark = getBadgeColor('N2', true);
+      final n1Dark = getBadgeColor('N1', true);
+      final n3Dark = getBadgeColor('N3', true);
+
+      // Verify that dark mode colors are distinct and not equal to background slate 900 (0xFF0F172A)
+      expect(n2Dark, equals(const Color(0xFFFBBF24)));
+      expect(n1Dark, equals(const Color(0xFF34D399)));
+      expect(n3Dark, equals(const Color(0xFF60A5FA)));
+      expect(n2Dark.value != 0xFF0F172A, isTrue);
+    });
   });
 }

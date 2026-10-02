@@ -1285,6 +1285,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final productsAsync = ref.watch(productsListProvider);
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
@@ -1319,13 +1321,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       color: _timerPausedForRetry
-                          ? AppColors.danger.withValues(alpha: 0.15)
-                          : Colors.orange.withValues(alpha: 0.15),
+                          ? theme.colorScheme.error.withValues(alpha: 0.15)
+                          : (isDark ? AppColors.warningDark : Colors.orange).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: _timerPausedForRetry
-                            ? AppColors.danger.withValues(alpha: 0.4)
-                            : Colors.orange.withValues(alpha: 0.4),
+                            ? theme.colorScheme.error.withValues(alpha: 0.4)
+                            : (isDark ? AppColors.warningDark : Colors.orange).withValues(alpha: 0.4),
                       ),
                     ),
                     alignment: Alignment.center,
@@ -1335,13 +1337,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         Icon(
                           _timerPausedForRetry ? Icons.refresh : Icons.timer_outlined,
                           size: 16,
-                          color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
+                          color: _timerPausedForRetry
+                              ? theme.colorScheme.error
+                              : (isDark ? AppColors.warningDark : Colors.orange),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '$_secondsRemaining',
                           style: AppTextStyles.bodyBold.copyWith(
-                            color: _timerPausedForRetry ? AppColors.danger : Colors.orange,
+                            color: _timerPausedForRetry
+                                ? theme.colorScheme.error
+                                : (isDark ? AppColors.warningDark : Colors.orange),
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1353,12 +1359,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               ],
               if (_isSaving) ...[
                 const SizedBox(width: 8),
-                const SizedBox(
+                SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
                   ),
                 ),
               ],
@@ -1461,9 +1467,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
                 return DropdownButtonFormField<int>(
                   key: ValueKey(selectedId),
+                  isExpanded: true,
                   initialValue: warehouses.any((w) => w.id == selectedId)
                       ? selectedId
                       : warehouses.first.id,
+                  dropdownColor: theme.colorScheme.surface,
                   decoration: InputDecoration(
                     labelText: 'دیاریکردنی کۆگا',
                     prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
@@ -1926,71 +1934,94 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final theme = Theme.of(context);
 
     return customersAsync.when(
-      loading: () => const SizedBox(
+      loading: () => SizedBox(
         height: 36,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+            ),
+          ),
+        ),
       ),
-      error: (error, stackTrace) => const Text(
+      error: (error, stackTrace) => Text(
         'هەڵە لە بارکردنی کڕیاران',
-        style: TextStyle(color: Colors.white, fontSize: 11),
+        style: TextStyle(color: theme.colorScheme.error, fontSize: 11),
       ),
       data: (customers) {
         return DropdownButtonFormField<int>(
           key: ValueKey(_selectedCustomer?.id),
+          isExpanded: true,
           initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
               ? _selectedCustomer?.id
               : null,
           decoration: InputDecoration(
-            labelText: 'دیاریکردنی کڕیار',
-            labelStyle: TextStyle(
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
-              fontSize: 11,
+            isDense: true,
+            hintText: 'دیاریکردنی کڕیار',
+            hintStyle: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 12,
               fontFamily: 'Rudaw',
             ),
             prefixIcon: Icon(
               Icons.person_outline,
-              size: 20,
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
             ),
             suffixIcon: _buildFieldStatusIcon('customer', size: 16),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 28,
+              minHeight: 28,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+                color: theme.colorScheme.outline.withValues(alpha: 0.6),
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+                color: theme.colorScheme.outline.withValues(alpha: 0.6),
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: theme.colorScheme.onPrimary,
+                color: theme.colorScheme.primary,
                 width: 1.5,
               ),
             ),
+            filled: true,
+            fillColor: theme.colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 8,
-              vertical: 4,
+              vertical: 8,
             ),
           ),
           dropdownColor: theme.colorScheme.surface,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onPrimary,
+            color: theme.colorScheme.onSurface,
             fontFamily: 'Rudaw',
+            fontSize: 12,
           ),
-          iconEnabledColor: theme.colorScheme.onPrimary,
+          iconEnabledColor: theme.colorScheme.onSurfaceVariant,
           items: customers.map((c) {
             return DropdownMenuItem<int>(
               value: c.id,
               child: Text(
                 c.name,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontFamily: 'Rudaw',
+                  color: theme.colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -2014,18 +2045,28 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildPriceTypeBadge() {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final String priceType = _selectedCustomer != null
         ? (_selectedCustomer!.priceType ?? 'N2')
         : 'N2';
+
+    Color badgeColor;
+    if (priceType == 'N1') {
+      badgeColor = isDark ? AppColors.successDark : AppColors.n1;
+    } else if (priceType == 'N2') {
+      badgeColor = isDark ? AppColors.warningDark : AppColors.n2;
+    } else {
+      badgeColor = isDark ? AppColors.primaryDark : AppColors.n3;
+    }
 
     return Container(
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.onPrimary.withValues(alpha: 0.15),
+        color: badgeColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),
+          color: badgeColor.withValues(alpha: 0.4),
         ),
       ),
       alignment: Alignment.center,
@@ -2035,13 +2076,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           Icon(
             Icons.sell_outlined,
             size: 14,
-            color: theme.colorScheme.onPrimary,
+            color: badgeColor,
           ),
           const SizedBox(width: 6),
           Text(
             priceType,
             style: AppTextStyles.bodyBold.copyWith(
-              color: theme.colorScheme.onPrimary,
+              color: badgeColor,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -2533,18 +2574,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Text(
+                            Text(
                               'داشکان: ',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(width: 4),
                             DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _discountType,
+                                dropdownColor: theme.colorScheme.surface,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -2635,12 +2677,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'کۆ:',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                             Expanded(
