@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
-import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -66,69 +65,94 @@ class TodayTripsScreen extends ConsumerWidget {
             onRefresh: () async => ref.invalidate(driverTripsProvider),
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
               itemCount: trips.length,
               separatorBuilder: (context, index) =>
                   const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final trip = trips[index];
-                return AppCard(
-                  onTap: () {
-                    context.push('/trip/${trip.id}');
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            AppIcons.orderDelivered,
-                            color: theme.colorScheme.primary,
+                final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+
+                return Stack(
+                  children: [
+                    AppCard(
+                      onTap: () {
+                        context.push('/trip/${trip.id}');
+                      },
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                AppIcons.orderDelivered,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'گەشتی ژمارە ${trip.tripNumber}',
+                                  style: AppTextStyles.bodyBold,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
+                                  style: AppTextStyles.caption,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (trip.notes != null && trip.notes!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    trip.notes!,
+                                    style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isCompleted)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.success,
+                            size: 14,
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'گەشتی ژمارە ${trip.tripNumber}',
-                              style: AppTextStyles.bodyBold,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
-                              style: AppTextStyles.caption,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (trip.notes != null && trip.notes!.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                trip.notes!,
-                                style: AppTextStyles.caption.copyWith(color: Colors.grey),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      StatusBadge(
-                        label: _getStatusLabel(trip.status),
-                        type: _getStatusBadgeType(trip.status),
-                      ),
-                    ],
-                  ),
+                  ],
                 );
               },
             ),
@@ -136,27 +160,5 @@ class TodayTripsScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  String _getStatusLabel(String status) {
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return 'تەواوبوو';
-      case 'IN_PROGRESS':
-        return 'لە گەیاندن';
-      default:
-        return 'پلان بۆ داڕێژراو';
-    }
-  }
-
-  StatusBadgeType _getStatusBadgeType(String status) {
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return StatusBadgeType.success;
-      case 'IN_PROGRESS':
-        return StatusBadgeType.warning;
-      default:
-        return StatusBadgeType.info;
-    }
   }
 }

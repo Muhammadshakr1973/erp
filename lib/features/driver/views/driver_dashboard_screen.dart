@@ -16,6 +16,7 @@ class DriverDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final tripsAsync = ref.watch(driverTripsProvider);
 
     return Scaffold(
@@ -143,45 +144,60 @@ class DriverDashboardScreen extends ConsumerWidget {
                           const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final trip = trips[index];
-                        return AppCard(
-                          onTap: () {
-                            context.push('/trip/${trip.id}');
-                          },
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.primary.withOpacity(0.1),
-                              child: const Icon(AppIcons.orderDelivered,
-                                  color: AppColors.primary),
-                            ),
-                            title: Text(
-                              'گەشتی ژمارە ${trip.tripNumber}',
-                              style: AppTextStyles.bodyBold,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
-                              style: AppTextStyles.caption,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(trip.status).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                _getStatusLabel(trip.status),
-                                style: AppTextStyles.caption.copyWith(
-                                  color: _getStatusColor(trip.status),
-                                  fontWeight: FontWeight.bold,
+                        final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+
+                        return Stack(
+                          children: [
+                            AppCard(
+                              onTap: () {
+                                context.push('/trip/${trip.id}');
+                              },
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  child: const Icon(AppIcons.orderDelivered,
+                                      color: AppColors.primary),
+                                ),
+                                title: Text(
+                                  'گەشتی ژمارە ${trip.tripNumber}',
+                                  style: AppTextStyles.bodyBold,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
+                                  style: AppTextStyles.caption,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
-                          ),
+                            if (isCompleted)
+                              Positioned(
+                                top: 6,
+                                left: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surface,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 2,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.success,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),
@@ -193,28 +209,6 @@ class DriverDashboardScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return AppColors.success;
-      case 'IN_PROGRESS':
-        return AppColors.warning;
-      default:
-        return AppColors.info;
-    }
-  }
-
-  String _getStatusLabel(String status) {
-    switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return 'تەواوبوو';
-      case 'IN_PROGRESS':
-        return 'لە گەیاندن';
-      default:
-        return 'پلان بۆ داڕێژراو';
-    }
   }
 
   Widget _buildStatCard({
