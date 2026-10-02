@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../providers/driver_providers.dart';
 
 class DriverDashboardScreen extends ConsumerWidget {
@@ -112,7 +113,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                           _buildStatCard(
                             context: context,
                             title: 'پارەی وەرگیراو',
-                            value: '${_formatCurrency(totalCollected)} د.ع',
+                            value: Formatters.currency(totalCollected),
                             icon: AppIcons.customerDebt,
                             color: AppColors.primary,
                           ),
@@ -192,10 +193,6 @@ class DriverDashboardScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  String _formatCurrency(num amount) {
-    return amount.toString().replaceAllRegExp(RegExp(r'\B(?=(\d{3})+(?!\n))'), ',');
   }
 
   Color _getStatusColor(String status) {
@@ -281,11 +278,5 @@ class DriverDashboardScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-extension RegExpReplaceAll on String {
-  String replaceAllRegExp(RegExp regExp, String replace) {
-    return replaceAllMapped(regExp, (m) => replace);
   }
 }
