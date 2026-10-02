@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_app/core/components/app_button.dart';
 import 'package:pos_app/features/products/models/product_model.dart';
+import 'package:pos_app/features/orders/models/order_model.dart';
 
 void main() {
   group('Create Order - Calculations & Pricing Rules', () {
@@ -35,6 +36,39 @@ void main() {
       const double invoiceFixedDiscount = 5000.0;
       final double finalTotal = amountAfterPerm - invoiceFixedDiscount;
       expect(finalTotal, equals(45000.0));
+    });
+
+    test('Default discount type is FIXED (بڕی پارە)', () {
+      final orderDefault = OrderModel(
+        id: 1,
+        orderNumber: 'ORD-001',
+        customerId: 1,
+        salesmanId: 1,
+        subtotal: 10000,
+        discountAmount: 0,
+        discountPercent: 0,
+        totalAmount: 10000,
+        totalProfit: 2000,
+        status: 'PACKING',
+        createdAt: '2026-10-02',
+      );
+      expect(orderDefault.discountType, equals('FIXED'));
+
+      final jsonWithoutDiscountType = {
+        'id': 2,
+        'order_number': 'ORD-002',
+        'customer_id': 1,
+        'salesman_id': 1,
+        'subtotal': 10000,
+        'discount_amount': 0,
+        'discount_percent': 0,
+        'total_amount': 10000,
+        'total_profit': 2000,
+        'status': 'PACKING',
+        'created_at': '2026-10-02',
+      };
+      final parsed = OrderModel.fromJson(jsonWithoutDiscountType);
+      expect(parsed.discountType, equals('FIXED'));
     });
 
     test('Customer dropdown value resolution does not throw on unselected or missing customer', () {

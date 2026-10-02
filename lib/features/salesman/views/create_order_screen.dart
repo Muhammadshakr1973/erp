@@ -42,7 +42,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final Map<int, String> _cartNotes = {}; // product_id -> notes
   Timer? _debounceTimer;
   Map<int, double> _customerSpecialPrices = {}; // product_id -> special unit price
-  String _discountType = 'PERCENT';
+  String _discountType = 'FIXED';
   double _discountValue = 0.0;
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
@@ -140,8 +140,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _currentVersion = order.version;
       _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
-      _discountType = order.discountType;
-      _discountValue = order.discountType == 'PERCENT'
+      _discountType = (order.discountPercent == 0 && order.discountAmount == 0)
+          ? 'FIXED'
+          : order.discountType;
+      _discountValue = _discountType == 'PERCENT'
           ? order.discountPercent
           : order.discountAmount;
       if (order.notes != null) {
@@ -2595,12 +2597,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 isDense: true,
                                 items: const [
                                   DropdownMenuItem(
-                                    value: 'PERCENT',
-                                    child: Text('% (ڕێژە)', style: TextStyle(fontSize: 13)),
-                                  ),
-                                  DropdownMenuItem(
                                     value: 'FIXED',
                                     child: Text('بڕ (پارە)', style: TextStyle(fontSize: 13)),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'PERCENT',
+                                    child: Text('% (ڕێژە)', style: TextStyle(fontSize: 13)),
                                   ),
                                 ],
                                 onChanged: (val) {
@@ -2621,7 +2623,22 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             Expanded(
                               child: AppTextField(
                                 key: ValueKey('discount_field_${_discountValue}_$_discountType'),
-                                controller: TextEditingController(text: _discountValue == 0 ? '' : _discountValue.toString())..selection = TextSelection.fromPosition(TextPosition(offset: (_discountValue == 0 ? '' : _discountValue.toString()).length)),
+                                controller: TextEditingController(
+                                  text: _discountValue == 0
+                                      ? ''
+                                      : (_discountValue == _discountValue.roundToDouble()
+                                          ? _discountValue.toInt().toString()
+                                          : _discountValue.toString()),
+                                )..selection = TextSelection.fromPosition(
+                                    TextPosition(
+                                      offset: (_discountValue == 0
+                                              ? ''
+                                              : (_discountValue == _discountValue.roundToDouble()
+                                                  ? _discountValue.toInt().toString()
+                                                  : _discountValue.toString()))
+                                          .length,
+                                    ),
+                                  ),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 borderRadius: BorderRadius.zero,
                                 customDecoration: InputDecoration(

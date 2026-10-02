@@ -98,7 +98,7 @@ class OrderModel {
     this.permanentDiscountAmount = 0.0,
     required this.discountAmount,
     required this.discountPercent,
-    this.discountType = 'PERCENT',
+    this.discountType = 'FIXED',
     required this.totalAmount,
     required this.totalProfit,
     required this.status,
@@ -142,7 +142,7 @@ class OrderModel {
           double.tryParse(json['discount_amount']?.toString() ?? '0') ?? 0.0,
       discountPercent:
           double.tryParse(json['discount_percent']?.toString() ?? '0') ?? 0.0,
-      discountType: (json['discount_type'] ?? 'PERCENT').toString(),
+      discountType: (json['discount_type'] ?? 'FIXED').toString(),
       totalAmount:
           double.tryParse(json['total_amount']?.toString() ?? '0') ?? 0.0,
       totalProfit:

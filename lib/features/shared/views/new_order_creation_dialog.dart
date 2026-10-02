@@ -160,7 +160,7 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
                         'customer_id': _selectedCustomer!.id,
                         'warehouse_id': _selectedWarehouse!.id,
                         'status': 'PACKING',
-                        'discount_type': 'PERCENT',
+                        'discount_type': 'FIXED',
                         'discount_percent': 0.0,
                         'discount_amount': 0.0,
                         'shared_key': 'order_${DateTime.now().microsecondsSinceEpoch}',
