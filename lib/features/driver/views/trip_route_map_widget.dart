@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -24,7 +23,6 @@ class TripRouteMapWidget extends StatefulWidget {
 class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTickerProviderStateMixin {
   late MapController _mapController;
   LatLng? _driverLocation;
-  bool _isLoadingDriverLoc = false;
   StreamSubscription<Position>? _positionSubscription;
   bool _hasInitialFit = false;
 
@@ -52,10 +50,6 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
   }
 
   Future<void> _startLocationListening() async {
-    setState(() {
-      _isLoadingDriverLoc = true;
-    });
-
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -84,7 +78,6 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
         if (mounted) {
           setState(() {
             _driverLocation = LatLng(pos.latitude, pos.longitude);
-            _isLoadingDriverLoc = false;
           });
           _fitAllBounds();
         }
@@ -105,16 +98,8 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
             }
           }
         });
-      } else {
-        if (mounted) {
-          setState(() => _isLoadingDriverLoc = false);
-        }
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isLoadingDriverLoc = false);
-      }
-    }
+    } catch (_) {}
   }
 
   void _fitAllBounds() {
@@ -192,13 +177,13 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      overflow: Clip.antiAlias,
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -206,7 +191,7 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark ? Colors.blueGrey.shade900 : Colors.blue.shade50.withOpacity(0.5),
+              color: isDark ? Colors.blueGrey.shade900 : Colors.blue.shade50.withValues(alpha: 0.5),
               border: Border(
                 bottom: BorderSide(
                   color: isDark ? Colors.blueGrey.shade800 : Colors.blue.shade100,
@@ -219,7 +204,7 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.12),
+                    color: Colors.blue.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.navigation_rounded, color: Colors.blue, size: 20),
@@ -314,7 +299,7 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
                                 Polyline(
                                   points: [_driverLocation!, routePoints.first],
                                   strokeWidth: 3.5,
-                                  color: Colors.orange.withOpacity(0.8),
+                                  color: Colors.orange.withValues(alpha: 0.8),
                                   isDotted: true,
                                 ),
                               ],
@@ -404,7 +389,7 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
                                               border: Border.all(color: pinColor, width: 1.5),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(0.15),
+                                                  color: Colors.black.withValues(alpha: 0.15),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -581,10 +566,10 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: status == 'DELIVERED'
-                            ? Colors.green.withOpacity(0.12)
+                            ? Colors.green.withValues(alpha: 0.12)
                             : status == 'FAILED'
-                                ? AppColors.danger.withOpacity(0.12)
-                                : AppColors.warning.withOpacity(0.12),
+                                ? AppColors.danger.withValues(alpha: 0.12)
+                                : AppColors.warning.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -674,7 +659,7 @@ class _PulsingLocationMarkerState extends State<PulsingLocationMarker> with Sing
               width: 12 + (24 * _controller.value),
               height: 12 + (24 * _controller.value),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(1.0 - _controller.value),
+                color: Colors.blue.withValues(alpha: 1.0 - _controller.value),
                 shape: BoxShape.circle,
               ),
             ),
@@ -683,7 +668,7 @@ class _PulsingLocationMarkerState extends State<PulsingLocationMarker> with Sing
               width: 18,
               height: 18,
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.2),
+                color: Colors.blue.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
