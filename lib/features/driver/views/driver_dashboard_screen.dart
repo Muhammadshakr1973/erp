@@ -11,12 +11,20 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
+import 'trip_route_map_widget.dart';
 
-class DriverDashboardScreen extends ConsumerWidget {
+class DriverDashboardScreen extends ConsumerStatefulWidget {
   const DriverDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DriverDashboardScreen> createState() => _DriverDashboardScreenState();
+}
+
+class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
+  int _selectedTripIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tripsAsync = ref.watch(driverTripsProvider);
 
@@ -62,11 +70,13 @@ class DriverDashboardScreen extends ConsumerWidget {
             return a.tripDate.compareTo(b.tripDate);
           });
 
+          if (_selectedTripIndex >= trips.length) {
+            _selectedTripIndex = 0;
+          }
+
           int totalOrdersCount = 0;
           int deliveredOrdersCount = 0;
           int totalCollected = 0;
-
-          final undeliveredOrders = <DeliveryTripOrderModel>[];
 
           for (final trip in trips) {
             totalOrdersCount += trip.orders.length;
@@ -74,8 +84,6 @@ class DriverDashboardScreen extends ConsumerWidget {
               if (order.status == 'DELIVERED') {
                 deliveredOrdersCount++;
                 totalCollected += order.receivedAmount;
-              } else {
-                undeliveredOrders.add(order);
               }
             }
           }
@@ -140,107 +148,140 @@ class DriverDashboardScreen extends ConsumerWidget {
                       ),
                     )
                   else ...[
-                    Text('پسوڵە نەگەیشتووەکان', style: AppTextStyles.h3),
+                    // Trip Routing Section Title
+                    Text('ڕێڕەوی گەیاندنی گەشتەکان', style: AppTextStyles.h3),
                     const SizedBox(height: AppSpacing.md),
-                    if (undeliveredOrders.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Text(
-                            'هیچ پسوڵەیەکی نەگەیشتوو بەردەست نییە',
-                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: undeliveredOrders.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) {
-                          final tripOrder = undeliveredOrders[index];
-                          final order = tripOrder.order;
-                          final customerName = order?.customerName ?? 'کڕیاری نەناسراو';
-                          final routeName = order?.customerRouteName ?? 'بێ ڕاوت';
-                          final isFailed = tripOrder.status == 'FAILED';
 
-                          return AppCard(
-                            onTap: () {
-                              context.push('/trip/${tripOrder.deliveryTripId}');
-                            },
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: CircleAvatar(
-                                backgroundColor: isFailed
-                                    ? AppColors.danger.withValues(alpha: 0.12)
-                                    : theme.colorScheme.primary.withValues(alpha: 0.12),
-                                child: Icon(
-                                  isFailed ? Icons.error_outline_rounded : Icons.receipt_long_rounded,
-                                  color: isFailed ? AppColors.danger : theme.colorScheme.primary,
+                    // Horizontal Selector if there are multiple trips
+                    if (trips.length > 1) ...[
+                      SizedBox(
+                        height: 70,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: trips.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: AppSpacing.sm),
+                          itemBuilder: (context, index) {
+                            final trip = trips[index];
+                            final isSelected = index == _selectedTripIndex;
+                            final activeColor = theme.colorScheme.primary;
+
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedTripIndex = index;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                width: 160,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? activeColor.withOpacity(0.12)
+                                      : (theme.brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? activeColor : theme.colorScheme.outlineVariant,
+                                    width: isSelected ? 2.0 : 1.0,
+                                  ),
                                 ),
-                              ),
-                              title: Text(
-                                customerName,
-                                style: AppTextStyles.bodyBold,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${order?.orderNumber ?? ''} • $routeName',
-                                    style: AppTextStyles.caption,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (isFailed && tripOrder.failedReason != null) ...[
-                                    const SizedBox(height: 2),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
                                     Text(
-                                      'شکست: ${tripOrder.failedReason}',
-                                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${Formatters.currency(order?.totalAmount ?? 0)} د.ع',
-                                    style: AppTextStyles.bodyBold,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isFailed
-                                          ? AppColors.danger.withValues(alpha: 0.12)
-                                          : AppColors.warning.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      isFailed ? 'شکستخواردوو' : 'ماوە',
-                                      style: TextStyle(
-                                        color: isFailed ? AppColors.danger : AppColors.warning,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Rudaw',
+                                      'گەشتی ژمارە ${trip.tripNumber}',
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        color: isSelected ? activeColor : theme.colorScheme.onSurface,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${trip.orders.length} پسوڵە',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
+                      const SizedBox(height: AppSpacing.md),
+                    ] else ...[
+                      // Quick link card for single trip details
+                      InkWell(
+                        onTap: () {
+                          context.push('/trip/${trips.first.id}');
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: AppCard(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.local_shipping_rounded, color: theme.colorScheme.primary),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'بینینی پسوڵەکانی گەشتی ژمارە ${trips.first.tripNumber}',
+                                      style: AppTextStyles.bodyBold,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'کلیک بکە بۆ تۆمارکردنی باری پسوڵەکان یان ناردنیان',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey.shade400),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
+                    // The beautiful map widget showing the delivery route
+                    TripRouteMapWidget(trip: trips[_selectedTripIndex]),
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Navigation button to show list of all orders/invoices for the selected trip
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          context.push('/trip/${trips[_selectedTripIndex].id}');
+                        },
+                        icon: const Icon(Icons.list_alt_rounded),
+                        label: Text(
+                          'بینینی پسوڵەکانی گەشتی ژمارە ${trips[_selectedTripIndex].tripNumber}',
+                          style: const TextStyle(
+                            fontFamily: 'Rudaw',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -273,7 +314,7 @@ class DriverDashboardScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -311,73 +352,6 @@ class DriverDashboardScreen extends ConsumerWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget? _buildTripStatusTrailing(BuildContext context, DeliveryTripModel trip) {
-    final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    if (isCompleted) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'گەیەنراوە',
-            style: AppTextStyles.bodyBold.copyWith(
-              color: isDark ? AppColors.successDark : AppColors.success,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.check_circle_rounded,
-            color: isDark ? AppColors.successDark : AppColors.success,
-            size: 16,
-          ),
-        ],
-      );
-    }
-
-    final parsed = DateTime.tryParse(trip.tripDate);
-    if (parsed == null) return null;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tripDate = DateTime(parsed.year, parsed.month, parsed.day);
-
-    final tomorrow = today.add(const Duration(days: 1));
-    final dayAfterTomorrow = today.add(const Duration(days: 2));
-
-    String label = '';
-    Color color;
-
-    if (tripDate == today) {
-      label = 'ئەمڕۆ';
-      color = isDark ? AppColors.primaryDark : AppColors.primary;
-    } else if (tripDate == tomorrow) {
-      label = 'سبەی';
-      color = isDark ? AppColors.warningDark : AppColors.warning;
-    } else if (tripDate == dayAfterTomorrow) {
-      label = 'دووسبەی';
-      color = isDark ? AppColors.purpleDark : AppColors.purple;
-    } else {
-      return null;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyBold.copyWith(
-          color: color,
-          fontSize: 12,
-        ),
       ),
     );
   }
