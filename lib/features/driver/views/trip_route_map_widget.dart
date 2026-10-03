@@ -13,8 +13,13 @@ import '../models/delivery_trip_model.dart';
 
 class TripRouteMapWidget extends StatefulWidget {
   final DeliveryTripModel trip;
+  final double height;
 
-  const TripRouteMapWidget({super.key, required this.trip});
+  const TripRouteMapWidget({
+    super.key,
+    required this.trip,
+    this.height = 400.0,
+  });
 
   @override
   State<TripRouteMapWidget> createState() => _TripRouteMapWidgetState();
@@ -243,7 +248,7 @@ class _TripRouteMapWidgetState extends State<TripRouteMapWidget> with SingleTick
 
           // Map Area
           SizedBox(
-            height: 400,
+            height: widget.height,
             child: !hasCustomersWithLoc
                 ? Center(
                     child: Padding(
