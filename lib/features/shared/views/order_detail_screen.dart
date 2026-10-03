@@ -463,6 +463,7 @@ class OrderDetailScreen extends ConsumerWidget {
                       customerAddress: customerAddress,
                       latitude: order.customerLatitude,
                       longitude: order.customerLongitude,
+                      isReadOnly: true,
                     );
                   },
                 ),

@@ -212,6 +212,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                     customerAddress: _getCustomerAddress(order?.customer),
                                     latitude: _getCustomerLatitude(order?.customer),
                                     longitude: _getCustomerLongitude(order?.customer),
+                                    isReadOnly: true,
                                   );
                                 },
                                 borderRadius: BorderRadius.circular(4),

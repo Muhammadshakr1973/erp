@@ -338,105 +338,106 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       });
                     },
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: AppColors.danger,
-                    ),
-                    tooltip: 'سڕینەوەی کڕیار',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text(
-                            'سڕینەوەی کڕیار',
-                            style: AppTextStyles.h3,
-                          ),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'دڵنیایت لە سڕینەوەی کڕیاری "${customer.name}"؟',
-                              ),
-                              if (customer.balance > 0) ...[
-                                const SizedBox(height: AppSpacing.sm),
-                                Container(
-                                  padding: const EdgeInsets.all(AppSpacing.sm),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.danger.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
+                  if (currentUser?.isAdmin ?? false)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: AppColors.danger,
+                      ),
+                      tooltip: 'سڕینەوەی کڕیار',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text(
+                              'سڕینەوەی کڕیار',
+                              style: AppTextStyles.h3,
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'دڵنیایت لە سڕینەوەی کڕیاری "${customer.name}"؟',
+                                ),
+                                if (customer.balance > 0) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Container(
+                                    padding: const EdgeInsets.all(AppSpacing.sm),
+                                    decoration: BoxDecoration(
                                       color: AppColors.danger.withValues(
-                                        alpha: 0.3,
+                                        alpha: 0.1,
                                       ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: AppColors.danger,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'ئاگاداربە: ئەم کڕیارە بڕی ${Formatters.currency(customer.balance)} قەرزی لەسەرە!',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: AppColors.danger,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppColors.danger.withValues(
+                                          alpha: 0.3,
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: AppColors.danger,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'ئاگاداربە: ئەم کڕیارە بڕی ${Formatters.currency(customer.balance)} قەرزی لەسەرە!',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.danger,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('پاشگەزبوونەوە'),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
+                                ),
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  try {
+                                    await ref
+                                        .read(customerActionsProvider)
+                                        .deleteCustomer(customer.id);
+                                    if (context.mounted) {
+                                      AppSnackbar.show(
+                                        context,
+                                        message: 'کڕیار بە سەرکەوتوویی سڕایەوە',
+                                        type: SnackbarType.success,
+                                      );
+                                      Navigator.pop(context);
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      AppSnackbar.show(
+                                        context,
+                                        message: 'هەڵە لە سڕینەوە: $e',
+                                        type: SnackbarType.error,
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text('سڕینەوە'),
+                              ),
                             ],
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('پاشگەزبوونەوە'),
-                            ),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.danger,
-                              ),
-                              onPressed: () async {
-                                Navigator.pop(ctx);
-                                try {
-                                  await ref
-                                      .read(customerActionsProvider)
-                                      .deleteCustomer(customer.id);
-                                  if (context.mounted) {
-                                    AppSnackbar.show(
-                                      context,
-                                      message: 'کڕیار بە سەرکەوتوویی سڕایەوە',
-                                      type: SnackbarType.success,
-                                    );
-                                    Navigator.pop(context);
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    AppSnackbar.show(
-                                      context,
-                                      message: 'هەڵە لە سڕینەوە: $e',
-                                      type: SnackbarType.error,
-                                    );
-                                  }
-                                }
-                              },
-                              child: const Text('سڕینەوە'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
               orElse: () => const SizedBox.shrink(),

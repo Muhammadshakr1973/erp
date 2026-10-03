@@ -9,7 +9,6 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../core/components/status_badge.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
@@ -153,79 +152,96 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: undeliveredTrips.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final trip = undeliveredTrips[index];
-                        return AppCard(
-                          onTap: () {
-                            context.push('/trip/${trip.id}');
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+                        final trailingWidget = _buildTripStatusTrailing(context, trip);
+
+                        return Stack(
+                          children: [
+                            AppCard(
+                              onTap: () {
+                                context.push('/trip/${trip.id}');
+                              },
+                              child: Row(
                                 children: [
-                                  Text(
-                                    'گەشتی ژمارە ${trip.tripNumber}',
-                                    style: AppTextStyles.bodyBold.copyWith(
-                                      color: theme.colorScheme.primary,
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primaryContainer,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        AppIcons.orderDelivered,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
                                   ),
-                                  _buildStatusBadge(trip.status),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'گەشتی ژمارە ${trip.tripNumber}',
+                                          style: AppTextStyles.bodyBold,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
+                                          style: AppTextStyles.caption,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (trip.notes != null && trip.notes!.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            trip.notes!,
+                                            style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  if (trailingWidget != null) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    trailingWidget,
+                                  ],
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today_rounded,
-                                    size: 16,
-                                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                                  ),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  Text(
-                                    Formatters.kurdishDayAndDate(trip.tripDate),
-                                    style: AppTextStyles.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.list_alt_rounded,
-                                        size: 16,
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                                      ),
-                                      const SizedBox(width: AppSpacing.xs),
-                                      Text(
-                                        '${trip.orders.length} پسوڵە',
-                                        style: AppTextStyles.bodyMedium,
+                            ),
+                            if (isCompleted)
+                              Positioned(
+                                top: 6,
+                                left: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surface,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 2,
+                                        offset: const Offset(0, 1),
                                       ),
                                     ],
                                   ),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.monetization_on_rounded,
-                                        size: 16,
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                                      ),
-                                      const SizedBox(width: AppSpacing.xs),
-                                      Text(
-                                        Formatters.currency(trip.totalAmountCollected),
-                                        style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
+                                  child: const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.success,
+                                    size: 14,
                                   ),
-                                ],
+                                ),
                               ),
-                            ],
-                          ),
+                          ],
                         );
                       },
                     ),
@@ -303,21 +319,70 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
-    final s = status.toUpperCase();
-    switch (s) {
-      case 'DRAFT':
-        return const StatusBadge(label: 'ڕەشنووس', type: StatusBadgeType.neutral);
-      case 'PLANNED':
-        return const StatusBadge(label: 'ڕێکراو (ئامادە)', type: StatusBadgeType.info);
-      case 'IN_PROGRESS':
-        return const StatusBadge(label: 'لە ڕێگادایە', type: StatusBadgeType.warning);
-      case 'COMPLETED':
-        return const StatusBadge(label: 'تەواوبوو', type: StatusBadgeType.success);
-      case 'CANCELLED':
-        return const StatusBadge(label: 'هەڵوەشایەوە', type: StatusBadgeType.danger);
-      default:
-        return StatusBadge(label: status, type: StatusBadgeType.neutral);
+  Widget? _buildTripStatusTrailing(BuildContext context, DeliveryTripModel trip) {
+    final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isCompleted) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'گەیەنراوە',
+            style: AppTextStyles.bodyBold.copyWith(
+              color: isDark ? AppColors.successDark : AppColors.success,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.check_circle_rounded,
+            color: isDark ? AppColors.successDark : AppColors.success,
+            size: 16,
+          ),
+        ],
+      );
     }
+
+    final parsed = DateTime.tryParse(trip.tripDate);
+    if (parsed == null) return null;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tripDate = DateTime(parsed.year, parsed.month, parsed.day);
+
+    final tomorrow = today.add(const Duration(days: 1));
+    final dayAfterTomorrow = today.add(const Duration(days: 2));
+
+    String label = '';
+    Color color;
+
+    if (tripDate == today) {
+      label = 'ئەمڕۆ';
+      color = isDark ? AppColors.primaryDark : AppColors.primary;
+    } else if (tripDate == tomorrow) {
+      label = 'سبەی';
+      color = isDark ? AppColors.warningDark : AppColors.warning;
+    } else if (tripDate == dayAfterTomorrow) {
+      label = 'دووسبەی';
+      color = isDark ? AppColors.purpleDark : AppColors.purple;
+    } else {
+      return null;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.bodyBold.copyWith(
+          color: color,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 }

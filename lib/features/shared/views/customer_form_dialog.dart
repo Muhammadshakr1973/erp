@@ -431,6 +431,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   }
 
   Widget _buildProfileFormFields(BuildContext context) {
+    final currentUser = ref.watch(authProvider).user;
+    final isSalesman = currentUser?.isSalesman ?? false;
+    final isEditing = widget.customer != null;
+    final hideFields = isSalesman && isEditing;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -588,100 +593,102 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          AppTextField(
-            controller: _imageUrlController,
-            labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
-            hintText: 'https://example.com/image.jpg',
-            prefixIcon: Icons.image_outlined,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          DropdownButtonFormField<String>(
-            initialValue: _priceType,
-            decoration: const InputDecoration(
-              labelText: 'جۆری نرخ',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              prefixIcon: Icon(Icons.sell_outlined),
+          if (!hideFields) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              controller: _imageUrlController,
+              labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
+              hintText: 'https://example.com/image.jpg',
+              prefixIcon: Icons.image_outlined,
             ),
-            items: const [
-              DropdownMenuItem(
-                value: 'N1',
-                child: Text('نرخی یەکەم (N1 - تاک)'),
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<String>(
+              initialValue: _priceType,
+              decoration: const InputDecoration(
+                labelText: 'جۆری نرخ',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                prefixIcon: Icon(Icons.sell_outlined),
               ),
-              DropdownMenuItem(
-                value: 'N2',
-                child: Text('نرخی دووەم (N2 - کۆ)'),
-              ),
-              DropdownMenuItem(
-                value: 'N3',
-                child: Text('نرخی سێیەم (N3 - تایبەت)'),
-              ),
-            ],
-            onChanged: (val) {
-              if (val != null) {
-                setState(() => _priceType = val);
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ref
-              .watch(routeListProvider)
-              .when(
-                data: (routes) {
-                  final currentUser = ref.watch(authProvider).user;
-                  final filteredRoutes = currentUser != null && !currentUser.isAdmin
-                      ? routes.where((r) => r.salesmen.any((s) => s.salesmanId == currentUser.id)).toList()
-                      : routes;
+              items: const [
+                DropdownMenuItem(
+                  value: 'N1',
+                  child: Text('نرخی یەکەم (N1 - تاک)'),
+                ),
+                DropdownMenuItem(
+                  value: 'N2',
+                  child: Text('نرخی دووەم (N2 - کۆ)'),
+                ),
+                DropdownMenuItem(
+                  value: 'N3',
+                  child: Text('نرخی سێیەم (N3 - تایبەت)'),
+                ),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _priceType = val);
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ref
+                .watch(routeListProvider)
+                .when(
+                  data: (routes) {
+                    final currentUser = ref.watch(authProvider).user;
+                    final filteredRoutes = currentUser != null && !currentUser.isAdmin
+                        ? routes.where((r) => r.salesmen.any((s) => s.salesmanId == currentUser.id)).toList()
+                        : routes;
 
-                  return DropdownButtonFormField<int?>(
-                    initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
-                        ? _routeId
-                        : null,
-                    decoration: const InputDecoration(
-                      labelText: 'گەڕەک / ڕاوت',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      prefixIcon: Icon(Icons.alt_route),
-                    ),
-                    items: [
-                      const DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text('گەڕەک دیاری نەکراوە'),
-                      ),
-                      ...filteredRoutes.map(
-                        (route) => DropdownMenuItem<int?>(
-                          value: route.id,
-                          child: Text(route.name),
+                    return DropdownButtonFormField<int?>(
+                      initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
+                          ? _routeId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'گەڕەک / ڕاوت',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
                         ),
+                        prefixIcon: Icon(Icons.alt_route),
                       ),
-                    ],
-                    onChanged: (val) {
-                      setState(() => _routeId = val);
-                    },
-                  );
-                },
-                loading: () => const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('گەڕەک دیاری نەکراوە'),
+                        ),
+                        ...filteredRoutes.map(
+                          (route) => DropdownMenuItem<int?>(
+                            value: route.id,
+                            child: Text(route.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() => _routeId = val);
+                      },
+                    );
+                  },
+                  loading: () => const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  error: (err, _) => Text(
+                    'کێشە لە بارکردنی ڕاوتەکان: $err',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontFamily: 'Rudaw',
+                    ),
                   ),
                 ),
-                error: (err, _) => Text(
-                  'کێشە لە بارکردنی ڕاوتەکان: $err',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Rudaw',
-                  ),
-                ),
-              ),
+          ],
           if (widget.customer == null) ...[
             const SizedBox(height: AppSpacing.md),
             AppTextField(

@@ -236,6 +236,7 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                               customerAddress: customerAddress,
                               latitude: order.customerLatitude,
                               longitude: order.customerLongitude,
+                              isReadOnly: true,
                             );
                           },
                           borderRadius: BorderRadius.circular(4),
