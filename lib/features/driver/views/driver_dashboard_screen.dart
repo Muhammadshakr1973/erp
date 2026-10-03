@@ -147,7 +147,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                               child: ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 leading: CircleAvatar(
-                                  backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+                                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
                                   child: Icon(
                                     AppIcons.orderDelivered,
                                     color: theme.colorScheme.primary,
@@ -178,7 +178,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withValues(alpha: 0.1),
                                         blurRadius: 2,
                                         offset: const Offset(0, 1),
                                       ),
@@ -213,6 +213,7 @@ class DriverDashboardScreen extends ConsumerWidget {
     required Color color,
     VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
       onTap: onTap,

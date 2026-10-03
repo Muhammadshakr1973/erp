@@ -7,6 +7,7 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
@@ -130,7 +131,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isDark
-                                        ? const Color(0xFF3B82F6).withOpacity(0.5)
+                                        ? const Color(0xFF3B82F6).withValues(alpha: 0.5)
                                         : const Color(0xFF93C5FD),
                                   ),
                                 ),
@@ -711,7 +712,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
     } catch (_) {}
 
     final bool hasImage = rawImagePath != null && rawImagePath.trim().isNotEmpty;
-    final String? resolvedUrl = hasImage ? _resolveImageUrl(rawImagePath!.trim()) : null;
+    final String? resolvedUrl = hasImage ? _resolveImageUrl(rawImagePath.trim()) : null;
 
     showDialog(
       context: context,
@@ -719,7 +720,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
       builder: (dialogContext) {
         final theme = Theme.of(dialogContext);
         return Dialog.fullscreen(
-          backgroundColor: Colors.black.withOpacity(0.95),
+          backgroundColor: Colors.black.withValues(alpha: 0.95),
           child: SafeArea(
             child: Directionality(
               textDirection: TextDirection.rtl,
