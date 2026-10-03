@@ -9,6 +9,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
 class DriverDashboardScreen extends ConsumerWidget {
@@ -51,7 +52,16 @@ class DriverDashboardScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (trips) {
+        data: (tripsList) {
+          final trips = List<DeliveryTripModel>.from(tripsList)..sort((a, b) {
+            final dateA = DateTime.tryParse(a.tripDate);
+            final dateB = DateTime.tryParse(b.tripDate);
+            if (dateA != null && dateB != null) {
+              return dateA.compareTo(dateB);
+            }
+            return a.tripDate.compareTo(b.tripDate);
+          });
+
           int totalOrdersCount = 0;
           int deliveredOrdersCount = 0;
           int totalCollected = 0;
@@ -165,6 +175,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                trailing: _buildTripStatusTrailing(context, trip),
                               ),
                             ),
                             if (isCompleted)
@@ -265,6 +276,73 @@ class DriverDashboardScreen extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget? _buildTripStatusTrailing(BuildContext context, DeliveryTripModel trip) {
+    final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isCompleted) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'گەیەنراوە',
+            style: AppTextStyles.bodyBold.copyWith(
+              color: isDark ? AppColors.successDark : AppColors.success,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.check_circle_rounded,
+            color: isDark ? AppColors.successDark : AppColors.success,
+            size: 16,
+          ),
+        ],
+      );
+    }
+
+    final parsed = DateTime.tryParse(trip.tripDate);
+    if (parsed == null) return null;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tripDate = DateTime(parsed.year, parsed.month, parsed.day);
+
+    final tomorrow = today.add(const Duration(days: 1));
+    final dayAfterTomorrow = today.add(const Duration(days: 2));
+
+    String label = '';
+    Color color;
+
+    if (tripDate == today) {
+      label = 'ئەمڕۆ';
+      color = isDark ? AppColors.primaryDark : AppColors.primary;
+    } else if (tripDate == tomorrow) {
+      label = 'سبەی';
+      color = isDark ? AppColors.warningDark : AppColors.warning;
+    } else if (tripDate == dayAfterTomorrow) {
+      label = 'دووسبەی';
+      color = isDark ? AppColors.purpleDark : AppColors.purple;
+    } else {
+      return null;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.bodyBold.copyWith(
+          color: color,
+          fontSize: 12,
+        ),
       ),
     );
   }
