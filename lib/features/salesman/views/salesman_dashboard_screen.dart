@@ -634,6 +634,13 @@ class SalesmanDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildSalesmanDashboardStats(BuildContext context, SalesmanDashboardData dashboard) {
+    final theme = Theme.of(context);
+    final ext = theme.extension<AppThemeExtension>();
+    final successColor = ext?.success ?? AppColors.success;
+    final warningColor = ext?.warning ?? AppColors.warning;
+    final purpleColor = ext?.purple ?? AppColors.purple;
+    final infoColor = ext?.info ?? AppColors.info;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -653,7 +660,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               title: 'فرۆشی هەفتە',
               value: Formatters.currency(dashboard.last7DaysSales),
               icon: AppIcons.order,
-              iconColor: AppColors.info,
+              iconColor: infoColor,
             ),
             // 2. یەکەکانی هەفتە
             _buildStatCard(
@@ -661,7 +668,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               title: 'یەکەکانی هەفتە',
               value: '${dashboard.last7DaysUnits} یەکە',
               icon: Icons.analytics_rounded,
-              iconColor: AppColors.purple,
+              iconColor: purpleColor,
             ),
             // 3. یەکەکانی مانگ
             _buildStatCard(
@@ -669,7 +676,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               title: 'یەکەکانی مانگ',
               value: 'ئەم مانگە: ${dashboard.monthUnits} | ڕابردوو: ${dashboard.lastMonthUnits}',
               icon: Icons.stars_rounded,
-              iconColor: AppColors.warning,
+              iconColor: warningColor,
             ),
             // 4. کڕیارە نوێکان
             _buildStatCard(
@@ -677,7 +684,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               title: 'کڕیارە نوێکان',
               value: 'هەفتە: ${dashboard.newCustomersWeek} | مانگ: ${dashboard.newCustomersMonth}',
               icon: AppIcons.customer,
-              iconColor: AppColors.success,
+              iconColor: successColor,
             ),
           ],
         ),

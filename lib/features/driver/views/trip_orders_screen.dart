@@ -272,10 +272,10 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                           Expanded(
                                             child: Row(
                                               children: [
-                                                const Icon(
+                                                Icon(
                                                   Icons.image_search_outlined,
                                                   size: 16,
-                                                  color: AppColors.primary,
+                                                  color: theme.colorScheme.primary,
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Expanded(
@@ -443,6 +443,11 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
 
   Widget _buildTripSummary(int total, int delivered, int pending, int failed) {
     final theme = Theme.of(context);
+    final ext = theme.extension<AppThemeExtension>();
+    final successColor = ext?.success ?? AppColors.success;
+    final warningColor = ext?.warning ?? AppColors.warning;
+    final dangerColor = ext?.danger ?? AppColors.danger;
+
     return Container(
       color: theme.brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white,
       padding: const EdgeInsets.symmetric(
@@ -453,15 +458,16 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildSummaryItem('هەموو', '$total'),
-          _buildSummaryItem('گەیشتوو', '$delivered', AppColors.success),
-          _buildSummaryItem('ماوە', '$pending', AppColors.warning),
-          _buildSummaryItem('شکست', '$failed', AppColors.danger),
+          _buildSummaryItem('گەیشتوو', '$delivered', successColor),
+          _buildSummaryItem('ماوە', '$pending', warningColor),
+          _buildSummaryItem('شکست', '$failed', dangerColor),
         ],
       ),
     );
   }
 
   Widget _buildSummaryItem(String label, String value, [Color? color]) {
+    final theme = Theme.of(context);
     return Expanded(
       child: Column(
         children: [
@@ -477,7 +483,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
             child: Text(
               value,
               style: AppTextStyles.h2.copyWith(
-                color: color ?? AppColors.textPrimaryLight,
+                color: color ?? theme.colorScheme.onSurface,
               ),
             ),
           ),

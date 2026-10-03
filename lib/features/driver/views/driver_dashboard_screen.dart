@@ -52,7 +52,6 @@ class DriverDashboardScreen extends ConsumerWidget {
           ),
         ),
         data: (trips) {
-          int totalTrips = trips.length;
           int totalOrdersCount = 0;
           int deliveredOrdersCount = 0;
           int totalCollected = 0;
@@ -79,14 +78,14 @@ class DriverDashboardScreen extends ConsumerWidget {
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      int crossAxisCount = 3;
-                      double aspectRatio = 0.95;
+                      int crossAxisCount = 2;
+                      double aspectRatio = 1.35;
                       if (constraints.maxWidth >= 1024) {
-                        crossAxisCount = 3;
-                        aspectRatio = 1.5;
+                        crossAxisCount = 2;
+                        aspectRatio = 2.2;
                       } else if (constraints.maxWidth >= 600) {
-                        crossAxisCount = 3;
-                        aspectRatio = 1.3;
+                        crossAxisCount = 2;
+                        aspectRatio = 1.8;
                       }
 
                       return GridView.count(
@@ -99,13 +98,6 @@ class DriverDashboardScreen extends ConsumerWidget {
                         children: [
                           _buildStatCard(
                             context: context,
-                            title: 'گەشتەکانی ئەمڕۆ',
-                            value: '$totalTrips',
-                            icon: AppIcons.orderStatus,
-                            color: AppColors.info,
-                          ),
-                          _buildStatCard(
-                            context: context,
                             title: 'پسوڵەی گەیەنراو',
                             value: '$deliveredOrdersCount / $totalOrdersCount',
                             icon: AppIcons.orderDelivered,
@@ -116,7 +108,7 @@ class DriverDashboardScreen extends ConsumerWidget {
                             title: 'پارەی وەرگیراو',
                             value: Formatters.currency(totalCollected),
                             icon: AppIcons.customerDebt,
-                            color: AppColors.primary,
+                            color: AppColors.primaryAdaptive(context),
                           ),
                         ],
                       );
@@ -155,9 +147,11 @@ class DriverDashboardScreen extends ConsumerWidget {
                               child: ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 leading: CircleAvatar(
-                                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                                  child: const Icon(AppIcons.orderDelivered,
-                                      color: AppColors.primary),
+                                  backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+                                  child: Icon(
+                                    AppIcons.orderDelivered,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                 ),
                                 title: Text(
                                   'گەشتی ژمارە ${trip.tripNumber}',
@@ -253,7 +247,7 @@ class DriverDashboardScreen extends ConsumerWidget {
               Text(
                 title,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondaryLight,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

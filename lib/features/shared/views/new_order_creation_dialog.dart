@@ -94,7 +94,7 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
                 ),
                 child: Row(
                   children: [
-                    const Icon(AppIcons.customer, color: AppColors.primary),
+                    Icon(AppIcons.customer, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
