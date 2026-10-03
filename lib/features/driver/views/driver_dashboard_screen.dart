@@ -66,12 +66,16 @@ class DriverDashboardScreen extends ConsumerWidget {
           int deliveredOrdersCount = 0;
           int totalCollected = 0;
 
+          final undeliveredOrders = <DeliveryTripOrderModel>[];
+
           for (final trip in trips) {
             totalOrdersCount += trip.orders.length;
             for (final order in trip.orders) {
               if (order.status == 'DELIVERED') {
                 deliveredOrdersCount++;
                 totalCollected += order.receivedAmount;
+              } else {
+                undeliveredOrders.add(order);
               }
             }
           }
@@ -136,76 +140,107 @@ class DriverDashboardScreen extends ConsumerWidget {
                       ),
                     )
                   else ...[
-                    Text('گەشتەکان', style: AppTextStyles.h3),
+                    Text('پسوڵە نەگەیشتووەکان', style: AppTextStyles.h3),
                     const SizedBox(height: AppSpacing.md),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: trips.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (context, index) {
-                        final trip = trips[index];
-                        final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
+                    if (undeliveredOrders.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          child: Text(
+                            'هیچ پسوڵەیەکی نەگەیشتوو بەردەست نییە',
+                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: undeliveredOrders.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final tripOrder = undeliveredOrders[index];
+                          final order = tripOrder.order;
+                          final customerName = order?.customerName ?? 'کڕیاری نەناسراو';
+                          final routeName = order?.customerRouteName ?? 'بێ ڕاوت';
+                          final isFailed = tripOrder.status == 'FAILED';
 
-                        return Stack(
-                          children: [
-                            AppCard(
-                              onTap: () {
-                                context.push('/trip/${trip.id}');
-                              },
-                              child: ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                  child: Icon(
-                                    AppIcons.orderDelivered,
-                                    color: theme.colorScheme.primary,
+                          return AppCard(
+                            onTap: () {
+                              context.push('/trip/${tripOrder.deliveryTripId}');
+                            },
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: CircleAvatar(
+                                backgroundColor: isFailed
+                                    ? AppColors.danger.withValues(alpha: 0.12)
+                                    : theme.colorScheme.primary.withValues(alpha: 0.12),
+                                child: Icon(
+                                  isFailed ? Icons.error_outline_rounded : Icons.receipt_long_rounded,
+                                  color: isFailed ? AppColors.danger : theme.colorScheme.primary,
+                                ),
+                              ),
+                              title: Text(
+                                customerName,
+                                style: AppTextStyles.bodyBold,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${order?.orderNumber ?? ''} • $routeName',
+                                    style: AppTextStyles.caption,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                title: Text(
-                                  'گەشتی ژمارە ${trip.tripNumber}',
-                                  style: AppTextStyles.bodyBold,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  '${trip.orders.length} پسوڵە • ${Formatters.kurdishDayAndDate(trip.tripDate)}',
-                                  style: AppTextStyles.caption,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: _buildTripStatusTrailing(context, trip),
+                                  if (isFailed && tripOrder.failedReason != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'شکست: ${tripOrder.failedReason}',
+                                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${Formatters.currency(order?.totalAmount ?? 0)} د.ع',
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isFailed
+                                          ? AppColors.danger.withValues(alpha: 0.12)
+                                          : AppColors.warning.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      isFailed ? 'شکستخواردوو' : 'ماوە',
+                                      style: TextStyle(
+                                        color: isFailed ? AppColors.danger : AppColors.warning,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (isCompleted)
-                              Positioned(
-                                top: 6,
-                                left: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.surface,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.1),
-                                        blurRadius: 2,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.check_circle_rounded,
-                                    color: AppColors.success,
-                                    size: 14,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
                   ],
                 ],
               ),
