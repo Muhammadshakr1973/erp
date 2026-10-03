@@ -533,24 +533,22 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                     labelText: 'بڕی پارەی وەرگیراو (د.ع)',
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  TextField(
+                  AppTextField(
                     controller: notesController,
-                    decoration: const InputDecoration(
-                      labelText: 'تێبینییەکان (ئارەزوومەندانە)',
-                    ),
+                    labelText: 'تێبینییەکان (ئارەزوومەندانە)',
                   ),
                 ],
               ),
             ),
             actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+              AppButton(
+                text: 'تۆمارکردن',
+                type: AppButtonType.success,
                 onPressed: () async {
                   final amount = int.tryParse(amountController.text) ?? 0;
                   Navigator.of(context).pop();
                   _submitDeliver(tripOrder.id, amount, notesController.text);
                 },
-                child: const Text('تۆمارکردن'),
               ),
             ],
           ),
@@ -649,23 +647,21 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      TextField(
+                      AppTextField(
                         controller: notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'تێبینییەکان (ئارەزوومەندانە)',
-                        ),
+                        labelText: 'تێبینییەکان (ئارەزوومەندانە)',
                       ),
                     ],
                   ),
                 ),
                 actions: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                  AppButton(
+                    text: 'پەسەندکردن',
+                    type: AppButtonType.danger,
                     onPressed: () {
                       Navigator.of(context).pop();
                       _submitFail(tripOrder.id, selectedReason, notesController.text);
                     },
-                    child: const Text('پەسەندکردن'),
                   ),
                 ],
               ),

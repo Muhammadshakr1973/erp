@@ -5,7 +5,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_sizes.dart';
 import '../theme/app_text_styles.dart';
 
-enum AppButtonType { primary, secondary, outline, text, danger, textDanger }
+enum AppButtonType { primary, secondary, outline, text, danger, textDanger, success }
 
 enum AppButtonSize { sm, md, lg }
 
@@ -82,6 +82,10 @@ class AppButton extends StatelessWidget {
       case AppButtonType.textDanger:
         backgroundColor = Colors.transparent;
         textColor = isDark ? AppColors.dangerDark : theme.colorScheme.error;
+        break;
+      case AppButtonType.success:
+        backgroundColor = isDark ? AppColors.successDark : AppColors.success;
+        textColor = isDark ? const Color(0xFF0F172A) : Colors.white;
         break;
     }
 
