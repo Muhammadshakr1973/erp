@@ -15,8 +15,6 @@ import '../../shared/views/map_picker_dialog.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
-import 'trip_route_map_widget.dart';
-
 class TripOrdersScreen extends ConsumerStatefulWidget {
   final String tripId;
 
@@ -28,7 +26,6 @@ class TripOrdersScreen extends ConsumerStatefulWidget {
 
 class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   bool _isSubmitting = false;
-  bool _showMap = true;
 
   @override
   Widget build(BuildContext context) {
@@ -93,73 +90,6 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
             return Column(
               children: [
                 _buildTripSummary(total, delivered, pending, failed),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenHorizontal,
-                    vertical: AppSpacing.xs,
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _showMap = !_showMap;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: theme.colorScheme.primary.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _showMap ? Icons.map_rounded : Icons.map_outlined,
-                            size: 18,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _showMap ? 'شاردنەوەی نەخشەی ڕێڕەو' : 'پیشاندانی نەخشەی ڕێڕەوی گشتی (١ نەخشە بۆ هەموو پسوڵەکان)',
-                              style: TextStyle(
-                                fontFamily: 'Rudaw',
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Icon(
-                            _showMap ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                            size: 18,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (_showMap) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenHorizontal,
-                      vertical: AppSpacing.xs,
-                    ),
-                    child: TripRouteMapWidget(
-                      trip: trip,
-                      height: 250,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
                 Expanded(
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
