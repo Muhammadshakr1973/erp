@@ -155,7 +155,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                     // Horizontal Selector if there are multiple trips
                     if (trips.length > 1) ...[
                       SizedBox(
-                        height: 70,
+                        height: 88,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: trips.length,
