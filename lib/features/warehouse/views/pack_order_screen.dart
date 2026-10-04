@@ -661,7 +661,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     WarehouseOrderModel order,
     bool isAllPacked,
   ) {
-    if (!isAllPacked) {
+    if (!isAllPacked || _isSaving || _unsavedChanges.isNotEmpty || _secondsRemaining > 0) {
       return const SizedBox.shrink();
     }
     return Container(
