@@ -32,8 +32,18 @@ class ApiClient {
           // Retrieve token from storage
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString('auth_token');
+          final isAuthRoute = options.path.contains('/auth/login') || options.path == '/auth/login';
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
+          } else if (!isAuthRoute) {
+            // Cancel request immediately if there's no auth token and it's not an auth route
+            return handler.reject(
+              DioException(
+                requestOptions: options,
+                error: 'Unauthorized: No auth token found.',
+                type: DioExceptionType.cancel,
+              ),
+            );
           }
           return handler.next(options);
         },

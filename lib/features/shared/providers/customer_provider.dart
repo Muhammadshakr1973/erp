@@ -55,7 +55,16 @@ final filteredCustomerListProvider =
       ref,
       filters,
     ) async {
-      ref.watch(authProvider.select((state) => state.user?.id));
+      final userId = ref.watch(authProvider.select((state) => state.user?.id));
+      if (userId == null) {
+        return const PaginatedResponse<Customer>(
+          data: [],
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+          perPage: 15,
+        );
+      }
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
@@ -116,7 +125,10 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   ref,
   id,
 ) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) {
+    throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+  }
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -148,7 +160,10 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
 
 final customerReconciliationProvider =
     FutureProvider.family<CustomerReconciliationModel, int>((ref, id) async {
-      ref.watch(authProvider.select((state) => state.user?.id));
+      final userId = ref.watch(authProvider.select((state) => state.user?.id));
+      if (userId == null) {
+        throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+      }
       final api = ref.watch(apiClientProvider);
       try {
         final response = await api.client.get('/customers/$id/reconcile');
@@ -174,7 +189,8 @@ final customerLedgerProvider =
       ref,
       filters,
     ) async {
-      ref.watch(authProvider.select((state) => state.user?.id));
+      final userId = ref.watch(authProvider.select((state) => state.user?.id));
+      if (userId == null) return const [];
       final api = ref.watch(apiClientProvider);
       final customerId = filters['customer_id'];
       try {

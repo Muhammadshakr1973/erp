@@ -27,7 +27,8 @@ List<Map<String, dynamic>> _parseListResponse(dynamic rawData) {
 }
 
 final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/routes');

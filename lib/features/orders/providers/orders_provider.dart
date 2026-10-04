@@ -10,7 +10,8 @@ import '../../auth/providers/auth_provider.dart';
 import '../models/order_model.dart';
 
 final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -61,7 +62,8 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
   orderId,
 ) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return null;
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -220,7 +222,8 @@ class OrderActions {
 }
 
 final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/sales-returns');
@@ -245,7 +248,8 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
   ref,
   id,
 ) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return null;
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/sales-returns/$id');
@@ -311,7 +315,8 @@ final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
 /// پسوڵە ئامادەکراوەکان بۆ دابەشکردن و دروستکردنی گەشتی شۆفێر
 /// تەنها ئەو پسوڵانە دەگرێتەوە کە لە دۆخی READY دان
 final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final pusher = ref.watch(pusherServiceProvider);
 
   void onOrdersEvent(Map<String, dynamic> eventData) {

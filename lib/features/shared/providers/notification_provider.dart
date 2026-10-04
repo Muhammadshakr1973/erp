@@ -39,8 +39,13 @@ class NotificationsNotifier
     : _pusherService = _ref.read(pusherServiceProvider),
       _userRole = _ref.read(authProvider).user?.role,
       super(const AsyncValue.loading()) {
-    loadNotifications();
-    _subscribeToLiveNotifications();
+    final user = _ref.read(authProvider).user;
+    if (user != null) {
+      loadNotifications();
+      _subscribeToLiveNotifications();
+    } else {
+      state = const AsyncValue.data([]);
+    }
   }
 
   void _subscribeToLiveNotifications() {
@@ -115,6 +120,8 @@ class NotificationsNotifier
         queryParameters: queryParams,
       );
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData is! Map || resData['data'] is! List) {
@@ -150,6 +157,7 @@ class NotificationsNotifier
         );
       }
     } catch (e, stack) {
+      if (!mounted) return;
       state = AsyncValue.error(_api.parseError(e), stack);
     }
   }

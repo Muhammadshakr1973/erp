@@ -14,8 +14,13 @@ class ProductsListNotifier
 
   ProductsListNotifier(this._api, this._pusher, this._ref)
       : super(const AsyncValue.loading()) {
-    fetchProducts();
-    _subscribeToPusher();
+    final user = _ref.read(authProvider).user;
+    if (user != null) {
+      fetchProducts();
+      _subscribeToPusher();
+    } else {
+      state = const AsyncValue.data([]);
+    }
   }
 
   void _subscribeToPusher() {
@@ -152,6 +157,7 @@ class ProductsListNotifier
       int productId, List<ProductModel> currentList) async {
     try {
       final response = await _api.client.get('/products/$productId');
+      if (!mounted) return;
       if (response.statusCode == 200 &&
           response.data is Map &&
           response.data['data'] is Map) {
@@ -175,6 +181,7 @@ class ProductsListNotifier
     state = const AsyncValue.loading();
     try {
       final response = await _api.client.get('/products');
+      if (!mounted) return;
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData is! Map || resData['data'] is! List) {
@@ -192,6 +199,7 @@ class ProductsListNotifier
         'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
       );
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(_api.parseError(e), st);
     }
   }
