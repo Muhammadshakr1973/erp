@@ -759,7 +759,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (mounted) {
         setState(() {
           _timerPausedForRetry = true;
-          _secondsRemaining = 30; // Freeze at 30 for manual retry trigger
+          _secondsRemaining = 10; // Freeze at 10 for manual retry trigger
           _failureCount++;
         });
 
@@ -1239,7 +1239,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     if (mounted) {
       setState(() {
-        _secondsRemaining = 30;
+        _secondsRemaining = 10;
         _timerPausedForRetry = false;
       });
     }
@@ -1259,7 +1259,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       });
     });
 
-    _debounceTimer = Timer(const Duration(seconds: 30), () {
+    _debounceTimer = Timer(const Duration(seconds: 10), () {
       _countdownTimer?.cancel();
       if (mounted) {
         setState(() {

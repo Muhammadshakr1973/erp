@@ -32,7 +32,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
   final Set<int> _pendingItemIds = {};
   bool _isSubmittingReady = false;
 
-  // 30-Second Timer/Sync variables:
+  // 10-Second Timer/Sync variables:
   final Map<int, bool> _unsavedChanges = {};
   int _secondsRemaining = 0;
   bool _timerPausedForRetry = false;
@@ -53,7 +53,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
     if (mounted) {
       setState(() {
-        _secondsRemaining = 30;
+        _secondsRemaining = 10;
         _timerPausedForRetry = false;
       });
     }
@@ -73,7 +73,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       });
     });
 
-    _debounceTimer = Timer(const Duration(seconds: 30), () {
+    _debounceTimer = Timer(const Duration(seconds: 10), () {
       _countdownTimer?.cancel();
       if (mounted) {
         setState(() {
@@ -123,7 +123,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       if (mounted) {
         setState(() {
           _timerPausedForRetry = true;
-          _secondsRemaining = 30; // Freeze at 30 for manual retry trigger
+          _secondsRemaining = 10; // Freeze at 10 for manual retry trigger
           _isSaving = false;
         });
 
