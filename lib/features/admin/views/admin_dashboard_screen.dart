@@ -202,6 +202,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: AppIcons.customerDebt,
                           color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
+                          subText: 'کۆی قەرزی کڕیار: ${Formatters.currency(dashboard.totalCustomerDebts)}',
+                          onTap: () {
+                            context.push('/admin-reports/customer-debts');
+                          },
                         ),
                         _buildStatCard(
                           context: context,
@@ -210,7 +214,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
-                          subText: 'ڕادەستکراو بە ئۆفیس: ${Formatters.currency(dashboard.deliveredToOffice)}',
+                          subText: 'ڕادەستکراو: ${Formatters.currency(dashboard.deliveredToOffice)}',
                           onTap: () {
                             context.push('/admin-driver-collections');
                           },

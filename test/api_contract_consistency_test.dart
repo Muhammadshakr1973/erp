@@ -10,10 +10,34 @@ import 'package:pos_app/features/products/models/supplier_ledger_model.dart';
 import 'package:pos_app/features/shared/models/customer_ledger_model.dart';
 import 'package:pos_app/features/shared/models/commission_model.dart';
 import 'package:pos_app/features/admin/models/purchase_requirement_model.dart';
+import 'package:pos_app/features/admin/models/dashboard_model.dart';
 import 'package:pos_app/features/salesman/providers/salesman_dashboard_provider.dart';
 
 void main() {
   group('API Contract Consistency & Response Parsing Tests', () {
+    test('Dashboard Model JSON Contract Verification', () {
+      final json = {
+        'monthly_sales': 313500,
+        'monthly_profit': 153500,
+        'last_month_sales': 529500,
+        'last_month_profit': 270500,
+        'total_receivables': 20000,
+        'total_customer_debts': 20000,
+        'total_payables': 50000,
+        'monthly_collected': 678500,
+        'delivered_to_office': 800000,
+      };
+
+      final model = DashboardModel.fromJson(json);
+      expect(model.monthlySales, equals(313500.0));
+      expect(model.monthlyProfit, equals(153500.0));
+      expect(model.totalReceivables, equals(20000.0));
+      expect(model.totalCustomerDebts, equals(20000.0));
+      expect(model.totalPayables, equals(50000.0));
+      expect(model.monthlyCollected, equals(678500.0));
+      expect(model.deliveredToOffice, equals(800000.0));
+    });
+
     test('Audit Log Paginated JSON Contract Unwrapping', () {
       final paginatedApiResponse = {
         'message': 'لیستی تۆمارەکانی چاودێری',

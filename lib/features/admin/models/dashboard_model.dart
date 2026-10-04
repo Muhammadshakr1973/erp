@@ -2,6 +2,8 @@ class DashboardModel {
   final double monthlySales;
   final double monthlyProfit;
   final double totalReceivables;
+  final double totalCustomerDebts;
+  final double totalPayables;
   final double monthlyCollected;
   final double deliveredToOffice;
   final double lastMonthSales;
@@ -11,6 +13,8 @@ class DashboardModel {
     required this.monthlySales,
     required this.monthlyProfit,
     required this.totalReceivables,
+    required this.totalCustomerDebts,
+    required this.totalPayables,
     required this.monthlyCollected,
     required this.deliveredToOffice,
     required this.lastMonthSales,
@@ -25,6 +29,10 @@ class DashboardModel {
           double.tryParse(json['monthly_profit']?.toString() ?? '0') ?? 0.0,
       totalReceivables:
           double.tryParse(json['total_receivables']?.toString() ?? '0') ?? 0.0,
+      totalCustomerDebts:
+          double.tryParse(json['total_customer_debts']?.toString() ?? json['total_receivables']?.toString() ?? '0') ?? 0.0,
+      totalPayables:
+          double.tryParse(json['total_payables']?.toString() ?? '0') ?? 0.0,
       monthlyCollected:
           double.tryParse(json['monthly_collected']?.toString() ?? '0') ?? 0.0,
       deliveredToOffice:

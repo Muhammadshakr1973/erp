@@ -23,7 +23,7 @@ class ReportController extends Controller
      */
     public function dashboard(): JsonResponse
     {
-        $cacheKey = 'admin_dashboard_kpis_v2';
+        $cacheKey = 'admin_dashboard_kpis_v3';
 
         $data = Cache::remember($cacheKey, 60, function () {
             $startOfMonth = Carbon::now()->startOfMonth();
@@ -52,8 +52,11 @@ class ReportController extends Controller
                 ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
                 ->sum('total_profit');
 
-            // 5. Outstanding customer receivables
+            // 5. Outstanding customer receivables / customer debts
             $totalReceivables = (int) Customer::sum('current_balance');
+
+            // 5b. Outstanding supplier payables
+            $totalPayables = (int) \App\Models\Supplier::sum('current_balance');
 
             // 6. Monthly collections
             $monthlyCollected = (int) CustomerPayment::whereBetween('paid_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
@@ -64,13 +67,15 @@ class ReportController extends Controller
                 ->sum('amount');
 
             return [
-                'monthly_sales'      => $monthlySales,
-                'monthly_profit'     => $monthlyProfit,
-                'last_month_sales'   => $lastMonthSales,
-                'last_month_profit'  => $lastMonthProfit,
-                'total_receivables'  => $totalReceivables,
-                'monthly_collected'  => $monthlyCollected,
-                'delivered_to_office' => $deliveredToOffice,
+                'monthly_sales'        => $monthlySales,
+                'monthly_profit'       => $monthlyProfit,
+                'last_month_sales'     => $lastMonthSales,
+                'last_month_profit'    => $lastMonthProfit,
+                'total_receivables'    => $totalReceivables,
+                'total_customer_debts' => $totalReceivables,
+                'total_payables'       => $totalPayables,
+                'monthly_collected'    => $monthlyCollected,
+                'delivered_to_office'  => $deliveredToOffice,
             ];
         });
 
