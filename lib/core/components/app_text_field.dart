@@ -137,8 +137,8 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         _isDialogShowing = false;
         if (mounted) {
           _effectiveFocusNode.unfocus();
+          ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
         }
-        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
       });
     });
   }

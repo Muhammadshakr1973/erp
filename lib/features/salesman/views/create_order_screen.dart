@@ -237,26 +237,60 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _loadCustomerById(int customerId) async {
-    final customers = await ref.read(customerListProvider.future);
-    final match = customers.where((c) => c.id == customerId).firstOrNull;
-    if (match != null && mounted) {
-      setState(() {
-        _selectedCustomer = match;
-      });
-      _fetchSpecialPricesForCustomer(match.id);
+    try {
+      final customers = await ref.read(customerListProvider.future);
+      final match = customers.where((c) => c.id == customerId).firstOrNull;
+      if (match != null && mounted) {
+        setState(() {
+          _selectedCustomer = match;
+        });
+        _fetchSpecialPricesForCustomer(match.id);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: load directly using singleCustomerProvider
+    try {
+      final customer = await ref.read(singleCustomerProvider(customerId).future);
+      if (mounted) {
+        setState(() {
+          _selectedCustomer = customer;
+        });
+        _fetchSpecialPricesForCustomer(customer.id);
+      }
+    } catch (e) {
+      debugPrint("CreateOrderScreen: Error loading customer $customerId: $e");
     }
   }
 
   void _loadPreselectedCustomer() async {
-    final customers = await ref.read(customerListProvider.future);
-    final match = customers
-        .where((c) => c.id == widget.preselectedCustomerId)
-        .firstOrNull;
-    if (match != null && mounted) {
-      setState(() {
-        _selectedCustomer = match;
-      });
-      _fetchSpecialPricesForCustomer(match.id);
+    final customerId = widget.preselectedCustomerId;
+    if (customerId == null) return;
+    try {
+      final customers = await ref.read(customerListProvider.future);
+      final match = customers
+          .where((c) => c.id == customerId)
+          .firstOrNull;
+      if (match != null && mounted) {
+        setState(() {
+          _selectedCustomer = match;
+        });
+        _fetchSpecialPricesForCustomer(match.id);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: load directly using singleCustomerProvider
+    try {
+      final customer = await ref.read(singleCustomerProvider(customerId).future);
+      if (mounted) {
+        setState(() {
+          _selectedCustomer = customer;
+        });
+        _fetchSpecialPricesForCustomer(customer.id);
+      }
+    } catch (e) {
+      debugPrint("CreateOrderScreen: Error loading preselected customer $customerId: $e");
     }
   }
 
