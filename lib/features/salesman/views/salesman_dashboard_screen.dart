@@ -903,6 +903,32 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       return;
     }
 
+    // Check if there is an existing undelivered/non-cancelled order for this customer
+    final ordersAsync = ref.read(ordersListProvider);
+    final orders = ordersAsync.value;
+    OrderModel? existingOrder;
+    if (orders != null) {
+      try {
+        existingOrder = orders.firstWhere(
+          (o) => o.customerId == customer.id && 
+                 o.status.toUpperCase() != 'DELIVERED' && 
+                 o.status.toUpperCase() != 'CANCELLED',
+        );
+      } catch (_) {
+        existingOrder = null;
+      }
+    }
+
+    if (existingOrder != null) {
+      final normalizedStatus = existingOrder.status.toUpperCase();
+      if (normalizedStatus == 'PACKING' || normalizedStatus == 'DRAFT') {
+        context.push('/salesman/create-order', extra: existingOrder);
+      } else {
+        context.push('/order/${existingOrder.id}');
+      }
+      return;
+    }
+
     // Show progress/loading dialog
     showDialog(
       context: context,
