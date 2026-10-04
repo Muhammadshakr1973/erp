@@ -64,13 +64,16 @@ class _AdminDriverCollectionsScreenState
           labelStyle: AppTextStyles.bodyBold,
           tabs: _tabs
               .map((tab) => Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(tab.icon, size: 18),
-                        const SizedBox(width: 8),
-                        Text(tab.label),
-                      ],
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(tab.icon, size: 18),
+                          const SizedBox(width: 8),
+                          Text(tab.label),
+                        ],
+                      ),
                     ),
                   ))
               .toList(),
