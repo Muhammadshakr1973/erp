@@ -204,6 +204,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     icon: Icons.local_shipping_outlined,
                     color: AppColors.primary,
                     isAlert: readyOrdersCount > 0,
+                    isDimmed: readyOrdersCount == 0,
                     onTap: readyOrdersCount > 0
                         ? () {
                             final orderIds = readyOrdersAsync.maybeWhen(
@@ -227,6 +228,8 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     subtitle: 'لەژێر ئاستی کەمینە',
                     icon: Icons.warning_amber_rounded,
                     color: AppColors.danger,
+                    isAlert: data.lowStockCount > 0,
+                    isDimmed: data.lowStockCount == 0,
                     onTap: () {
                       ref.read(warehouseLowStockFilterProvider.notifier).state =
                           true;
@@ -260,16 +263,24 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     required Color color,
     VoidCallback? onTap,
     bool isAlert = false,
+    bool isDimmed = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    // Dimmed state colors (slate/grey scale to look "turned off")
+    final Color dimmedColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+    
     final cardBgColor = isAlert 
         ? AppColors.danger.withValues(alpha: isDark ? 0.12 : 0.06) 
-        : null;
+        : (isDimmed 
+            ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.6) : const Color(0xFFF8FAFC))
+            : null);
         
     final cardBorderColor = isAlert 
         ? AppColors.danger.withValues(alpha: 0.6) 
-        : null;
+        : (isDimmed 
+            ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.4) : const Color(0xFFE2E8F0))
+            : null);
 
     return AppCard(
       onTap: onTap,
@@ -291,7 +302,9 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: isAlert 
                       ? AppColors.danger.withValues(alpha: 0.25)
-                      : color.withValues(alpha: 0.12),
+                      : (isDimmed 
+                          ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
+                          : color.withValues(alpha: 0.12)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: isAlert
@@ -300,7 +313,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                         color: AppColors.danger,
                         size: 22,
                       )
-                    : Icon(icon, color: color, size: 22),
+                    : Icon(icon, color: isDimmed ? dimmedColor : color, size: 22),
               ),
               if (onTap != null)
                 Icon(
@@ -308,7 +321,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                   size: 14,
                   color: isAlert 
                       ? AppColors.danger
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                      : (isDimmed ? dimmedColor : Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
             ],
           ),
@@ -320,7 +333,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               Text(
                 title,
                 style: AppTextStyles.caption.copyWith(
-                  color: isAlert ? AppColors.danger : null,
+                  color: isAlert ? AppColors.danger : (isDimmed ? dimmedColor : null),
                   fontWeight: isAlert ? FontWeight.bold : null,
                 ),
                 maxLines: 1,
@@ -334,7 +347,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                   Text(
                     value,
                     style: AppTextStyles.h2.copyWith(
-                      color: isAlert ? AppColors.danger : null,
+                      color: isAlert ? AppColors.danger : (isDimmed ? dimmedColor : null),
                     ),
                     maxLines: 1,
                   ),
@@ -364,7 +377,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 style: AppTextStyles.caption.copyWith(
                   color: isAlert 
                       ? AppColors.danger.withValues(alpha: 0.8)
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                      : (isDimmed ? dimmedColor.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurfaceVariant),
                   fontSize: 11,
                   fontWeight: isAlert ? FontWeight.w500 : null,
                 ),
