@@ -9,7 +9,8 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../providers/driver_collection_provider.dart';
+import 'providers/driver_collection_provider.dart';
+import '../models/driver_collection_model.dart';
 
 class AdminDriverCollectionsScreen extends ConsumerStatefulWidget {
   const AdminDriverCollectionsScreen({super.key});
@@ -114,7 +115,7 @@ class _AdminDriverCollectionsScreenState
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.md),
             itemCount: summaries.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) {
               final summary = summaries[index];
               final driverName = summary.driver['name'] ?? 'شۆفێر';
@@ -275,7 +276,7 @@ class _AdminDriverCollectionsScreenState
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.md),
             itemCount: collections.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final col = collections[index];
               return AppCard(
