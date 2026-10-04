@@ -16,8 +16,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -37,15 +37,41 @@ class ApiClient {
           }
           return handler.next(options);
         },
-        onError: (DioException e, handler) {
+        onError: (DioException e, handler) async {
           // Handle 401 Unauthorized globally to protect client session
           // 403 Forbidden means insufficient permissions, but the session is still valid
           if (e.response?.statusCode == 401) {
-            SharedPreferences.getInstance().then((prefs) {
-              prefs.remove('auth_token');
-              prefs.remove('current_user');
-            });
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('auth_token');
+            await prefs.remove('current_user');
           }
+
+          // Retry logic for GET request timeouts (safe, idempotent, prevents startup timeouts)
+          if (e.requestOptions.method.toUpperCase() == 'GET' &&
+              (e.type == DioExceptionType.connectionTimeout ||
+               e.type == DioExceptionType.receiveTimeout ||
+               e.type == DioExceptionType.sendTimeout)) {
+            
+            final extra = Map<String, dynamic>.from(e.requestOptions.extra);
+            final retryCount = extra['retry_count'] ?? 0;
+            if (retryCount < 2) {
+              extra['retry_count'] = retryCount + 1;
+              e.requestOptions.extra = extra;
+              
+              // Wait 2 seconds before retrying to let the server wake up
+              await Future.delayed(const Duration(seconds: 2));
+              try {
+                final response = await _dio.fetch(e.requestOptions);
+                return handler.resolve(response);
+              } catch (err) {
+                if (err is DioException) {
+                  return handler.next(err);
+                }
+                return handler.next(DioException(requestOptions: e.requestOptions, error: err));
+              }
+            }
+          }
+
           return handler.next(e);
         },
       ),

@@ -10,6 +10,7 @@ use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ReportController extends Controller
 {
@@ -22,49 +23,55 @@ class ReportController extends Controller
      */
     public function dashboard(): JsonResponse
     {
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        $cacheKey = 'admin_dashboard_kpis_v1';
 
-        $startOfLastMonth = Carbon::now()->subMonth()->startOfMonth();
-        $endOfLastMonth = Carbon::now()->subMonth()->endOfMonth();
+        $data = Cache::remember($cacheKey, 60, function () {
+            $startOfMonth = Carbon::now()->startOfMonth();
+            $endOfMonth = Carbon::now()->endOfMonth();
 
-        // 1. Monthly sales from confirmed/delivered orders using authoritative order_date
-        $monthlySales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
-            ->sum('total_amount');
+            $startOfLastMonth = Carbon::now()->subMonth()->startOfMonth();
+            $endOfLastMonth = Carbon::now()->subMonth()->endOfMonth();
 
-        // 2. Monthly profit using authoritative order_date
-        $monthlyProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
-            ->sum('total_profit');
+            // 1. Monthly sales from confirmed/delivered orders using authoritative order_date
+            $monthlySales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+                ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->sum('total_amount');
 
-        // 3. Last month's sales
-        $lastMonthSales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
-            ->sum('total_amount');
+            // 2. Monthly profit using authoritative order_date
+            $monthlyProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+                ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->sum('total_profit');
 
-        // 4. Last month's profit
-        $lastMonthProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
-            ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
-            ->sum('total_profit');
+            // 3. Last month's sales
+            $lastMonthSales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+                ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
+                ->sum('total_amount');
 
-        // 5. Outstanding customer receivables
-        $totalReceivables = (int) Customer::sum('current_balance');
+            // 4. Last month's profit
+            $lastMonthProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+                ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
+                ->sum('total_profit');
 
-        // 6. Monthly collections
-        $monthlyCollected = (int) CustomerPayment::whereBetween('paid_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
-            ->sum('amount');
+            // 5. Outstanding customer receivables
+            $totalReceivables = (int) Customer::sum('current_balance');
 
-        return response()->json([
-            'message' => 'ئامارەکانی داشبۆرد',
-            'data' => [
+            // 6. Monthly collections
+            $monthlyCollected = (int) CustomerPayment::whereBetween('paid_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->sum('amount');
+
+            return [
                 'monthly_sales'      => $monthlySales,
                 'monthly_profit'     => $monthlyProfit,
                 'last_month_sales'   => $lastMonthSales,
                 'last_month_profit'  => $lastMonthProfit,
                 'total_receivables'  => $totalReceivables,
                 'monthly_collected'  => $monthlyCollected,
-            ]
+            ];
+        });
+
+        return response()->json([
+            'message' => 'ئامارەکانی داشبۆرد',
+            'data' => $data
         ], 200);
     }
 
