@@ -341,6 +341,11 @@ class ReportService
         $endDate = !empty($filters['end_date']) ? $filters['end_date'] : Carbon::now()->endOfMonth()->toDateString();
         $salesmanIds = $salesmen->pluck('id');
 
+        $startOfThisMonth = Carbon::now()->startOfMonth()->toDateString();
+        $endOfThisMonth = Carbon::now()->endOfMonth()->toDateString();
+        $startOfLastMonth = Carbon::now()->subMonth()->startOfMonth()->toDateString();
+        $endOfLastMonth = Carbon::now()->subMonth()->endOfMonth()->toDateString();
+
         // Aggregated orders summary by salesman
         $ordersAggQuery = SalesOrder::whereIn('salesman_id', $salesmanIds)
             ->whereBetween('order_date', [$startDate, $endDate]);
@@ -357,6 +362,17 @@ class ReportService
                 COALESCE(SUM(CASE WHEN status IN ('confirmed', 'delivered') THEN total_amount ELSE 0 END), 0) as total_sales,
                 COALESCE(SUM(CASE WHEN status IN ('confirmed', 'delivered') THEN total_profit ELSE 0 END), 0) as total_profit
             ", [SalesOrder::STATUS_DELIVERED])
+            ->groupBy('salesman_id')
+            ->get()
+            ->keyBy('salesman_id');
+
+        // Aggregated last month profit by salesman
+        $lastMonthOrdersAgg = SalesOrder::whereIn('salesman_id', $salesmanIds)
+            ->whereBetween('order_date', [$startOfLastMonth, $endOfLastMonth])
+            ->selectRaw("
+                salesman_id,
+                COALESCE(SUM(CASE WHEN status IN ('confirmed', 'delivered') THEN total_profit ELSE 0 END), 0) as total_profit
+            ")
             ->groupBy('salesman_id')
             ->get()
             ->keyBy('salesman_id');
@@ -379,12 +395,38 @@ class ReportService
             ->get()
             ->keyBy('salesman_id');
 
-        $reportData = $salesmen->map(function ($salesman) use ($ordersAgg, $paymentsAgg, $commissionsAgg) {
+        $reportData = $salesmen->map(function ($salesman) use ($ordersAgg, $paymentsAgg, $commissionsAgg, $lastMonthOrdersAgg, $startOfThisMonth, $endOfThisMonth, $startOfLastMonth, $endOfLastMonth) {
             $ord = $ordersAgg->get($salesman->id);
             $totalOrders = (int) ($ord->total_orders ?? 0);
             $deliveredOrders = (int) ($ord->delivered_orders ?? 0);
             $totalSales = (int) ($ord->total_sales ?? 0);
             $totalProfit = (int) ($ord->total_profit ?? 0);
+
+            $lastMonthOrd = $lastMonthOrdersAgg->get($salesman->id);
+            $lastMonthProfit = (int) ($lastMonthOrd->total_profit ?? 0);
+
+            $assignedRouteIds = DB::table('route_salesmen')
+                ->where('salesman_id', $salesman->id)
+                ->pluck('route_id')
+                ->toArray();
+
+            $thisMonthCustomers = (int) Customer::where(function ($q) use ($salesman, $assignedRouteIds) {
+                    $q->where('created_by', $salesman->id);
+                    if (!empty($assignedRouteIds)) {
+                        $q->orWhereIn('route_id', $assignedRouteIds);
+                    }
+                })
+                ->whereBetween(DB::raw('DATE(created_at)'), [$startOfThisMonth, $endOfThisMonth])
+                ->count();
+
+            $lastMonthCustomers = (int) Customer::where(function ($q) use ($salesman, $assignedRouteIds) {
+                    $q->where('created_by', $salesman->id);
+                    if (!empty($assignedRouteIds)) {
+                        $q->orWhereIn('route_id', $assignedRouteIds);
+                    }
+                })
+                ->whereBetween(DB::raw('DATE(created_at)'), [$startOfLastMonth, $endOfLastMonth])
+                ->count();
 
             $rate = (float) ($salesman->commission_rate ?? 0);
             
@@ -400,17 +442,20 @@ class ReportService
             $avgOrder = $totalOrders > 0 ? (int) round($totalSales / $totalOrders) : 0;
 
             return [
-                'salesman_id'          => $salesman->id,
-                'salesman_name'        => $salesman->name,
-                'salesman_phone'       => $salesman->phone,
-                'commission_rate'      => $rate,
-                'total_orders'         => $totalOrders,
-                'delivered_orders'     => $deliveredOrders,
-                'total_sales'          => $totalSales,
-                'total_profit'         => $totalProfit,
-                'estimated_commission' => $estimatedCommission,
-                'payments_collected'   => $paymentsCollected,
-                'average_order_value'  => $avgOrder,
+                'salesman_id'              => $salesman->id,
+                'salesman_name'            => $salesman->name,
+                'salesman_phone'           => $salesman->phone,
+                'commission_rate'          => $rate,
+                'total_orders'             => $totalOrders,
+                'delivered_orders'         => $deliveredOrders,
+                'total_sales'              => $totalSales,
+                'total_profit'             => $totalProfit,
+                'last_month_profit'        => $lastMonthProfit,
+                'new_customers_this_month' => $thisMonthCustomers,
+                'new_customers_last_month' => $lastMonthCustomers,
+                'estimated_commission'     => $estimatedCommission,
+                'payments_collected'       => $paymentsCollected,
+                'average_order_value'      => $avgOrder,
             ];
         });
 

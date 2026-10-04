@@ -18,6 +18,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../shared/providers/route_provider.dart';
 import '../../shared/models/route_model.dart';
+import '../../shared/models/report_models.dart';
 import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
@@ -31,6 +32,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int? _activeSalesmanTooltipId;
+  int? _activeCustomerChartTooltipId;
   final GlobalKey _todayPlanKey = GlobalKey();
 
   @override
@@ -244,139 +246,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 },
               ),
 
-              // Salesmen Profit Bar Chart (real-time data)
+              // Salesmen Profit Bar Chart & New Customers Bar Chart
               salesmenReportAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => const SizedBox.shrink(),
-                data: (reportData) => _buildSalesmanProfitChart(context, reportData.salesmen),
+                data: (reportData) => Column(
+                  children: [
+                    _buildSalesmanProfitChart(context, reportData.salesmen),
+                    _buildSalesmanNewCustomersChart(context, reportData.salesmen),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.sectionGap),
-
-
-
-              // Recent Orders
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('دوایین پسوڵەکانی فرۆشتن', style: AppTextStyles.h2),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ref
-                  .watch(ordersListProvider)
-                  .when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, stack) => Center(
-                      child: Text('هەڵەیەک ڕوویدا لە هێنانی پسوڵەکان'),
-                    ),
-                    data: (orders) {
-                      if (orders.isEmpty) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(AppSpacing.md),
-                            child: Text('هیچ پسوڵەیەک نییە'),
-                          ),
-                        );
-                      }
-                      final recentOrders = orders.take(4).toList();
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: recentOrders.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) {
-                          final order = recentOrders[index];
-                          final customerName = order.customer != null
-                              ? (order.customer['name'] ?? 'کڕیار')
-                              : 'کڕیار';
-                          final salesmanName = order.salesman != null
-                              ? (order.salesman['name'] ?? 'مەندوب')
-                              : 'مەندوب';
-
-                          StatusBadgeType badgeType;
-                          String statusText;
-                          switch (order.status.toUpperCase()) {
-                            case 'DELIVERED':
-                              badgeType = StatusBadgeType.success;
-                              statusText = 'گەیشتووە';
-                              break;
-                            case 'IN_DELIVERY':
-                              badgeType = StatusBadgeType.info;
-                              statusText = 'لە ڕێگایە';
-                              break;
-                            case 'READY':
-                            case 'PACKING':
-                              badgeType = StatusBadgeType.warning;
-                              statusText = 'ئامادەکردن';
-                              break;
-                            case 'CANCELLED':
-                              badgeType = StatusBadgeType.danger;
-                              statusText = 'گەڕاوە';
-                              break;
-                            default:
-                              badgeType = StatusBadgeType.purple;
-                              statusText = order.status;
-                          }
-
-                          return InkWell(
-                            onTap: () {
-                              context.push('/order/${order.id}');
-                            },
-                            child: AppCard(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primaryContainer,
-                                      borderRadius: AppRadius.radiusMd,
-                                    ),
-                                    child: Icon(
-                                      AppIcons.order,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          customerName,
-                                          style: AppTextStyles.bodyBold,
-                                        ),
-                                        Text(
-                                          'مەندوب: $salesmanName • ${order.orderNumber}',
-                                          style: AppTextStyles.caption,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '${Formatters.currency(order.totalAmount)}',
-                                        style: AppTextStyles.price,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      StatusBadge(
-                                        label: statusText,
-                                        type: badgeType,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
             ],
           ),
         ),
@@ -452,26 +333,46 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildSalesmanProfitChart(BuildContext context, List<dynamic> salesmen) {
+  Widget _buildSalesmanProfitChart(BuildContext context, List<SalesmanPerformanceItem> salesmen) {
     final theme = Theme.of(context);
     
-    // Filter salesmen with profit > 0
-    final chartSalesmen = salesmen.where((s) => s.totalProfit > 0).toList();
+    // Filter salesmen with profit > 0 in either this month or last month
+    final chartSalesmen = salesmen.where((s) => s.totalProfit > 0 || s.lastMonthProfit > 0).toList();
     
     if (chartSalesmen.isEmpty) {
-      return const SizedBox.shrink(); // Hide the chart if no salesman has profit > 0 this month
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: AppCard(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Icon(Icons.bar_chart_rounded, color: theme.colorScheme.primary, size: 24),
+                const SizedBox(width: 8),
+                const Text('قازانجی پسوڵەی مەندوبەکان: زانیاری نییە', style: AppTextStyles.bodyBold),
+              ],
+            ),
+          ),
+        ),
+      );
     }
     
-    // Find the maximum profit to scale the chart dynamically
-    final maxProfit = chartSalesmen.map((s) => s.totalProfit as num).reduce((a, b) => a > b ? a : b);
+    // Find maximum profit across both this month and last month
+    num maxProfit = 0;
+    for (final s in chartSalesmen) {
+      if (s.totalProfit > maxProfit) maxProfit = s.totalProfit;
+      if (s.lastMonthProfit > maxProfit) maxProfit = s.lastMonthProfit;
+    }
     
-    // Determine the ceiling for y-axis
     final double yMax = maxProfit == 0 
         ? 100000 
         : ((maxProfit / 20000).ceil() * 20000).toDouble();
         
     final yInterval = yMax / 4;
     final yLabels = List.generate(5, (index) => yMax - (index * yInterval));
+
+    final thisMonthColor = theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success;
+    final lastMonthColor = theme.colorScheme.primary;
     
     return AppCard(
       child: Padding(
@@ -500,77 +401,78 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            
-            // Interactive Tooltip Info Box
-            if (_activeSalesmanTooltipId != null) () {
-              dynamic activeSalesman = chartSalesmen.first;
-              for (final s in chartSalesmen) {
-                if (s.salesmanId == _activeSalesmanTooltipId) {
-                  activeSalesman = s;
-                  break;
+            const SizedBox(height: 8),
+              
+              // Legend
+              Row(
+                children: [
+                  Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 6),
+                  Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 16),
+                  Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 6),
+                  Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              
+              // Interactive Tooltip Info Box
+              if (_activeSalesmanTooltipId != null) () {
+                SalesmanPerformanceItem? activeSalesman;
+                for (final s in chartSalesmen) {
+                  if (s.salesmanId == _activeSalesmanTooltipId) {
+                    activeSalesman = s;
+                    break;
+                  }
                 }
-              }
-              return Container(
-                margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    )
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Text(
-                      activeSalesman.salesmanName,
-                      style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success,
-                            shape: BoxShape.circle,
+                if (activeSalesman == null) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Text(
+                        activeSalesman.salesmanName,
+                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
+                      ),
+                      Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ئەم مانگە: ${Formatters.currency(activeSalesman.totalProfit)}',
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'قازانج: ${Formatters.currency(activeSalesman.totalProfit)}',
-                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            shape: BoxShape.circle,
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'مانگی ڕابردوو: ${Formatters.currency(activeSalesman.lastMonthProfit)}',
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'پسوڵەکان: ${activeSalesman.deliveredOrders}',
-                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }() ?? const SizedBox.shrink(),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }() ?? const SizedBox.shrink(),
             
             // The Bar Chart Row
             SizedBox(
@@ -629,93 +531,91 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             ),
                             
                             // 2. Bars Row
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: chartSalesmen.asMap().entries.map((entry) {
-                                  final index = entry.key;
-                                  final s = entry.value;
-                                  
-                                  // Height percentage based on profit
-                                  final double profitPct = s.totalProfit / yMax;
-                                  
-                                  // Ensure height is clamped properly
-                                  final double heightPctClamped = profitPct.clamp(0.01, 1.0);
-                                  
-                                  final isSelected = s.salesmanId == _activeSalesmanTooltipId;
-                                  final barColor = index % 2 == 0 ? AppColors.primary : AppColors.success;
-                                  
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        if (_activeSalesmanTooltipId == s.salesmanId) {
-                                          _activeSalesmanTooltipId = null;
-                                        } else {
-                                          _activeSalesmanTooltipId = s.salesmanId;
-                                        }
-                                      });
-                                    },
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 12.0),
-                                      width: 48,
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Expanded(
-                                            child: Align(
-                                              alignment: Alignment.bottomCenter,
-                                              child: FractionallySizedBox(
-                                                heightFactor: heightPctClamped,
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: [
-                                                        barColor,
-                                                        barColor.withValues(alpha: 0.8),
-                                                      ],
-                                                      begin: Alignment.topCenter,
-                                                      end: Alignment.bottomCenter,
-                                                    ),
-                                                    borderRadius: const BorderRadius.only(
-                                                      topLeft: Radius.circular(6),
-                                                      topRight: Radius.circular(6),
-                                                    ),
-                                                    border: isSelected
-                                                        ? Border.all(color: Colors.white, width: 2)
-                                                        : null,
-                                                    boxShadow: [
-                                                      if (isSelected)
-                                                        BoxShadow(
-                                                          color: barColor.withValues(alpha: 0.5),
-                                                          blurRadius: 8,
-                                                          spreadRadius: 2,
+                             Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: chartSalesmen.map((s) {
+                                    final double thisMonthPct = (s.totalProfit / yMax).clamp(0.01, 1.0);
+                                    final double lastMonthPct = (s.lastMonthProfit / yMax).clamp(0.01, 1.0);
+                                    final isSelected = s.salesmanId == _activeSalesmanTooltipId;
+                                    
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          if (_activeSalesmanTooltipId == s.salesmanId) {
+                                            _activeSalesmanTooltipId = null;
+                                          } else {
+                                            _activeSalesmanTooltipId = s.salesmanId;
+                                          }
+                                        });
+                                      },
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 10.0),
+                                        width: 60,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  // This Month Bar
+                                                  Expanded(
+                                                    child: FractionallySizedBox(
+                                                      heightFactor: thisMonthPct,
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: thisMonthColor,
+                                                          borderRadius: const BorderRadius.only(
+                                                            topLeft: Radius.circular(4),
+                                                            topRight: Radius.circular(4),
+                                                          ),
+                                                          border: isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
                                                         ),
-                                                    ],
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
+                                                  const SizedBox(width: 4),
+                                                  // Last Month Bar
+                                                  Expanded(
+                                                    child: FractionallySizedBox(
+                                                      heightFactor: lastMonthPct,
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: lastMonthColor,
+                                                          borderRadius: const BorderRadius.only(
+                                                            topLeft: Radius.circular(4),
+                                                            topRight: Radius.circular(4),
+                                                          ),
+                                                          border: isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            s.salesmanName,
-                                            textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTextStyles.caption.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                              color: isSelected ? theme.colorScheme.primary : null,
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              s.salesmanName,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: AppTextStyles.caption.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                color: isSelected ? theme.colorScheme.primary : null,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }).toList(),
+                                    );
+                                  }).toList(),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -725,6 +625,306 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSalesmanNewCustomersChart(BuildContext context, List<SalesmanPerformanceItem> salesmen) {
+    final theme = Theme.of(context);
+    
+    // Filter salesmen with new customers > 0 in either this month or last month
+    final chartSalesmen = salesmen.where((s) => s.newCustomersThisMonth > 0 || s.newCustomersLastMonth > 0).toList();
+    
+    if (chartSalesmen.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: AppCard(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Icon(Icons.person_add_alt_1_rounded, color: theme.colorScheme.primary, size: 24),
+                const SizedBox(width: 8),
+                const Text('کڕیارە نوێیەکانی مەندوبەکان: هیچ کڕیارێکی نوێ ڕانەگەیەندراوە', style: AppTextStyles.bodyBold),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Find maximum customers across both this month and last month
+    num maxCust = 0;
+    for (final s in chartSalesmen) {
+      if (s.newCustomersThisMonth > maxCust) maxCust = s.newCustomersThisMonth;
+      if (s.newCustomersLastMonth > maxCust) maxCust = s.newCustomersLastMonth;
+    }
+    
+    final double yMax = maxCust == 0 
+        ? 10 
+        : ((maxCust / 5).ceil() * 5).toDouble();
+        
+    final yInterval = yMax / 4;
+    final yLabels = List.generate(5, (index) => (yMax - (index * yInterval)).round());
+
+    final thisMonthColor = theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info;
+    final lastMonthColor = theme.brightness == Brightness.dark ? AppColors.purpleDark : AppColors.purple;
+    
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: AppCard(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person_add_alt_1_rounded, color: theme.colorScheme.primary, size: 24),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'کڕیارە نوێیەکانی مەندوبەکان',
+                        style: AppTextStyles.bodyBold,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'ژمارەی کڕیار',
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Legend
+              Row(
+                children: [
+                  Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 6),
+                  Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 16),
+                  Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 6),
+                  Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              
+              // Interactive Tooltip Info Box
+              if (_activeCustomerChartTooltipId != null) () {
+                SalesmanPerformanceItem? activeSalesman;
+                for (final s in chartSalesmen) {
+                  if (s.salesmanId == _activeCustomerChartTooltipId) {
+                    activeSalesman = s;
+                    break;
+                  }
+                }
+                if (activeSalesman == null) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Text(
+                        activeSalesman.salesmanName,
+                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
+                      ),
+                      Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ئەم مانگە: ${activeSalesman.newCustomersThisMonth} کڕیار',
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'مانگی ڕابردوو: ${activeSalesman.newCustomersLastMonth} کڕیار',
+                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }() ?? const SizedBox.shrink(),
+              
+              // The Bar Chart Row
+              SizedBox(
+                height: 200,
+                child: Row(
+                  children: [
+                    // Y-Axis Labels Column
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: yLabels.map((val) {
+                        return SizedBox(
+                          width: 40,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Text(
+                              val.toString(),
+                              textAlign: TextAlign.end,
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // Grid and Bars Viewport
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: IntrinsicWidth(
+                          child: Stack(
+                            children: [
+                              // Gridlines
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: List.generate(5, (index) {
+                                  return Expanded(
+                                    child: Container(
+                                      width: (chartSalesmen.length * 84.0 + 32.0).clamp(200.0, 1000.0),
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: Colors.grey.withValues(alpha: 0.15),
+                                            width: 1,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                              
+                              // Grouped Bars Row
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: chartSalesmen.map((s) {
+                                    final double thisMonthPct = (s.newCustomersThisMonth / yMax).clamp(0.01, 1.0);
+                                    final double lastMonthPct = (s.newCustomersLastMonth / yMax).clamp(0.01, 1.0);
+                                    final isSelected = s.salesmanId == _activeCustomerChartTooltipId;
+                                    
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          if (_activeCustomerChartTooltipId == s.salesmanId) {
+                                            _activeCustomerChartTooltipId = null;
+                                          } else {
+                                            _activeCustomerChartTooltipId = s.salesmanId;
+                                          }
+                                        });
+                                      },
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 10.0),
+                                        width: 60,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  // This Month Bar
+                                                  Expanded(
+                                                    child: FractionallySizedBox(
+                                                      heightFactor: thisMonthPct,
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: thisMonthColor,
+                                                          borderRadius: const BorderRadius.only(
+                                                            topLeft: Radius.circular(4),
+                                                            topRight: Radius.circular(4),
+                                                          ),
+                                                          border: isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  // Last Month Bar
+                                                  Expanded(
+                                                    child: FractionallySizedBox(
+                                                      heightFactor: lastMonthPct,
+                                                      child: Container(
+                                                        decoration: BoxDecoration(
+                                                          color: lastMonthColor,
+                                                          borderRadius: const BorderRadius.only(
+                                                            topLeft: Radius.circular(4),
+                                                            topRight: Radius.circular(4),
+                                                          ),
+                                                          border: isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              s.salesmanName,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: AppTextStyles.caption.copyWith(
+                                                fontSize: 10,
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                color: isSelected ? theme.colorScheme.primary : null,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

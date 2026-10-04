@@ -277,6 +277,9 @@ class SalesmanPerformanceItem {
   final int deliveredOrders;
   final int totalSales;
   final int totalProfit;
+  final int lastMonthProfit;
+  final int newCustomersThisMonth;
+  final int newCustomersLastMonth;
   final int estimatedCommission;
   final int paymentsCollected;
   final int averageOrderValue;
@@ -290,6 +293,9 @@ class SalesmanPerformanceItem {
     required this.deliveredOrders,
     required this.totalSales,
     required this.totalProfit,
+    this.lastMonthProfit = 0,
+    this.newCustomersThisMonth = 0,
+    this.newCustomersLastMonth = 0,
     required this.estimatedCommission,
     required this.paymentsCollected,
     required this.averageOrderValue,
@@ -307,6 +313,9 @@ class SalesmanPerformanceItem {
       deliveredOrders: (json['delivered_orders'] ?? 0) as int,
       totalSales: (json['total_sales'] ?? 0) as int,
       totalProfit: (json['total_profit'] ?? 0) as int,
+      lastMonthProfit: (json['last_month_profit'] ?? 0) as int,
+      newCustomersThisMonth: (json['new_customers_this_month'] ?? json['new_customers'] ?? 0) as int,
+      newCustomersLastMonth: (json['new_customers_last_month'] ?? 0) as int,
       estimatedCommission: (json['estimated_commission'] ?? 0) as int,
       paymentsCollected: (json['payments_collected'] ?? 0) as int,
       averageOrderValue: (json['average_order_value'] ?? 0) as int,
