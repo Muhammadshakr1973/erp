@@ -247,13 +247,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.sectionGap),
 
-              // Dashboard Chart
-              dashboardAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (err, stack) => const SizedBox.shrink(),
-                data: (dashboard) => _buildDashboardChart(context, dashboard),
-              ),
-              const SizedBox(height: AppSpacing.sectionGap),
+
 
               // Recent Orders
               Row(
@@ -447,126 +441,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardChart(BuildContext context, DashboardModel data) {
-    final theme = Theme.of(context);
-    final totalActivity = data.monthlySales + data.totalReceivables;
-    final salesRatio = totalActivity > 0
-        ? (data.monthlySales / totalActivity)
-        : 0.0;
-    final debtRatio = totalActivity > 0
-        ? (data.totalReceivables / totalActivity)
-        : 0.0;
-
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'شیکاری دارایی و ڕێژەی فرۆشتن بەرامبەر قەرز',
-              style: AppTextStyles.bodyBold,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'ئەم چارتە نیشاندەری ڕێژەی فرۆشتنی مانگانەیە لەگەڵ کۆی قەرزە دەرەکییەکان',
-              style: AppTextStyles.caption,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            // Stacked Progress Bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                height: 16,
-                child: Row(
-                  children: [
-                    if (salesRatio > 0)
-                      Expanded(
-                        flex: (salesRatio * 100).toInt(),
-                        child: Container(color: theme.colorScheme.primary),
-                      ),
-                    if (debtRatio > 0)
-                      Expanded(
-                        flex: (debtRatio * 100).toInt(),
-                        child: Container(color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            // Legend
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'فرۆشتنی مانگ (${(salesRatio * 100).toStringAsFixed(1)}%)',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'قەرزی کڕیار (${(debtRatio * 100).toStringAsFixed(1)}%)',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const Divider(height: AppSpacing.lg),
-            // Profit Margin Indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'ڕێژەی قازانجی گشتی فرۆشتن:',
-                  style: AppTextStyles.caption,
-                ),
-                Text(
-                  '${data.monthlySales > 0 ? ((data.monthlyProfit / data.monthlySales) * 100).toStringAsFixed(1) : "0"}%',
-                  style: AppTextStyles.bodyBold.copyWith(
-                    color: AppColors.success,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: data.monthlySales > 0
-                  ? (data.monthlyProfit / data.monthlySales)
-                  : 0.0,
-              backgroundColor: theme.colorScheme.surfaceContainer,
-              color: AppColors.success,
-              borderRadius: BorderRadius.circular(4),
-            ),
           ],
         ),
       ),
