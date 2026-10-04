@@ -11,13 +11,9 @@ import '../../../../core/api_client.dart';
 import '../../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/models/commission_model.dart';
-import '../../admin/views/providers/commission_provider.dart';
 
 final myCommissionsProvider =
-    FutureProvider.family<List<CommissionModel>, String?>((
-      ref,
-      status,
-    ) async {
+    FutureProvider.family<List<CommissionModel>, String?>((ref, status) async {
       final api = ref.watch(apiClientProvider);
       try {
         final response = await api.client.get(
@@ -53,7 +49,9 @@ final myCommissionsProvider =
       }
     });
 
-final myCommissionSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final myCommissionSummaryProvider = FutureProvider<Map<String, dynamic>>((
+  ref,
+) async {
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/commissions/summary');
@@ -82,21 +80,28 @@ class SalesmanMyCommissionsScreen extends ConsumerStatefulWidget {
 class _SalesmanMyCommissionsScreenState
     extends ConsumerState<SalesmanMyCommissionsScreen> {
   String? _selectedStatus;
+  PusherService? _pusherService;
 
   @override
   void initState() {
     super.initState();
+    _pusherService = ref.read(pusherServiceProvider);
     _setupPusherListener();
   }
 
   void _setupPusherListener() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final pusher = ref.read(pusherServiceProvider);
+      if (!mounted) return;
+      final pusher = (_pusherService ?? ref.read(pusherServiceProvider))!;
+      _pusherService ??= pusher;
       final user = ref.read(authProvider).user;
-      
+
       pusher.subscribeToChannel('commissions', _onCommissionPusherEvent);
       if (user != null) {
-        pusher.subscribeToChannel('private-user-notifications.${user.id}', _onCommissionPusherEvent);
+        pusher.subscribeToChannel(
+          'private-user-notifications.${user.id}',
+          _onCommissionPusherEvent,
+        );
       }
     });
   }
@@ -108,11 +113,16 @@ class _SalesmanMyCommissionsScreenState
 
   @override
   void dispose() {
-    final pusher = ref.read(pusherServiceProvider);
+    final pusher = _pusherService;
     final user = ref.read(authProvider).user;
-    pusher.unsubscribeFromChannel('commissions', _onCommissionPusherEvent);
-    if (user != null) {
-      pusher.unsubscribeFromChannel('private-user-notifications.${user.id}', _onCommissionPusherEvent);
+    if (pusher != null) {
+      pusher.unsubscribeFromChannel('commissions', _onCommissionPusherEvent);
+      if (user != null) {
+        pusher.unsubscribeFromChannel(
+          'private-user-notifications.${user.id}',
+          _onCommissionPusherEvent,
+        );
+      }
     }
     super.dispose();
   }
@@ -224,11 +234,17 @@ class _SalesmanMyCommissionsScreenState
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.verified, color: AppColors.success, size: 28),
+                        const Icon(
+                          Icons.verified,
+                          color: AppColors.success,
+                          size: 28,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -345,7 +361,9 @@ class _SalesmanMyCommissionsScreenState
                         children: [
                           Expanded(
                             child: Text(
-                              isPaid ? 'بڕی کۆمسیۆنی دراو:' : 'بڕی کۆمسیۆنی شایستە:',
+                              isPaid
+                                  ? 'بڕی کۆمسیۆنی دراو:'
+                                  : 'بڕی کۆمسیۆنی شایستە:',
                               style: AppTextStyles.h3,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -354,9 +372,15 @@ class _SalesmanMyCommissionsScreenState
                           Text(
                             _formatCurrency(commission.commissionAmount),
                             style: TextStyle(
-                              color: isPaid 
-                                  ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
-                                  : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
+                              color: isPaid
+                                  ? (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.successDark
+                                        : AppColors.success)
+                                  : (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary),
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -364,13 +388,16 @@ class _SalesmanMyCommissionsScreenState
                           ),
                         ],
                       ),
-                      if (commission.notes != null && commission.notes!.isNotEmpty) ...[
+                      if (commission.notes != null &&
+                          commission.notes!.isNotEmpty) ...[
                         const Divider(height: 16),
                         Align(
                           alignment: Alignment.centerRight,
                           child: Text(
                             'تێبینی: ${commission.notes}',
-                            style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic),
+                            style: AppTextStyles.caption.copyWith(
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
                       ],
@@ -392,7 +419,10 @@ class _SalesmanMyCommissionsScreenState
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -429,11 +459,16 @@ class _SalesmanMyCommissionsScreenState
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: AppColors.success,
+                                        size: 16,
+                                      ),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          d.orderNumber ?? 'پسوڵەی #${d.salesOrderId}',
+                                          d.orderNumber ??
+                                              'پسوڵەی #${d.salesOrderId}',
                                           style: AppTextStyles.bodyBold,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -448,7 +483,9 @@ class _SalesmanMyCommissionsScreenState
                                   ),
                                   Text(
                                     'فرۆش: ${_formatCurrency(d.salesAmount)}',
-                                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontSize: 11,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -461,7 +498,11 @@ class _SalesmanMyCommissionsScreenState
                                 Text(
                                   _formatCurrency(d.commissionAmount),
                                   style: TextStyle(
-                                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
@@ -517,11 +558,14 @@ class _SalesmanMyCommissionsScreenState
               summaryAsync.when(
                 data: (summary) {
                   final paid = summary['paid'] as Map<String, dynamic>? ?? {};
-                  final calculated = summary['calculated'] as Map<String, dynamic>? ?? {};
-                  final approved = summary['approved'] as Map<String, dynamic>? ?? {};
-                  
+                  final calculated =
+                      summary['calculated'] as Map<String, dynamic>? ?? {};
+                  final approved =
+                      summary['approved'] as Map<String, dynamic>? ?? {};
+
                   final paidAmount = (paid['amount'] as num?)?.toInt() ?? 0;
-                  final pendingAmount = ((calculated['amount'] as num?)?.toInt() ?? 0) +
+                  final pendingAmount =
+                      ((calculated['amount'] as num?)?.toInt() ?? 0) +
                       ((approved['amount'] as num?)?.toInt() ?? 0);
                   final paidCount = (paid['count'] as num?)?.toInt() ?? 0;
 
@@ -530,12 +574,16 @@ class _SalesmanMyCommissionsScreenState
                       // Paid Commissions Card (Prominently Highlighted)
                       Expanded(
                         child: AppCard(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'کۆمسیۆنی دراو',
@@ -548,10 +596,16 @@ class _SalesmanMyCommissionsScreenState
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.success.withValues(alpha: 0.15),
+                                      color: AppColors.success.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                                    child: const Icon(
+                                      Icons.check_circle,
+                                      color: AppColors.success,
+                                      size: 16,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -568,7 +622,9 @@ class _SalesmanMyCommissionsScreenState
                               const SizedBox(height: 2),
                               Text(
                                 '$paidCount کۆمسیۆنی دراو',
-                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 10,
+                                ),
                               ),
                             ],
                           ),
@@ -578,12 +634,16 @@ class _SalesmanMyCommissionsScreenState
                       // Pending / Calculated Commissions Card
                       Expanded(
                         child: AppCard(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'چاوەڕوانکراو',
@@ -596,10 +656,16 @@ class _SalesmanMyCommissionsScreenState
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(alpha: 0.15),
+                                      color: AppColors.warning.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.hourglass_top, color: AppColors.warning, size: 16),
+                                    child: const Icon(
+                                      Icons.hourglass_top,
+                                      color: AppColors.warning,
+                                      size: 16,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -616,7 +682,9 @@ class _SalesmanMyCommissionsScreenState
                               const SizedBox(height: 2),
                               Text(
                                 'هەژمارکراو / پەسەندکراو',
-                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 10,
+                                ),
                               ),
                             ],
                           ),
@@ -647,7 +715,11 @@ class _SalesmanMyCommissionsScreenState
                       label: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                          Icon(
+                            Icons.check_circle,
+                            size: 14,
+                            color: AppColors.success,
+                          ),
                           SizedBox(width: 4),
                           Text('دراوە'),
                         ],
@@ -708,7 +780,11 @@ class _SalesmanMyCommissionsScreenState
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey.withValues(alpha: 0.5)),
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 56,
+                            color: Colors.grey.withValues(alpha: 0.5),
+                          ),
                           const SizedBox(height: 12),
                           const Text(
                             'هیچ تۆمارێکی کۆمسیۆن نەدۆزرایەوە',
@@ -717,7 +793,9 @@ class _SalesmanMyCommissionsScreenState
                           const SizedBox(height: 4),
                           Text(
                             'کۆمسیۆن تەنها لەسەر ئەو پسوڵانە هەژمار دەکرێت کە بە تەواوی گەیەنراون.',
-                            style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.grey,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -758,15 +836,24 @@ class _SalesmanMyCommissionsScreenState
                             if (isPaid && c.paidAt != null) ...[
                               const SizedBox(height: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  color: AppColors.success.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.check, size: 14, color: AppColors.success),
+                                    const Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: AppColors.success,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'دراوە لە: ${c.paidAt!.split("T").first} (${c.paymentMethod ?? 'کاش'})',
@@ -807,9 +894,15 @@ class _SalesmanMyCommissionsScreenState
                                     Text(
                                       _formatCurrency(c.commissionAmount),
                                       style: TextStyle(
-                                        color: isPaid 
-                                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
-                                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
+                                        color: isPaid
+                                            ? (Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? AppColors.successDark
+                                                  : AppColors.success)
+                                            : (Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? AppColors.primaryDark
+                                                  : AppColors.primary),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
@@ -819,9 +912,15 @@ class _SalesmanMyCommissionsScreenState
                                       isPaid ? 'دراوە' : 'شایستە',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isPaid 
-                                            ? (Theme.of(context).brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
-                                            : (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryDark : AppColors.primary),
+                                        color: isPaid
+                                            ? (Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? AppColors.successDark
+                                                  : AppColors.success)
+                                            : (Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? AppColors.primaryDark
+                                                  : AppColors.primary),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
