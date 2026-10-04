@@ -16,7 +16,12 @@ import '../../orders/providers/orders_provider.dart';
 enum TripDatePreset { today, tomorrow, dayAfterTomorrow, custom }
 
 class CreateDeliveryTripDialog extends ConsumerStatefulWidget {
-  const CreateDeliveryTripDialog({super.key});
+  final List<int>? initialSelectedOrderIds;
+
+  const CreateDeliveryTripDialog({
+    super.key,
+    this.initialSelectedOrderIds,
+  });
 
   @override
   ConsumerState<CreateDeliveryTripDialog> createState() => _CreateDeliveryTripDialogState();
@@ -34,6 +39,9 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   void initState() {
     super.initState();
     _selectedDate = _getTomorrowDate();
+    if (widget.initialSelectedOrderIds != null) {
+      _selectedOrderIds.addAll(widget.initialSelectedOrderIds!);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(ordersListProvider);
       ref.invalidate(readyOrdersForDeliveryProvider);

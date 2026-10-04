@@ -17,6 +17,9 @@ import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 import '../providers/warehouse_provider.dart';
 import 'warehouse_main_screen.dart';
+import '../../orders/providers/orders_provider.dart';
+import '../../orders/models/order_model.dart';
+import '../../admin/views/create_delivery_trip_dialog.dart';
 
 class WarehouseDashboardScreen extends ConsumerWidget {
   const WarehouseDashboardScreen({super.key});
@@ -24,6 +27,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(warehouseDashboardProvider);
+    final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,6 +45,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
           ref.invalidate(warehouseDashboardProvider);
           ref.invalidate(ordersToPackProvider);
           ref.invalidate(warehouseStocksProvider);
+          ref.invalidate(readyOrdersForDeliveryProvider);
           await ref.read(warehouseDashboardProvider.future);
         },
         child: dashboardAsync.when(
@@ -61,7 +66,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               ),
             ),
           ),
-          data: (data) => _buildDashboardContent(context, ref, data),
+          data: (data) => _buildDashboardContent(context, ref, data, readyOrdersAsync),
         ),
       ),
     );
@@ -94,7 +99,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 mainAxisSpacing: AppSpacing.md,
                 childAspectRatio: childAspectRatio,
                 children: List.generate(
-                  3,
+                  4,
                   (index) => const AppCard(
                     padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
@@ -137,7 +142,13 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     WarehouseDashboardData data,
+    AsyncValue<List<OrderModel>> readyOrdersAsync,
   ) {
+    final readyOrdersCount = readyOrdersAsync.maybeWhen(
+      data: (orders) => orders.length,
+      orElse: () => 0,
+    );
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
@@ -184,6 +195,29 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     icon: AppIcons.orderDelivered,
                     color: AppColors.success,
                     onTap: null,
+                  ),
+                  _buildInteractiveStatCard(
+                    context,
+                    title: 'ئامادەکراوی دەرەوەی گەشت',
+                    value: readyOrdersCount.toString(),
+                    subtitle: 'پسوڵەی بێ گەشت',
+                    icon: Icons.local_shipping_outlined,
+                    color: AppColors.primary,
+                    onTap: readyOrdersCount > 0
+                        ? () {
+                            final orderIds = readyOrdersAsync.maybeWhen(
+                              data: (orders) => orders.map((o) => o.id).toList(),
+                              orElse: () => <int>[],
+                            );
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => CreateDeliveryTripDialog(
+                                initialSelectedOrderIds: orderIds,
+                              ),
+                            );
+                          }
+                        : null,
                   ),
                   _buildInteractiveStatCard(
                     context,
