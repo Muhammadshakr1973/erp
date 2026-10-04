@@ -1,8 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'dart:ui';
 
 import 'core/theme/app_theme.dart';
@@ -10,33 +11,44 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/components/global_numeric_keyboard.dart';
 
+bool _shouldIgnoreWebTextInputError(Object error, StackTrace? stack) {
+  final text = '${error.toString()} ${stack ?? ''}'.toLowerCase();
+
+  final isKnownTextInputIssue =
+      text.contains('text_editing') ||
+      text.contains('editing_delta') ||
+      text.contains('texteditingdelta') ||
+      text.contains('text input');
+
+  final isKnownDeltaAssertion =
+      text.contains('assertion') && text.contains('delta');
+
+  return kIsWeb && (isKnownTextInputIssue || isKnownDeltaAssertion);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Handle standard Flutter framework errors gracefully
+  // Handle known Flutter web text input issues without hiding unrelated app errors.
   FlutterError.onError = (FlutterErrorDetails details) {
-    final errorStr = '${details.exception} ${details.stack}'.toLowerCase();
-    if (errorStr.contains('text_editing') || 
-        errorStr.contains('editing_delta') ||
-        errorStr.contains('delta')) {
-      debugPrint('Suppressed text editing delta FlutterError');
+    if (_shouldIgnoreWebTextInputError(details.exception, details.stack)) {
+      debugPrint(
+        'Suppressed non-critical Flutter web text input error: ${details.exception}',
+      );
       return;
     }
     FlutterError.presentError(details);
   };
 
-  // Intercept and handle asynchronous errors (such as web promise/rejection unhandled errors)
+  // Intercept and handle asynchronous errors (such as web promise/rejection unhandled errors).
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    final errorStr = '$error $stack'.toLowerCase();
-    // Catch and suppress known non-critical text input and assertion delta errors on web
-    if (errorStr.contains('text_editing') || 
-        errorStr.contains('editing_delta') || 
-        errorStr.contains('delta') ||
-        errorStr.contains('assertion')) {
-      debugPrint('Suppressed asynchronous text editing delta/assertion error');
-      return true; // Mark as handled, preventing browser-level Unhandled Rejections
+    if (_shouldIgnoreWebTextInputError(error, stack)) {
+      debugPrint(
+        'Suppressed non-critical async Flutter web text input error: $error',
+      );
+      return true;
     }
-    return false; // Propagate other errors normally
+    return false;
   };
 
   await Hive.initFlutter();
@@ -46,7 +58,7 @@ void main() async {
 }
 
 class PosApp extends ConsumerWidget {
-  const PosApp({Key? key}) : super(key: key);
+  const PosApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
