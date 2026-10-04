@@ -175,7 +175,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: AppSpacing.md,
                       mainAxisSpacing: AppSpacing.md,
-                      childAspectRatio: 1.2,
+                      childAspectRatio: 1.1,
                       children: [
                         _buildStatCard(
                           context: context,
@@ -184,6 +184,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: AppIcons.order,
                           color: theme.colorScheme.primary,
+                          subText: 'مانگی پێشوو: ${Formatters.currency(dashboard.lastMonthSales)}',
                         ),
                         _buildStatCard(
                           context: context,
@@ -192,6 +193,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: Icons.trending_up,
                           color: theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success,
+                          subText: 'مانگی پێشوو: ${Formatters.currency(dashboard.lastMonthProfit)}',
                         ),
                         _buildStatCard(
                           context: context,
@@ -387,8 +389,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     String? currency,
     required IconData icon,
     required Color color,
+    String? subText,
     VoidCallback? onTap,
   }) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.radiusMd,
@@ -430,6 +434,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ],
               ],
             ),
+            if (subText != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                subText,
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -72,9 +72,17 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
             return s != 'COMPLETED' && s != 'CANCELLED';
           }).toList();
 
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+
           int totalOrdersCount = 0;
           int deliveredOrdersCount = 0;
           int totalCollected = 0;
+
+          int last7DaysTrips = 0;
+          int last7DaysOrders = 0;
+          int thisMonthTrips = 0;
+          int thisMonthOrders = 0;
 
           for (final trip in trips) {
             totalOrdersCount += trip.orders.length;
@@ -84,7 +92,43 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                 totalCollected += order.receivedAmount;
               }
             }
+
+            final tripDateTime = DateTime.tryParse(trip.tripDate);
+            if (tripDateTime != null) {
+              final tripDateOnly = DateTime(tripDateTime.year, tripDateTime.month, tripDateTime.day);
+
+              // 7 Days Range (today down to 6 days ago)
+              final diff = today.difference(tripDateOnly).inDays;
+              if (diff >= 0 && diff < 7) {
+                if (trip.status == 'COMPLETED') {
+                  last7DaysTrips++;
+                }
+                for (final order in trip.orders) {
+                  if (order.status == 'DELIVERED') {
+                    last7DaysOrders++;
+                  }
+                }
+              }
+
+              // This Month Range (from 1st of current month to today)
+              if (tripDateOnly.year == now.year &&
+                  tripDateOnly.month == now.month &&
+                  tripDateOnly.day <= now.day) {
+                if (trip.status == 'COMPLETED') {
+                  thisMonthTrips++;
+                }
+                for (final order in trip.orders) {
+                  if (order.status == 'DELIVERED') {
+                    thisMonthOrders++;
+                  }
+                }
+              }
+            }
           }
+
+          final isDark = theme.brightness == Brightness.dark;
+          final infoColor = isDark ? AppColors.infoDark : AppColors.info;
+          final purpleColor = isDark ? AppColors.purpleDark : AppColors.purple;
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -99,13 +143,13 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       int crossAxisCount = 2;
-                      double aspectRatio = 1.35;
+                      double aspectRatio = 1.25;
                       if (constraints.maxWidth >= 1024) {
-                        crossAxisCount = 2;
-                        aspectRatio = 2.2;
+                        crossAxisCount = 4;
+                        aspectRatio = 1.35;
                       } else if (constraints.maxWidth >= 600) {
-                        crossAxisCount = 2;
-                        aspectRatio = 1.8;
+                        crossAxisCount = 4;
+                        aspectRatio = 1.25;
                       }
 
                       return GridView.count(
@@ -129,6 +173,20 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                             value: Formatters.currency(totalCollected),
                             icon: AppIcons.customerDebt,
                             color: AppColors.primaryAdaptive(context),
+                          ),
+                          _buildStatCard(
+                            context: context,
+                            title: 'گەیاندنی ٧ ڕۆژی ڕابردوو',
+                            value: '$last7DaysTrips گەشت / $last7DaysOrders پسوڵە',
+                            icon: Icons.history_rounded,
+                            color: infoColor,
+                          ),
+                          _buildStatCard(
+                            context: context,
+                            title: 'گەیاندنی ئەم مانگە',
+                            value: '$thisMonthTrips گەشت / $thisMonthOrders پسوڵە',
+                            icon: Icons.calendar_month_rounded,
+                            color: purpleColor,
                           ),
                         ],
                       );

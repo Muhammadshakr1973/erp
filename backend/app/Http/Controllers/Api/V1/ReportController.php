@@ -25,6 +25,9 @@ class ReportController extends Controller
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
+        $startOfLastMonth = Carbon::now()->subMonth()->startOfMonth();
+        $endOfLastMonth = Carbon::now()->subMonth()->endOfMonth();
+
         // 1. Monthly sales from confirmed/delivered orders using authoritative order_date
         $monthlySales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
             ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
@@ -35,20 +38,32 @@ class ReportController extends Controller
             ->whereBetween('order_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->sum('total_profit');
 
-        // 3. Outstanding customer receivables
+        // 3. Last month's sales
+        $lastMonthSales = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+            ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
+            ->sum('total_amount');
+
+        // 4. Last month's profit
+        $lastMonthProfit = (int) SalesOrder::whereIn('status', [SalesOrder::STATUS_DELIVERED, SalesOrder::STATUS_CONFIRMED, 'delivered', 'confirmed'])
+            ->whereBetween('order_date', [$startOfLastMonth->toDateString(), $endOfLastMonth->toDateString()])
+            ->sum('total_profit');
+
+        // 5. Outstanding customer receivables
         $totalReceivables = (int) Customer::sum('current_balance');
 
-        // 4. Monthly collections
+        // 6. Monthly collections
         $monthlyCollected = (int) CustomerPayment::whereBetween('paid_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->sum('amount');
 
         return response()->json([
             'message' => 'ئامارەکانی داشبۆرد',
             'data' => [
-                'monthly_sales'     => $monthlySales,
-                'monthly_profit'    => $monthlyProfit,
-                'total_receivables' => $totalReceivables,
-                'monthly_collected' => $monthlyCollected,
+                'monthly_sales'      => $monthlySales,
+                'monthly_profit'     => $monthlyProfit,
+                'last_month_sales'   => $lastMonthSales,
+                'last_month_profit'  => $lastMonthProfit,
+                'total_receivables'  => $totalReceivables,
+                'monthly_collected'  => $monthlyCollected,
             ]
         ], 200);
     }
