@@ -210,6 +210,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
+                          onTap: () {
+                            context.push('/admin-driver-collections');
+                          },
                         ),
                       ],
                     );

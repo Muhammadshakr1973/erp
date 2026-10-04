@@ -20,6 +20,7 @@ import '../../features/shared/views/sales_return_detail_screen.dart';
 import '../../features/admin/views/admin_purchases_screen.dart';
 import '../../features/admin/views/admin_audit_logs_screen.dart';
 import '../../features/admin/views/admin_delivery_trips_screen.dart';
+import '../../features/admin/views/admin_driver_collections_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
@@ -105,6 +106,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return _getDashboardForRole(role);
       }
       if (location.startsWith('/admin-audit-logs') &&
+          !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/admin-driver-collections') &&
           !(role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
@@ -221,6 +226,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin-delivery-trips',
         name: 'adminDeliveryTrips',
         builder: (context, state) => const AdminDeliveryTripsScreen(),
+      ),
+      GoRoute(
+        path: '/admin-driver-collections',
+        name: 'adminDriverCollections',
+        builder: (context, state) => const AdminDriverCollectionsScreen(),
       ),
       GoRoute(
         path: '/trip/:id',
