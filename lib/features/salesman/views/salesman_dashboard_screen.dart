@@ -23,6 +23,8 @@ import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/app_snackbar.dart';
+import '../../shared/providers/warehouse_provider.dart';
 import '../providers/salesman_dashboard_provider.dart';
 import 'salesman_my_commissions_screen.dart';
 import 'salesman_main_screen.dart';
@@ -744,6 +746,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             
             return AppCard(
               onTap: () {
+                _handleCustomerTap(context, ref, customer);
+              },
+              onLongPress: () {
                 context.push('/customer/${customer.id}');
               },
               color: customer.visited 
@@ -882,5 +887,86 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleCustomerTap(
+    BuildContext context,
+    WidgetRef ref,
+    DashboardCustomer customer,
+  ) async {
+    // Show progress/loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final user = ref.read(authProvider).user;
+      int? warehouseId = user?.warehouseId;
+
+      if (warehouseId == null) {
+        // Fallback: fetch/get warehouses
+        final warehousesAsync = ref.read(warehouseListProvider);
+        final warehouses = warehousesAsync.value;
+        if (warehouses != null && warehouses.isNotEmpty) {
+          final mainWh = warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first);
+          warehouseId = mainWh.id;
+        } else {
+          // If not loaded or empty, try to fetch it asynchronously
+          final fetchedWarehouses = await ref.read(warehouseListProvider.future);
+          if (fetchedWarehouses.isNotEmpty) {
+            final mainWh = fetchedWarehouses.firstWhere((w) => w.isMain, orElse: () => fetchedWarehouses.first);
+            warehouseId = mainWh.id;
+          }
+        }
+      }
+
+      if (warehouseId == null) {
+        throw Exception('هیچ کۆگایەک نەدۆزرایەوە بۆ دروستکردنی پسوڵە');
+      }
+
+      final payload = {
+        'customer_id': customer.id,
+        'warehouse_id': warehouseId,
+        'status': 'PACKING',
+        'discount_type': 'FIXED',
+        'discount_percent': 0.0,
+        'discount_amount': 0.0,
+        'shared_key': 'order_${DateTime.now().microsecondsSinceEpoch}',
+        'version': 1,
+        'notes': null,
+        'items': [],
+      };
+
+      final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
+
+      if (context.mounted) {
+        // Pop the loading dialog
+        Navigator.pop(context);
+
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەکە بە سەرکەوتوویی دروستکرا',
+          type: SnackbarType.success,
+        );
+
+        // Open the newly created order
+        context.push('/salesman/create-order', extra: createdOrder);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Pop the loading dialog
+        Navigator.pop(context);
+
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە لە دروستکردنی پسوڵە: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 }
