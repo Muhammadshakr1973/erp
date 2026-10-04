@@ -894,6 +894,15 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     DashboardCustomer customer,
   ) async {
+    if (customer.id <= 0) {
+      AppSnackbar.show(
+        context,
+        message: 'ناسنامەی کڕیار نادروستە (Customer ID is invalid: ${customer.id})',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
     // Show progress/loading dialog
     showDialog(
       context: context,

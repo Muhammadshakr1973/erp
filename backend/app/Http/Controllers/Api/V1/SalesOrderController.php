@@ -353,8 +353,8 @@ class SalesOrderController extends Controller
 
             foreach ($customers as $customer) {
                 $todayRouteCustomers[] = [
-                    'id' => $customer->id,
-                    'name' => $customer->name,
+                    'id' => (int) $customer->id,
+                    'name' => (string) $customer->name,
                     'phone' => $customer->phone,
                     'address' => $customer->address,
                     'current_balance' => (int) $customer->current_balance,

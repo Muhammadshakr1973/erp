@@ -47,14 +47,32 @@ class DashboardCustomer {
   });
 
   factory DashboardCustomer.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'] ?? json['customer_id'];
+    final parsedId = rawId is num
+        ? rawId.toInt()
+        : (int.tryParse(rawId?.toString() ?? '0') ?? 0);
+
+    final rawBalance = json['current_balance'] ?? json['balance'];
+    final parsedBalance = rawBalance is num
+        ? rawBalance.toInt()
+        : (int.tryParse(rawBalance?.toString() ?? '0') ?? 0);
+
+    final rawVisitOrder = json['visit_order'];
+    final parsedVisitOrder = rawVisitOrder is num
+        ? rawVisitOrder.toInt()
+        : (int.tryParse(rawVisitOrder?.toString() ?? '0') ?? 0);
+
     return DashboardCustomer(
-      id: (json['id'] is num) ? (json['id'] as num).toInt() : 0,
+      id: parsedId,
       name: json['name']?.toString() ?? '',
       phone: json['phone']?.toString(),
       address: json['address']?.toString(),
-      currentBalance: (json['current_balance'] is num) ? (json['current_balance'] as num).toInt() : 0,
-      visitOrder: (json['visit_order'] is num) ? (json['visit_order'] as num).toInt() : 0,
-      visited: json['visited'] == true || json['visited'] == 1,
+      currentBalance: parsedBalance,
+      visitOrder: parsedVisitOrder,
+      visited: json['visited'] == true ||
+          json['visited'] == 1 ||
+          json['visited'] == '1' ||
+          json['visited'] == 'true',
     );
   }
 }
@@ -94,24 +112,41 @@ class SalesmanDashboardData {
     
     return SalesmanDashboardData(
       routeName: json['route_name']?.toString() ?? 'گشتی',
-      todayRouteId: json['today_route_id'] != null ? (json['today_route_id'] as num).toInt() : null,
+      todayRouteId: json['today_route_id'] != null
+          ? (json['today_route_id'] is num
+              ? (json['today_route_id'] as num).toInt()
+              : int.tryParse(json['today_route_id'].toString()))
+          : null,
       todayRouteCustomers: rawCustomers
           .map((item) => DashboardCustomer.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
-      todaySales: (json['today_sales'] is num) ? (json['today_sales'] as num).toInt() : 0,
-      todayUnits: (json['today_units'] is num) ? (json['today_units'] as num).toInt() : 0,
+      todaySales: (json['today_sales'] is num)
+          ? (json['today_sales'] as num).toInt()
+          : (int.tryParse(json['today_sales']?.toString() ?? '0') ?? 0),
+      todayUnits: (json['today_units'] is num)
+          ? (json['today_units'] as num).toInt()
+          : (int.tryParse(json['today_units']?.toString() ?? '0') ?? 0),
       last7DaysSales: (json['last_7_days_sales'] is num)
           ? (json['last_7_days_sales'] as num).toInt()
-          : ((json['weekly_sales'] is num) ? (json['weekly_sales'] as num).toInt() : 0),
-      last7DaysUnits: (json['last_7_days_units'] is num) ? (json['last_7_days_units'] as num).toInt() : 0,
+          : (int.tryParse(json['last_7_days_sales']?.toString() ?? '') ??
+              (int.tryParse(json['weekly_sales']?.toString() ?? '0') ?? 0)),
+      last7DaysUnits: (json['last_7_days_units'] is num)
+          ? (json['last_7_days_units'] as num).toInt()
+          : (int.tryParse(json['last_7_days_units']?.toString() ?? '0') ?? 0),
       monthUnits: (json['month_units'] is num)
           ? (json['month_units'] as num).toInt()
-          : ((json['this_month_units'] is num) ? (json['this_month_units'] as num).toInt() : 0),
+          : (int.tryParse(json['month_units']?.toString() ?? '') ??
+              (int.tryParse(json['this_month_units']?.toString() ?? '0') ?? 0)),
       lastMonthUnits: (json['last_month_units'] is num)
           ? (json['last_month_units'] as num).toInt()
-          : ((json['previous_month_units'] is num) ? (json['previous_month_units'] as num).toInt() : 0),
-      newCustomersWeek: (json['new_customers_week'] is num) ? (json['new_customers_week'] as num).toInt() : 0,
-      newCustomersMonth: (json['new_customers_month'] is num) ? (json['new_customers_month'] as num).toInt() : 0,
+          : (int.tryParse(json['last_month_units']?.toString() ?? '') ??
+              (int.tryParse(json['previous_month_units']?.toString() ?? '0') ?? 0)),
+      newCustomersWeek: (json['new_customers_week'] is num)
+          ? (json['new_customers_week'] as num).toInt()
+          : (int.tryParse(json['new_customers_week']?.toString() ?? '0') ?? 0),
+      newCustomersMonth: (json['new_customers_month'] is num)
+          ? (json['new_customers_month'] as num).toInt()
+          : (int.tryParse(json['new_customers_month']?.toString() ?? '0') ?? 0),
       weeklyChartData: rawChart
           .map((item) => WeeklyChartItem.fromJson(Map<String, dynamic>.from(item)))
           .toList(),

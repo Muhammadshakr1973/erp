@@ -237,6 +237,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _loadCustomerById(int customerId) async {
+    if (customerId <= 0) return;
     try {
       final customers = await ref.read(customerListProvider.future);
       final match = customers.where((c) => c.id == customerId).firstOrNull;
@@ -265,7 +266,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _loadPreselectedCustomer() async {
     final customerId = widget.preselectedCustomerId;
-    if (customerId == null) return;
+    if (customerId == null || customerId <= 0) return;
     try {
       final customers = await ref.read(customerListProvider.future);
       final match = customers
