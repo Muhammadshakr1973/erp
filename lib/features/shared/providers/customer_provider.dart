@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -113,11 +114,15 @@ final filteredCustomerListProvider =
       }
     });
 
-final customerListProvider = FutureProvider<List<Customer>>((ref) async {
-  final paginated = await ref.watch(
-    filteredCustomerListProvider(const CustomerFilters(perPage: 500)).future,
+final customerListProvider = FutureProvider<List<Customer>>((ref) {
+  final paginatedAsync = ref.watch(
+    filteredCustomerListProvider(const CustomerFilters(perPage: 500)),
   );
-  return paginated.data;
+  return paginatedAsync.when(
+    data: (paginated) => paginated.data,
+    loading: () => Completer<List<Customer>>().future,
+    error: (err, stack) => Future<List<Customer>>.error(err, stack),
+  );
 });
 
 final singleCustomerProvider = FutureProvider.family<Customer, int>((
