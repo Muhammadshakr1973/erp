@@ -23,7 +23,7 @@ class ReportController extends Controller
      */
     public function dashboard(): JsonResponse
     {
-        $cacheKey = 'admin_dashboard_kpis_v1';
+        $cacheKey = 'admin_dashboard_kpis_v2';
 
         $data = Cache::remember($cacheKey, 60, function () {
             $startOfMonth = Carbon::now()->startOfMonth();
@@ -59,6 +59,10 @@ class ReportController extends Controller
             $monthlyCollected = (int) CustomerPayment::whereBetween('paid_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                 ->sum('amount');
 
+            // 7. Delivered to office (collections handed over to office)
+            $deliveredToOffice = (int) \App\Models\DriverCollection::whereBetween('collected_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+                ->sum('amount');
+
             return [
                 'monthly_sales'      => $monthlySales,
                 'monthly_profit'     => $monthlyProfit,
@@ -66,6 +70,7 @@ class ReportController extends Controller
                 'last_month_profit'  => $lastMonthProfit,
                 'total_receivables'  => $totalReceivables,
                 'monthly_collected'  => $monthlyCollected,
+                'delivered_to_office' => $deliveredToOffice,
             ];
         });
 

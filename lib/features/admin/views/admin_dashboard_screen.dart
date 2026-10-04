@@ -210,6 +210,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
+                          subText: 'ڕادەستکراو بە ئۆفیس: ${Formatters.currency(dashboard.deliveredToOffice)}',
                           onTap: () {
                             context.push('/admin-driver-collections');
                           },
