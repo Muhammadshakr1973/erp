@@ -9,6 +9,7 @@ class AppCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final Color? color;
+  final Color? borderColor;
 
   const AppCard({
     Key? key,
@@ -17,6 +18,7 @@ class AppCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.color,
+    this.borderColor,
   }) : super(key: key);
 
   @override
@@ -31,6 +33,7 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? theme.colorScheme.surface,
         borderRadius: AppRadius.radiusLg,
+        border: borderColor != null ? Border.all(color: borderColor!, width: 1.5) : null,
         boxShadow: isDark ? AppShadows.cardDark : AppShadows.cardLight,
       ),
       child: Material(

@@ -203,6 +203,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     subtitle: 'پسوڵەی بێ گەشت',
                     icon: Icons.local_shipping_outlined,
                     color: AppColors.primary,
+                    isAlert: readyOrdersCount > 0,
                     onTap: readyOrdersCount > 0
                         ? () {
                             final orderIds = readyOrdersAsync.maybeWhen(
@@ -258,9 +259,22 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     required IconData icon,
     required Color color,
     VoidCallback? onTap,
+    bool isAlert = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final cardBgColor = isAlert 
+        ? AppColors.danger.withValues(alpha: isDark ? 0.12 : 0.06) 
+        : null;
+        
+    final cardBorderColor = isAlert 
+        ? AppColors.danger.withValues(alpha: 0.6) 
+        : null;
+
     return AppCard(
       onTap: onTap,
+      color: cardBgColor,
+      borderColor: cardBorderColor,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
@@ -275,16 +289,26 @@ class WarehouseDashboardScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: isAlert 
+                      ? AppColors.danger.withValues(alpha: 0.25)
+                      : color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: isAlert
+                    ? const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.danger,
+                        size: 22,
+                      )
+                    : Icon(icon, color: color, size: 22),
               ),
               if (onTap != null)
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isAlert 
+                      ? AppColors.danger
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
             ],
           ),
@@ -295,22 +319,54 @@ class WarehouseDashboardScreen extends ConsumerWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.caption,
+                style: AppTextStyles.caption.copyWith(
+                  color: isAlert ? AppColors.danger : null,
+                  fontWeight: isAlert ? FontWeight.bold : null,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: AppTextStyles.h2,
-                maxLines: 1,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    value,
+                    style: AppTextStyles.h2.copyWith(
+                      color: isAlert ? AppColors.danger : null,
+                    ),
+                    maxLines: 1,
+                  ),
+                  if (isAlert) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'ئاگاداری',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: AppTextStyles.caption.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isAlert 
+                      ? AppColors.danger.withValues(alpha: 0.8)
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
+                  fontWeight: isAlert ? FontWeight.w500 : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
