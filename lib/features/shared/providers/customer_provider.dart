@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,8 +56,8 @@ final filteredCustomerListProvider =
     ) async {
       final userId = ref.watch(authProvider.select((state) => state.user?.id));
       if (userId == null) {
-        return const PaginatedResponse<Customer>(
-          data: [],
+        return PaginatedResponse<Customer>(
+          data: const [],
           currentPage: 1,
           lastPage: 1,
           total: 0,
