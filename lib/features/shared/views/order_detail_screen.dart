@@ -442,7 +442,7 @@ class OrderDetailScreen extends ConsumerWidget {
               _buildInfoRow(
                 context,
                 'بەروار',
-                order.createdAt.split('T').first,
+                Formatters.kurdishDayAndDate(order.createdAt),
               ),
               const SizedBox(height: AppSpacing.xs),
               SizedBox(

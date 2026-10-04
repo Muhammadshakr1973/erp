@@ -434,7 +434,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'ژمارەی کاڵا: ${order.items.length} دانە • بەروار: ${order.createdAt.length >= 10 ? order.createdAt.substring(0, 10) : order.createdAt}',
+                            'ژمارەی کاڵا: ${order.items.length} دانە • بەروار: ${Formatters.kurdishDayAndDate(order.createdAt)}',
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.textSecondaryLight,
                               fontSize: 11,

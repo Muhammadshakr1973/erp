@@ -305,7 +305,7 @@ class _AdminDriverCollectionsScreenState
                           style: AppTextStyles.caption,
                         ),
                         Text(
-                          col.collectedAt,
+                          Formatters.kurdishDayAndDate(col.collectedAt),
                           style: AppTextStyles.caption,
                         ),
                       ],

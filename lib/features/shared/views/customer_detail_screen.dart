@@ -1014,7 +1014,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'مەندوب: $salesmanName • ${order.createdAt.split('T').first}',
+                              'مەندوب: $salesmanName • ${Formatters.kurdishDayAndDate(order.createdAt)}',
                               style: AppTextStyles.caption,
                             ),
                           ],
