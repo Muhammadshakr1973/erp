@@ -1999,10 +1999,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         style: TextStyle(color: theme.colorScheme.error, fontSize: 11),
       ),
       data: (customers) {
+        final dropdownCustomers = List<Customer>.from(customers);
+        if (_selectedCustomer != null &&
+            !dropdownCustomers.any((c) => c.id == _selectedCustomer!.id)) {
+          dropdownCustomers.insert(0, _selectedCustomer!);
+        }
+
         return DropdownButtonFormField<int>(
           key: ValueKey(_selectedCustomer?.id),
           isExpanded: true,
-          initialValue: customers.any((c) => c.id == _selectedCustomer?.id)
+          initialValue: dropdownCustomers.any((c) => c.id == _selectedCustomer?.id)
               ? _selectedCustomer?.id
               : null,
           decoration: InputDecoration(
@@ -2060,7 +2066,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             fontSize: 12,
           ),
           iconEnabledColor: theme.colorScheme.onSurfaceVariant,
-          items: customers.map((c) {
+          items: dropdownCustomers.map((c) {
             return DropdownMenuItem<int>(
               value: c.id,
               child: Text(
@@ -2075,7 +2081,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             );
           }).toList(),
           onChanged: (val) {
-            final found = customers.where((c) => c.id == val).firstOrNull;
+            final found = dropdownCustomers.where((c) => c.id == val).firstOrNull;
             _lastChangedField = 'customer';
             setState(() {
               _selectedCustomer = found;
