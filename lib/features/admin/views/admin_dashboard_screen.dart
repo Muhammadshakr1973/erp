@@ -205,9 +205,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           icon: AppIcons.customerDebt,
                           color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                           subText: 'کۆی قەرزی کڕیار: ${Formatters.currency(dashboard.totalCustomerDebts)}',
-                          onTap: () {
-                            context.push('/admin-reports/customer-debts');
-                          },
                         ),
                         _buildStatCard(
                           context: context,
