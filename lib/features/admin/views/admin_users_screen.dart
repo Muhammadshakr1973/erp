@@ -887,7 +887,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       }
     }
 
-    if (isWarehouseSelected && _selectedWarehouseId == null) {
+    if ((isWarehouseSelected || isSalesmanSelected) && _selectedWarehouseId == null) {
       invalidKeys.add(_warehouseKey);
     }
 
@@ -952,7 +952,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       final barcode = _barcodeController.text.trim();
       final imageUrl = _imageUrlController.text.trim();
 
-      final warehouseId = isWarehouseSelected ? _selectedWarehouseId : null;
+      final warehouseId = (isWarehouseSelected || isSalesmanSelected) ? _selectedWarehouseId : null;
 
       final List<Map<String, dynamic>> routePlansPayload = [];
       if (isSalesmanSelected) {
@@ -1484,7 +1484,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                if (isWarehouseSelected) ...[
+                if (isWarehouseSelected || isSalesmanSelected) ...[
                   warehousesAsync.when(
                     data: (warehouses) {
                       return DropdownButtonFormField<int>(

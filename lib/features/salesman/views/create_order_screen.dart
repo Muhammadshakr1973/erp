@@ -19,6 +19,7 @@ import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../../core/sync/pusher_service.dart';
 
 class CreateOrderScreen extends ConsumerStatefulWidget {
@@ -1293,6 +1294,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
 
+    final currentUser = ref.watch(authProvider).user;
+    final isSalesman = currentUser?.isSalesman ?? false;
+    if (isSalesman && _selectedWarehouseId == null && currentUser?.warehouseId != null) {
+      _selectedWarehouseId = currentUser.warehouseId;
+    }
+
     final allProducts = productsAsync.asData?.value ?? [];
 
     return Scaffold(
@@ -1425,6 +1432,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     AsyncValue<List<WarehouseModel>> warehousesAsync,
   ) {
     final theme = Theme.of(context);
+    final currentUser = ref.watch(authProvider).user;
+    final isSalesman = currentUser?.isSalesman ?? false;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
@@ -1447,67 +1456,69 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               },
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          if (!isSalesman) ...[
+            const SizedBox(width: AppSpacing.sm),
 
-          // 2. Warehouse Selection
-          Expanded(
-            flex: 2,
-            child: warehousesAsync.when(
-              loading: () => const SizedBox(
-                height: 48,
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              error: (err, _) => const Text('هەڵە لە کۆگا'),
-              data: (warehouses) {
-                if (warehouses.isEmpty) {
-                  return const Text('کۆگا نییە');
-                }
-                final selectedId = _selectedWarehouseId ??
-                    (warehouses.any((w) => w.isMain)
-                        ? warehouses.firstWhere((w) => w.isMain).id
-                        : warehouses.first.id);
+            // 2. Warehouse Selection
+            Expanded(
+              flex: 2,
+              child: warehousesAsync.when(
+                loading: () => const SizedBox(
+                  height: 48,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                error: (err, _) => const Text('هەڵە لە کۆگا'),
+                data: (warehouses) {
+                  if (warehouses.isEmpty) {
+                    return const Text('کۆگا نییە');
+                  }
+                  final selectedId = _selectedWarehouseId ??
+                      (warehouses.any((w) => w.isMain)
+                          ? warehouses.firstWhere((w) => w.isMain).id
+                          : warehouses.first.id);
 
-                return DropdownButtonFormField<int>(
-                  key: ValueKey(selectedId),
-                  isExpanded: true,
-                  initialValue: warehouses.any((w) => w.id == selectedId)
-                      ? selectedId
-                      : warehouses.first.id,
-                  dropdownColor: theme.colorScheme.surface,
-                  decoration: InputDecoration(
-                    labelText: 'دیاریکردنی کۆگا',
-                    prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
-                    suffixIcon: _buildFieldStatusIcon('warehouse'),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                  ),
-                  style: theme.textTheme.bodyMedium,
-                  items: warehouses.map((w) {
-                    return DropdownMenuItem<int>(
-                      value: w.id,
-                      child: Text(
-                        w.name,
-                        style: const TextStyle(fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
+                  return DropdownButtonFormField<int>(
+                    key: ValueKey(selectedId),
+                    isExpanded: true,
+                    initialValue: warehouses.any((w) => w.id == selectedId)
+                        ? selectedId
+                        : warehouses.first.id,
+                    dropdownColor: theme.colorScheme.surface,
+                    decoration: InputDecoration(
+                      labelText: 'دیاریکردنی کۆگا',
+                      prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
+                      suffixIcon: _buildFieldStatusIcon('warehouse'),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      _lastChangedField = 'warehouse';
-                      setState(() {
-                        _selectedWarehouseId = val;
-                      });
-                      _triggerDebouncedAutoSave();
-                    }
-                  },
-                );
-              },
+                    ),
+                    style: theme.textTheme.bodyMedium,
+                    items: warehouses.map((w) {
+                      return DropdownMenuItem<int>(
+                        value: w.id,
+                        child: Text(
+                          w.name,
+                          style: const TextStyle(fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        _lastChangedField = 'warehouse';
+                        setState(() {
+                          _selectedWarehouseId = val;
+                        });
+                        _triggerDebouncedAutoSave();
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

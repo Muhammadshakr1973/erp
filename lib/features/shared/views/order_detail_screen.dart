@@ -12,6 +12,7 @@ import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/utils/formatters.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import 'create_sales_return_dialog.dart';
 import 'map_picker_dialog.dart';
 
@@ -405,6 +406,9 @@ class OrderDetailScreen extends ConsumerWidget {
     final salesmanName = order.salesmanName;
     final warehouseName = order.warehouseName;
 
+    final currentUser = ref.watch(authProvider).user;
+    final isSalesman = currentUser?.isSalesman ?? false;
+
     StatusBadgeType statusType = StatusBadgeType.warning;
     switch (order.status) {
       case OrderModel.statusDelivered:
@@ -438,7 +442,7 @@ class OrderDetailScreen extends ConsumerWidget {
               _buildInfoRow(context, 'کڕیار', customerName),
               _buildInfoRow(context, 'ناونیشان', customerAddress),
               _buildInfoRow(context, 'مەندوب', salesmanName),
-              _buildInfoRow(context, 'کۆگا', warehouseName),
+              if (!isSalesman) _buildInfoRow(context, 'کۆگا', warehouseName),
               _buildInfoRow(
                 context,
                 'بەروار',

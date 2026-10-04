@@ -11,6 +11,16 @@ class UpdateSalesOrderRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $user = $this->user();
+        if ($user && $user->role?->name === 'salesman') {
+            $this->merge([
+                'warehouse_id' => $user->warehouse_id,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [

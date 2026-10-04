@@ -13,6 +13,7 @@ import '../providers/warehouse_provider.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import 'customer_selection_dialog.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class NewOrderCreationDialog extends ConsumerStatefulWidget {
   const NewOrderCreationDialog({super.key});
@@ -41,12 +42,22 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
   @override
   Widget build(BuildContext context) {
     final warehousesAsync = ref.watch(warehouseListProvider);
+    final currentUser = ref.watch(authProvider).user;
+    final isSalesman = currentUser?.isSalesman ?? false;
 
-    // Automatically select the main warehouse once loaded
+    // Automatically select the warehouse
     warehousesAsync.whenData((warehouses) {
       if (!_initialized && warehouses.isNotEmpty) {
-        final mainWh = warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first);
-        _selectedWarehouse = mainWh;
+        if (isSalesman) {
+          final assignedWh = warehouses.firstWhere(
+            (w) => w.id == currentUser?.warehouseId,
+            orElse: () => warehouses.first,
+          );
+          _selectedWarehouse = assignedWh;
+        } else {
+          final mainWh = warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first);
+          _selectedWarehouse = mainWh;
+        }
         _initialized = true;
       }
     });
@@ -110,42 +121,44 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
             const SizedBox(height: AppSpacing.md),
 
             // Warehouse Dropdown
-            const Text('کۆگا', style: AppTextStyles.bodyBold),
-            const SizedBox(height: AppSpacing.xs),
-            warehousesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Text('هەڵە لە بارکردنی کۆگاکان: $err', style: const TextStyle(color: AppColors.danger)),
-              data: (warehouses) {
-                if (warehouses.isEmpty) {
-                  return const Text('هیچ کۆگایەک بەردەست نییە', style: TextStyle(color: AppColors.danger));
-                }
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<WarehouseModel>(
-                      value: _selectedWarehouse,
-                      isExpanded: true,
-                      items: warehouses.map((wh) {
-                        return DropdownMenuItem<WarehouseModel>(
-                          value: wh,
-                          child: Text(wh.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedWarehouse = val;
-                        });
-                      },
+            if (!isSalesman) ...[
+              const Text('کۆگا', style: AppTextStyles.bodyBold),
+              const SizedBox(height: AppSpacing.xs),
+              warehousesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('هەڵە لە بارکردنی کۆگاکان: $err', style: const TextStyle(color: AppColors.danger)),
+                data: (warehouses) {
+                  if (warehouses.isEmpty) {
+                    return const Text('هیچ کۆگایەک بەردەست نییە', style: TextStyle(color: AppColors.danger));
+                  }
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.lg),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<WarehouseModel>(
+                        value: _selectedWarehouse,
+                        isExpanded: true,
+                        items: warehouses.map((wh) {
+                          return DropdownMenuItem<WarehouseModel>(
+                            value: wh,
+                            child: Text(wh.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedWarehouse = val;
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
 
             // Submit Button
             AppButton(
