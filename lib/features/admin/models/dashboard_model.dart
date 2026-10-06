@@ -8,6 +8,9 @@ class DashboardModel {
   final double deliveredToOffice;
   final double lastMonthSales;
   final double lastMonthProfit;
+  final double driversRemainingCash;
+  final double lastCollectionAmount;
+  final String? lastCollectionDriver;
 
   DashboardModel({
     required this.monthlySales,
@@ -19,6 +22,9 @@ class DashboardModel {
     required this.deliveredToOffice,
     required this.lastMonthSales,
     required this.lastMonthProfit,
+    required this.driversRemainingCash,
+    required this.lastCollectionAmount,
+    this.lastCollectionDriver,
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +47,11 @@ class DashboardModel {
           double.tryParse(json['last_month_sales']?.toString() ?? '0') ?? 0.0,
       lastMonthProfit:
           double.tryParse(json['last_month_profit']?.toString() ?? '0') ?? 0.0,
+      driversRemainingCash:
+          double.tryParse(json['drivers_remaining_cash']?.toString() ?? '0') ?? 0.0,
+      lastCollectionAmount:
+          double.tryParse(json['last_collection_amount']?.toString() ?? '0') ?? 0.0,
+      lastCollectionDriver: json['last_collection_driver']?.toString(),
     );
   }
 }

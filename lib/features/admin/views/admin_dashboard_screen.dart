@@ -208,12 +208,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         ),
                         _buildStatCard(
                           context: context,
-                          title: 'پارەی وەرگیراو',
-                          value: dashboard.monthlyCollected.toInt().toString(),
+                          title: 'پارەی لای شۆفێر',
+                          value: dashboard.driversRemainingCash.toInt().toString(),
                           currency: 'د.ع',
                           icon: Icons.monetization_on_outlined,
                           color: theme.brightness == Brightness.dark ? AppColors.infoDark : AppColors.info,
-                          subText: 'ڕادەستکراو: ${Formatters.currency(dashboard.deliveredToOffice)}',
+                          subText: dashboard.lastCollectionDriver != null
+                              ? 'کۆتا ڕادەستکردن (${dashboard.lastCollectionDriver}): ${Formatters.currency(dashboard.lastCollectionAmount)}'
+                              : 'کۆتا ڕادەستکردن: ${Formatters.currency(dashboard.lastCollectionAmount)}',
                           onTap: () {
                             context.push('/admin-driver-collections');
                           },

@@ -23,7 +23,7 @@ class ReportController extends Controller
      */
     public function dashboard(): JsonResponse
     {
-        $cacheKey = 'admin_dashboard_kpis_v3';
+        $cacheKey = 'admin_dashboard_kpis_v4';
 
         $data = Cache::remember($cacheKey, 60, function () {
             $startOfMonth = Carbon::now()->startOfMonth();
@@ -66,16 +66,33 @@ class ReportController extends Controller
             $deliveredToOffice = (int) \App\Models\DriverCollection::whereBetween('collected_at', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                 ->sum('amount');
 
+            // 8. Total remaining cash with all drivers
+            $totalCollectedByDrivers = (int) \DB::table('delivery_trip_orders')
+                ->where('status', 'DELIVERED')
+                ->sum('received_amount');
+            $totalPaidByDrivers = (int) \DB::table('driver_collections')->sum('amount');
+            $driversRemainingCash = $totalCollectedByDrivers - $totalPaidByDrivers;
+
+            // 9. Get the last collection from any driver
+            $lastCollection = \App\Models\DriverCollection::with('driver:id,name')
+                ->orderBy('id', 'desc')
+                ->first();
+            $lastCollectionAmount = $lastCollection ? (int)$lastCollection->amount : 0;
+            $lastCollectionDriverName = $lastCollection && $lastCollection->driver ? $lastCollection->driver->name : null;
+
             return [
-                'monthly_sales'        => $monthlySales,
-                'monthly_profit'       => $monthlyProfit,
-                'last_month_sales'     => $lastMonthSales,
-                'last_month_profit'    => $lastMonthProfit,
-                'total_receivables'    => $totalReceivables,
-                'total_customer_debts' => $totalReceivables,
-                'total_payables'       => $totalPayables,
-                'monthly_collected'    => $monthlyCollected,
-                'delivered_to_office'  => $deliveredToOffice,
+                'monthly_sales'            => $monthlySales,
+                'monthly_profit'           => $monthlyProfit,
+                'last_month_sales'         => $lastMonthSales,
+                'last_month_profit'        => $lastMonthProfit,
+                'total_receivables'        => $totalReceivables,
+                'total_customer_debts'     => $totalReceivables,
+                'total_payables'           => $totalPayables,
+                'monthly_collected'        => $monthlyCollected,
+                'delivered_to_office'      => $deliveredToOffice,
+                'drivers_remaining_cash'   => $driversRemainingCash,
+                'last_collection_amount'   => $lastCollectionAmount,
+                'last_collection_driver'   => $lastCollectionDriverName,
             ];
         });
 
