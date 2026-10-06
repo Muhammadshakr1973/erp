@@ -77,6 +77,45 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
               },
             ),
           ),
+          // Mandatory visit order warning notice
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+              vertical: AppSpacing.xs,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.warning,
+                    size: 20,
+                  ),
+                  SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'ئاگاداری: ڕێزبەندی سەردانەکان ناچارکەرە. تکایە بەپێی ئەم ڕێزبەندییەی خوارەوە سەردانی کڕیاران بکە.',
+                      style: TextStyle(
+                        fontFamily: 'Rudaw',
+                        fontSize: 12,
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: customersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -102,7 +141,23 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                 ),
               ),
               data: (customers) {
-                var filtered = customers
+                // Sort customers by routeId first, then by visitOrder, then by name
+                var sorted = List<Customer>.from(customers);
+                sorted.sort((a, b) {
+                  final aRouteId = a.routeId ?? 999999;
+                  final bRouteId = b.routeId ?? 999999;
+                  if (aRouteId != bRouteId) {
+                    return aRouteId.compareTo(bRouteId);
+                  }
+                  final aOrder = a.visitOrder ?? 999999;
+                  final bOrder = b.visitOrder ?? 999999;
+                  if (aOrder != bOrder) {
+                    return aOrder.compareTo(bOrder);
+                  }
+                  return a.name.compareTo(b.name);
+                });
+
+                var filtered = sorted
                     .where(
                       (c) => c.name.toLowerCase().contains(
                         _searchQuery.toLowerCase(),
@@ -149,6 +204,31 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                         },
                         child: Row(
                           children: [
+                            // Mandatory visit order sequence number badge
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${customer.visitOrder ?? index + 1}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Rudaw',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
                             CustomerAvatar(
                               imageUrl: customer.imageUrl,
                               size: 40,
