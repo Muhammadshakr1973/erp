@@ -492,20 +492,46 @@ class _PaymentsHistoryReportScreenState
                         // Brief statistics summary
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'کۆی پسوڵەکان: ${payments.length}',
-                                style: AppTextStyles.bodyBold,
-                              ),
-                              Text(
-                                'کۆی پارەی وەرگیراو/دراو: ${_formatCurrency(payments.fold<num>(0, (prev, element) => prev + element.amount))}',
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isMobile = constraints.maxWidth < 450;
+                              if (isMobile) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'کۆی پسوڵەکان: ${payments.length}',
+                                      style: AppTextStyles.bodyBold,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'کۆی پارەی وەرگیراو/دراو: ${_formatCurrency(payments.fold<num>(0, (prev, element) => prev + element.amount))}',
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        color: AppColors.success,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'کۆی پسوڵەکان: ${payments.length}',
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      'کۆی پارەی وەرگیراو/دراو: ${_formatCurrency(payments.fold<num>(0, (prev, element) => prev + element.amount))}',
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        color: AppColors.success,
+                                      ),
+                                      textAlign: TextAlign.end,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         const Divider(),
