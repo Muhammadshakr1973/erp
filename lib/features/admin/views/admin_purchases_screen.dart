@@ -831,7 +831,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: AppSpacing.md,
               mainAxisSpacing: AppSpacing.sm,
-              mainAxisExtent: isMobileOrTablet ? 98 : 82,
+              mainAxisExtent: isMobileOrTablet ? 124 : 82,
             ),
             itemBuilder: (context, index) =>
                 _buildSupplierCard(
