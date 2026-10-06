@@ -538,6 +538,7 @@ class ReportService
 
         $ledgerSummary = (clone $ledgerQuery)
             ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw('
                 COALESCE(SUM(debit), 0) as total_debit,
                 COALESCE(SUM(credit), 0) as total_credit
@@ -613,6 +614,7 @@ class ReportService
 
         $ledgerSummary = (clone $ledgerQuery)
             ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw('
             COALESCE(SUM(debit), 0) as total_debit,
             COALESCE(SUM(credit), 0) as total_credit
@@ -666,6 +668,7 @@ class ReportService
 
             $summaryData = (clone $query)
                 ->withoutEagerLoads()
+                ->reorder()
                 ->selectRaw("
                 COUNT(*) as total_count,
                 COALESCE(SUM(amount), 0) as total_amount,
@@ -733,6 +736,7 @@ class ReportService
 
         $summaryData = (clone $query)
             ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw("
             COUNT(*) as total_count,
             COALESCE(SUM(amount), 0) as total_amount,
@@ -864,6 +868,7 @@ class ReportService
 
         $summaryData = (clone $query)
             ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw('
             COUNT(*) as total_transactions,
             COALESCE(SUM(CASE WHEN quantity_change > 0 THEN quantity_change ELSE 0 END), 0) as total_in_qty,
@@ -916,6 +921,7 @@ class ReportService
 
         $summaryData = (clone $query)
             ->withoutEagerLoads()
+            ->reorder()
             ->selectRaw("
             COUNT(*) as total_transfers,
             SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_transfers
