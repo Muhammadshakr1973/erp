@@ -164,7 +164,7 @@ class AdminDeliveryTripsScreen extends ConsumerWidget {
                               Expanded(
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
+                                    Icon(Icons.local_shipping, size: 20, color: AppColors.primaryAdaptive(context)),
                                     const SizedBox(width: AppSpacing.xs),
                                     Expanded(
                                       child: Text(

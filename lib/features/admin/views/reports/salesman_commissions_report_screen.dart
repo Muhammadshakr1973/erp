@@ -1062,12 +1062,13 @@ class _SalesmanCommissionsReportScreenState
                     summary['approved'] as Map<String, dynamic>? ?? {};
                 final paid = summary['paid'] as Map<String, dynamic>? ?? {};
 
-                Widget buildKpiCard(
+                 Widget buildKpiCard(
                   String title,
                   dynamic amount,
                   dynamic count,
                   Color color,
                 ) {
+                  final adaptiveColor = AppColors.getAdaptiveColor(context, color);
                   return AppCard(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -1091,7 +1092,7 @@ class _SalesmanCommissionsReportScreenState
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: color,
+                            color: adaptiveColor,
                           ),
                           textDirection: TextDirection.ltr,
                           maxLines: 1,

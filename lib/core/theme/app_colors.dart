@@ -33,24 +33,39 @@ class AppColors {
   static const Color textSecondary = textSecondaryLight;
   static const Color textTertiary = textDisabledLight;
 
-  // Dark Mode colors (Modern Professional Slate Palette)
-  static const Color primaryDark = Color(0xFF60A5FA); // Vibrant clear blue
-  static const Color primaryContainerDark = Color(0xFF1E293B);
-  static const Color backgroundDark = Color(0xFF0F172A); // Slate 900
-  static const Color surfaceDark = Color(0xFF1E293B); // Slate 800
-  static const Color surfaceContainerDark = Color(0xFF334155); // Slate 700
-  static const Color surfaceContainerHighestDark = Color(0xFF475569); // Slate 600
+  // Dark Mode colors (Modern Professional Slate/Midnight Palette)
+  static const Color primaryDark = Color(0xFF3A86FF); // Brilliant clear electric blue
+  static const Color primaryContainerDark = Color(0xFF162541); // Deep rich navy container
+  static const Color backgroundDark = Color(0xFF080C14); // Ultra-rich deep space midnight black background
+  static const Color surfaceDark = Color(0xFF10192A); // High-contrast premium deep midnight card surface
+  static const Color surfaceContainerDark = Color(0xFF17243B); // Dark slate/navy container
+  static const Color surfaceContainerHighestDark = Color(0xFF223250); // Dark accent slate container
   
-  static const Color successDark = Color(0xFF34D399); // Emerald 400
-  static const Color warningDark = Color(0xFFFBBF24); // Amber 400
-  static const Color dangerDark = Color(0xFFF87171); // Red 400
-  static const Color infoDark = Color(0xFF38BDF8); // Sky 400
-  static const Color purpleDark = Color(0xFFA78BFA); // Violet 400
+  static const Color successDark = Color(0xFF00E676); // Pure electric green
+  static const Color warningDark = Color(0xFFFFB300); // Vibrant glowing gold/amber
+  static const Color dangerDark = Color(0xFFFE3F30); // Vibrant neon coral/red
+  static const Color infoDark = Color(0xFF00E5FF); // Electric bright cyan/sky blue
+  static const Color purpleDark = Color(0xFFD500F9); // Vibrant neon purple/violet
 
   static const Color textPrimaryDark = Color(0xFFF8FAFC); // Slate 50 (Ultra crisp)
-  static const Color textSecondaryDark = Color(0xFFCBD5E1); // Slate 300 (Clear, legible)
+  static const Color textSecondaryDark = Color(0xFFE2E8F0); // Slate 200 (Clear, legible)
   static const Color textDisabledDark = Color(0xFF64748B); // Slate 500
-  static const Color borderDark = Color(0xFF334155); // Slate 700
+  static const Color borderDark = Color(0xFF1E2E4A); // Clean, structured deep midnight-blue border
+
+  /// Helper to get an adaptive color from a given base color
+  static Color getAdaptiveColor(BuildContext context, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (!isDark) return color;
+
+    if (color == primary) return primaryDark;
+    if (color == success) return successDark;
+    if (color == warning) return warningDark;
+    if (color == danger) return dangerDark;
+    if (color == info) return infoDark;
+    if (color == purple) return purpleDark;
+    
+    return color;
+  }
 
   /// Helper to get adaptive primary color based on theme
   static Color primaryAdaptive(BuildContext context) {

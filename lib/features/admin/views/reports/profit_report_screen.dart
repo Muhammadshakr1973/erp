@@ -370,6 +370,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
     return Builder(
       builder: (context) {
         final theme = Theme.of(context);
+        final adaptiveColor = AppColors.getAdaptiveColor(context, color);
         return SizedBox(
           width: width,
           child: AppCard(
@@ -391,7 +392,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                   child: Text(
                     value,
                     style: AppTextStyles.h3.copyWith(
-                      color: color,
+                      color: adaptiveColor,
                       fontWeight: FontWeight.bold,
                     ),
                     textDirection: TextDirection.ltr,

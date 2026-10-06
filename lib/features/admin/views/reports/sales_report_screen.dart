@@ -454,6 +454,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   }
 
   Widget _buildKpiCard(String title, String value, Color color, double width) {
+    final adaptiveColor = AppColors.getAdaptiveColor(context, color);
     return SizedBox(
       width: width,
       child: AppCard(
@@ -463,7 +464,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
             Text(
               title,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondaryLight,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -475,7 +476,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
               child: Text(
                 value,
                 style: AppTextStyles.h3.copyWith(
-                  color: color,
+                  color: adaptiveColor,
                   fontWeight: FontWeight.bold,
                 ),
                 textDirection: TextDirection.ltr,

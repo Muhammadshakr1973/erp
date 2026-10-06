@@ -266,18 +266,20 @@ class WarehouseDashboardScreen extends ConsumerWidget {
     bool isDimmed = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final adaptiveColor = AppColors.getAdaptiveColor(context, color);
+    final dangerColor = isDark ? AppColors.dangerDark : AppColors.danger;
     
     // Dimmed state colors (slate/grey scale to look "turned off")
     final Color dimmedColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
     
     final cardBgColor = isAlert 
-        ? AppColors.danger.withValues(alpha: isDark ? 0.12 : 0.06) 
+        ? dangerColor.withValues(alpha: isDark ? 0.12 : 0.06) 
         : (isDimmed 
             ? (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.6) : const Color(0xFFF8FAFC))
             : null);
         
     final cardBorderColor = isAlert 
-        ? AppColors.danger.withValues(alpha: 0.6) 
+        ? dangerColor.withValues(alpha: 0.6) 
         : (isDimmed 
             ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.4) : const Color(0xFFE2E8F0))
             : null);
@@ -301,26 +303,26 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: isAlert 
-                      ? AppColors.danger.withValues(alpha: 0.25)
+                      ? dangerColor.withValues(alpha: 0.25)
                       : (isDimmed 
                           ? (isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0))
-                          : color.withValues(alpha: 0.12)),
+                          : adaptiveColor.withValues(alpha: 0.12)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: isAlert
-                    ? const Icon(
+                    ? Icon(
                         Icons.warning_amber_rounded,
-                        color: AppColors.danger,
+                        color: dangerColor,
                         size: 22,
                       )
-                    : Icon(icon, color: isDimmed ? dimmedColor : color, size: 22),
+                    : Icon(icon, color: isDimmed ? dimmedColor : adaptiveColor, size: 22),
               ),
               if (onTap != null)
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
                   color: isAlert 
-                      ? AppColors.danger
+                      ? dangerColor
                       : (isDimmed ? dimmedColor : Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
             ],
