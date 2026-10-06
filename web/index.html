@@ -43,30 +43,9 @@
   <script>
     window.addEventListener('load', function(ev) {
       if (window._flutter && window._flutter.loader) {
-        if (typeof window._flutter.loader.load === 'function') {
-          window._flutter.loader.load({
-            config: window._flutter.buildConfig
-          }).catch(function(e) {
-            console.warn('Flutter loader.load failed, trying loadEntrypoint fallback:', e);
-            if (typeof window._flutter.loader.loadEntrypoint === 'function') {
-              window._flutter.loader.loadEntrypoint({
-                onEntrypointLoaded: function(engineInitializer) {
-                  engineInitializer.initializeEngine().then(function(appRunner) {
-                    appRunner.runApp();
-                  });
-                }
-              });
-            }
-          });
-        } else if (typeof window._flutter.loader.loadEntrypoint === 'function') {
-          window._flutter.loader.loadEntrypoint({
-            onEntrypointLoaded: function(engineInitializer) {
-              engineInitializer.initializeEngine().then(function(appRunner) {
-                appRunner.runApp();
-              });
-            }
-          });
-        }
+        window._flutter.loader.load({
+          config: window._flutter.buildConfig
+        });
       }
     });
   </script>
