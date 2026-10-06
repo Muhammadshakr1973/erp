@@ -1561,9 +1561,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final isSalesman = currentUser?.isSalesman ?? false;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+      padding: const EdgeInsets.only(
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        top: AppSpacing.sm,
+        bottom: 2.0,
       ),
       color: theme.colorScheme.surfaceContainerLow,
       child: Row(
@@ -1574,7 +1576,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             flex: 2,
             child: AppTextField(
               controller: _notesController,
-              hintText: 'تێبینی (ئارەزوومەندانە)...',
+              hintText: 'تێبینی...',
               prefixIcon: Icons.note_alt_outlined,
               suffixIcon: _buildFieldStatusIcon('order_notes'),
               borderRadius: BorderRadius.circular(8),
@@ -1784,6 +1786,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   child: AppTextField(
                     controller: textEditingController,
                     focusNode: focusNode,
+                    borderRadius: BorderRadius.circular(8),
                     hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
                     prefixIcon: AppIcons.search,
                     suffixIcon: Row(
@@ -2544,9 +2547,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+            padding: const EdgeInsets.only(
+              left: AppSpacing.md,
+              right: AppSpacing.md,
+              top: 2.0,
+              bottom: AppSpacing.sm,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
