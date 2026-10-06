@@ -1250,22 +1250,22 @@ class _SalesmanCommissionsReportScreenState
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Row(
+                            Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   'دەستکاریکردن',
                                   style: TextStyle(
-                                    color: AppColors.primary,
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Icon(
                                   Icons.edit_outlined,
                                   size: 14,
-                                  color: AppColors.primary,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ],
                             ),

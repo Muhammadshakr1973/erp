@@ -256,25 +256,25 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'دەستکاریکردنی فلتەر',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Icon(
-                                      Icons.edit_outlined,
-                                      size: 14,
-                                      color: AppColors.primary,
-                                    ),
-                                  ],
+                                Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'دەستکاریکردنی فلتەر',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ],
+                            ),
                               ],
                             ),
                           ),
