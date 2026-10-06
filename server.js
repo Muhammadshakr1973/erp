@@ -83,7 +83,7 @@ const server = http.createServer((req, res) => {
     if (pathname.endsWith('flutter.js')) {
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.end('window._flutter = window._flutter || { loader: { loadEntrypoint: function() {} } };');
+      res.end('window._flutter = window._flutter || { loader: { load: function() {}, loadEntrypoint: function() {} } };');
       return;
     }
 
