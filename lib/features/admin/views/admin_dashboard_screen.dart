@@ -242,6 +242,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   return _buildTodaySalesmenPlanList(context, assignments);
                 },
               ),
+              const SizedBox(height: AppSpacing.sectionGap),
 
               // Salesmen Profit Bar Chart & New Customers Bar Chart
               salesmenReportAsync.when(
