@@ -98,6 +98,12 @@ class PusherService {
   Future<void> init() async {
     if (_isInitialized) return;
 
+    if (kIsWeb) {
+      debugPrint("Pusher: Realtime pusher events safely disabled on Web platform due to native plugin constraints.");
+      _isInitialized = false;
+      return;
+    }
+
     try {
       // Load the key/cluster dynamically from the backend for production safety
       await _fetchPusherConfig();
