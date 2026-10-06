@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 
 class TodayCustomersScreen extends ConsumerStatefulWidget {
