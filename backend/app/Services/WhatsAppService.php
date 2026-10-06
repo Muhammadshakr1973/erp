@@ -316,6 +316,133 @@ class WhatsAppService
     }
 
     /**
+     * Commission Calculated WhatsApp Notification
+     */
+    public function sendCommissionCalculatedNotification(
+        SalesmanCommission $commission,
+        ?User $actor = null
+    ): WhatsAppNotificationLog {
+        $salesman = $commission->salesman ?? User::find($commission->salesman_id);
+        $phone = $this->formatPhoneNumber($salesman?->phone);
+        $recipientName = $salesman?->name ?? 'مەندوبی بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('salesman_commission', $commission->id, 'COMMISSION_CALCULATED');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        
+        $fromStr = $commission->period_from ? \Carbon\Carbon::parse($commission->period_from)->format('Y-m-d') : 'N/A';
+        $toStr = $commission->period_to ? \Carbon\Carbon::parse($commission->period_to)->format('Y-m-d') : 'N/A';
+        
+        $totalSalesStr = $this->formatMoney($commission->total_sales);
+        $totalProfitStr = $this->formatMoney($commission->total_profit);
+        $fixedAmountStr = $this->formatMoney($commission->fixed_amount ?? 0);
+        $commissionAmountStr = $this->formatMoney($commission->commission_amount);
+        $percentageCommissionStr = $this->formatMoney(max(0, $commission->commission_amount - ($commission->fixed_amount ?? 0)));
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "📊 *هەژمارکردنی کۆمسیۆنی نوێ*\n"
+            . "👤 بەڕێز: {$recipientName}\n"
+            . "📅 ماوەی پسوڵەکان: {$fromStr} تا {$toStr}\n"
+            . "💵 کۆی گشتی فرۆش: {$totalSalesStr}\n"
+            . "📈 کۆی گشتی قازانج: {$totalProfitStr}\n"
+            . "💰 بڕی کۆمسیۆن: *{$commissionAmountStr}*\n"
+            . "📌 وردەکاری: مووچەی جێگیر ({$fixedAmountStr}) + ڕێژەیی ({$percentageCommissionStr})\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "تکایە پێداچوونەوەی بۆ بکە و چاوەڕێ بە تاوەکو لەلایەن کارگێڕییەوە پەسەند دەکرێت.";
+
+        $payload = [
+            'commission_id' => $commission->id,
+            'salesman_id' => $commission->salesman_id,
+            'period_from' => $commission->period_from,
+            'period_to' => $commission->period_to,
+            'total_sales' => $commission->total_sales,
+            'total_profit' => $commission->total_profit,
+            'fixed_amount' => $commission->fixed_amount,
+            'commission_amount' => $commission->commission_amount,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $salesman?->phone ?? 'UNKNOWN',
+            recipientName: $recipientName,
+            notificationType: 'COMMISSION_CALCULATED',
+            referenceType: 'salesman_commission',
+            referenceId: $commission->id,
+            message: $message,
+            customerId: null,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
+     * Commission Paid WhatsApp Notification
+     */
+    public function sendCommissionPaidNotification(
+        SalesmanCommission $commission,
+        ?User $actor = null
+    ): WhatsAppNotificationLog {
+        $salesman = $commission->salesman ?? User::find($commission->salesman_id);
+        $phone = $this->formatPhoneNumber($salesman?->phone);
+        $recipientName = $salesman?->name ?? 'مەندوبی بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('salesman_commission', $commission->id, 'COMMISSION_PAID');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        
+        $fromStr = $commission->period_from ? \Carbon\Carbon::parse($commission->period_from)->format('Y-m-d') : 'N/A';
+        $toStr = $commission->period_to ? \Carbon\Carbon::parse($commission->period_to)->format('Y-m-d') : 'N/A';
+        
+        $commissionAmountStr = $this->formatMoney($commission->commission_amount);
+        $paymentMethod = $commission->payment_method ? strtoupper($commission->payment_method) : 'CASH';
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "💵 *خەرجکردنی کۆمسیۆن*\n"
+            . "👤 بەڕێز: {$recipientName}\n"
+            . "📅 ماوەی پسوڵەکان: {$fromStr} تا {$toStr}\n"
+            . "💰 بڕی خەرجکراو: *{$commissionAmountStr}*\n"
+            . "📌 ڕێگای پارەدان: {$paymentMethod}\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "کۆمسیۆنی دیاریکراو بە سەرکەوتوویی خەرج کرا و ڕادەستتان کرا. سوپاس بۆ ماندووبوونت و هەوڵەکانت.";
+
+        $payload = [
+            'commission_id' => $commission->id,
+            'salesman_id' => $commission->salesman_id,
+            'period_from' => $commission->period_from,
+            'period_to' => $commission->period_to,
+            'commission_amount' => $commission->commission_amount,
+            'payment_method' => $commission->payment_method,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $salesman?->phone ?? 'UNKNOWN',
+            recipientName: $recipientName,
+            notificationType: 'COMMISSION_PAID',
+            referenceType: 'salesman_commission',
+            referenceId: $commission->id,
+            message: $message,
+            customerId: null,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
      * Dispatch message to provider with fallback and full audit recording
      */
     public function dispatchMessage(

@@ -103,4 +103,14 @@ class SalesmanCommission extends Model
     {
         return $this->status === self::STATUS_CANCELLED;
     }
+
+    public function getPeriodMonthAttribute(): string
+    {
+        return $this->period_from ? \Carbon\Carbon::parse($this->period_from)->format('m') : '';
+    }
+
+    public function getPeriodYearAttribute(): string
+    {
+        return $this->period_from ? \Carbon\Carbon::parse($this->period_from)->format('Y') : '';
+    }
 }

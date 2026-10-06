@@ -326,6 +326,13 @@ class NotificationService
             $this->notifyUser($salesman->id, Notification::TYPE_COMMISSION, $title, $body, $data);
         }
         $this->notifyRole(['owner', 'admin'], Notification::TYPE_COMMISSION, $title, "کۆمسیۆنی {$salesman?->name}: {$amountStr}", $data);
+
+        // Send WhatsApp notification
+        try {
+            app(WhatsAppService::class)->sendCommissionCalculatedNotification($commission);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send commission calculated WhatsApp notification: " . $e->getMessage());
+        }
     }
 
     /**
@@ -346,6 +353,13 @@ class NotificationService
 
         if ($commission->salesman_id) {
             $this->notifyUser($commission->salesman_id, Notification::TYPE_COMMISSION, $title, $body, $data);
+        }
+
+        // Send WhatsApp notification
+        try {
+            app(WhatsAppService::class)->sendCommissionPaidNotification($commission);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send commission paid WhatsApp notification: " . $e->getMessage());
         }
     }
 
