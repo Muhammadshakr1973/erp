@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
 import '../../../shared/models/commission_model.dart';
 
 final commissionsListProvider =
@@ -9,6 +11,17 @@ final commissionsListProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      pusher.subscribeToChannel('private-commissions', (eventData) {
+        debugPrint("Realtime update received on private-commissions for list: $eventData");
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-commissions');
+      });
+
       try {
         final response = await api.client.get(
           '/commissions',
@@ -50,6 +63,17 @@ final commissionSummaryProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      pusher.subscribeToChannel('private-commissions', (eventData) {
+        debugPrint("Realtime update received on private-commissions for summary: $eventData");
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-commissions');
+      });
+
       try {
         final response = await api.client.get(
           '/commissions/summary',
@@ -82,6 +106,17 @@ final commissionDetailProvider = FutureProvider.family<CommissionModel, int>((
   commissionId,
 ) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  pusher.subscribeToChannel('private-commissions', (eventData) {
+    debugPrint("Realtime update received on private-commissions for detail #$commissionId: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-commissions');
+  });
+
   try {
     final response = await api.client.get('/commissions/$commissionId');
     if (response.statusCode == 200) {

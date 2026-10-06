@@ -98,12 +98,6 @@ class PusherService {
   Future<void> init() async {
     if (_isInitialized) return;
 
-    if (kIsWeb) {
-      debugPrint("Pusher: Native pusher_channels_flutter plugin channel disabled on Web platform.");
-      _isInitialized = false;
-      return;
-    }
-
     try {
       // Load the key/cluster dynamically from the backend for production safety
       await _fetchPusherConfig();

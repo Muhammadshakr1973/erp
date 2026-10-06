@@ -96,7 +96,7 @@ class _SalesmanMyCommissionsScreenState
       _pusherService ??= pusher;
       final user = ref.read(authProvider).user;
 
-      pusher.subscribeToChannel('commissions', _onCommissionPusherEvent);
+      pusher.subscribeToChannel('private-commissions', _onCommissionPusherEvent);
       if (user != null) {
         pusher.subscribeToChannel(
           'private-user-notifications.${user.id}',
