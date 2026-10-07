@@ -78,8 +78,8 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
 
-          int totalOrdersCount = 0;
-          int deliveredOrdersCount = 0;
+          int todayTotalOrdersCount = 0;
+          int todayDeliveredOrdersCount = 0;
           int totalCollected = 0;
 
           int last7DaysTrips = 0;
@@ -88,10 +88,8 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
           int thisMonthOrders = 0;
 
           for (final trip in trips) {
-            totalOrdersCount += trip.orders.length;
             for (final order in trip.orders) {
               if (order.status == 'DELIVERED') {
-                deliveredOrdersCount++;
                 totalCollected += order.receivedAmount;
               }
             }
@@ -99,6 +97,16 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
             final tripDateTime = DateTime.tryParse(trip.tripDate);
             if (tripDateTime != null) {
               final tripDateOnly = DateTime(tripDateTime.year, tripDateTime.month, tripDateTime.day);
+
+              // Today's orders
+              if (tripDateOnly == today) {
+                todayTotalOrdersCount += trip.orders.length;
+                for (final order in trip.orders) {
+                  if (order.status == 'DELIVERED') {
+                    todayDeliveredOrdersCount++;
+                  }
+                }
+              }
 
               // 7 Days Range (today down to 6 days ago)
               final diff = today.difference(tripDateOnly).inDays;
@@ -179,7 +187,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                           _buildStatCard(
                             context: context,
                             title: 'پسوڵەی گەیەنراو',
-                            value: '$deliveredOrdersCount / $totalOrdersCount',
+                            value: '$todayDeliveredOrdersCount / $todayTotalOrdersCount',
                             icon: AppIcons.orderDelivered,
                             color: AppColors.success,
                           ),
