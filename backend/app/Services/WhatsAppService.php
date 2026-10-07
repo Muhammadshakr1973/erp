@@ -79,7 +79,9 @@ class WhatsAppService
     ): WhatsAppNotificationLog {
         $customer = $payment->customer ?? Customer::find($payment->customer_id);
         $phone = $this->formatPhoneNumber($customer?->phone);
-        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+        $recipientName = $customer && $customer->customer_name
+            ? "{$customer->customer_name} خاوەنی مارکێتی {$customer->name}"
+            : ($customer?->name ?? 'کڕیاری بەڕێز');
 
         // Check idempotency
         $existing = $this->checkIdempotency('customer_payment', $payment->id, 'PAYMENT_RECEIVED');
@@ -143,7 +145,9 @@ class WhatsAppService
     ): WhatsAppNotificationLog {
         $customer = $order->customer ?? Customer::find($order->customer_id);
         $phone = $this->formatPhoneNumber($customer?->phone);
-        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+        $recipientName = $customer && $customer->customer_name
+            ? "{$customer->customer_name} خاوەنی مارکێتی {$customer->name}"
+            : ($customer?->name ?? 'کڕیاری بەڕێز');
 
         // Check idempotency
         $existing = $this->checkIdempotency('sales_order', $order->id, 'DELIVERY_DEBT');
@@ -228,7 +232,9 @@ class WhatsAppService
     ): WhatsAppNotificationLog {
         $customer = $order->customer ?? Customer::find($order->customer_id);
         $phone = $this->formatPhoneNumber($customer?->phone);
-        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+        $recipientName = $customer && $customer->customer_name
+            ? "{$customer->customer_name} خاوەنی مارکێتی {$customer->name}"
+            : ($customer?->name ?? 'کڕیاری بەڕێز');
 
         // Check idempotency
         $existing = $this->checkIdempotency('sales_order', $order->id, 'SALES_RETURN');
@@ -648,7 +654,9 @@ class WhatsAppService
     ): WhatsAppNotificationLog {
         $customer = $order->customer ?? Customer::find($order->customer_id);
         $phone = $this->formatPhoneNumber($customer?->phone);
-        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+        $recipientName = $customer && $customer->customer_name
+            ? "{$customer->customer_name} خاوەنی مارکێتی {$customer->name}"
+            : ($customer?->name ?? 'کڕیاری بەڕێز');
 
         // Check idempotency
         $existing = $this->checkIdempotency('sales_order', $order->id, 'ORDER_READY');
