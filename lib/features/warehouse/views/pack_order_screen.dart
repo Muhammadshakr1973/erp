@@ -549,13 +549,20 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  item.productName,
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    decoration: isPacked
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    color: isPacked ? Colors.grey : null,
+                                InkWell(
+                                  onTap: () => _showProductImageFullScreen(context, item),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                    child: Text(
+                                      item.productName,
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        decoration: isPacked
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                        color: isPacked ? Colors.grey : null,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -686,5 +693,164 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
               ),
       ),
     );
+  }
+
+  void _showProductImageFullScreen(BuildContext context, WarehouseOrderItemModel item) {
+    String? rawImagePath;
+    try {
+      rawImagePath = item.productImagePath;
+    } catch (_) {}
+
+    final bool hasImage = rawImagePath != null && rawImagePath.trim().isNotEmpty;
+    final String? resolvedUrl = hasImage ? _resolveImageUrl(rawImagePath.trim()) : null;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black.withValues(alpha: 0.95),
+          child: SafeArea(
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Stack(
+                children: [
+                  // Image/Content viewer area
+                  Center(
+                    child: resolvedUrl != null
+                        ? InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            child: Image.network(
+                              resolvedUrl,
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 80,
+                                      color: Colors.white54,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                      child: Text(
+                                        item.productName,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Rudaw',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'وێنەی کاڵاکە بارنەبوو یان بەردەست نییە',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14,
+                                        fontFamily: 'Rudaw',
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 100,
+                                color: Colors.white38,
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                child: Text(
+                                  item.productName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Rudaw',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'هیچ وێنەیەک بۆ ئەم کاڵایە تۆمار نەکراوە',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontFamily: 'Rudaw',
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+
+                  // Top Header Bar
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                         gradient: LinearGradient(
+                          colors: [Colors.black87, Colors.transparent],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _resolveImageUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    return 'https://pos.gardi.click$cleanPath';
   }
 }

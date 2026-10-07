@@ -46,6 +46,7 @@ class WarehouseOrderItemModel {
   final String? packedAt;
   final String? productUnit;
   final int? unitsPerCarton;
+  final String? productImagePath;
 
   WarehouseOrderItemModel({
     required this.id,
@@ -56,10 +57,11 @@ class WarehouseOrderItemModel {
     this.packedAt,
     this.productUnit,
     this.unitsPerCarton,
+    this.productImagePath,
   });
 
   factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
-    final productObj = json['product'];
+    final productObj = json['product'] as Map<String, dynamic>?;
     final String pName = productObj != null
         ? (productObj['name'] ?? 'کاڵا')
         : 'کاڵا';
@@ -67,6 +69,10 @@ class WarehouseOrderItemModel {
     // Handle is_packed as bool, check if it is 1 or true
     final rawPacked = json['is_packed'];
     final bool isPacked = rawPacked == true || rawPacked == 1;
+
+    final imgPath = productObj != null
+        ? (productObj['image_path'] ?? productObj['image_url'] ?? productObj['image'])
+        : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
 
     return WarehouseOrderItemModel(
       id: json['id'] ?? 0,
@@ -77,6 +83,7 @@ class WarehouseOrderItemModel {
       packedAt: json['packed_at'],
       productUnit: productObj != null ? (productObj['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
       unitsPerCarton: productObj != null ? (productObj['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      productImagePath: imgPath?.toString(),
     );
   }
 
@@ -90,6 +97,7 @@ class WarehouseOrderItemModel {
       packedAt: packedAt ?? this.packedAt,
       productUnit: productUnit,
       unitsPerCarton: unitsPerCarton,
+      productImagePath: productImagePath,
     );
   }
 }
