@@ -202,16 +202,16 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertEquals(1, WhatsAppNotificationLog::where('reference_id', $payment->id)->count());
     }
 
-    public function test_whatsapp_database_settings_override_config_defaults(): void
+    public function test_whatsapp_environment_settings_override_database_settings(): void
     {
         $apiUrl = 'https://api.ultramsg.com/instance-test/messages/chat';
         config([
-            'services.whatsapp.provider' => 'api_provider',
-            'services.whatsapp.api_url' => 'https://configured-provider.test/send',
-            'services.whatsapp.api_token' => 'configured-token',
+            'services.whatsapp.provider' => 'ultramsg',
+            'services.whatsapp.api_url' => $apiUrl,
+            'services.whatsapp.api_token' => 'environment-token',
         ]);
-        \App\Models\Setting::setValue('whatsapp_provider', 'ultramsg');
-        \App\Models\Setting::setValue('whatsapp_api_url', $apiUrl);
+        \App\Models\Setting::setValue('whatsapp_provider', 'api_provider');
+        \App\Models\Setting::setValue('whatsapp_api_url', 'https://database-provider.test/send');
         \App\Models\Setting::setValue('whatsapp_api_token', 'database-token');
 
         \Illuminate\Support\Facades\Http::fake([
@@ -231,7 +231,7 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertSame(WhatsAppNotificationLog::STATUS_SENT, $log->status);
         \Illuminate\Support\Facades\Http::assertSent(fn ($request) =>
             $request->url() === $apiUrl
-            && $request['token'] === 'database-token'
+            && $request['token'] === 'environment-token'
             && $request['to'] === '+9647501234567'
             && $request['body'] === 'Commission calculated'
         );

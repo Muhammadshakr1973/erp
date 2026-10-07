@@ -491,7 +491,7 @@ class WhatsAppService
             'idempotency_key' => $idempotencyKey,
             'message' => $message,
             'status' => WhatsAppNotificationLog::STATUS_PENDING,
-            'provider' => Setting::getValue('whatsapp_provider', config('services.whatsapp.provider', 'unconfigured')),
+            'provider' => config('services.whatsapp.provider') ?: Setting::getValue('whatsapp_provider', 'unconfigured'),
             'payload' => $payload,
             'last_attempt_at' => now(),
             'created_by' => $actor?->id,
@@ -505,9 +505,9 @@ class WhatsAppService
      */
     public function executeProviderSend(WhatsAppNotificationLog $log): WhatsAppNotificationLog
     {
-        $provider = $log->provider ?? Setting::getValue('whatsapp_provider', config('services.whatsapp.provider', 'unconfigured'));
-        $apiUrl = Setting::getValue('whatsapp_api_url', config('services.whatsapp.api_url'));
-        $apiToken = Setting::getValue('whatsapp_api_token', config('services.whatsapp.api_token'));
+        $provider = $log->provider ?: config('services.whatsapp.provider') ?: Setting::getValue('whatsapp_provider', 'unconfigured');
+        $apiUrl = config('services.whatsapp.api_url') ?: Setting::getValue('whatsapp_api_url');
+        $apiToken = config('services.whatsapp.api_token') ?: Setting::getValue('whatsapp_api_token');
 
         // Check if provider credentials are set
         if (!$apiUrl || !$apiToken || $provider === 'unconfigured') {
