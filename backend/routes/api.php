@@ -75,6 +75,37 @@ Route::prefix('v1')->group(function () {
             ], 500);
         }
     });
+    Route::get('/whatsapp-test-send', function () {
+        try {
+            $commission = \App\Models\SalesmanCommission::latest('id')->first();
+            if (!$commission) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No commission found in database'
+                ]);
+            }
+
+            $service = app(\App\Services\WhatsAppService::class);
+            $log = $service->sendCommissionPaidNotification($commission);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Test executed successfully!',
+                'log_id' => $log->id,
+                'log_status' => $log->status,
+                'log_error' => $log->error_message,
+                'recipient' => $log->recipient_name . ' (' . $log->recipient_phone . ')',
+                'response' => $log->response
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'class' => get_class($e),
+                'message' => $e->getMessage(),
+                'trace' => substr($e->getTraceAsString(), 0, 1500)
+            ], 500);
+        }
+    });
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
