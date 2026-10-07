@@ -9,8 +9,6 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../../admin/views/providers/driver_collection_provider.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
@@ -26,7 +24,6 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tripsAsync = ref.watch(driverTripsProvider);
-    final cashSummaryAsync = ref.watch(driverCashSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -80,20 +77,11 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
 
           int todayTotalOrdersCount = 0;
           int todayDeliveredOrdersCount = 0;
-          int totalCollected = 0;
 
-          int last7DaysTrips = 0;
-          int last7DaysOrders = 0;
           int thisMonthTrips = 0;
           int thisMonthOrders = 0;
 
           for (final trip in trips) {
-            for (final order in trip.orders) {
-              if (order.status == 'DELIVERED') {
-                totalCollected += order.receivedAmount;
-              }
-            }
-
             final tripDateTime = DateTime.tryParse(trip.tripDate);
             if (tripDateTime != null) {
               final tripDateOnly = DateTime(tripDateTime.year, tripDateTime.month, tripDateTime.day);
@@ -104,19 +92,6 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                 for (final order in trip.orders) {
                   if (order.status == 'DELIVERED') {
                     todayDeliveredOrdersCount++;
-                  }
-                }
-              }
-
-              // 7 Days Range (today down to 6 days ago)
-              final diff = today.difference(tripDateOnly).inDays;
-              if (diff >= 0 && diff < 7) {
-                if (trip.status == 'COMPLETED') {
-                  last7DaysTrips++;
-                }
-                for (final order in trip.orders) {
-                  if (order.status == 'DELIVERED') {
-                    last7DaysOrders++;
                   }
                 }
               }
@@ -147,26 +122,12 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
           }
 
           final isDark = theme.brightness == Brightness.dark;
-          final infoColor = isDark ? AppColors.infoDark : AppColors.info;
           final purpleColor = isDark ? AppColors.purpleDark : AppColors.purple;
           final warningColor = isDark ? AppColors.warningDark : AppColors.warning;
-
-          // Determine cash currently held by driver (total collected minus paid to company)
-          int cashWithDriver = totalCollected;
-          final currentUser = ref.watch(authProvider).user;
-          if (cashSummaryAsync.value != null && cashSummaryAsync.value!.isNotEmpty) {
-            final summaryList = cashSummaryAsync.value!;
-            final mySummary = summaryList.firstWhere(
-              (s) => currentUser != null && s.driver['id'] == currentUser.id,
-              orElse: () => summaryList.first,
-            );
-            cashWithDriver = mySummary.remainingAmount;
-          }
 
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(driverTripsProvider);
-              ref.invalidate(driverCashSummaryProvider);
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -179,11 +140,11 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                       int crossAxisCount = 2;
                       double aspectRatio = 1.25;
                       if (constraints.maxWidth >= 1024) {
-                        crossAxisCount = 4;
-                        aspectRatio = 1.35;
+                        crossAxisCount = 2;
+                        aspectRatio = 1.8;
                       } else if (constraints.maxWidth >= 600) {
-                        crossAxisCount = 4;
-                        aspectRatio = 1.25;
+                        crossAxisCount = 2;
+                        aspectRatio = 1.5;
                       }
 
                       return GridView.count(
@@ -200,20 +161,6 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                             value: '$pendingOrdersCount پسوڵە',
                             icon: Icons.local_shipping_outlined,
                             color: warningColor,
-                          ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'پارە لای شۆفێر',
-                            value: Formatters.currency(cashWithDriver),
-                            icon: AppIcons.customerDebt,
-                            color: AppColors.primaryAdaptive(context),
-                          ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'گەیاندنی ٧ ڕۆژی ڕابردوو',
-                            value: '$last7DaysTrips گەشت / $last7DaysOrders پسوڵە',
-                            icon: Icons.history_rounded,
-                            color: infoColor,
                           ),
                           _buildStatCard(
                             context: context,
