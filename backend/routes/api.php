@@ -26,6 +26,23 @@ Route::prefix('v1')->group(function () {
     // ئەوانەی پێویستیان بە تۆکن نییە (Public)
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
     Route::get('/proxy-image', [CustomerController::class, 'proxyImage']);
+    Route::get('/clear-system-cache', function () {
+        try {
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+            return response()->json([
+                'status' => 'success',
+                'message' => 'سیستەم کاش و ڕێکخستنەکان بەسەرکەوتوویی پاککرانەوە / System cache and config cleared successfully!',
+                'cache_cleared' => true,
+                'config_cleared' => true
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    });
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
