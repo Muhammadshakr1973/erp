@@ -388,6 +388,13 @@ class NotificationService
         if ($trip->driver_id) {
             $this->notifyUser($trip->driver_id, Notification::TYPE_ORDER, $title, $body, $data);
         }
+
+        // Send WhatsApp notification to the driver
+        try {
+            app(WhatsAppService::class)->sendDriverDeliveryTripNotification($trip);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send driver delivery trip WhatsApp notification: " . $e->getMessage());
+        }
     }
 
     /**

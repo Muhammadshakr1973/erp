@@ -436,4 +436,65 @@ class NotificationAndWhatsAppTest extends TestCase
             'type' => 'customer',
         ]);
     }
+
+    /**
+     * Test that creating a delivery trip sends a WhatsApp notification to the assigned driver with details, day, routes, and notes.
+     */
+    public function test_delivery_trip_creation_dispatches_whatsapp_notification_to_driver(): void
+    {
+        $driverRole = Role::create([
+            'name' => Role::DRIVER,
+            'display_name' => 'Driver',
+            'permissions' => ['delivery.view', 'delivery.update'],
+        ]);
+
+        $driver = User::factory()->create([
+            'role_id' => $driverRole->id,
+            'phone' => '07509876543',
+            'is_active' => true,
+        ]);
+
+        $warehouse = \App\Models\Warehouse::create(['name' => 'Main Warehouse', 'is_main' => true, 'is_active' => true]);
+
+        $order = \App\Models\SalesOrder::create([
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $warehouse->id,
+            'status' => \App\Models\SalesOrder::STATUS_READY,
+            'total_amount' => 150000,
+            'notes' => 'لە دواوەی مارکێتەکە دابگرە',
+            'created_by' => $this->salesman->id,
+        ]);
+
+        $tripService = app(\App\Services\DeliveryTripService::class);
+
+        $tripData = [
+            'driver_id' => $driver->id,
+            'trip_date' => '2026-10-11', // Sunday
+            'order_ids' => [$order->id],
+            'notes' => 'تکایە پێش سەعات 12 بگەیت',
+        ];
+
+        $trip = $tripService->createTrip($tripData, $this->owner);
+
+        $this->assertNotNull($trip);
+
+        $this->assertDatabaseHas('whatsapp_notification_logs', [
+            'notification_type' => 'DELIVERY_TRIP_ASSIGNED',
+            'reference_type' => 'delivery_trip',
+            'reference_id' => $trip->id,
+            'recipient_phone' => '+9647509876543',
+        ]);
+
+        $log = WhatsAppNotificationLog::where('reference_type', 'delivery_trip')
+            ->where('reference_id', $trip->id)
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertStringContainsString('یەکشەممە', $log->message);
+        $this->assertStringContainsString('Route Center', $log->message);
+        $this->assertStringContainsString('تکایە پێش سەعات 12 بگەیت', $log->message);
+        $this->assertStringContainsString('لە دواوەی مارکێتەکە دابگرە', $log->message);
+        $this->assertStringContainsString('Kawa Store', $log->message);
+    }
 }

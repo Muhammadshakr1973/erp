@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerPayment;
+use App\Models\DeliveryTrip;
 use App\Models\SalesOrder;
 use App\Models\Setting;
 use App\Models\Supplier;
@@ -702,6 +703,132 @@ class WhatsAppService
             referenceId: $order->id,
             message: $message,
             customerId: $customer?->id,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
+     * Driver Delivery Trip WhatsApp Notification
+     * Triggered AFTER delivery trip creation to inform the driver of trip details, day, routes, and notes.
+     */
+    public function sendDriverDeliveryTripNotification(
+        DeliveryTrip $trip,
+        ?User $actor = null
+    ): ?WhatsAppNotificationLog {
+        $trip->loadMissing([
+            'driver',
+            'orders.order.customer.route',
+        ]);
+
+        $driver = $trip->driver;
+        if (!$driver || !$driver->phone) {
+            return null;
+        }
+
+        $phone = $this->formatPhoneNumber($driver->phone);
+        $recipientName = $driver->name ?? 'شۆفێری بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('delivery_trip', $trip->id, 'DELIVERY_TRIP_ASSIGNED');
+        if ($existing) {
+            return $existing;
+        }
+
+        $daysKurdish = [
+            'Sunday'    => 'یەکشەممە',
+            'Monday'    => 'دووشەممە',
+            'Tuesday'   => 'سێشەممە',
+            'Wednesday' => 'چوارشەممە',
+            'Thursday'  => 'پێنجشەممە',
+            'Friday'    => 'هەینی',
+            'Saturday'  => 'شەممە',
+        ];
+
+        $company = $this->getCompanyName();
+        $dateCarbon = $trip->trip_date ? \Carbon\Carbon::parse($trip->trip_date) : now();
+        $dayEnglish = $dateCarbon->format('l');
+        $dayKurdish = $daysKurdish[$dayEnglish] ?? $dayEnglish;
+        $dateStr = $dateCarbon->format('Y-m-d');
+
+        // Extract routes without duplication and order notes with customer names
+        $routeNames = [];
+        $orderNotes = [];
+
+        foreach ($trip->orders as $tripOrder) {
+            $order = $tripOrder->order;
+            if (!$order) {
+                continue;
+            }
+
+            // Customer route
+            if ($order->customer) {
+                $routeName = $order->customer->route?->name;
+                if ($routeName && !in_array($routeName, $routeNames)) {
+                    $routeNames[] = $routeName;
+                }
+            }
+
+            // Order note
+            $notes = trim($order->notes ?? '');
+            if ($notes !== '') {
+                $customerName = $order->customer && $order->customer->customer_name
+                    ? "{$order->customer->customer_name} ({$order->customer->name})"
+                    : ($order->customer?->name ?? 'کڕیار');
+                $orderNotes[] = "🔹 *{$customerName}* (پسوڵەی #{$order->order_number}): {$notes}";
+            }
+        }
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "📅 *ڕۆژی گەیاندن: {$dayKurdish}* ({$dateStr})\n"
+            . "--------------------------------\n"
+            . "🚚 *ئاگاداری گەشتی گەیاندن*\n"
+            . "👤 شۆفێری بەڕێز: {$recipientName}\n"
+            . "🔢 ژمارەی گەشت: *{$trip->trip_number}*\n"
+            . "📦 ژمارەی پسوڵەکان: *{$trip->total_orders} پسوڵە*\n";
+
+        if (!empty($routeNames)) {
+            $message .= "\n🗺️ *ڕاوتەکانی پسوڵەکان:*\n";
+            foreach ($routeNames as $routeName) {
+                $message .= "• {$routeName}\n";
+            }
+        }
+
+        if (!empty(trim($trip->notes ?? ''))) {
+            $tripNotes = trim($trip->notes);
+            $message .= "\n📝 *تێبینیی گەشت:*\n{$tripNotes}\n";
+        }
+
+        if (!empty($orderNotes)) {
+            $message .= "\n📌 *تێبینیی پسوڵەی کڕیارەکان:*\n";
+            foreach ($orderNotes as $note) {
+                $message .= "{$note}\n";
+            }
+        }
+
+        $message .= "--------------------------------\n"
+            . "سوپاس بۆ خزمەت و ماندووبوونت.";
+
+        $payload = [
+            'trip_id' => $trip->id,
+            'trip_number' => $trip->trip_number,
+            'driver_id' => $trip->driver_id,
+            'total_orders' => $trip->total_orders,
+            'trip_date' => $dateStr,
+            'day_of_week' => $dayKurdish,
+            'routes' => $routeNames,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $driver->phone,
+            recipientName: $recipientName,
+            notificationType: 'DELIVERY_TRIP_ASSIGNED',
+            referenceType: 'delivery_trip',
+            referenceId: $trip->id,
+            message: $message,
+            customerId: null,
             supplierId: null,
             payload: $payload,
             actor: $actor
