@@ -371,7 +371,7 @@ class WhatsAppService
             . "👤 بەڕێز: {$recipientName}\n"
             . "📅 ماوەی پسوڵەکان: {$fromStr} تا {$toStr}\n"
             . "💵 کۆی گشتی فرۆش: {$totalSalesStr}\n"
-            . "📈 کۆی گشتی قازانج: {$totalProfitStr}\n"
+            . "📈 کۆی گشتی یەکە: {$totalProfitStr}\n"
             . "💰 بڕی کۆمسیۆن: *{$commissionAmountStr}*\n"
             . "📌 وردەکاری: مووچەی جێگیر ({$fixedAmountStr}) + ڕێژەیی ({$percentageCommissionStr})\n"
             . "🕒 کات و بەروار: {$dateStr}\n"
