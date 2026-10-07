@@ -16,6 +16,7 @@ import '../models/customer.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
+import '../../salesman/providers/salesman_dashboard_provider.dart';
 import 'map_picker_dialog.dart';
 
 class CustomerFormDialog extends ConsumerStatefulWidget {
@@ -45,6 +46,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
 
   String _priceType = 'N3';
   int? _routeId;
+  bool _isRouteInitialized = false;
   double? _latitude;
   double? _longitude;
 
@@ -71,6 +73,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _initialDebtController = TextEditingController();
     _priceType = widget.customer?.priceType ?? 'N3';
     _routeId = widget.customer?.routeId;
+    _isRouteInitialized = widget.customer != null;
     _latitude = widget.customer?.latitude;
     _longitude = widget.customer?.longitude;
 
@@ -301,6 +304,16 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
     final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    final currentUser = ref.watch(authProvider).user;
+    if (!_isRouteInitialized && widget.customer == null && currentUser != null && currentUser.isSalesman) {
+      final dashboardAsync = ref.watch(salesmanDashboardProvider);
+      final todayRouteId = dashboardAsync.value?.todayRouteId;
+      if (todayRouteId != null) {
+        _routeId = todayRouteId;
+        _isRouteInitialized = true;
+      }
+    }
 
     final childWidget = widget.customer == null
         ? _buildProfileForm(context, keyboardHeight)
@@ -621,7 +634,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         : routes;
 
                     return DropdownButtonFormField<int?>(
-                      initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
+                      value: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
                           ? _routeId
                           : null,
                       decoration: const InputDecoration(
@@ -646,7 +659,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         ),
                       ],
                       onChanged: (val) {
-                        setState(() => _routeId = val);
+                        setState(() {
+                          _routeId = val;
+                          _isRouteInitialized = true;
+                        });
                       },
                     );
                   },
