@@ -43,6 +43,38 @@ Route::prefix('v1')->group(function () {
             ], 500);
         }
     });
+    Route::get('/whatsapp-debug', function () {
+        try {
+            $logs = \App\Models\WhatsAppNotificationLog::latest('id')
+                ->take(10)
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'recipient' => $log->recipient_name . ' (' . $log->recipient_phone . ')',
+                        'type' => $log->notification_type,
+                        'status' => $log->status,
+                        'provider' => $log->provider,
+                        'error' => $log->error_message,
+                        'created_at' => $log->created_at?->toDateTimeString(),
+                        'sent_at' => $log->sent_at?->toDateTimeString(),
+                        'response' => $log->response,
+                        'env_provider' => config('services.whatsapp.provider'),
+                        'env_url' => substr(config('services.whatsapp.api_url'), 0, 30) . '...',
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'success',
+                'logs' => $logs
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    });
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
