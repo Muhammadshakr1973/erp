@@ -18,6 +18,7 @@ import '../../products/providers/products_provider.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
+import '../../shared/views/customer_form_dialog.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -1437,7 +1438,25 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   child: _buildCustomerSelectionDropdown(customersAsync),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+                tooltip: 'تۆمارکردنی کڕیاری نوێ',
+                onPressed: () async {
+                  final result = await showDialog<dynamic>(
+                    context: context,
+                    builder: (context) => const CustomerFormDialog(),
+                  );
+                  if (result != null && result is Customer && mounted) {
+                    setState(() {
+                      _selectedCustomer = result;
+                    });
+                    _fetchSpecialPricesForCustomer(result.id);
+                    _triggerDebouncedAutoSave();
+                  }
+                },
+              ),
+              const SizedBox(width: 4),
               _buildPriceTypeBadge(),
               if (_secondsRemaining > 0 || _timerPausedForRetry) ...[
                 const SizedBox(width: 8),

@@ -19,6 +19,16 @@ class Customer {
   final int? visitOrder;
   final RouteModel? route;
 
+  static Customer get temporary => Customer(
+        id: 0,
+        name: 'کڕیاری کاتی (بێ ناو)',
+        phone: '00000000000',
+        address: 'بێ ناونیشان',
+        balance: 0.0,
+        creditLimit: 0.0,
+        isActive: true,
+      );
+
   Customer({
     required this.id,
     required this.name,

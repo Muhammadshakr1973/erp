@@ -30,19 +30,17 @@ class CustomerService
 
             $query->where(function ($q) use ($routeIds, $directCustomerIds) {
                 $q->whereIn('route_id', $routeIds)
-                  ->orWhereIn('id', $directCustomerIds);
+                  ->orWhereIn('id', $directCustomerIds)
+                  ->orWhere('id', 0);
             });
-
-            // Order today's route customers first
-            $todayRouteId = $user->getTodayRouteId();
-            if ($todayRouteId) {
-                $query->orderByRaw("CASE WHEN route_id = ? THEN 0 ELSE 1 END", [$todayRouteId]);
-            }
         }
 
         // فلتەرکردن بەپێی گەڕەک ئەگەر نێردرابوو
         if (!empty($filters['route_id'])) {
-            $query->where('route_id', $filters['route_id']);
+            $query->where(function ($q) use ($filters) {
+                $q->where('route_id', $filters['route_id'])
+                  ->orWhere('id', 0);
+            });
         }
 
         // گەڕان بەپێی ناو یان تەلەفۆن
@@ -50,13 +48,25 @@ class CustomerService
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('id', 0);
             });
         }
 
         // فلتەرکردن بەپێی قەرز (تەنها ئەوانەی قەرزدارن)
         if (isset($filters['has_debt']) && $filters['has_debt'] == 'true') {
             $query->where('current_balance', '>', 0);
+        }
+
+        // کڕیاری کاتی هەمیشە لە سەرەتای لیستەکە بێت
+        $query->orderByRaw("CASE WHEN id = 0 THEN 0 ELSE 1 END");
+
+        if ($user->isSalesman()) {
+            // Order today's route customers first
+            $todayRouteId = $user->getTodayRouteId();
+            if ($todayRouteId) {
+                $query->orderByRaw("CASE WHEN route_id = ? THEN 0 ELSE 1 END", [$todayRouteId]);
+            }
         }
 
         // دانانی بەشەکان بەپێی per_page (یان ٢٠ بە دیفۆڵت)

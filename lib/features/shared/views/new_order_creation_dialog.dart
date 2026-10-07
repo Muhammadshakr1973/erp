@@ -85,7 +85,29 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
             const SizedBox(height: AppSpacing.md),
 
             // Customer Selector Button
-            const Text('کڕیار', style: AppTextStyles.bodyBold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('کڕیار', style: AppTextStyles.bodyBold),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCustomer = Customer.temporary;
+                    });
+                  },
+                  icon: const Icon(Icons.flash_on, size: 16, color: Colors.orange),
+                  label: const Text(
+                    'کڕیاری کاتی',
+                    style: TextStyle(
+                      fontFamily: 'Rudaw',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.xs),
             InkWell(
               onTap: () async {

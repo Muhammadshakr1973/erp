@@ -170,11 +170,14 @@ class User extends Authenticatable
 
     public function hasCustomerAccess($customer): bool
     {
-        if ($this->isAdmin() || $this->isOwner()) {
+        $customerId = $customer instanceof Customer ? $customer->id : $customer;
+        if ($customerId == 0) {
             return true;
         }
 
-        $customerId = $customer instanceof Customer ? $customer->id : $customer;
+        if ($this->isAdmin() || $this->isOwner()) {
+            return true;
+        }
         $customerModel = $customer instanceof Customer ? $customer : Customer::find($customerId);
         if (!$customerModel) {
             return false;

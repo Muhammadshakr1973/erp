@@ -109,9 +109,10 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
 
     try {
       final actions = ref.read(customerActionsProvider);
+      Customer? createdCustomer;
       if (widget.customer == null) {
         final initialDebt = int.tryParse(_initialDebtController.text.trim());
-        await actions.addCustomer(
+        createdCustomer = await actions.addCustomer(
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
               ? null
@@ -130,7 +131,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           longitude: _longitude,
         );
       } else {
-        await actions.updateCustomer(
+        createdCustomer = await actions.updateCustomer(
           widget.customer!.id,
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
@@ -156,7 +157,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
         if (widget.customer != null) {
           ref.invalidate(singleCustomerProvider(widget.customer!.id));
         }
-        Navigator.pop(context, true);
+        Navigator.pop(context, createdCustomer);
         AppSnackbar.show(
           context,
           message: widget.customer == null

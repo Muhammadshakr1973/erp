@@ -97,24 +97,55 @@ class _CustomerSelectionDialogState
                     return const Center(child: Text('هیچ کڕیارێک نەدۆزرایەوە'));
                   }
 
-                  // Separate into today's route customers & other route customers
+                  // Separate into today's route customers, other route customers & temporary customer
                   final List<Customer> todayCustomers = [];
                   final List<Customer> otherCustomers = [];
+                  Customer? tempCustomer;
 
-                  if (todayRouteId != null) {
-                    for (final c in filtered) {
-                      if (c.routeId == todayRouteId) {
-                        todayCustomers.add(c);
-                      } else {
-                        otherCustomers.add(c);
-                      }
+                  for (final c in filtered) {
+                    if (c.id == 0) {
+                      tempCustomer = c;
+                    } else if (todayRouteId != null && c.routeId == todayRouteId) {
+                      todayCustomers.add(c);
+                    } else {
+                      otherCustomers.add(c);
                     }
-                  } else {
-                    otherCustomers.addAll(filtered);
                   }
 
                   // Build list items
                   final List<Widget> listItems = [];
+
+                  // Section 0: Highlighted Temporary Customer Card
+                  if (tempCustomer != null) {
+                    listItems.add(
+                      Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                        ),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.flash_on, color: Colors.white, size: 20),
+                          ),
+                          title: Text(
+                            tempCustomer.name,
+                            style: AppTextStyles.bodyBold.copyWith(color: Colors.orange.shade800),
+                          ),
+                          subtitle: const Text('دروستکردنی پسوڵە بەبێ دیاریکردنی پێشوەختەی کڕیار'),
+                          onTap: () {
+                            Navigator.of(context).pop(tempCustomer);
+                          },
+                        ),
+                      ),
+                    );
+                  }
 
                   // Section 1: Today's Route Customers (if available)
                   if (todayCustomers.isNotEmpty) {

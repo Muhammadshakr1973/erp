@@ -719,6 +719,10 @@ class SalesOrderService
      */
     private function checkCustomerAssignment(Customer $customer, $user): void
     {
+        if ($customer->id == 0) {
+            return;
+        }
+
         if ($user->isAdmin() || $user->isOwner()) {
             return;
         }
