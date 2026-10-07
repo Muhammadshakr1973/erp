@@ -137,9 +137,19 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
             }
           }
 
+          int pendingOrdersCount = 0;
+          for (final trip in undeliveredTrips) {
+            for (final order in trip.orders) {
+              if (order.status.toUpperCase() == 'PENDING') {
+                pendingOrdersCount++;
+              }
+            }
+          }
+
           final isDark = theme.brightness == Brightness.dark;
           final infoColor = isDark ? AppColors.infoDark : AppColors.info;
           final purpleColor = isDark ? AppColors.purpleDark : AppColors.purple;
+          final warningColor = isDark ? AppColors.warningDark : AppColors.warning;
 
           // Determine cash currently held by driver (total collected minus paid to company)
           int cashWithDriver = totalCollected;
@@ -186,10 +196,10 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                         children: [
                           _buildStatCard(
                             context: context,
-                            title: 'پسوڵەی گەیەنراو',
-                            value: '$todayDeliveredOrdersCount / $todayTotalOrdersCount',
-                            icon: AppIcons.orderDelivered,
-                            color: AppColors.success,
+                            title: 'پسوڵەی نەگەیەنراو',
+                            value: '$pendingOrdersCount پسوڵە',
+                            icon: Icons.local_shipping_outlined,
+                            color: warningColor,
                           ),
                           _buildStatCard(
                             context: context,
