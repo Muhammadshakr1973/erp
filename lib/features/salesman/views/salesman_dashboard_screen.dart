@@ -703,8 +703,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     
-    final visitedCount = customers.where((c) => c.visited).length;
-    final totalCount = customers.length;
+    final visitedCount = customers.where((c) => c.visited && c.id != 0).length;
+    final totalCount = customers.where((c) => c.id != 0).length;
     final progress = totalCount > 0 ? visitedCount / totalCount : 0.0;
     
     return Column(
@@ -743,15 +743,17 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (context, index) {
             final customer = customers[index];
+            final isTemp = customer.id == 0;
+            final isVisited = !isTemp && customer.visited;
             
             return AppCard(
               onTap: () {
                 _handleCustomerTap(context, ref, customer);
               },
-              onLongPress: () {
+              onLongPress: isTemp ? null : () {
                 context.push('/customer/${customer.id}');
               },
-              color: customer.visited 
+              color: isVisited 
                 ? Colors.green.withValues(alpha: 0.05)
                 : null,
               child: Row(
@@ -760,21 +762,26 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: customer.visited 
-                        ? AppColors.success.withValues(alpha: 0.1) 
-                        : theme.colorScheme.primaryContainer,
+                      color: isTemp
+                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : (isVisited 
+                            ? AppColors.success.withValues(alpha: 0.1) 
+                            : theme.colorScheme.primaryContainer),
                       shape: BoxShape.circle,
+                      border: isTemp ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5) : null,
                     ),
                     child: Center(
-                      child: customer.visited
-                        ? const Icon(Icons.check, color: AppColors.success, size: 18)
-                        : Text(
-                            '${customer.visitOrder}',
-                            style: AppTextStyles.bodyBold.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontSize: 12,
-                            ),
-                          ),
+                      child: isTemp
+                        ? Icon(Icons.bolt, color: theme.colorScheme.primary, size: 18)
+                        : (isVisited
+                            ? const Icon(Icons.check, color: AppColors.success, size: 18)
+                            : Text(
+                                '${customer.visitOrder}',
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 12,
+                                ),
+                              )),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -788,7 +795,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          customer.address ?? 'بێ ناونیشان',
+                          isTemp ? 'بۆ دروستکردنی خێرای پسوڵە' : (customer.address ?? 'بێ ناونیشان'),
                           style: AppTextStyles.caption,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -800,22 +807,41 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        Formatters.currency(customer.currentBalance),
-                        style: AppTextStyles.caption.copyWith(
-                          color: customer.currentBalance > 0 ? AppColors.danger : Colors.grey,
-                          fontFamily: 'Rudaw',
+                      if (isTemp) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'پسوڵەی خێرا',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              fontFamily: 'Rudaw',
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        customer.visited ? 'سەردانکراوە' : 'سەردان نەکراوە',
-                        style: AppTextStyles.caption.copyWith(
-                          color: customer.visited ? AppColors.success : Colors.grey,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                      ] else ...[
+                        Text(
+                          Formatters.currency(customer.currentBalance),
+                          style: AppTextStyles.caption.copyWith(
+                            color: customer.currentBalance > 0 ? AppColors.danger : Colors.grey,
+                            fontFamily: 'Rudaw',
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isVisited ? 'سەردانکراوە' : 'سەردان نەکراوە',
+                          style: AppTextStyles.caption.copyWith(
+                            color: isVisited ? AppColors.success : Colors.grey,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -894,7 +920,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     DashboardCustomer customer,
   ) async {
-    if (customer.id <= 0) {
+    if (customer.id < 0) {
       AppSnackbar.show(
         context,
         message: 'ناسنامەی کڕیار نادروستە (Customer ID is invalid: ${customer.id})',
