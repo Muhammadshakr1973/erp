@@ -35,7 +35,21 @@ class UpdateCustomerRequest extends FormRequest
                 }
             ],
             'name'       => ['required', 'string', 'max:255'],
-            'image_url'  => ['nullable', 'string', 'max:2048'],
+            'image_url'  => [
+                'nullable',
+                'string',
+                'max:2048',
+                function ($attribute, $value, $fail) use ($user) {
+                    if ($value !== null && $value !== '' && $user && !$user->isAdmin()) {
+                        // Check if the image url changed from current value
+                        $customer = $this->route('customer');
+                        $currentImageUrl = $customer instanceof \App\Models\Customer ? $customer->image_url : null;
+                        if ($value !== $currentImageUrl) {
+                            $fail('تەنها خاوەن یان ئادمین دەتوانێت بەستەری وێنە دابنێت.');
+                        }
+                    }
+                }
+            ],
             'phone'      => ['nullable', 'string', 'max:20', Rule::unique('customers')->ignore($customerId)->whereNull('deleted_at')],
             'phone2'     => ['nullable', 'string', 'max:20'],
             'address'    => ['nullable', 'string'],

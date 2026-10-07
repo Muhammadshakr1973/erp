@@ -84,6 +84,7 @@ class OrderModel {
   final dynamic warehouse;
   final List<OrderItemModel> items;
   final bool pendingSync;
+  final String? priceType;
 
   OrderModel({
     required this.id,
@@ -109,6 +110,7 @@ class OrderModel {
     this.warehouse,
     this.items = const [],
     this.pendingSync = false,
+    this.priceType,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -155,6 +157,7 @@ class OrderModel {
       warehouse: json['warehouse'],
       items: parsedItems,
       pendingSync: json['pending_sync'] == true || json['pending_sync'] == 1,
+      priceType: json['price_type']?.toString(),
     );
   }
 

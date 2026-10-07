@@ -97,9 +97,15 @@ class SalesOrderService
                 $product = Product::findOrFail($item['product_id']);
 
                 // دیاریکردنی نرخ بەپێی تایپ و کڕیار (تۆمارکردنی مێژوویی - Snapshot)
-                $priceDetails = $customer->getPriceDetailsForProduct($product);
-                $unitPrice = (int) $priceDetails['price'];
-                $priceType = $priceDetails['price_type'];
+                if (isset($data['price_type'])) {
+                    $requestedType = strtoupper($data['price_type']);
+                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
+                    $unitPrice = (int) $product->getPriceForType($priceType);
+                } else {
+                    $priceDetails = $customer->getPriceDetailsForProduct($product);
+                    $unitPrice = (int) $priceDetails['price'];
+                    $priceType = $priceDetails['price_type'];
+                }
                 $costPrice = (int) $product->cost_price; // Snapshot نرخی کڕین
 
                 $lineTotal = $unitPrice * $quantity;
@@ -229,9 +235,15 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
-                $priceDetails = $customer->getPriceDetailsForProduct($product);
-                $unitPrice = (int) $priceDetails['price'];
-                $priceType = $priceDetails['price_type'];
+                if (isset($data['price_type'])) {
+                    $requestedType = strtoupper($data['price_type']);
+                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
+                    $unitPrice = (int) $product->getPriceForType($priceType);
+                } else {
+                    $priceDetails = $customer->getPriceDetailsForProduct($product);
+                    $unitPrice = (int) $priceDetails['price'];
+                    $priceType = $priceDetails['price_type'];
+                }
                 $costPrice = (int) $product->cost_price;
 
                 $lineTotal = $unitPrice * $quantity;
@@ -864,9 +876,15 @@ class SalesOrderService
 
                 $product = Product::findOrFail($item['product_id']);
 
-                $priceDetails = $customer->getPriceDetailsForProduct($product);
-                $unitPrice = (int) $priceDetails['price'];
-                $priceType = $priceDetails['price_type'];
+                if (isset($data['price_type'])) {
+                    $requestedType = strtoupper($data['price_type']);
+                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
+                    $unitPrice = (int) $product->getPriceForType($priceType);
+                } else {
+                    $priceDetails = $customer->getPriceDetailsForProduct($product);
+                    $unitPrice = (int) $priceDetails['price'];
+                    $priceType = $priceDetails['price_type'];
+                }
                 $costPrice = (int) $product->cost_price;
 
                 $lineTotal = $unitPrice * $quantity;

@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class SalesOrder extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $appends = ['price_type'];
+
+    public function getPriceTypeAttribute(): string
+    {
+        return $this->items()->first()?->price_type ?? 'N3';
+    }
+
     protected $fillable = [
         'order_number',
         'order_date',

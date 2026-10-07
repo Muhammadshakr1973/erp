@@ -142,9 +142,13 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                 ),
               ),
               data: (customers) {
-                // Sort customers by routeId first, then by visitOrder, then by name
+                // Sort customers by routeId first, then by visitOrder, then by name,
+                // BUT make sure Customer 0 (Temporary Customer) is ALWAYS at the absolute top!
                 var sorted = List<Customer>.from(customers);
                 sorted.sort((a, b) {
+                  if (a.id == 0) return -1;
+                  if (b.id == 0) return 1;
+
                   final aRouteId = a.routeId ?? 999999;
                   final bRouteId = b.routeId ?? 999999;
                   if (aRouteId != bRouteId) {

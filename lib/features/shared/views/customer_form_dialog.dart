@@ -585,13 +585,15 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           ],
           if (!hideFields) ...[
-            const SizedBox(height: AppSpacing.md),
-            AppTextField(
-              controller: _imageUrlController,
-              labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
-              hintText: 'https://example.com/image.jpg',
-              prefixIcon: Icons.image_outlined,
-            ),
+            if (currentUser?.isAdmin ?? false) ...[
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                controller: _imageUrlController,
+                labelText: 'بەستەری وێنەی کڕیار (ئارەزوومەندانە)',
+                hintText: 'https://example.com/image.jpg',
+                prefixIcon: Icons.image_outlined,
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
               initialValue: _priceType,
@@ -683,7 +685,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   ),
                 ),
           ],
-          if (widget.customer == null) ...[
+          if (widget.customer == null && (currentUser?.isAdmin ?? false)) ...[
             const SizedBox(height: AppSpacing.md),
             AppTextField(
               controller: _initialDebtController,

@@ -41,6 +41,7 @@ class CreateOrderScreen extends ConsumerStatefulWidget {
 class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Customer? _selectedCustomer;
   int? _selectedWarehouseId;
+  String? _overridePriceType;
   final Map<int, int> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
   Timer? _debounceTimer;
@@ -146,6 +147,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void _populateFromExistingOrder(OrderModel order) {
     setState(() {
       _serverOrderId = order.id;
+      _overridePriceType = order.priceType;
       _sharedKey = order.sharedKey;
       _currentVersion = order.version;
       _hasSavedOnce = true;
@@ -263,7 +265,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _loadCustomerById(int customerId) async {
-    if (customerId <= 0) return;
+    if (customerId == 0) {
+      if (mounted) {
+        setState(() {
+          _selectedCustomer = Customer.temporary;
+          _overridePriceType ??= 'N3';
+        });
+      }
+      return;
+    }
+    if (customerId < 0) return;
     try {
       final customers = await ref.read(customerListProvider.future);
       final match = customers.where((c) => c.id == customerId).firstOrNull;
@@ -294,7 +305,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   void _loadPreselectedCustomer() async {
     final customerId = widget.preselectedCustomerId;
-    if (customerId == null || customerId <= 0) return;
+    if (customerId == 0) {
+      if (mounted) {
+        setState(() {
+          _selectedCustomer = Customer.temporary;
+          _overridePriceType ??= 'N3';
+        });
+      }
+      return;
+    }
+    if (customerId == null || customerId < 0) return;
     try {
       final customers = await ref.read(customerListProvider.future);
       final match = customers.where((c) => c.id == customerId).firstOrNull;
@@ -369,14 +389,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   double _getProductUnitPrice(ProductModel product) {
-    if (_selectedCustomer == null) {
-      return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
-    }
-    // پشکنینی ئەوەی کە ئایا نرخی تایبەت بۆ ئەم کاڵایە هەیە بۆ ئەم کڕیارە
-    if (_customerSpecialPrices.containsKey(product.id)) {
+    final String tier = _overridePriceType ?? (_selectedCustomer?.priceType?.toUpperCase() ?? 'N3');
+
+    // special prices should only apply if there is NO explicit override, and we have special prices
+    if (_overridePriceType == null && _selectedCustomer != null && _customerSpecialPrices.containsKey(product.id)) {
       return _customerSpecialPrices[product.id]!;
     }
-    final tier = _selectedCustomer!.priceType?.toUpperCase() ?? 'N2';
     switch (tier) {
       case 'N1':
         return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
@@ -764,6 +782,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
       'shared_key': sharedKey,
       'version': version,
+      'price_type': _overridePriceType ?? _selectedCustomer?.priceType?.toUpperCase(),
       'notes': _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
@@ -2339,9 +2358,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget _buildPriceTypeBadge() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final String priceType = _selectedCustomer != null
-        ? (_selectedCustomer!.priceType ?? 'N2')
-        : 'N2';
+    final String priceType = _overridePriceType ?? (_selectedCustomer != null
+        ? (_selectedCustomer!.priceType ?? 'N3')
+        : 'N3');
 
     Color badgeColor;
     if (priceType == 'N1') {
@@ -2352,29 +2371,68 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       badgeColor = isDark ? AppColors.primaryDark : AppColors.n3;
     }
 
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
-      ),
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.sell_outlined, size: 14, color: badgeColor),
-          const SizedBox(width: 6),
-          Text(
-            priceType,
-            style: AppTextStyles.bodyBold.copyWith(
-              color: badgeColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
+    return InkWell(
+      onTap: () async {
+        final selected = await showDialog<String>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('دیاریکردنی جۆری نرخ', style: AppTextStyles.h3),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('N1 - تاک'),
+                  trailing: priceType == 'N1' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  onTap: () => Navigator.pop(context, 'N1'),
+                ),
+                ListTile(
+                  title: const Text('N2 - کۆ'),
+                  trailing: priceType == 'N2' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  onTap: () => Navigator.pop(context, 'N2'),
+                ),
+                ListTile(
+                  title: const Text('N3 - تایبەت / کاتی'),
+                  trailing: priceType == 'N3' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  onTap: () => Navigator.pop(context, 'N3'),
+                ),
+              ],
             ),
           ),
-        ],
+        );
+
+        if (selected != null && mounted) {
+          _lastChangedField = 'customer'; // triggers auto-save and updates UI prices
+          setState(() {
+            _overridePriceType = selected;
+          });
+          _triggerDebouncedAutoSave();
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: badgeColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sell_outlined, size: 14, color: badgeColor),
+            const SizedBox(width: 6),
+            Text(
+              priceType,
+              style: AppTextStyles.bodyBold.copyWith(
+                color: badgeColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

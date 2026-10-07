@@ -30,6 +30,7 @@ class UpdateSalesOrderRequest extends FormRequest
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_type' => ['nullable', 'string', 'in:PERCENT,FIXED,percent,fixed'],
             'notes' => ['nullable', 'string'],
+            'price_type' => ['nullable', 'string', 'in:N1,N2,N3,n1,n2,n3'],
 
             // پشکنینی ئایتمەکانی پسوڵەکە (ڕێگە بە بەتاڵبوون دەدرێت بۆ دراوتی سەرەتایی)
             'items' => ['nullable', 'array'],

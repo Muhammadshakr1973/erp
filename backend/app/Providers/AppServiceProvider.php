@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
                         'phone' => '00000000000',
                         'phone2' => null,
                         'route_id' => $defaultRouteId,
-                        'price_type' => 'N2',
+                        'price_type' => 'N3',
                         'current_balance' => 0,
                         'is_active' => 1,
                         'created_by' => null,

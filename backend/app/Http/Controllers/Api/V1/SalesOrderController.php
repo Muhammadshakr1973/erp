@@ -343,8 +343,24 @@ class SalesOrderController extends Controller
             ->toArray();
 
         $todayRouteCustomers = [];
+
+        // کڕیاری کاتی هەمیشە یەکەم بێت لە پلانی سەردانی ئەمڕۆ بۆ هەموو مەندوبەکان
+        $tempCustomer = \App\Models\Customer::find(0);
+        if ($tempCustomer) {
+            $todayRouteCustomers[] = [
+                'id' => 0,
+                'name' => (string) $tempCustomer->name,
+                'phone' => $tempCustomer->phone,
+                'address' => $tempCustomer->address,
+                'current_balance' => (int) $tempCustomer->current_balance,
+                'visit_order' => 0,
+                'visited' => in_array(0, $todayOrderCustomerIds) || in_array(0, $todayPaymentCustomerIds)
+            ];
+        }
+
         if ($todayRouteId) {
             $customers = \App\Models\Customer::where('route_id', $todayRouteId)
+                ->where('id', '!=', 0)
                 ->where('is_active', true)
                 ->orderBy('visit_order')
                 ->orderBy('name')

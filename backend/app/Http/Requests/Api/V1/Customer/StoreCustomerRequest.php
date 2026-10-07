@@ -32,7 +32,16 @@ class StoreCustomerRequest extends FormRequest
                 }
             ],
             'name'         => ['required', 'string', 'max:255'],
-            'image_url'    => ['nullable', 'string', 'max:2048'],
+            'image_url'    => [
+                'nullable',
+                'string',
+                'max:2048',
+                function ($attribute, $value, $fail) use ($user) {
+                    if ($value !== null && $value !== '' && $user && !$user->isAdmin()) {
+                        $fail('تەنها خاوەن یان ئادمین دەتوانێت بەستەری وێنە دابنێت.');
+                    }
+                }
+            ],
             'phone'        => ['nullable', 'string', 'max:20', \Illuminate\Validation\Rule::unique('customers')->whereNull('deleted_at')],
             'phone2'       => ['nullable', 'string', 'max:20'],
             'address'      => ['nullable', 'string'],
@@ -40,7 +49,16 @@ class StoreCustomerRequest extends FormRequest
             'longitude'    => ['nullable', 'numeric'],
             'price_type'   => ['nullable', 'in:N1,N2,N3'],
             'permanent_discount' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'initial_debt' => ['nullable', 'numeric', 'min:0'],
+            'initial_debt' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($user) {
+                    if ($value !== null && $value != 0 && $user && !$user->isAdmin()) {
+                        $fail('تەنها خاوەن یان ئادمین دەتوانێت قەرزی پێشینە دابنێت.');
+                    }
+                }
+            ],
             'is_active'    => ['boolean'],
         ];
     }

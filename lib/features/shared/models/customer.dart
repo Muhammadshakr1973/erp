@@ -26,6 +26,7 @@ class Customer {
         address: 'بێ ناونیشان',
         balance: 0.0,
         creditLimit: 0.0,
+        priceType: 'N3',
         isActive: true,
       );
 
