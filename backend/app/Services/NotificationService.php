@@ -201,6 +201,13 @@ class NotificationService
         ];
 
         $this->notifyRole(['driver', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
+
+        // Send WhatsApp notification to the customer
+        try {
+            app(WhatsAppService::class)->sendOrderReadyNotification($order, $actor);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send order ready WhatsApp notification: " . $e->getMessage());
+        }
     }
 
     /**

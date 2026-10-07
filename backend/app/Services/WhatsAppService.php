@@ -637,4 +637,66 @@ class WhatsAppService
 
         return $query->paginate($perPage);
     }
+
+    /**
+     * Customer Order Ready (Packed) WhatsApp Notification
+     * Triggered AFTER order is marked READY per warehouse packing completion
+     */
+    public function sendOrderReadyNotification(
+        SalesOrder $order,
+        ?User $actor = null
+    ): WhatsAppNotificationLog {
+        $customer = $order->customer ?? Customer::find($order->customer_id);
+        $phone = $this->formatPhoneNumber($customer?->phone);
+        $recipientName = $customer?->name ?? 'کڕیاری بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('sales_order', $order->id, 'ORDER_READY');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        $orderTotalStr = $this->formatMoney($order->total_amount);
+        $currentBalance = (int) ($customer?->current_balance ?? 0);
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "📦 *ئامادەکردنی پسوڵەی فرۆشتن*\n"
+            . "👤 بەڕێز: {$recipientName}\n"
+            . "🔢 ژمارەی پسوڵە: {$order->order_number}\n"
+            . "💰 کۆی پسوڵە: *{$orderTotalStr}*\n";
+
+        if ($currentBalance > 0) {
+            $debtStr = $this->formatMoney($currentBalance);
+            $message .= "📊 بڕی قەرزی کۆن: {$debtStr}\n";
+        }
+
+        $message .= "🚚 پسوڵەکەت ئامادەکراوە و بەیانی دەگاتە لای بەڕێزت ان شاءلله.\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "سوپاس بۆ متمانەتان.";
+
+        $payload = [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $customer?->id,
+            'order_total' => $order->total_amount,
+            'current_balance' => $currentBalance,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $customer?->phone ?? 'UNKNOWN',
+            recipientName: $recipientName,
+            notificationType: 'ORDER_READY',
+            referenceType: 'sales_order',
+            referenceId: $order->id,
+            message: $message,
+            customerId: $customer?->id,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
 }
