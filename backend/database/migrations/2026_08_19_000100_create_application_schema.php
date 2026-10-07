@@ -85,7 +85,7 @@ return new class extends Migration
             $table->string('name')->index();
             $table->string('image_url')->nullable();
             $table->string('phone', 20)->nullable()->index();
-            $table->string('phone2', 20)->nullable();
+            $table->string('customer_name')->nullable();
             $table->string('address')->nullable();
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();

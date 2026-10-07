@@ -236,7 +236,7 @@ class CustomerActions {
   Future<Customer> addCustomer({
     required String name,
     String? phone,
-    String? phone2,
+    String? customerName,
     String? address,
     String? imageUrl,
     int? routeId,
@@ -248,7 +248,7 @@ class CustomerActions {
     final payload = {
       'name': name,
       if (phone != null && phone.isNotEmpty) 'phone': phone,
-      if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+      if (customerName != null && customerName.isNotEmpty) 'customer_name': customerName,
       if (address != null && address.isNotEmpty) 'address': address,
       if (imageUrl != null && imageUrl.trim().isNotEmpty) 'image_url': imageUrl.trim(),
       if (routeId != null) 'route_id': routeId,
@@ -280,7 +280,7 @@ class CustomerActions {
     int id, {
     required String name,
     String? phone,
-    String? phone2,
+    String? customerName,
     String? address,
     String? imageUrl,
     int? routeId,
@@ -292,7 +292,7 @@ class CustomerActions {
     final payload = {
       'name': name,
       if (phone != null && phone.isNotEmpty) 'phone': phone,
-      if (phone2 != null && phone2.isNotEmpty) 'phone2': phone2,
+      if (customerName != null && customerName.isNotEmpty) 'customer_name': customerName,
       if (address != null && address.isNotEmpty) 'address': address,
       'image_url': (imageUrl != null && imageUrl.trim().isNotEmpty) ? imageUrl.trim() : null,
       if (routeId != null) 'route_id': routeId,

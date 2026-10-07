@@ -10,7 +10,7 @@ void main() {
         'id': 10,
         'name': 'کۆمپانیای سەردەم',
         'phone': '07501234567',
-        'phone2': '07701234567',
+        'customer_name': 'کاک هێمن',
         'address': 'هەولێر - شەقامی ٦٠ مەتری',
         'image_url': 'https://example.com/customer.png',
         'current_balance': '150000',
@@ -36,7 +36,7 @@ void main() {
       expect(customer.id, equals(10));
       expect(customer.name, equals('کۆمپانیای سەردەم'));
       expect(customer.phone, equals('07501234567'));
-      expect(customer.phone2, equals('07701234567'));
+      expect(customer.customerName, equals('کاک هێمن'));
       expect(customer.address, equals('هەولێر - شەقامی ٦٠ مەتری'));
       expect(customer.imageUrl, equals('https://example.com/customer.png'));
       expect(customer.balance, equals(150000.0));

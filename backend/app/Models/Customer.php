@@ -12,7 +12,7 @@ use App\Models\Traits\Auditable;
 class Customer extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
-    protected $fillable = ['name', 'phone', 'phone2', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
+    protected $fillable = ['name', 'phone', 'customer_name', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
 
     protected static function boot()
     {

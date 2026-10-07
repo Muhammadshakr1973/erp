@@ -525,6 +525,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           AppCard(
             child: Column(
               children: [
+                if (customer.customerName != null &&
+                    customer.customerName!.isNotEmpty) ...[
+                  _buildInfoRow(
+                    context,
+                    Icons.person_outline,
+                    'کڕیار / خاوەن: ${customer.customerName!}',
+                  ),
+                  const Divider(),
+                ],
                 _buildInfoRow(
                   context,
                   Icons.phone,

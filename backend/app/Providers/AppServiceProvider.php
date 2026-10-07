@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
                         'id' => 0,
                         'name' => 'کڕیاری کاتی (بێ ناو)',
                         'phone' => '00000000000',
-                        'phone2' => null,
+                        'customer_name' => null,
                         'route_id' => $defaultRouteId,
                         'price_type' => 'N3',
                         'current_balance' => 0,

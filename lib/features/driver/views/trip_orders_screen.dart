@@ -389,9 +389,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
   String _getCustomerPhone(dynamic customer) {
     if (customer == null) return '';
     if (customer is Map) {
-      final phone = customer['phone']?.toString() ?? '';
-      if (phone.isNotEmpty) return phone;
-      return customer['phone2']?.toString() ?? '';
+      return customer['phone']?.toString() ?? '';
     }
     return '';
   }

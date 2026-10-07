@@ -43,7 +43,7 @@ class StoreCustomerRequest extends FormRequest
                 }
             ],
             'phone'        => ['nullable', 'string', 'max:20', \Illuminate\Validation\Rule::unique('customers')->whereNull('deleted_at')],
-            'phone2'       => ['nullable', 'string', 'max:20'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
             'address'      => ['nullable', 'string'],
             'latitude'     => ['nullable', 'numeric'],
             'longitude'    => ['nullable', 'numeric'],

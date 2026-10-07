@@ -36,6 +36,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   String? _phoneError;
 
   late TextEditingController _nameController;
+  late TextEditingController _customerNameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _imageUrlController;
@@ -62,6 +63,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       _ledgerFilters = {'customer_id': widget.customer!.id.toString()};
     }
     _nameController = TextEditingController(text: widget.customer?.name);
+    _customerNameController = TextEditingController(text: widget.customer?.customerName);
     _phoneController = TextEditingController(text: widget.customer?.phone);
     _addressController = TextEditingController(text: widget.customer?.address);
     _imageUrlController = TextEditingController(
@@ -84,6 +86,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _customerNameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
     _imageUrlController.dispose();
@@ -117,7 +120,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          phone2: null,
+          customerName: _customerNameController.text.trim().isEmpty
+              ? null
+              : _customerNameController.text.trim(),
           address: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
@@ -137,7 +142,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          phone2: null,
+          customerName: _customerNameController.text.trim().isEmpty
+              ? null
+              : _customerNameController.text.trim(),
           address: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
@@ -447,17 +454,39 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
           const SizedBox(height: AppSpacing.sm),
-          AppTextField(
-            controller: _nameController,
-            labelText: 'ناوی کڕیار / مارکێت',
-            hintText: 'نموونە: مارکێتی بێستون',
-            prefixIcon: Icons.person_outline,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'تکایە ناوی کڕیار بنووسە';
-              }
-              return null;
-            },
+          Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: _nameController,
+                  labelText: 'ناوی مارکێت',
+                  hintText: 'نموونە: مارکێتی بێستون',
+                  prefixIcon: Icons.store_outlined,
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(24),
+                    bottomStart: Radius.circular(24),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'تکایە ناوی مارکێت بنووسە';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              Expanded(
+                child: AppTextField(
+                  controller: _customerNameController,
+                  labelText: 'ناوی کڕیار',
+                  hintText: 'نموونە: کاک هێمن',
+                  prefixIcon: Icons.person_outline,
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topEnd: Radius.circular(24),
+                    bottomEnd: Radius.circular(24),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           AppTextField(

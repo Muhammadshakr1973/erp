@@ -4,7 +4,7 @@ class Customer {
   final int id;
   final String name;
   final String? phone;
-  final String? phone2;
+  final String? customerName;
   final String? address;
   final String? imageUrl;
   final double balance;
@@ -34,7 +34,7 @@ class Customer {
     required this.id,
     required this.name,
     this.phone,
-    this.phone2,
+    this.customerName,
     this.address,
     this.imageUrl,
     this.balance = 0.0,
@@ -55,7 +55,7 @@ class Customer {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       phone: json['phone'],
-      phone2: json['phone2'],
+      customerName: json['customer_name'] ?? json['phone2'],
       address: json['address'],
       imageUrl: json['image_url'],
       balance:
