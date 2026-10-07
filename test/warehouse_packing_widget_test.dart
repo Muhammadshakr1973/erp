@@ -63,8 +63,8 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('پسوڵەی #ORD-12345'), findsOneWidget);
     expect(find.textContaining('مارکێتی ئەحمەد'), findsOneWidget);
+    expect(find.textContaining('مەندوب:'), findsOneWidget);
   });
 
   testWidgets('StockListScreen displays stock items from warehouseStocksProvider', (WidgetTester tester) async {
@@ -183,7 +183,7 @@ void main() {
     expect(find.text('3'), findsOneWidget);
 
     // Verify recent order details
-    expect(find.text('پسوڵەی #ORD-9988'), findsOneWidget);
+    expect(find.textContaining('مەندوب:'), findsOneWidget);
     expect(find.text('مارکێتی ژیان'), findsOneWidget);
     expect(find.text('لە پاکەتکردندایە'), findsOneWidget);
 

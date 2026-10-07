@@ -640,7 +640,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                 style: AppTextStyles.bodyBold,
               ),
               Text(
-                'بەروار: ${Formatters.kurdishDayAndDate(order.createdAt)}',
+                'مەندوب: ${order.salesmanName} • بەروار: ${Formatters.kurdishDayAndDate(order.createdAt)}',
                 style: AppTextStyles.caption,
               ),
             ],

@@ -532,7 +532,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'ژمارەی پسوڵە: #${order.orderNumber}',
+                            'مەندوب: ${order.salesmanName}',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondaryLight,
                             ),

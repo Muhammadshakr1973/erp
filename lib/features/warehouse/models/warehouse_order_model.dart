@@ -4,6 +4,7 @@ class WarehouseOrderModel {
   final String status;
   final String createdAt;
   final String customerName;
+  final String salesmanName;
   final List<WarehouseOrderItemModel> items;
 
   WarehouseOrderModel({
@@ -12,6 +13,7 @@ class WarehouseOrderModel {
     required this.status,
     required this.createdAt,
     required this.customerName,
+    this.salesmanName = 'مەندوبی دیارینەکراو',
     required this.items,
   });
 
@@ -20,6 +22,11 @@ class WarehouseOrderModel {
     final String cName = customerObj != null
         ? (customerObj['name'] ?? 'کڕیاری نەنوسراو')
         : 'کڕیاری نەنوسراو';
+
+    final salesmanObj = json['salesman'] ?? json['creator'];
+    final String sName = salesmanObj != null
+        ? (salesmanObj['name'] ?? 'مەندوبی دیارینەکراو')
+        : (json['salesman_name'] ?? 'مەندوبی دیارینەکراو');
 
     final List itemsList = json['items'] ?? [];
     final List<WarehouseOrderItemModel> parsedItems = itemsList
@@ -32,6 +39,7 @@ class WarehouseOrderModel {
       status: json['status'] ?? 'CONFIRMED',
       createdAt: json['created_at'] ?? '',
       customerName: cName,
+      salesmanName: sName,
       items: parsedItems,
     );
   }

@@ -67,7 +67,7 @@ class WarehouseController extends Controller
         $lowStockCount = $stockQuery->whereRaw('quantity <= min_stock_level')->count();
 
         // 4. Recent orders to pack (up to 5)
-        $recentOrdersQuery = SalesOrder::with(['customer', 'items.product', 'warehouse'])
+        $recentOrdersQuery = SalesOrder::with(['customer', 'items.product', 'warehouse', 'salesman'])
             ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
         if ($warehouseId) {
             $recentOrdersQuery->where('warehouse_id', $warehouseId);
@@ -225,7 +225,7 @@ class WarehouseController extends Controller
     public function ordersToPack(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = SalesOrder::with(['customer', 'warehouse', 'items.product'])
+        $query = SalesOrder::with(['customer', 'warehouse', 'items.product', 'salesman'])
             ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
 
         if ($user && $user->warehouse_id) {

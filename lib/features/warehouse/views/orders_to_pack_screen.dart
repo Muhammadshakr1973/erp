@@ -141,7 +141,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'ژمارەی پسوڵە: #${order.orderNumber} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
+                              'مەندوب: ${order.salesmanName} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
                               style: AppTextStyles.caption,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
