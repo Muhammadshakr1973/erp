@@ -9,6 +9,8 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../admin/views/providers/driver_collection_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
@@ -24,6 +26,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tripsAsync = ref.watch(driverTripsProvider);
+    final cashSummaryAsync = ref.watch(driverCashSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,9 +133,22 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
           final infoColor = isDark ? AppColors.infoDark : AppColors.info;
           final purpleColor = isDark ? AppColors.purpleDark : AppColors.purple;
 
+          // Determine cash currently held by driver (total collected minus paid to company)
+          int cashWithDriver = totalCollected;
+          final currentUser = ref.watch(authProvider).user;
+          if (cashSummaryAsync.value != null && cashSummaryAsync.value!.isNotEmpty) {
+            final summaryList = cashSummaryAsync.value!;
+            final mySummary = summaryList.firstWhere(
+              (s) => currentUser != null && s.driver['id'] == currentUser.id,
+              orElse: () => summaryList.first,
+            );
+            cashWithDriver = mySummary.remainingAmount;
+          }
+
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(driverTripsProvider);
+              ref.invalidate(driverCashSummaryProvider);
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -170,7 +186,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                           _buildStatCard(
                             context: context,
                             title: 'پارەی وەرگیراو',
-                            value: Formatters.currency(totalCollected),
+                            value: Formatters.currency(cashWithDriver),
                             icon: AppIcons.customerDebt,
                             color: AppColors.primaryAdaptive(context),
                           ),

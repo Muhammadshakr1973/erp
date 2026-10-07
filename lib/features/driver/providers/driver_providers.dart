@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
+import '../../admin/views/providers/driver_collection_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/delivery_trip_model.dart';
 
@@ -179,6 +180,7 @@ class DriverActions {
         ),
       );
       ref.invalidate(driverTripsProvider);
+      ref.invalidate(driverCashSummaryProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

@@ -137,6 +137,45 @@ class DeliveryTripController extends Controller
     // وەرگرتنی کورتەی پارەی سەرجەم شۆفێرەکان
     public function getDriversCashSummary(\Illuminate\Http\Request $request): JsonResponse
     {
+        $user = $request->user();
+
+        if ($user && $user->isDriver()) {
+            $totalCollected = \DB::table('delivery_trip_orders')
+                ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+                ->where('delivery_trips.driver_id', $user->id)
+                ->where('delivery_trip_orders.status', 'DELIVERED')
+                ->sum('delivery_trip_orders.received_amount');
+
+            $totalPaid = \DB::table('driver_collections')
+                ->where('driver_id', $user->id)
+                ->sum('amount');
+
+            $remainingAmount = $totalCollected - $totalPaid;
+
+            return response()->json([
+                'message' => 'کورتەی حیسابی پارەی وەرگیراوی شۆفێر',
+                'data' => [
+                    [
+                        'driver' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'phone' => $user->phone,
+                        ],
+                        'total_collected' => (int)$totalCollected,
+                        'total_paid' => (int)$totalPaid,
+                        'remaining_amount' => (int)$remainingAmount,
+                    ]
+                ]
+            ], 200);
+        }
+
+        if (!$user || (!$user->hasPermission('users.manage') && !$user->hasPermission('delivery.view'))) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی ئەم کردارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $drivers = \App\Models\User::active()
             ->drivers()
             ->select('id', 'name', 'phone')
@@ -221,6 +260,8 @@ class DeliveryTripController extends Controller
 
             return $collection;
         });
+
+        event(new \App\Events\DeliveryTripUpdated(null, 'driver_collection'));
 
         return response()->json([
             'message' => 'پارەکە بە سەرکەوتوویی لە شۆفێرەکە وەرگیرا و تۆمارکرا',

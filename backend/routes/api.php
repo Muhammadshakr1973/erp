@@ -212,8 +212,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/delivery-trips/orders/{tripOrderId}/deliver', [DeliveryTripController::class, 'deliverOrder'])->middleware(['permission:delivery.update', 'idempotent']);
         Route::post('/delivery-trips/orders/{tripOrderId}/fail', [DeliveryTripController::class, 'failOrder'])->middleware(['permission:delivery.update', 'idempotent']);
         
-        // Driver collections management (Requires users.manage permissions)
-        Route::get('/driver-collections/summary', [DeliveryTripController::class, 'getDriversCashSummary'])->middleware('permission:users.manage');
+        // Driver collections management
+        Route::get('/driver-collections/summary', [DeliveryTripController::class, 'getDriversCashSummary']);
         Route::get('/driver-collections', [DeliveryTripController::class, 'getDriverCollections'])->middleware('permission:users.manage');
         Route::post('/driver-collections', [DeliveryTripController::class, 'storeDriverCollection'])->middleware(['permission:users.manage', 'idempotent']);
         

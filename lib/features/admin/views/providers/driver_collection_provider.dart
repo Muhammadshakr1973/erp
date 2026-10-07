@@ -1,9 +1,22 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
 import '../../models/driver_collection_model.dart';
 
 final driverCashSummaryProvider = FutureProvider<List<DriverCashSummary>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+    debugPrint("Realtime update received on private-delivery-trips for driver cash summary: $eventData");
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-delivery-trips');
+  });
+
   try {
     final response = await api.client.get('/driver-collections/summary');
     if (response.statusCode == 200) {
