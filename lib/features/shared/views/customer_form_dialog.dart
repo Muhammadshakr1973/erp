@@ -462,9 +462,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   labelText: 'ناوی مارکێت',
                   hintText: 'نموونە: مارکێتی بێستون',
                   prefixIcon: Icons.store_outlined,
-                  borderRadius: const BorderRadiusDirectional.only(
-                    topStart: Radius.circular(24),
-                    bottomStart: Radius.circular(24),
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -480,9 +480,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   labelText: 'ناوی کڕیار',
                   hintText: 'نموونە: کاک هێمن',
                   prefixIcon: Icons.person_outline,
-                  borderRadius: const BorderRadiusDirectional.only(
-                    topEnd: Radius.circular(24),
-                    bottomEnd: Radius.circular(24),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    bottomLeft: Radius.circular(24),
                   ),
                 ),
               ),
@@ -666,7 +666,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                         : routes;
 
                     return DropdownButtonFormField<int?>(
-                      value: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
+                      initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
                           ? _routeId
                           : null,
                       decoration: const InputDecoration(
