@@ -185,7 +185,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                           ),
                           _buildStatCard(
                             context: context,
-                            title: 'پارەی وەرگیراو',
+                            title: 'پارە لای شۆفێر',
                             value: Formatters.currency(cashWithDriver),
                             icon: AppIcons.customerDebt,
                             color: AppColors.primaryAdaptive(context),
