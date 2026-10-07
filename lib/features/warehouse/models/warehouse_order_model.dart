@@ -47,6 +47,7 @@ class WarehouseOrderItemModel {
   final String? productUnit;
   final int? unitsPerCarton;
   final String? productImagePath;
+  final String? sku;
 
   WarehouseOrderItemModel({
     required this.id,
@@ -58,6 +59,7 @@ class WarehouseOrderItemModel {
     this.productUnit,
     this.unitsPerCarton,
     this.productImagePath,
+    this.sku,
   });
 
   factory WarehouseOrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -74,6 +76,10 @@ class WarehouseOrderItemModel {
         ? (productObj['image_path'] ?? productObj['image_url'] ?? productObj['image'])
         : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
 
+    final String? pSku = productObj != null
+        ? productObj['sku']?.toString()
+        : json['sku']?.toString();
+
     return WarehouseOrderItemModel(
       id: json['id'] ?? 0,
       productId: json['product_id'] ?? 0,
@@ -84,6 +90,7 @@ class WarehouseOrderItemModel {
       productUnit: productObj != null ? (productObj['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
       unitsPerCarton: productObj != null ? (productObj['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
       productImagePath: imgPath?.toString(),
+      sku: pSku,
     );
   }
 
@@ -98,6 +105,7 @@ class WarehouseOrderItemModel {
       productUnit: productUnit,
       unitsPerCarton: unitsPerCarton,
       productImagePath: productImagePath,
+      sku: sku,
     );
   }
 }

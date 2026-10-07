@@ -555,7 +555,9 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                                     child: Text(
-                                      item.productName,
+                                      item.sku != null && item.sku!.trim().isNotEmpty
+                                          ? '${item.productName} (${item.sku})'
+                                          : item.productName,
                                       style: AppTextStyles.bodyBold.copyWith(
                                         decoration: isPacked
                                             ? TextDecoration.lineThrough
