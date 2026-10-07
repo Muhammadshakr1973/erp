@@ -509,22 +509,48 @@ class WhatsAppService
         }
 
         try {
-            $response = Http::withToken($apiToken)
-                ->timeout(10)
-                ->post($apiUrl, [
-                    'phone' => $log->recipient_phone,
-                    'message' => $log->message,
-                ]);
+            $isUltraMsg = strtolower($provider) === 'ultramsg' || str_contains($apiUrl, 'ultramsg.com');
+
+            if ($isUltraMsg) {
+                $response = Http::asForm()
+                    ->timeout(15)
+                    ->post($apiUrl, [
+                        'token' => $apiToken,
+                        'to'    => $log->recipient_phone,
+                        'body'  => $log->message,
+                    ]);
+            } else {
+                $response = Http::withToken($apiToken)
+                    ->timeout(15)
+                    ->post($apiUrl, [
+                        'phone'   => $log->recipient_phone,
+                        'message' => $log->message,
+                        'to'      => $log->recipient_phone,
+                        'body'    => $log->message,
+                    ]);
+            }
 
             if ($response->successful()) {
                 $resData = $response->json() ?? ['raw' => $response->body()];
-                $log->update([
-                    'status' => WhatsAppNotificationLog::STATUS_SENT,
-                    'provider_message_id' => $resData['id'] ?? $resData['message_id'] ?? Str::uuid()->toString(),
-                    'response' => $resData,
-                    'sent_at' => now(),
-                    'error_message' => null,
-                ]);
+                $hasError = isset($resData['error']) || (isset($resData['sent']) && ($resData['sent'] === 'false' || $resData['sent'] === false));
+
+                if ($hasError) {
+                    $errorMsg = is_array($resData['error'] ?? null) ? implode(', ', $resData['error']) : ($resData['message'] ?? 'Failed to send message via provider');
+                    $log->update([
+                        'status'        => WhatsAppNotificationLog::STATUS_FAILED,
+                        'error_message' => 'Provider error: ' . $errorMsg,
+                        'response'      => $resData,
+                    ]);
+                    Log::warning("WhatsApp send failed for log #{$log->id}: " . $errorMsg);
+                } else {
+                    $log->update([
+                        'status'              => WhatsAppNotificationLog::STATUS_SENT,
+                        'provider_message_id' => $resData['id'] ?? $resData['message_id'] ?? Str::uuid()->toString(),
+                        'response'            => $resData,
+                        'sent_at'             => now(),
+                        'error_message'       => null,
+                    ]);
+                }
             } else {
                 $log->update([
                     'status' => WhatsAppNotificationLog::STATUS_FAILED,

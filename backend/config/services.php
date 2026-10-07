@@ -36,9 +36,9 @@ return [
     ],
 
     'whatsapp' => [
-        'provider' => env('WHATSAPP_PROVIDER', 'unconfigured'),
-        'api_url' => env('WHATSAPP_API_URL'),
-        'api_token' => env('WHATSAPP_API_TOKEN'),
+        'provider' => env('WHATSAPP_PROVIDER', 'ultramsg'),
+        'api_url' => env('WHATSAPP_API_URL', 'https://api.ultramsg.com/instance193658/messages/chat'),
+        'api_token' => env('WHATSAPP_API_TOKEN', 'ktj954rbn1jupqxy'),
     ],
 
 ];
