@@ -261,6 +261,30 @@ class DeliveryTripController extends Controller
             return $collection;
         });
 
+        // Calculate driver's remaining cash balance
+        $totalCollected = \DB::table('delivery_trip_orders')
+            ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+            ->where('delivery_trips.driver_id', $collection->driver_id)
+            ->where('delivery_trip_orders.status', 'DELIVERED')
+            ->sum('delivery_trip_orders.received_amount');
+
+        $totalPaid = \DB::table('driver_collections')
+            ->where('driver_id', $collection->driver_id)
+            ->sum('amount');
+
+        $remainingAmount = (int) ($totalCollected - $totalPaid);
+
+        // Send WhatsApp notification to driver
+        try {
+            app(\App\Services\WhatsAppService::class)->sendDriverCollectionNotification(
+                $collection,
+                $remainingAmount,
+                $user
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed sending driver collection WhatsApp notification: " . $e->getMessage());
+        }
+
         event(new \App\Events\DeliveryTripUpdated(null, 'driver_collection'));
 
         return response()->json([

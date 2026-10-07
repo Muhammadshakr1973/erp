@@ -78,6 +78,17 @@ class DriverCollectionTest extends TestCase
             'driver_id' => $this->driver->id,
             'amount' => 500000,
         ]);
+
+        $this->assertDatabaseHas('whatsapp_notification_logs', [
+            'notification_type' => 'DRIVER_COLLECTION',
+            'reference_type' => 'driver_collection',
+            'recipient_phone' => '+9647705554433',
+        ]);
+
+        $log = \App\Models\WhatsAppNotificationLog::where('notification_type', 'DRIVER_COLLECTION')->first();
+        $this->assertNotNull($log);
+        $this->assertStringContainsString('500,000', $log->message);
+        $this->assertStringContainsString('Dana Driver', $log->message);
     }
 
     public function test_driver_cannot_store_driver_collection()

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\DeliveryTrip;
+use App\Models\DriverCollection;
 use App\Models\SalesOrder;
 use App\Models\Setting;
 use App\Models\Supplier;
@@ -22,7 +23,8 @@ class WhatsAppService
      */
     private function getCompanyName(): string
     {
-        return Setting::getValue('company_name', 'کۆمپانیای گاردی (GARDI ERP)');
+        $name = Setting::getValue('company_name', 'کۆمپانیای گەردی (GARDI ERP)');
+        return str_replace('گاردی', 'گەردی', $name);
     }
 
     /**
@@ -827,6 +829,66 @@ class WhatsAppService
             notificationType: 'DELIVERY_TRIP_ASSIGNED',
             referenceType: 'delivery_trip',
             referenceId: $trip->id,
+            message: $message,
+            customerId: null,
+            supplierId: null,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
+     * Driver Cash Collection WhatsApp Notification
+     * Triggered AFTER driver hands over cash to office/company
+     */
+    public function sendDriverCollectionNotification(
+        DriverCollection $collection,
+        int $remainingAmount,
+        ?User $actor = null
+    ): ?WhatsAppNotificationLog {
+        $driver = $collection->driver ?? User::find($collection->driver_id);
+        if (!$driver || !$driver->phone) {
+            return null;
+        }
+
+        $phone = $this->formatPhoneNumber($driver->phone);
+        $recipientName = $driver->name ?? 'شۆفێری بەڕێز';
+
+        // Check idempotency
+        $existing = $this->checkIdempotency('driver_collection', $collection->id, 'DRIVER_COLLECTION');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        $amountHandedStr = $this->formatMoney($collection->amount);
+        $remainingStr = $this->formatMoney($remainingAmount);
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "🧾 *ڕادەستکردنی پارەی شۆفێر*\n"
+            . "👤 شۆفێری بەڕێز: {$recipientName}\n"
+            . "💰 بڕی ڕادەستکراو بە ئۆفیس: *{$amountHandedStr}*\n"
+            . "💵 پارەی ماوە لەلای شۆفێر: *{$remainingStr}*\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "سوپاس بۆ خزمەت و ئەمانەتتان.";
+
+        $payload = [
+            'collection_id' => $collection->id,
+            'driver_id' => $collection->driver_id,
+            'amount_handed' => $collection->amount,
+            'remaining_amount' => $remainingAmount,
+            'collected_at' => $collection->collected_at,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $driver->phone,
+            recipientName: $recipientName,
+            notificationType: 'DRIVER_COLLECTION',
+            referenceType: 'driver_collection',
+            referenceId: $collection->id,
             message: $message,
             customerId: null,
             supplierId: null,
