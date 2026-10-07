@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
+import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/order_model.dart';
 
@@ -139,6 +140,7 @@ class OrderActions {
       );
 
       ref.invalidate(ordersListProvider);
+      ref.invalidate(dashboardProvider);
 
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
@@ -225,6 +227,19 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onSalesReturnsEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received on private-orders channel for sales returns: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-orders', onSalesReturnsEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onSalesReturnsEvent);
+  });
+
   try {
     final response = await api.client.get('/sales-returns');
     if (response.statusCode == 200) {

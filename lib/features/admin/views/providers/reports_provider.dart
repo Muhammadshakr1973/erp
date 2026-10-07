@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
 import '../../../products/models/supplier_ledger_model.dart';
 import '../../../shared/models/customer_ledger_model.dart';
 import '../../../shared/models/payment_history_model.dart';
@@ -43,6 +45,23 @@ final customerDebtsReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onCustomerDebtsEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for customerDebtsReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-customers', onCustomerDebtsEvent);
+      pusher.subscribeToChannel('private-orders', onCustomerDebtsEvent);
+      pusher.subscribeToChannel('private-delivery-trips', onCustomerDebtsEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-customers', onCustomerDebtsEvent);
+        pusher.unsubscribeFromChannel('private-orders', onCustomerDebtsEvent);
+        pusher.unsubscribeFromChannel('private-delivery-trips', onCustomerDebtsEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/customer-debts',
@@ -74,6 +93,21 @@ final paymentsHistoryReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onPaymentsEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for paymentsHistoryReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-customers', onPaymentsEvent);
+      pusher.subscribeToChannel('private-delivery-trips', onPaymentsEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-customers', onPaymentsEvent);
+        pusher.unsubscribeFromChannel('private-delivery-trips', onPaymentsEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/payments-history',
@@ -106,6 +140,21 @@ final salesReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onSalesReportEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for salesReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-orders', onSalesReportEvent);
+      pusher.subscribeToChannel('private-delivery-trips', onSalesReportEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-orders', onSalesReportEvent);
+        pusher.unsubscribeFromChannel('private-delivery-trips', onSalesReportEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/sales',

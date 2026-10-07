@@ -15,15 +15,23 @@ final FutureProvider<DashboardModel> dashboardProvider =
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  void onOrdersEvent(Map<String, dynamic> eventData) {
+  void onRealtimeDashboardEvent(Map<String, dynamic> eventData) {
     debugPrint("Pusher: Realtime update received on admin dashboardProvider: $eventData");
     ref.invalidateSelf();
   }
 
-  pusher.subscribeToChannel('private-orders', onOrdersEvent);
+  pusher.subscribeToChannel('private-orders', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-delivery-trips', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-customers', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-products', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-commissions', onRealtimeDashboardEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+    pusher.unsubscribeFromChannel('private-orders', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-delivery-trips', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-customers', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-products', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-commissions', onRealtimeDashboardEvent);
   });
 
   try {

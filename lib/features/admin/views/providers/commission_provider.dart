@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/api_client.dart';
 import '../../../../core/sync/pusher_service.dart';
 import '../../../shared/models/commission_model.dart';
+import 'dashboard_provider.dart';
 
 final commissionsListProvider =
     FutureProvider.family<List<CommissionModel>, Map<String, dynamic>>((
@@ -13,13 +14,15 @@ final commissionsListProvider =
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
-      pusher.subscribeToChannel('private-commissions', (eventData) {
+      void onCommissionsListEvent(Map<String, dynamic> eventData) {
         debugPrint("Realtime update received on private-commissions for list: $eventData");
         ref.invalidateSelf();
-      });
+      }
+
+      pusher.subscribeToChannel('private-commissions', onCommissionsListEvent);
 
       ref.onDispose(() {
-        pusher.unsubscribeFromChannel('private-commissions');
+        pusher.unsubscribeFromChannel('private-commissions', onCommissionsListEvent);
       });
 
       try {
@@ -65,13 +68,15 @@ final commissionSummaryProvider =
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
-      pusher.subscribeToChannel('private-commissions', (eventData) {
+      void onCommissionSummaryEvent(Map<String, dynamic> eventData) {
         debugPrint("Realtime update received on private-commissions for summary: $eventData");
         ref.invalidateSelf();
-      });
+      }
+
+      pusher.subscribeToChannel('private-commissions', onCommissionSummaryEvent);
 
       ref.onDispose(() {
-        pusher.unsubscribeFromChannel('private-commissions');
+        pusher.unsubscribeFromChannel('private-commissions', onCommissionSummaryEvent);
       });
 
       try {
@@ -108,13 +113,15 @@ final commissionDetailProvider = FutureProvider.family<CommissionModel, int>((
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-commissions', (eventData) {
+  void onCommissionDetailEvent(Map<String, dynamic> eventData) {
     debugPrint("Realtime update received on private-commissions for detail #$commissionId: $eventData");
     ref.invalidateSelf();
-  });
+  }
+
+  pusher.subscribeToChannel('private-commissions', onCommissionDetailEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-commissions');
+    pusher.unsubscribeFromChannel('private-commissions', onCommissionDetailEvent);
   });
 
   try {

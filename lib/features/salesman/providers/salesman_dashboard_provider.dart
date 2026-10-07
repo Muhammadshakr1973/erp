@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../orders/providers/orders_provider.dart';
 
 class WeeklyChartItem {
@@ -155,11 +157,25 @@ class SalesmanDashboardData {
 }
 
 final salesmanDashboardProvider = FutureProvider<SalesmanDashboardData>((ref) async {
-  // Watching orders list provider triggers an automatic refetch
-  // whenever any orders change or a real-time Pusher notification arrives!
   ref.watch(ordersListProvider);
-  
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onSalesmanDashboardEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for salesmanDashboardProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-orders', onSalesmanDashboardEvent);
+  pusher.subscribeToChannel('private-customers', onSalesmanDashboardEvent);
+  pusher.subscribeToChannel('private-delivery-trips', onSalesmanDashboardEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-orders', onSalesmanDashboardEvent);
+    pusher.unsubscribeFromChannel('private-customers', onSalesmanDashboardEvent);
+    pusher.unsubscribeFromChannel('private-delivery-trips', onSalesmanDashboardEvent);
+  });
+
   try {
     final response = await api.client.get('/salesman/dashboard');
     if (response.statusCode == 200) {

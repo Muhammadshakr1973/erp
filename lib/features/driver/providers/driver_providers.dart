@@ -54,13 +54,15 @@ final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async 
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+  void onDriverTripsEvent(Map<String, dynamic> eventData) {
     debugPrint("Realtime update received on private-delivery-trips: $eventData");
     ref.invalidateSelf();
-  });
+  }
+
+  pusher.subscribeToChannel('private-delivery-trips', onDriverTripsEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-delivery-trips');
+    pusher.unsubscribeFromChannel('private-delivery-trips', onDriverTripsEvent);
   });
 
   try {
@@ -86,13 +88,15 @@ final tripDetailProvider =
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+  void onTripDetailEvent(Map<String, dynamic> eventData) {
     debugPrint("Realtime update received on private-delivery-trips for single trip: $eventData");
     ref.invalidateSelf();
-  });
+  }
+
+  pusher.subscribeToChannel('private-delivery-trips', onTripDetailEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-delivery-trips');
+    pusher.unsubscribeFromChannel('private-delivery-trips', onTripDetailEvent);
   });
 
   try {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/models/paginated_response.dart';
+import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/customer.dart';
 import '../models/customer_ledger_model.dart';
@@ -68,13 +69,15 @@ final filteredCustomerListProvider =
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
-      pusher.subscribeToChannel('private-customers', (eventData) {
+      void onCustomerEvent(Map<String, dynamic> eventData) {
         debugPrint("Realtime update received on private-customers channel: $eventData");
         ref.invalidateSelf();
-      });
+      }
+
+      pusher.subscribeToChannel('private-customers', onCustomerEvent);
 
       ref.onDispose(() {
-        pusher.unsubscribeFromChannel('private-customers');
+        pusher.unsubscribeFromChannel('private-customers', onCustomerEvent);
       });
 
       try {
@@ -136,13 +139,15 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-customers', (eventData) {
+  void onSingleCustomerEvent(Map<String, dynamic> eventData) {
     debugPrint("Realtime update received on private-customers channel for singleCustomer: $eventData");
     ref.invalidateSelf();
-  });
+  }
+
+  pusher.subscribeToChannel('private-customers', onSingleCustomerEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-customers');
+    pusher.unsubscribeFromChannel('private-customers', onSingleCustomerEvent);
   });
 
   try {
@@ -196,7 +201,22 @@ final customerLedgerProvider =
       final userId = ref.watch(authProvider.select((state) => state.user?.id));
       if (userId == null) return const [];
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
       final customerId = filters['customer_id'];
+
+      void onLedgerEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update received on private-customers or private-orders for ledger: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-customers', onLedgerEvent);
+      pusher.subscribeToChannel('private-orders', onLedgerEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-customers', onLedgerEvent);
+        pusher.unsubscribeFromChannel('private-orders', onLedgerEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/customers/$customerId/ledger',
@@ -421,6 +441,7 @@ class CustomerActions {
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(singleCustomerProvider(customerId));
+        ref.invalidate(dashboardProvider);
         return;
       }
       throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە');

@@ -3,18 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api_client.dart';
 import '../../../../core/sync/pusher_service.dart';
 import '../../models/driver_collection_model.dart';
+import 'dashboard_provider.dart';
 
 final driverCashSummaryProvider = FutureProvider<List<DriverCashSummary>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-delivery-trips', (eventData) {
+  void onDeliveryTripEvent(Map<String, dynamic> eventData) {
     debugPrint("Realtime update received on private-delivery-trips for driver cash summary: $eventData");
     ref.invalidateSelf();
-  });
+  }
+
+  pusher.subscribeToChannel('private-delivery-trips', onDeliveryTripEvent);
 
   ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-delivery-trips');
+    pusher.unsubscribeFromChannel('private-delivery-trips', onDeliveryTripEvent);
   });
 
   try {
@@ -35,6 +38,19 @@ final driverCashSummaryProvider = FutureProvider<List<DriverCashSummary>>((ref) 
 
 final driverCollectionsHistoryProvider = FutureProvider<List<DriverCollection>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onDeliveryTripHistoryEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received on private-delivery-trips for driver collection history: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-delivery-trips', onDeliveryTripHistoryEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-delivery-trips', onDeliveryTripHistoryEvent);
+  });
+
   try {
     final response = await api.client.get('/driver-collections');
     if (response.statusCode == 200) {
@@ -83,6 +99,7 @@ class DriverCollectionActions {
       }
       ref.invalidate(driverCashSummaryProvider);
       ref.invalidate(driverCollectionsHistoryProvider);
+      ref.invalidate(dashboardProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

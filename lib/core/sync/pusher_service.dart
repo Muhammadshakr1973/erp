@@ -300,12 +300,16 @@ class PusherService {
   }
 
   Future<void> unsubscribeFromChannel(String channelName, [void Function(Map<String, dynamic>)? onUpdate]) async {
-    if (onUpdate != null && _listeners.containsKey(channelName)) {
-      _listeners[channelName]!.remove(onUpdate);
-      if (_listeners[channelName]!.isNotEmpty) {
-        debugPrint("Pusher kept channel subscription $channelName active for remaining listeners.");
-        return;
+    if (onUpdate != null) {
+      if (_listeners.containsKey(channelName)) {
+        _listeners[channelName]!.remove(onUpdate);
+        if (_listeners[channelName]!.isNotEmpty) {
+          debugPrint("Pusher kept channel subscription $channelName active for remaining (${_listeners[channelName]!.length}) listeners.");
+          return;
+        }
       }
+    } else {
+      debugPrint("Pusher WARNING: Unsubscribing channel $channelName without explicit callback reference.");
     }
     _listeners.remove(channelName);
 
