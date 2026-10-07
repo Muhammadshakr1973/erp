@@ -155,19 +155,39 @@ class WhatsAppService
         $dateStr = now()->format('Y-m-d H:i');
         $orderTotalStr = $this->formatMoney($order->total_amount);
         $receivedStr = $this->formatMoney($receivedAmount);
-        $oldDebtStr = $this->formatMoney($previousBalance);
-        $newDebtStr = $this->formatMoney($newBalance);
+
+        $discountAmount = (int) ($order->discount_amount ?? 0) + (int) ($order->permanent_discount_amount ?? 0);
+        $subtotal = (int) ($order->subtotal ?? 0);
+        if ($subtotal <= 0) {
+            $subtotal = (int) $order->total_amount + $discountAmount;
+        }
 
         $message = "🏢 *{$company}*\n"
             . "--------------------------------\n"
             . "🚚 *پسوڵەی گەیاندنی کاڵا*\n"
             . "👤 بەڕێز: {$recipientName}\n"
-            . "🔢 پسوڵەی فرۆشتن: {$order->order_number}\n"
-            . "📦 کۆی پسوڵە: {$orderTotalStr}\n"
-            . "💵 بڕی دراو بە شۆفێر: {$receivedStr}\n"
-            . "📊 قەرزی پێشوو: {$oldDebtStr}\n"
-            . "📈 کۆی گشتی قەرزی ماوە: *{$newDebtStr}*\n"
-            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "🔢 پسوڵەی فرۆشتن: {$order->order_number}\n";
+
+        if ($discountAmount > 0) {
+            $subtotalStr = $this->formatMoney($subtotal);
+            $discountStr = $this->formatMoney($discountAmount);
+            $message .= "📦 بڕی پسوڵە (بێ داشکاندن): {$subtotalStr}\n"
+                . "🏷️ بڕی داشکاندنی کراو: {$discountStr}\n"
+                . "💰 کۆی گشتی دوای داشکاندن: *{$orderTotalStr}*\n";
+        } else {
+            $message .= "📦 کۆی پسوڵە: {$orderTotalStr}\n";
+        }
+
+        $message .= "💵 بڕی دراو بە شۆفێر: {$receivedStr}\n";
+
+        if ($newBalance > 0) {
+            $oldDebtStr = $this->formatMoney($previousBalance);
+            $newDebtStr = $this->formatMoney($newBalance);
+            $message .= "📊 قەرزی پێشوو: {$oldDebtStr}\n"
+                . "📈 کۆی گشتی قەرزی ماوە: *{$newDebtStr}*\n";
+        }
+
+        $message .= "🕒 کات و بەروار: {$dateStr}\n"
             . "--------------------------------\n"
             . "سوپاس بۆ متمانەتان.";
 
