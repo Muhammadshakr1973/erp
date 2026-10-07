@@ -632,19 +632,27 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'کڕیار: ${order.customerName}',
-                style: AppTextStyles.bodyBold,
-              ),
-              Text(
-                'مەندوب: ${order.salesmanName} • بەروار: ${Formatters.kurdishDayAndDate(order.createdAt)}',
-                style: AppTextStyles.caption,
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'کڕیار: ${order.customerName}',
+                  style: AppTextStyles.bodyBold,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'مەندوب: ${order.salesmanName} • بەروار: ${Formatters.kurdishDayAndDate(order.createdAt)}',
+                  style: AppTextStyles.caption,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: AppSpacing.sm),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
