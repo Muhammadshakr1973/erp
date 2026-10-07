@@ -36,7 +36,6 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
-  late TextEditingController _phone2Controller;
   late TextEditingController _addressController;
   late TextEditingController _imageUrlController;
   late TextEditingController _initialDebtController;
@@ -62,7 +61,6 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     }
     _nameController = TextEditingController(text: widget.customer?.name);
     _phoneController = TextEditingController(text: widget.customer?.phone);
-    _phone2Controller = TextEditingController(text: widget.customer?.phone2);
     _addressController = TextEditingController(text: widget.customer?.address);
     _imageUrlController = TextEditingController(
       text: widget.customer?.imageUrl,
@@ -84,7 +82,6 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _phone2Controller.dispose();
     _addressController.dispose();
     _imageUrlController.dispose();
     _initialDebtController.dispose();
@@ -116,9 +113,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          phone2: _phone2Controller.text.trim().isEmpty
-              ? null
-              : _phone2Controller.text.trim(),
+          phone2: null,
           address: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
@@ -138,9 +133,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           phone: _phoneController.text.trim().isEmpty
               ? null
               : _phoneController.text.trim(),
-          phone2: _phone2Controller.text.trim().isEmpty
-              ? null
-              : _phone2Controller.text.trim(),
+          phone2: null,
           address: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
@@ -453,42 +446,26 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             },
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: AppTextField(
-                  controller: _phoneController,
-                  labelText: 'ژمارەی مۆبایل',
-                  hintText: '0750 ...',
-                  prefixIcon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  errorText: _phoneError,
-                  onChanged: (val) {
-                    if (_phoneError != null) {
-                      setState(() {
-                        _phoneError = null;
-                      });
-                    }
-                  },
-                  validator: (val) {
-                    if (_phoneError != null) {
-                      return _phoneError;
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: AppTextField(
-                  controller: _phone2Controller,
-                  labelText: 'ژمارەی دووەم (ئارەزوومەندانە)',
-                  hintText: '0770 ...',
-                  prefixIcon: Icons.phone_android_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-              ),
-            ],
+          AppTextField(
+            controller: _phoneController,
+            labelText: 'ژمارەی مۆبایل',
+            hintText: '0750 ...',
+            prefixIcon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            errorText: _phoneError,
+            onChanged: (val) {
+              if (_phoneError != null) {
+                setState(() {
+                  _phoneError = null;
+                });
+              }
+            },
+            validator: (val) {
+              if (_phoneError != null) {
+                return _phoneError;
+              }
+              return null;
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
