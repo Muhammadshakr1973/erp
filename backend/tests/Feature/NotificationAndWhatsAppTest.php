@@ -202,6 +202,41 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertEquals(1, WhatsAppNotificationLog::where('reference_id', $payment->id)->count());
     }
 
+    public function test_whatsapp_database_settings_override_config_defaults(): void
+    {
+        $apiUrl = 'https://api.ultramsg.com/instance-test/messages/chat';
+        config([
+            'services.whatsapp.provider' => 'api_provider',
+            'services.whatsapp.api_url' => 'https://configured-provider.test/send',
+            'services.whatsapp.api_token' => 'configured-token',
+        ]);
+        \App\Models\Setting::setValue('whatsapp_provider', 'ultramsg');
+        \App\Models\Setting::setValue('whatsapp_api_url', $apiUrl);
+        \App\Models\Setting::setValue('whatsapp_api_token', 'database-token');
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response(['sent' => true, 'id' => 'commission-message'], 200),
+        ]);
+
+        $log = app(WhatsAppService::class)->dispatchMessage(
+            recipientPhone: '+9647501234567',
+            recipientName: 'Salesman',
+            notificationType: 'COMMISSION_CALCULATED',
+            referenceType: 'salesman_commission',
+            referenceId: 123,
+            message: 'Commission calculated'
+        );
+
+        $this->assertSame('ultramsg', $log->provider);
+        $this->assertSame(WhatsAppNotificationLog::STATUS_SENT, $log->status);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) =>
+            $request->url() === $apiUrl
+            && $request['token'] === 'database-token'
+            && $request['to'] === '+9647501234567'
+            && $request['body'] === 'Commission calculated'
+        );
+    }
+
     /**
      * Test that notifications are never dispatched if the parent transaction fails and rolls back.
      */
