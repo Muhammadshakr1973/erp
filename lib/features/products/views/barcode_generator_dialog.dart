@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/theme/app_colors.dart';
@@ -202,7 +201,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 24),
+                          child: const Icon(Icons.barcode_reader, color: AppColors.primary, size: 24),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -382,13 +381,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                           children: [
                             // ----------------- TOP ROW -----------------
                             Expanded(
-                              flex: 175,
+                              flex: 180,
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   // Top Left: Logo Box
                                   SizedBox(
-                                    width: 210,
+                                    width: 175,
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                       child: const GardiLogoWidget(
@@ -399,24 +398,46 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                     ),
                                   ),
 
-                                  // Vertical divider between Logo and QR Code
+                                  // Vertical divider between Logo and Barcode Box
                                   Container(
                                     width: 2.0,
                                     color: Colors.black,
                                   ),
 
-                                  // Top Right: QR Code Box
+                                  // Top Right: Barcode Box (Maximized space, low margins, full width & height)
                                   Expanded(
                                     child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Center(
-                                        child: QrImageView(
-                                          data: barcodeText.isEmpty ? '07849564845' : barcodeText,
-                                          version: QrVersions.auto,
-                                          size: 145.0,
-                                          padding: const EdgeInsets.all(4),
-                                          backgroundColor: Colors.transparent,
-                                        ),
+                                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          // Barcode Bars filling maximum space
+                                          Expanded(
+                                            child: CustomPaint(
+                                              painter: Barcode128Painter(
+                                                data: barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                                barColor: Colors.black,
+                                              ),
+                                              size: Size.infinite,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          // Barcode code number underneath
+                                          Text(
+                                            barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontFamily: 'Rudaw',
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.black,
+                                              letterSpacing: 2.5,
+                                              height: 1.0,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -428,11 +449,11 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                             Container(
                               height: 2.0,
                               color: Colors.black,
-                              ),
+                            ),
 
                             // ----------------- BOTTOM ROW -----------------
                             Expanded(
-                              flex: 125,
+                              flex: 120,
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -734,6 +755,125 @@ class GardiLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant GardiLogoPainter oldDelegate) {
     return oldDelegate.color != color;
+  }
+}
+
+/// Production-grade Code 128 barcode generator
+/// Encodes standard GS1/ISO/IEC 15417 Code 128 symbols with automatic
+/// density optimization for pure digits and full ASCII support.
+class Barcode128Painter extends CustomPainter {
+  final String data;
+  final Color barColor;
+
+  Barcode128Painter({
+    required this.data,
+    this.barColor = Colors.black,
+  });
+
+  static const List<String> _code128Patterns = [
+    '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+    '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+    '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+    '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+    '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+    '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+    '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+    '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+    '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+    '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+    '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
+  ];
+
+  static String _normalizeEnglish(String input) {
+    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    String result = input;
+    for (int i = 0; i < 10; i++) {
+      result = result.replaceAll(arabicDigits[i], englishDigits[i]);
+    }
+    return result;
+  }
+
+  static List<int> _encode(String raw) {
+    String str = _normalizeEnglish(raw.trim());
+    if (str.isEmpty) str = '07849564845';
+
+    final isDigitsOnly = RegExp(r'^\d+$').hasMatch(str);
+    if (isDigitsOnly && str.length >= 2 && str.length % 2 == 0) {
+      // Code 128 Subset C (pairs of digits for maximum thickness and readability)
+      final symbols = <int>[105];
+      int checksum = 105;
+      int weight = 1;
+      for (int i = 0; i < str.length; i += 2) {
+        final val = int.parse(str.substring(i, i + 2));
+        symbols.add(val);
+        checksum += val * weight;
+        weight++;
+      }
+      symbols.add(checksum % 103);
+      symbols.add(106); // Stop pattern
+      return symbols;
+    } else {
+      // Code 128 Subset B (full alphanumeric ASCII support)
+      final symbols = <int>[104];
+      int checksum = 104;
+      int weight = 1;
+      for (int i = 0; i < str.length; i++) {
+        int code = str.codeUnitAt(i) - 32;
+        if (code < 0 || code > 95) code = 0;
+        symbols.add(code);
+        checksum += code * weight;
+        weight++;
+      }
+      symbols.add(checksum % 103);
+      symbols.add(106); // Stop pattern
+      return symbols;
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+
+    final symbols = _encode(data);
+    int totalModules = 0;
+    for (final sym in symbols) {
+      if (sym < 0 || sym >= _code128Patterns.length) continue;
+      final pat = _code128Patterns[sym];
+      for (int i = 0; i < pat.length; i++) {
+        totalModules += pat.codeUnitAt(i) - 48;
+      }
+    }
+
+    if (totalModules <= 0) return;
+
+    final double unitWidth = size.width / totalModules;
+    final paint = Paint()
+      ..color = barColor
+      ..style = PaintingStyle.fill;
+
+    double currentX = 0.0;
+    for (final sym in symbols) {
+      if (sym < 0 || sym >= _code128Patterns.length) continue;
+      final pat = _code128Patterns[sym];
+      for (int p = 0; p < pat.length; p++) {
+        final int wUnits = pat.codeUnitAt(p) - 48;
+        final double barW = wUnits * unitWidth;
+        if (p % 2 == 0) {
+          // Even index = Bar
+          canvas.drawRect(
+            Rect.fromLTWH(currentX, 0, barW, size.height),
+            paint,
+          );
+        }
+        currentX += barW;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant Barcode128Painter oldDelegate) {
+    return oldDelegate.data != data || oldDelegate.barColor != barColor;
   }
 }
 

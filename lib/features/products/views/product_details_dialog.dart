@@ -196,7 +196,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                               IconButton(
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.qr_code_2, size: 20, color: AppColors.primary),
+                                icon: const Icon(Icons.barcode_reader, size: 20, color: AppColors.primary),
                                 tooltip: 'کردارەکانی بارکۆد',
                                 onPressed: () {
                                   showDialog(

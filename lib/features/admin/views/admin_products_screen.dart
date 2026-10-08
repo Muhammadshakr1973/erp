@@ -129,7 +129,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
         title: const Text('کاڵاکان و کۆگا', style: AppTextStyles.h2),
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
+            icon: const Icon(Icons.barcode_reader),
             tooltip: 'دروستکردنی بارکۆد',
             onPressed: () {
               showDialog(
