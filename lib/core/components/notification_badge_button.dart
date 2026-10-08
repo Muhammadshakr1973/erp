@@ -18,39 +18,42 @@ class NotificationBadgeButton extends ConsumerWidget {
 
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        IconButton(
-          icon: Icon(AppIcons.notifications, color: color),
-          tooltip: 'ئاگادارکردنەوەکان',
-          onPressed: () {
-            context.push('/notifications');
-          },
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppColors.danger,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                unreadCount > 99 ? '99+' : '$unreadCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+    return IconButton(
+      tooltip: 'ئاگادارکردنەوەکان',
+      onPressed: () {
+        context.push('/notifications');
+      },
+      icon: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Icon(AppIcons.notifications, color: color),
+          if (unreadCount > 0)
+            Positioned(
+              top: -6,
+              right: -6,
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.danger,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
