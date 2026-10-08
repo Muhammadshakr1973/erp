@@ -351,7 +351,6 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                                 },
                               ),
                             ),
-                          ),
 
                           // Target Viewfinder Framing Box with Laser Line
                           Center(
