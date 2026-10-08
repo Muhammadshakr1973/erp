@@ -6,6 +6,8 @@ import '../../../core/network/api_constants.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/utils/notification_sound_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../orders/providers/orders_provider.dart';
+import '../../warehouse/providers/warehouse_provider.dart';
 import '../models/notification_model.dart';
 
 // Unread count provider for badges across the app
