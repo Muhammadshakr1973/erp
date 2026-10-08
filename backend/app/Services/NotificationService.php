@@ -183,7 +183,7 @@ class NotificationService
         $totalQty = $order->items ? (int) $order->items->sum('quantity') : 0;
 
         $title = 'پسوڵەی فرۆشتنی نوێ دروستکرا';
-        $body = "پسوڵەی نوێ #{$order->order_number} بۆ کڕیار '{$customerName}' لەلایەن '{$salesmanName}' دروستکرا ({$itemsCount} جۆر کاڵا / {$totalQty} دانە) بە بڕی " . number_format($order->total_amount, 0) . " د.ع";
+        $body = "پسوڵە بۆ کڕیار '{$customerName}' لەلایەن '{$salesmanName}' دروستکرا.";
 
         $data = [
             'order_id' => $order->id,
@@ -224,7 +224,7 @@ class NotificationService
         $actorName = $actor ? $actor->name : 'کارمەندی کۆگا';
 
         $title = 'پسوڵەی فرۆشتن سڕایەوە';
-        $body = "پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' لەلایەن '{$actorName}' سڕایەوە.";
+        $body = "پسوڵە بۆ کڕیار '{$customerName}' لەلایەن '{$actorName}' سڕایەوە.";
 
         $data = [
             'order_id' => $order->id,
@@ -253,7 +253,7 @@ class NotificationService
     {
         $creatorName = $actor ? $actor->name : ($customer->creator ? $customer->creator->name : 'مەندوب');
         $title = 'کڕیاری نوێ زیادکرا';
-        $body = "کڕیاری نوێ '{$customer->name}' لەلایەن '{$creatorName}' زیادکرا لە سیستەم.";
+        $body = "کڕیار '{$customer->name}' لەلایەن '{$creatorName}' زیادکرا.";
 
         $data = [
             'customer_id' => $customer->id,
@@ -276,7 +276,7 @@ class NotificationService
     {
         $customerName = $order->customer?->name ?? 'کڕیار';
         $title = 'پسوڵە ئامادەیە بۆ گەیاندن';
-        $body = "پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' پاکەت کرا و ئامادەی بارکردن و گەیاندنە.";
+        $body = "پسوڵە بۆ کڕیار '{$customerName}' ئامادەی گەیاندنە.";
 
         $data = [
             'order_id' => $order->id,
@@ -302,8 +302,8 @@ class NotificationService
     public function notifyOrderDelivered(SalesOrder $order, $actor = null): void
     {
         $customerName = $order->customer?->name ?? 'کڕیار';
-        $title = 'پسوڵە بە سەرکەوتوویی گەیندرا';
-        $body = "پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' گەیندرا.";
+        $title = 'پسوڵە بە سەرکەوتوویی گەییندرا';
+        $body = "پسوڵە بۆ کڕیار '{$customerName}' گەییندرا.";
 
         $data = [
             'order_id' => $order->id,
@@ -329,7 +329,7 @@ class NotificationService
         $customerName = $payment->customer?->name ?? 'کڕیار';
         $amountStr = number_format($payment->amount, 0) . ' د.ع';
         $title = 'پارەدانی کڕیار وەرگیرا';
-        $body = "بڕی {$amountStr} لەلایەن کڕیار '{$customerName}' وەرگیرا بە پسوڵەی #{$payment->payment_number}.";
+        $body = "بڕی {$amountStr} لەلایەن کڕیار '{$customerName}' وەرگیرا.";
 
         $data = [
             'payment_id' => $payment->id,
@@ -354,7 +354,7 @@ class NotificationService
     {
         $balanceStr = number_format($customer->current_balance, 0) . ' د.ع';
         $title = 'ئاگاداری بەرزی قەرزی کڕیار';
-        $body = "قەرزی کڕیار '{$customer->name}' گەیشتە {$balanceStr} کە لە سەرووی ئاستی دیاریکراوە.";
+        $body = "قەرزی کڕیار '{$customer->name}' گەیشتە {$balanceStr}.";
 
         $data = [
             'customer_id' => $customer->id,
@@ -372,7 +372,7 @@ class NotificationService
     public function notifyLowStock(WarehouseStock $stock, Product $product): void
     {
         $title = 'ئاگاداری کەمبوونەوەی کاڵا لە کۆگا';
-        $body = "بڕی ماوەی کاڵای '{$product->name}' لە کۆگا تەنها {$stock->quantity} دانەیە (کەمترین ئاست: {$stock->min_stock_level}).";
+        $body = "کاڵای '{$product->name}' گەیشتە ئاستی کەمبوونەوە ({$stock->quantity} دانە ماوە).";
 
         $data = [
             'product_id' => $product->id,
@@ -391,7 +391,7 @@ class NotificationService
     public function notifyOutOfStock(WarehouseStock $stock, Product $product): void
     {
         $title = 'تەواوبوونی ستۆکی کاڵا';
-        $body = "ستۆکی کاڵای '{$product->name}' لە کۆگا تەواو بوو (0 دانە ماوە).";
+        $body = "ستۆکی کاڵای '{$product->name}' تەواو بوو.";
 
         $data = [
             'product_id' => $product->id,
@@ -440,7 +440,7 @@ class NotificationService
     {
         $amountStr = number_format($commission->commission_amount, 0) . ' د.ع';
         $title = 'کۆمسیۆنی مانگانەت خەرجکرا';
-        $body = "کۆمسیۆنی بڕی {$amountStr} بە سەرکەوتوویی درا و ڕادەستت کرا.";
+        $body = "کۆمسیۆنی بڕی {$amountStr} خەرجکرا.";
 
         $data = [
             'commission_id' => $commission->id,
@@ -467,7 +467,7 @@ class NotificationService
     public function notifyDeliveryTripAssigned(DeliveryTrip $trip): void
     {
         $title = 'گەشتی گەیاندنی نوێت بۆ دانرا';
-        $body = "گەشتی ژمارە #{$trip->trip_number} بە {$trip->total_orders} پسوڵەوە بۆ بەڕێزت دیاریکرا.";
+        $body = "گەشتی گەیاندن بە {$trip->total_orders} پسوڵەوە دیاریکرا.";
 
         $data = [
             'trip_id' => $trip->id,
@@ -495,7 +495,7 @@ class NotificationService
     {
         $customerName = $order->customer?->name ?? 'کڕیار';
         $title = 'کێشە لە گەیاندنی پسوڵە';
-        $body = "گەیاندنی پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' سەرکەوتوو نەبوو بەهۆی: {$reason}";
+        $body = "گەیاندنی پسوڵە بۆ کڕیار '{$customerName}' سەرکەوتوو نەبوو بەهۆی: {$reason}";
 
         $data = [
             'order_id' => $order->id,
@@ -518,7 +518,7 @@ class NotificationService
     {
         $customerName = $order->customer?->name ?? 'کڕیار';
         $title = 'کاڵای پسوڵە گەڕێندرایەوە';
-        $body = "کاڵاکانی پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' بەشێکی یان تەواوی گەڕێندرایەوە بە بڕی " . number_format($amount, 0) . " د.ع";
+        $body = "پسوڵە بۆ کڕیار '{$customerName}' گەڕێندرایەوە بە بڕی " . number_format($amount, 0) . " د.ع";
 
         $data = [
             'order_id' => $order->id,
