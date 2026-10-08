@@ -351,15 +351,20 @@ class NotificationsNotifier
 
 // WhatsApp Logs Provider (BR-R04)
 final whatsAppLogsProvider =
-    FutureProvider.family<List<WhatsAppLog>, Map<String, dynamic>>((
+    FutureProvider.family<List<WhatsAppLog>, String?>((
       ref,
-      filters,
+      statusFilter,
     ) async {
       final api = ref.watch(apiClientProvider);
       try {
+        final queryParams = <String, dynamic>{};
+        if (statusFilter != null && statusFilter.isNotEmpty) {
+          queryParams['status'] = statusFilter;
+        }
+
         final response = await api.client.get(
           ApiConstants.whatsAppLogs,
-          queryParameters: filters,
+          queryParameters: queryParams,
         );
 
         if (response.statusCode == 200) {
@@ -370,7 +375,9 @@ final whatsAppLogsProvider =
             );
           }
           final List list = resData['data'] as List;
-          return list.map((json) => WhatsAppLog.fromJson(json)).toList();
+          return list
+              .map((json) => WhatsAppLog.fromJson(Map<String, dynamic>.from(json)))
+              .toList();
         }
         throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
       } catch (e) {

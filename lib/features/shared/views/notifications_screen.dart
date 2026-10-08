@@ -437,12 +437,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   }
 
   Widget _buildWhatsAppLogsTab(BuildContext context) {
-    final filters = <String, dynamic>{};
-    if (_selectedWhatsAppStatus != null) {
-      filters['status'] = _selectedWhatsAppStatus;
-    }
-
-    final logsAsync = ref.watch(whatsAppLogsProvider(filters));
+    final logsAsync = ref.watch(whatsAppLogsProvider(_selectedWhatsAppStatus));
     final theme = Theme.of(context);
 
     return Column(
@@ -494,12 +489,38 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(whatsAppLogsProvider(filters));
+              ref.invalidate(whatsAppLogsProvider(_selectedWhatsAppStatus));
             },
             child: logsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) =>
-                  Center(child: Text('هەڵە لە بارکردنی لۆگەکان: $error')),
+              error: (error, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: AppColors.danger,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'هەڵە لە بارکردنی لۆگەکان: $error',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ElevatedButton(
+                        onPressed: () => ref.invalidate(
+                          whatsAppLogsProvider(_selectedWhatsAppStatus),
+                        ),
+                        child: const Text('دووبارە هەوڵ بدەرەوە'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               data: (logs) {
                 if (logs.isEmpty) {
                   return const Center(
@@ -610,7 +631,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                           content: Text('دووبارە ناردنەوە ئەنجامدرا'),
                         ),
                       );
-                      ref.invalidate(whatsAppLogsProvider);
+                      ref.invalidate(
+                        whatsAppLogsProvider(_selectedWhatsAppStatus),
+                      );
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
