@@ -161,6 +161,60 @@ class OrderModel {
     );
   }
 
+  OrderModel copyWith({
+    int? id,
+    String? orderNumber,
+    String? sharedKey,
+    int? version,
+    int? customerId,
+    int? salesmanId,
+    int? warehouseId,
+    double? subtotal,
+    double? permanentDiscountPercent,
+    double? permanentDiscountAmount,
+    double? discountAmount,
+    double? discountPercent,
+    String? discountType,
+    double? totalAmount,
+    double? totalProfit,
+    String? status,
+    String? notes,
+    String? createdAt,
+    dynamic customer,
+    dynamic salesman,
+    dynamic warehouse,
+    List<OrderItemModel>? items,
+    bool? pendingSync,
+    String? priceType,
+  }) {
+    return OrderModel(
+      id: id ?? this.id,
+      orderNumber: orderNumber ?? this.orderNumber,
+      sharedKey: sharedKey ?? this.sharedKey,
+      version: version ?? this.version,
+      customerId: customerId ?? this.customerId,
+      salesmanId: salesmanId ?? this.salesmanId,
+      warehouseId: warehouseId ?? this.warehouseId,
+      subtotal: subtotal ?? this.subtotal,
+      permanentDiscountPercent: permanentDiscountPercent ?? this.permanentDiscountPercent,
+      permanentDiscountAmount: permanentDiscountAmount ?? this.permanentDiscountAmount,
+      discountAmount: discountAmount ?? this.discountAmount,
+      discountPercent: discountPercent ?? this.discountPercent,
+      discountType: discountType ?? this.discountType,
+      totalAmount: totalAmount ?? this.totalAmount,
+      totalProfit: totalProfit ?? this.totalProfit,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      customer: customer ?? this.customer,
+      salesman: salesman ?? this.salesman,
+      warehouse: warehouse ?? this.warehouse,
+      items: items ?? this.items,
+      pendingSync: pendingSync ?? this.pendingSync,
+      priceType: priceType ?? this.priceType,
+    );
+  }
+
   String get customerName {
     if (customerId == 0) return 'کڕیاری کاتی (بێ ناو)';
     if (customer == null) return 'کڕیاری نەناسراو';
