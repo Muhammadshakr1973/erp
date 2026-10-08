@@ -9,6 +9,7 @@ import '../../../core/sync/pusher_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
+import '../../shared/providers/customer_provider.dart';
 import '../models/order_model.dart';
 
 class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
@@ -199,7 +200,9 @@ class OrderActions {
         final newOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
         ref.read(ordersListProvider.notifier).refreshSilently();
-        ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+        ref.invalidate(salesmanDashboardProvider);
+        ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(dashboardProvider);
         return newOrder;
       }
@@ -236,7 +239,9 @@ class OrderActions {
         final updatedOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
         ref.read(ordersListProvider.notifier).refreshSilently();
-        ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+        ref.invalidate(salesmanDashboardProvider);
+        ref.invalidate(customerListProvider);
+        ref.invalidate(filteredCustomerListProvider);
         return updatedOrder;
       }
 
@@ -265,7 +270,9 @@ class OrderActions {
       );
 
       ref.read(ordersListProvider.notifier).refreshSilently();
-      ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+      ref.invalidate(salesmanDashboardProvider);
+      ref.invalidate(customerListProvider);
+      ref.invalidate(filteredCustomerListProvider);
     } catch (e) {
       ref.read(ordersListProvider.notifier).refreshSilently();
       throw Exception(api.parseError(e));
@@ -285,7 +292,9 @@ class OrderActions {
 
       // 3. Silently update providers in background without resetting UI state
       ref.read(ordersListProvider.notifier).refreshSilently();
-      ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+      ref.invalidate(salesmanDashboardProvider);
+      ref.invalidate(customerListProvider);
+      ref.invalidate(filteredCustomerListProvider);
       ref.invalidate(dashboardProvider);
     } catch (e) {
       // Restore state on failure
@@ -390,6 +399,9 @@ class SalesReturnActions {
       }
       ref.invalidate(ordersListProvider);
       ref.invalidate(salesReturnsListProvider);
+      ref.invalidate(salesmanDashboardProvider);
+      ref.invalidate(customerListProvider);
+      ref.invalidate(filteredCustomerListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

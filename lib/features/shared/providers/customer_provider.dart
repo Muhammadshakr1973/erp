@@ -7,6 +7,7 @@ import '../../../core/sync/pusher_service.dart';
 import '../../../core/models/paginated_response.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../models/customer.dart';
 import '../models/customer_ledger_model.dart';
 import '../models/customer_reconciliation_model.dart';
@@ -288,6 +289,7 @@ class CustomerActions {
         final createdCustomer = Customer.fromJson(Map<String, dynamic>.from(resData['data']));
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
+        ref.invalidate(salesmanDashboardProvider);
         return createdCustomer;
       }
       throw FormatException('داتای دروستکراوی کڕیار نادروستە');
@@ -333,6 +335,7 @@ class CustomerActions {
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(singleCustomerProvider(id));
+        ref.invalidate(salesmanDashboardProvider);
         return updatedCustomer;
       }
       throw FormatException('داتای نوێکراوەی کڕیار نادروستە');
@@ -347,6 +350,7 @@ class CustomerActions {
       ref.invalidate(customerListProvider);
       ref.invalidate(filteredCustomerListProvider);
       ref.invalidate(singleCustomerProvider(id));
+      ref.invalidate(salesmanDashboardProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -373,6 +377,7 @@ class CustomerActions {
         ref.invalidate(customerReconciliationProvider(id));
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
+        ref.invalidate(salesmanDashboardProvider);
 
         return result;
       } else {
@@ -441,6 +446,7 @@ class CustomerActions {
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(singleCustomerProvider(customerId));
+        ref.invalidate(salesmanDashboardProvider);
         ref.invalidate(dashboardProvider);
         return;
       }
