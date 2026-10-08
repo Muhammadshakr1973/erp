@@ -156,37 +156,58 @@ class SalesmanDashboardData {
   }
 }
 
-final salesmanDashboardProvider = FutureProvider<SalesmanDashboardData>((ref) async {
-  ref.watch(ordersListProvider);
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class SalesmanDashboardNotifier extends AsyncNotifier<SalesmanDashboardData> {
+  @override
+  FutureOr<SalesmanDashboardData> build() async {
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-  void onSalesmanDashboardEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received for salesmanDashboardProvider: $eventData");
-    ref.invalidateSelf();
+    void onSalesmanDashboardEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for SalesmanDashboardNotifier: $eventData");
+      refreshSilently();
+    }
+
+    pusher.subscribeToChannel('private-orders', onSalesmanDashboardEvent);
+    pusher.subscribeToChannel('private-customers', onSalesmanDashboardEvent);
+    pusher.subscribeToChannel('private-delivery-trips', onSalesmanDashboardEvent);
+
+    ref.onDispose(() {
+      pusher.unsubscribeFromChannel('private-orders', onSalesmanDashboardEvent);
+      pusher.unsubscribeFromChannel('private-customers', onSalesmanDashboardEvent);
+      pusher.unsubscribeFromChannel('private-delivery-trips', onSalesmanDashboardEvent);
+    });
+
+    return _fetchDashboard(api);
   }
 
-  pusher.subscribeToChannel('private-orders', onSalesmanDashboardEvent);
-  pusher.subscribeToChannel('private-customers', onSalesmanDashboardEvent);
-  pusher.subscribeToChannel('private-delivery-trips', onSalesmanDashboardEvent);
-
-  ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-orders', onSalesmanDashboardEvent);
-    pusher.unsubscribeFromChannel('private-customers', onSalesmanDashboardEvent);
-    pusher.unsubscribeFromChannel('private-delivery-trips', onSalesmanDashboardEvent);
-  });
-
-  try {
-    final response = await api.client.get('/salesman/dashboard');
-    if (response.statusCode == 200) {
-      final data = response.data['data'] ?? response.data;
-      return SalesmanDashboardData.fromJson(Map<String, dynamic>.from(data));
+  Future<SalesmanDashboardData> _fetchDashboard(ApiClient api) async {
+    try {
+      final response = await api.client.get('/salesman/dashboard');
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        return SalesmanDashboardData.fromJson(Map<String, dynamic>.from(data));
+      }
+      throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە');
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(api.parseError(e));
+      }
+      rethrow;
     }
-    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە');
-  } catch (e) {
-    if (e is DioException) {
-      throw Exception(api.parseError(e));
-    }
-    rethrow;
   }
-});
+
+  Future<void> refreshSilently() async {
+    final api = ref.read(apiClientProvider);
+    try {
+      final freshData = await _fetchDashboard(api);
+      state = AsyncData(freshData);
+    } catch (_) {
+      // Keep existing dashboard data on transient errors
+    }
+  }
+}
+
+final salesmanDashboardProvider =
+    AsyncNotifierProvider<SalesmanDashboardNotifier, SalesmanDashboardData>(
+  SalesmanDashboardNotifier.new,
+);

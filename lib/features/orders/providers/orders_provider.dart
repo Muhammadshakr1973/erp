@@ -8,27 +8,32 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../models/order_model.dart';
 
-final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) return const [];
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
+  @override
+  FutureOr<List<OrderModel>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-  void onOrdersEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received on private-orders channel: $eventData");
-    ref.invalidateSelf();
+    void onOrdersEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received on private-orders channel: $eventData");
+      refreshSilently();
+    }
+
+    pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+    ref.onDispose(() {
+      pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+    });
+
+    return _fetchOrders(api);
   }
 
-  // Subscribe to real-time order updates
-  pusher.subscribeToChannel('private-orders', onOrdersEvent);
-
-  ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
-  });
-
-  try {
+  Future<List<OrderModel>> _fetchOrders(ApiClient api) async {
     final response = await api.client.get('/orders');
     if (response.statusCode == 200) {
       final resData = response.data['data'] ?? response.data;
@@ -40,7 +45,6 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      // Sort descending by createdAt (newest first)
       onlineOrders.sort((a, b) {
         final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
         final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -51,13 +55,60 @@ final ordersListProvider = FutureProvider<List<OrderModel>>((ref) async {
     throw Exception(
       'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
     );
-  } catch (e) {
-    if (e is DioException) {
-      throw Exception(api.parseError(e));
-    }
-    rethrow;
   }
-});
+
+  Future<void> refreshSilently() async {
+    final api = ref.read(apiClientProvider);
+    try {
+      final freshOrders = await _fetchOrders(api);
+      state = AsyncData(freshOrders);
+    } catch (_) {
+      // Maintain current state on transient errors
+    }
+  }
+
+  void removeOrderLocally(String orderId) {
+    final currentOrders = state.valueOrNull;
+    if (currentOrders != null) {
+      final updated = currentOrders.where((o) => o.id.toString() != orderId).toList();
+      state = AsyncData(updated);
+    }
+  }
+
+  void updateOrderStatusLocally(String orderId, String newStatus) {
+    final currentOrders = state.valueOrNull;
+    if (currentOrders != null) {
+      final updated = currentOrders.map((o) {
+        if (o.id.toString() == orderId) {
+          return o.copyWith(status: newStatus);
+        }
+        return o;
+      }).toList();
+      state = AsyncData(updated);
+    }
+  }
+
+  void upsertOrderLocally(OrderModel newOrder) {
+    final currentOrders = state.valueOrNull ?? [];
+    final index = currentOrders.indexWhere((o) => o.id == newOrder.id);
+    List<OrderModel> updated;
+    if (index >= 0) {
+      updated = List.from(currentOrders)..[index] = newOrder;
+    } else {
+      updated = [newOrder, ...currentOrders];
+    }
+    state = AsyncData(updated);
+  }
+
+  void restoreState(List<OrderModel> previousOrders) {
+    state = AsyncData(previousOrders);
+  }
+}
+
+final ordersListProvider =
+    AsyncNotifierProvider<OrdersListNotifier, List<OrderModel>>(
+  OrdersListNotifier.new,
+);
 
 final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
@@ -139,16 +190,18 @@ class OrderActions {
         ),
       );
 
-      ref.invalidate(ordersListProvider);
-      ref.invalidate(dashboardProvider);
-
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
           ? resData['data']
           : resData;
 
       if (orderData is Map) {
-        return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        final newOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
+        ref.read(ordersListProvider.notifier).refreshSilently();
+        ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+        ref.invalidate(dashboardProvider);
+        return newOrder;
       }
 
       throw FormatException('داتای دروستکراوی پسوڵە نادروستە');
@@ -173,7 +226,6 @@ class OrderActions {
       );
 
       ref.invalidate(singleOrderProvider(orderId.toString()));
-      ref.invalidate(ordersListProvider);
 
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
@@ -181,7 +233,11 @@ class OrderActions {
           : resData;
 
       if (orderData is Map) {
-        return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        final updatedOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
+        ref.read(ordersListProvider.notifier).refreshSilently();
+        ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+        return updatedOrder;
       }
 
       throw FormatException('داتای نوێکراوەی پسوڵە نادروستە');
@@ -191,6 +247,9 @@ class OrderActions {
   }
 
   Future<void> updateOrderStatus(String orderId, String newStatus) async {
+    ref.read(ordersListProvider.notifier).updateOrderStatusLocally(orderId, newStatus);
+    ref.invalidate(singleOrderProvider(orderId));
+
     try {
       final idempotencyKey =
           'status_order_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
@@ -205,19 +264,34 @@ class OrderActions {
         ),
       );
 
-      ref.invalidate(singleOrderProvider(orderId));
-      ref.invalidate(ordersListProvider);
+      ref.read(ordersListProvider.notifier).refreshSilently();
+      ref.read(salesmanDashboardProvider.notifier).refreshSilently();
     } catch (e) {
+      ref.read(ordersListProvider.notifier).refreshSilently();
       throw Exception(api.parseError(e));
     }
   }
 
   Future<void> deleteOrder(String orderId) async {
+    final previousList = ref.read(ordersListProvider).valueOrNull;
+
+    // 1. Optimistically remove from local state immediately
+    ref.read(ordersListProvider.notifier).removeOrderLocally(orderId);
+    ref.invalidate(singleOrderProvider(orderId));
+
     try {
+      // 2. Call backend API
       await api.client.delete('/orders/$orderId');
-      ref.invalidate(ordersListProvider);
-      ref.invalidate(singleOrderProvider(orderId));
+
+      // 3. Silently update providers in background without resetting UI state
+      ref.read(ordersListProvider.notifier).refreshSilently();
+      ref.read(salesmanDashboardProvider.notifier).refreshSilently();
+      ref.invalidate(dashboardProvider);
     } catch (e) {
+      // Restore state on failure
+      if (previousList != null) {
+        ref.read(ordersListProvider.notifier).restoreState(previousList);
+      }
       throw Exception(api.parseError(e));
     }
   }
