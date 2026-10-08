@@ -98,4 +98,33 @@ class ProductModel {
       stocks: json['stocks'] ?? [],
     );
   }
+
+  int get minStockLevel {
+    if (stocks.isEmpty) return 0;
+    int minLevel = 0;
+    for (var s in stocks) {
+      if (s is Map) {
+        minLevel += (s['min_stock_level'] as num?)?.toInt() ?? 0;
+      }
+    }
+    return minLevel;
+  }
+
+  int get totalStock {
+    int total = 0;
+    for (var s in stocks) {
+      if (s is Map) {
+        total += (s['quantity'] as num?)?.toInt() ?? 0;
+      }
+    }
+    return total;
+  }
+
+  bool get isLowStock {
+    final min = minStockLevel;
+    if (min > 0) {
+      return totalStock <= min;
+    }
+    return totalStock <= 0;
+  }
 }

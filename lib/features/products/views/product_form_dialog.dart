@@ -37,6 +37,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _unitController;
   late FocusNode _unitFocusNode;
   late TextEditingController _stockController;
+  late TextEditingController _minStockController;
   late TextEditingController _imageUrlController;
 
   int? _selectedCategoryId;
@@ -48,9 +49,19 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     super.initState();
     final p = widget.product;
     int currentStock = 0;
+    int currentMinStock = 5;
     if (p != null) {
+      int foundMin = 0;
+      bool hasMin = false;
       for (var s in p.stocks) {
         currentStock += (s['quantity'] as int?) ?? 0;
+        if (s is Map && s['min_stock_level'] != null) {
+          foundMin += (s['min_stock_level'] as num).toInt();
+          hasMin = true;
+        }
+      }
+      if (hasMin) {
+        currentMinStock = foundMin;
       }
     }
     _nameController = TextEditingController(text: p?.name ?? '');
@@ -75,6 +86,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _unitController = TextEditingController(text: p?.unit ?? '');
     _stockController = TextEditingController(
       text: p != null ? currentStock.toString() : '0',
+    );
+    _minStockController = TextEditingController(
+      text: p != null ? currentMinStock.toString() : '5',
     );
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;
@@ -101,6 +115,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _unitController.dispose();
     _unitFocusNode.dispose();
     _stockController.dispose();
+    _minStockController.dispose();
     _imageUrlController.dispose();
     super.dispose();
   }
@@ -192,6 +207,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'supplier_id': _selectedSupplierId,
       'is_active': _isActive ? 1 : 0,
       'initial_stock': int.tryParse(_stockController.text) ?? 0,
+      'min_stock_level': int.tryParse(_minStockController.text) ?? 0,
       'image_path': _imageUrlController.text,
     };
 
@@ -1066,6 +1082,15 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                 controller: _stockController,
                                 labelText: 'ستۆک',
                                 hintText: 'ستۆک',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: AppTextField(
+                                controller: _minStockController,
+                                labelText: 'کەمترین بڕ (ئاگاداری)',
+                                hintText: 'ئاستی ئاگادارکردنەوە',
                                 keyboardType: TextInputType.number,
                               ),
                             ),

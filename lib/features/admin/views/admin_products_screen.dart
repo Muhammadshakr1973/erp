@@ -349,11 +349,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      int totalStock = 0;
-                      for (var stock in product.stocks) {
-                        totalStock += (stock['quantity'] as int?) ?? 0;
-                      }
-                      final bool isLowStock = totalStock < 20;
+                      final int totalStock = product.totalStock;
+                      final int minStock = product.minStockLevel;
+                      final bool isLowStock = product.isLowStock;
 
                       return AppCard(
                         padding: const EdgeInsets.symmetric(
@@ -514,7 +512,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      'ستۆک: $totalStock',
+                                      minStock > 0
+                                          ? 'ستۆک: $totalStock (کەمترین: $minStock)'
+                                          : 'ستۆک: $totalStock',
                                       style: TextStyle(
                                         color: isLowStock
                                             ? AppColors.danger

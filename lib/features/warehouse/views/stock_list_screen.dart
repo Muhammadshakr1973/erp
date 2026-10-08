@@ -57,7 +57,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'کۆگای دیاریکراو: ${stock.warehouseName}',
+                      'کۆگای دیاریکراو: ${stock.warehouseName} • کەمترین بڕی ئاگاداری: ${stock.minStockLevel}',
                       style: AppTextStyles.caption,
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -497,7 +497,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${stock.warehouseName} • حجزکراو: ${stock.reservedQuantity} • بەردەست: ${stock.availableQuantity}',
+                                    '${stock.warehouseName} • حجز: ${stock.reservedQuantity} • بەردەست: ${stock.availableQuantity} • کەمترین ئاست: ${stock.minStockLevel}',
                                     style: AppTextStyles.caption,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -510,7 +510,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 StatusBadge(
-                                  label: 'ستۆک: ${stock.quantity}',
+                                  label: isLow
+                                      ? 'ستۆک: ${stock.quantity} (کەمترین: ${stock.minStockLevel})'
+                                      : 'ستۆک: ${stock.quantity}',
                                   type: isLow
                                       ? StatusBadgeType.danger
                                       : StatusBadgeType.info,

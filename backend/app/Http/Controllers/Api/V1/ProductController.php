@@ -50,19 +50,23 @@ class ProductController extends Controller
             'price_n2' => 'nullable|numeric|min:0',
             'price_n3' => 'nullable|numeric|min:0',
             'image_path' => 'nullable|string',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'min_stock_level' => 'nullable|integer|min:0'
         ]);
 
-        $product = Product::create($validated);
+        $productData = collect($validated)->except(['min_stock_level'])->all();
+        $product = Product::create($productData);
         
         $initial_stock = $request->input('initial_stock', 0);
+        $min_stock_level = (int) $request->input('min_stock_level', 0);
         $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
         
         $stock = WarehouseStock::create([
             'product_id' => $product->id,
             'warehouse_id' => $warehouse->id,
             'quantity' => 0,
-            'reserved_quantity' => 0
+            'reserved_quantity' => 0,
+            'min_stock_level' => $min_stock_level
         ]);
 
         if ($initial_stock > 0) {
@@ -106,10 +110,31 @@ class ProductController extends Controller
             'price_n2' => 'nullable|numeric|min:0',
             'price_n3' => 'nullable|numeric|min:0',
             'image_path' => 'nullable|string',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'min_stock_level' => 'nullable|integer|min:0'
         ]);
 
-        $product->update($validated);
+        $productData = collect($validated)->except(['min_stock_level'])->all();
+        $product->update($productData);
+
+        if ($request->has('min_stock_level')) {
+            $min_stock_level = (int)$request->input('min_stock_level');
+            $stocks = WarehouseStock::where('product_id', $product->id)->get();
+            if ($stocks->isNotEmpty()) {
+                foreach ($stocks as $st) {
+                    $st->update(['min_stock_level' => $min_stock_level]);
+                }
+            } else {
+                $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
+                WarehouseStock::create([
+                    'product_id' => $product->id,
+                    'warehouse_id' => $warehouse->id,
+                    'quantity' => 0,
+                    'reserved_quantity' => 0,
+                    'min_stock_level' => $min_stock_level
+                ]);
+            }
+        }
 
         if ($request->has('initial_stock')) {
             $initial_stock = (int)$request->input('initial_stock');

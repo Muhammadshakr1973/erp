@@ -59,11 +59,9 @@ class ProductDetailsDialog extends ConsumerWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
 
-    int totalStock = 0;
-    for (var stock in product.stocks) {
-      totalStock += (stock['quantity'] as int?) ?? 0;
-    }
-    final bool isLowStock = totalStock < 20;
+    final int totalStock = product.totalStock;
+    final int minStockLevel = product.minStockLevel;
+    final bool isLowStock = product.isLowStock;
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -315,6 +313,42 @@ class ProductDetailsDialog extends ConsumerWidget {
                       '$totalStock دانە',
                       isLowStock ? AppColors.danger : AppColors.success,
                     ),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      context,
+                      'کەمترین بڕ (ئاستی ئاگاداری):',
+                      '$minStockLevel دانە',
+                    ),
+                    if (isLowStock) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                minStockLevel > 0
+                                    ? 'ئاگاداری: ئەم کاڵایە گەیشتووەتە کەمترین بڕی ستۆک ($minStockLevel دانە) یان کەمترە!'
+                                    : 'ئاگاداری: ئەم کاڵایە ستۆکی نەماوە!',
+                                style: const TextStyle(
+                                  color: AppColors.danger,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Rudaw',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
