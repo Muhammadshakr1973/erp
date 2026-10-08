@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/components/global_numeric_keyboard.dart';
+import 'features/shared/providers/notification_provider.dart';
 
 bool _shouldIgnoreWebTextInputError(Object error, StackTrace? stack) {
   final text = '${error.toString()} ${stack ?? ''}'.toLowerCase();
@@ -88,9 +89,23 @@ class PosApp extends ConsumerWidget {
         // Enforce RTL directionality
         return Directionality(
           textDirection: TextDirection.rtl,
-          child: GlobalNumericKeyboardWrapper(child: child!),
+          child: GlobalNumericKeyboardWrapper(
+            child: _NotificationListenerWrapper(child: child!),
+          ),
         );
       },
     );
+  }
+}
+
+class _NotificationListenerWrapper extends ConsumerWidget {
+  final Widget child;
+  const _NotificationListenerWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Keep notifications list provider active continuously so notifications arrive live
+    ref.watch(notificationsListProvider);
+    return child;
   }
 }
