@@ -282,10 +282,21 @@ class SalesmanOrdersScreen extends ConsumerWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text(
-            'سڕینەوەی پسوڵە',
-            style: AppTextStyles.h2,
-            textDirection: TextDirection.rtl,
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text(
+                  'سڕینەوەی پسوڵە',
+                  style: AppTextStyles.h2,
+                  textDirection: TextDirection.rtl,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
           content: Text(
             'ئایا دڵنیایت لە سڕینەوەی پسوڵەی #${order.orderNumber} بۆ کڕیار $customerName؟',
@@ -294,13 +305,6 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'پاشگەزبوونەوە',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            TextButton(
               onPressed: () async {
                 Navigator.pop(context);
                 try {
@@ -308,7 +312,7 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('پسوڵەکە بە سەرکەوتوویی سڕایەوە یان خرایە ڕیزی سڕینەوەوە'),
+                        content: Text('پسوڵەکە بەسەرکەوتوویی سڕایەوە'),
                       ),
                     );
                   }

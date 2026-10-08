@@ -72,7 +72,18 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی کڕیار', style: AppTextStyles.h3),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text('سڕینەوەی کڕیار', style: AppTextStyles.h3),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,10 +124,6 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: AppColors.danger,

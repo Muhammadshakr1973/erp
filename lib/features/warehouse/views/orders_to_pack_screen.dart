@@ -122,16 +122,26 @@ class OrdersToPackScreen extends ConsumerWidget {
                   showDialog(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
-                      title: const Text('سڕینەوەی پسوڵەی بەتاڵ', style: AppTextStyles.h3),
+                      title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'سڕینەوەی پسوڵەی بەتاڵ',
+                              style: AppTextStyles.h3,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                        ],
+                      ),
                       content: Text(
                         'ئایا دڵنیایت لە سڕینەوەی پسوڵەی "${order.customerName}" کە هیچ کاڵایەکی تێدا تۆمار نەکراوە؟\n\nنۆتیفیکەیشنی ئاگادارکردنەوە بۆ مەندوب (${order.salesmanName}) و خاوەن و ئادمین دەنێردرێت.',
                         style: AppTextStyles.bodyMedium,
                       ),
                       actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('پەشیمانبوونەوە'),
-                        ),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.colorScheme.error,
@@ -144,7 +154,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('پسوڵەکە بەسەرکەوتوویی سڕایەوە و نۆتیفیکەیشن نێردرا.'),
+                                    content: Text('پسوڵەکە بەسەرکەوتوویی سڕایەوە'),
                                     backgroundColor: Colors.green,
                                     behavior: SnackBarBehavior.floating,
                                   ),
