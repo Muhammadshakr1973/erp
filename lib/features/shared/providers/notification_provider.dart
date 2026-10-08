@@ -128,7 +128,7 @@ class NotificationsNotifier
 
             // Display top notification toast overlay for incoming notifications
             for (final n in newNotifications) {
-              AppSnackbar.info(null, title: n.title, message: n.body);
+              AppSnackbar.info(null, n.body, title: n.title);
             }
 
             final updatedList = [...newNotifications, ...currentList];
@@ -204,7 +204,7 @@ class NotificationsNotifier
       NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
 
       // Display top notification toast overlay
-      AppSnackbar.info(null, title: newNotification.title, message: newNotification.body);
+      AppSnackbar.info(null, newNotification.body, title: newNotification.title);
 
       final List<AppNotification> updatedList;
       final filterType = _filterType;
