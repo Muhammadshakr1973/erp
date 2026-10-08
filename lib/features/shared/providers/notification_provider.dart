@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/sync/pusher_service.dart';
+import '../../../core/utils/notification_sound_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/notification_model.dart';
 
@@ -75,6 +76,10 @@ class NotificationsNotifier
         final currentList = state.value ?? [];
         if (currentList.any((n) => n.id == newNotification.id)) return;
 
+        // Play notification sound & vibration feedback
+        final soundEnabled = _ref.read(notificationSoundEnabledProvider);
+        NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
+
         final List<AppNotification> updatedList;
         final filterType = _filterType;
         if (filterType == null || filterType.isEmpty || newNotification.type.toLowerCase() == filterType.toLowerCase()) {
@@ -90,6 +95,14 @@ class NotificationsNotifier
         } else {
           final count = _ref.read(unreadNotificationsCountProvider);
           _ref.read(unreadNotificationsCountProvider.notifier).state = count + 1;
+        }
+
+        // Realtime automatic refresh when order notifications arrive
+        if (newNotification.type.toLowerCase() == 'order') {
+          _ref.invalidate(ordersToPackProvider);
+          _ref.invalidate(ordersListProvider);
+          _ref.invalidate(warehouseDashboardProvider);
+          _ref.invalidate(readyOrdersForDeliveryProvider);
         }
       } catch (e) {
         debugPrint("Error parsing live notification: $e");

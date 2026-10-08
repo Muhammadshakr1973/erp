@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
+import '../../shared/providers/notification_provider.dart';
 import 'warehouse_dashboard_screen.dart';
 import 'orders_to_pack_screen.dart';
 import 'stock_list_screen.dart';
@@ -41,6 +42,9 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep live notification listener active across all tabs for warehouse staff
+    ref.watch(notificationsListProvider);
+
     final currentIndex = ref.watch(warehouseTabIndexProvider);
 
     return ResponsiveShell(

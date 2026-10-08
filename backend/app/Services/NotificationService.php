@@ -147,23 +147,34 @@ class NotificationService
     // =========================================================================
 
     /**
-     * NOT-001: New Sales Order created -> notify Warehouse staff & Admins
+     * NOT-001: New Sales Order created -> notify Warehouse staff ONLY
      */
     public function notifyNewOrderCreated(SalesOrder $order, $actor = null): void
     {
+        $order->loadMissing(['customer', 'items', 'salesman']);
+
         $customerName = $order->customer?->name ?? 'کڕیار';
+        $salesmanName = $actor ? $actor->name : ($order->salesman ? $order->salesman->name : 'مەندوب');
+        $itemsCount = $order->items ? $order->items->count() : 0;
+        $totalQty = $order->items ? (int) $order->items->sum('quantity') : 0;
+
         $title = 'پسوڵەی فرۆشتنی نوێ دروستکرا';
-        $body = "پسوڵەی نوێ #{$order->order_number} بۆ کڕیار '{$customerName}' دروستکرا بە بڕی " . number_format($order->total_amount, 0) . " د.ع";
+        $body = "پسوڵەی نوێ #{$order->order_number} بۆ کڕیار '{$customerName}' لەلایەن '{$salesmanName}' دروستکرا ({$itemsCount} جۆر کاڵا / {$totalQty} دانە) بە بڕی " . number_format($order->total_amount, 0) . " د.ع";
 
         $data = [
             'order_id' => $order->id,
             'order_number' => $order->order_number,
             'customer_id' => $order->customer_id,
+            'customer_name' => $customerName,
+            'salesman_name' => $salesmanName,
+            'items_count' => $itemsCount,
+            'total_quantity' => $totalQty,
+            'total_amount' => $order->total_amount,
             'action' => 'open_order',
         ];
 
-        // Notify Warehouse & Admins
-        $this->notifyRole(['warehouse', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
+        // Notify ONLY Warehouse staff (NOT Admin/Owner as requested)
+        $this->notifyRole(['warehouse'], Notification::TYPE_ORDER, $title, $body, $data);
     }
 
     /**
@@ -185,7 +196,7 @@ class NotificationService
     }
 
     /**
-     * NOT-002: Order packed & Ready for delivery -> notify Drivers & Admins
+     * NOT-002: Order packed & Ready for delivery -> notify Admins & Owner (drivers notified on trip assignment)
      */
     public function notifyOrderReadyForDelivery(SalesOrder $order, $actor = null): void
     {
@@ -200,7 +211,8 @@ class NotificationService
             'action' => 'open_order',
         ];
 
-        $this->notifyRole(['driver', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
+        // Notify Admins and Owner (drivers notified only when assigned to a trip)
+        $this->notifyRole(['admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
 
         // Send WhatsApp notification to the customer
         try {

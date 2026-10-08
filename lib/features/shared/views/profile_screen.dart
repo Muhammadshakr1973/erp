@@ -9,6 +9,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/utils/notification_sound_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -66,6 +67,24 @@ class ProfileScreen extends ConsumerWidget {
                     style: AppTextStyles.caption,
                   ),
                   onTap: () {},
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text(
+                    'دەنگی ئاگادارکردنەوە',
+                    style: AppTextStyles.bodyBold,
+                  ),
+                  subtitle: const Text(
+                    'لێدانی دەنگ لە کاتی هاتنی ئاگادارکردنەوە',
+                    style: AppTextStyles.caption,
+                  ),
+                  trailing: Switch(
+                    value: ref.watch(notificationSoundEnabledProvider),
+                    onChanged: (val) {
+                      ref.read(notificationSoundEnabledProvider.notifier).toggleSound(val);
+                    },
+                  ),
                 ),
                 const Divider(),
                 ListTile(
