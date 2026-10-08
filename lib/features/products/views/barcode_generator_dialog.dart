@@ -31,16 +31,6 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
   final GlobalKey _repaintKey = GlobalKey();
   bool _isCapturing = false;
 
-  String _toArabicIndicDigits(String input) {
-    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    String result = input;
-    for (int i = 0; i < 10; i++) {
-      result = result.replaceAll(englishDigits[i], arabicDigits[i]);
-    }
-    return result;
-  }
-
   String _normalizeToEnglishDigits(String input) {
     const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
