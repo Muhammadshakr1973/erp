@@ -153,7 +153,11 @@ class NotificationService
     {
         $order->loadMissing(['customer', 'items', 'salesman']);
 
-        $customerName = $order->customer?->name ?? 'کڕیار';
+        $customerName = $order->customer?->name;
+        if (empty($customerName) || $order->customer_id == 0) {
+            $customerName = 'کڕیاری کاتی (بێ ناو)';
+        }
+
         $salesmanName = $actor ? $actor->name : ($order->salesman ? $order->salesman->name : 'مەندوب');
         $itemsCount = $order->items ? $order->items->count() : 0;
         $totalQty = $order->items ? (int) $order->items->sum('quantity') : 0;
@@ -173,8 +177,8 @@ class NotificationService
             'action' => 'open_order',
         ];
 
-        // Notify ONLY Warehouse staff (NOT Admin/Owner as requested)
-        $this->notifyRole(['warehouse'], Notification::TYPE_ORDER, $title, $body, $data);
+        // Notify ONLY Warehouse staff (supports 'warehouse', 'Warehouse', and 'packer' roles)
+        $this->notifyRole(['warehouse', 'Warehouse', 'packer'], Notification::TYPE_ORDER, $title, $body, $data);
     }
 
     /**

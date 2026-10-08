@@ -51,7 +51,7 @@ class SalesOrderService
 
         $order = DB::transaction(function () use ($data, $user) {
             // ٢. قفڵکردنی ڕیزی کڕیار بۆ ڕێگری لە گۆڕانکاری هاوکات
-            $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
+            $customer = $this->getCustomerForOrder($data['customer_id']);
 
             // ٣. دڵنیابوونەوە لەوەی کە کڕیارەکە بۆ ئەم مەندوبە دەستنیشان کراوە (Authorization & Assignment)
             $this->checkCustomerAssignment($customer, $user);
@@ -173,12 +173,8 @@ class SalesOrderService
             return $order;
         });
 
-        // Notify new order created AFTER database commit (NOT-001)
-        try {
-            app(NotificationService::class)->notifyNewOrderCreated($order, $user);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for new order: " . $e->getMessage());
-        }
+        // Notify new order created AFTER database commit if items present
+        $this->dispatchOrderNotification($order, $user);
 
         try {
             event(new \App\Events\SalesOrderUpdated($order, 'create'));
@@ -204,7 +200,7 @@ class SalesOrderService
 
         $updatedOrder = DB::transaction(function () use ($order, $data, $user) {
             $customerId = $data['customer_id'] ?? $order->customer_id;
-            $customer = Customer::lockForUpdate()->findOrFail($customerId);
+            $customer = $this->getCustomerForOrder($customerId);
 
             $this->checkCustomerAssignment($customer, $user);
 
@@ -318,6 +314,7 @@ class SalesOrderService
         });
 
         event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        $this->dispatchOrderNotification($updatedOrder, $user);
 
         return $updatedOrder;
     }
@@ -852,7 +849,7 @@ class SalesOrderService
             }
 
             // Lock customer row
-            $customer = Customer::lockForUpdate()->findOrFail($data['customer_id']);
+            $customer = $this->getCustomerForOrder($data['customer_id']);
             $this->checkCustomerAssignment($customer, $user);
 
             // ئەگەر لە دۆخی PACKING بوو، ستۆک ئازاد دەکەین پێش سڕینەوەی ئایتمە کۆنەکان
@@ -963,11 +960,64 @@ class SalesOrderService
 
         try {
             event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+            $this->dispatchOrderNotification($updatedOrder, $user);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Event broadcast failed for shared order update: " . $e->getMessage());
         }
 
         return $updatedOrder;
+    }
+
+    /**
+     * Helper to safely get or create Customer for order creation/updates (including temporary customer ID 0)
+     */
+    private function getCustomerForOrder($customerId): Customer
+    {
+        $id = (int) $customerId;
+        if ($id === 0) {
+            $customer = Customer::where('id', 0)->first();
+            if (!$customer) {
+                $defaultRoute = \App\Models\Route::firstOrCreate(
+                    ['name' => 'گشتی'],
+                    ['color' => '#888888', 'is_active' => true]
+                );
+                \Illuminate\Support\Facades\DB::statement('SET SESSION sql_mode = "NO_AUTO_VALUE_ON_ZERO";');
+                $customer = Customer::create([
+                    'id' => 0,
+                    'name' => 'کڕیاری کاتی (بێ ناو)',
+                    'phone' => '00000000000',
+                    'route_id' => $defaultRoute->id,
+                    'price_type' => 'N3',
+                    'current_balance' => 0,
+                    'is_active' => true,
+                ]);
+            }
+            return $customer;
+        }
+
+        return Customer::lockForUpdate()->findOrFail($id);
+    }
+
+    /**
+     * Helper to dispatch warehouse notification when order contains items and has not been notified yet
+     */
+    private function dispatchOrderNotification(SalesOrder $order, $user): void
+    {
+        try {
+            if ($order->items()->count() === 0) {
+                return;
+            }
+
+            $alreadyNotified = \App\Models\Notification::where('type', \App\Models\Notification::TYPE_ORDER)
+                ->where('data->order_id', $order->id)
+                ->exists();
+
+            if (!$alreadyNotified) {
+                app(NotificationService::class)->notifyNewOrderCreated($order, $user);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order #{$order->id}: " . $e->getMessage());
+        }
     }
 
     /**

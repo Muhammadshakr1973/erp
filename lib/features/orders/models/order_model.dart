@@ -162,6 +162,7 @@ class OrderModel {
   }
 
   String get customerName {
+    if (customerId == 0) return 'کڕیاری کاتی (بێ ناو)';
     if (customer == null) return 'کڕیاری نەناسراو';
     if (customer is Map) return customer['name']?.toString() ?? 'کڕیاری نەناسراو';
     try {
