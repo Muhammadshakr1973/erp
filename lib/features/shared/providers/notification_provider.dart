@@ -156,14 +156,15 @@ class NotificationsNotifier
       _ref.invalidate(readyOrdersForDeliveryProvider);
       _ref.invalidate(salesmanDashboardProvider);
       _ref.invalidate(dashboardProvider);
-      _ref.invalidate(todayTripsProvider);
+      _ref.invalidate(driverTripsProvider);
     } else if (lowerType == 'payment') {
       _ref.invalidate(dashboardProvider);
       _ref.invalidate(salesmanDashboardProvider);
     } else if (lowerType == 'customer') {
       _ref.invalidate(customerListProvider);
     } else if (lowerType == 'stock') {
-      _ref.invalidate(warehouseStockProvider);
+      _ref.invalidate(warehouseStocksProvider);
+      _ref.invalidate(warehouseDashboardProvider);
     }
   }
 
