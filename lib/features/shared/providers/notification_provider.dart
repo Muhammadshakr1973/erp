@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/components/app_snackbar.dart';
 import '../../../core/network/api_constants.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/utils/notification_sound_service.dart';
@@ -125,6 +126,11 @@ class NotificationsNotifier
             final soundEnabled = _ref.read(notificationSoundEnabledProvider);
             NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
 
+            // Display top notification toast overlay for incoming notifications
+            for (final n in newNotifications) {
+              AppSnackbar.info(null, title: n.title, message: n.body);
+            }
+
             final updatedList = [...newNotifications, ...currentList];
             state = AsyncValue.data(updatedList);
 
@@ -196,6 +202,9 @@ class NotificationsNotifier
       // Play notification sound & vibration feedback
       final soundEnabled = _ref.read(notificationSoundEnabledProvider);
       NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
+
+      // Display top notification toast overlay
+      AppSnackbar.info(null, title: newNotification.title, message: newNotification.body);
 
       final List<AppNotification> updatedList;
       final filterType = _filterType;

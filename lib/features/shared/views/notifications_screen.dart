@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/notification_sound_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/notification_model.dart';
 import '../providers/notification_provider.dart';
@@ -121,6 +122,37 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
               )
             : null,
         actions: [
+          IconButton(
+            icon: Icon(
+              ref.watch(notificationSoundEnabledProvider)
+                  ? Icons.volume_up_rounded
+                  : Icons.volume_off_rounded,
+            ),
+            tooltip: ref.watch(notificationSoundEnabledProvider)
+                ? 'دەنگی ئاگادارکردنەوەکان چالاکە'
+                : 'دەنگی ئاگادارکردنەوەکان ناچالاکە',
+            onPressed: () {
+              final current = ref.read(notificationSoundEnabledProvider);
+              final notifier = ref.read(notificationSoundEnabledProvider.notifier);
+              notifier.toggleSound(!current);
+              if (!current) {
+                NotificationSoundService.playNotificationSound(soundEnabled: true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('دەنگی ئاگادارکردنەوەکان چالاککرا'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('دەنگی ئاگادارکردنەوەکان ناچالاککرا'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
           if (unreadCount > 0)
             TextButton.icon(
               onPressed: () {

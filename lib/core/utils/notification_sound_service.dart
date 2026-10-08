@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'sound_helper_stub.dart'
+    if (dart.library.html) 'sound_helper_web.dart' as sound_helper;
+
 final notificationSoundEnabledProvider =
     StateNotifierProvider<NotificationSoundNotifier, bool>((ref) {
   return NotificationSoundNotifier();
@@ -36,8 +39,11 @@ class NotificationSoundService {
     if (!soundEnabled) return;
 
     try {
-      // Trigger native system sound & vibration
-      await SystemSound.play(SystemSoundType.click);
+      if (kIsWeb) {
+        sound_helper.playChimeSoundWeb();
+      } else {
+        await SystemSound.play(SystemSoundType.alert);
+      }
       await HapticFeedback.heavyImpact();
     } catch (e) {
       debugPrint("Error playing notification sound: $e");
