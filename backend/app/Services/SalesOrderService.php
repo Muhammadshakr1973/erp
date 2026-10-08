@@ -1055,6 +1055,13 @@ class SalesOrderService
             ]);
         });
 
+        // Dispatch order deletion notification to salesman and admins/owner
+        try {
+            app(NotificationService::class)->notifyOrderDeleted($order, $user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order deletion: " . $e->getMessage());
+        }
+
         try {
             event(new \App\Events\SalesOrderUpdated($order, 'delete'));
         } catch (\Throwable $e) {

@@ -209,6 +209,44 @@ class NotificationService
     }
 
     /**
+     * Notify about order deletion (especially empty orders deleted by warehouse staff)
+     * -> notify Salesman who created it, Admins & Owner
+     */
+    public function notifyOrderDeleted(SalesOrder $order, $actor = null): void
+    {
+        $order->loadMissing(['customer', 'salesman']);
+
+        $customerName = $order->customer?->name;
+        if (empty($customerName) || $order->customer_id == 0) {
+            $customerName = 'کڕیاری کاتی (بێ ناو)';
+        }
+
+        $actorName = $actor ? $actor->name : 'کارمەندی کۆگا';
+
+        $title = 'پسوڵەی فرۆشتن سڕایەوە';
+        $body = "پسوڵەی #{$order->order_number} بۆ کڕیار '{$customerName}' لەلایەن '{$actorName}' سڕایەوە.";
+
+        $data = [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $order->customer_id,
+            'action' => 'order_deleted',
+        ];
+
+        // 1. Notify Salesman who created the order (if actor is not the salesman himself)
+        if ($order->salesman_id && ($actor === null || $actor->id !== $order->salesman_id)) {
+            $this->notifyUser($order->salesman_id, Notification::TYPE_ORDER, $title, $body, $data);
+        }
+
+        // 2. Notify Admins and Owner
+        $excludeUserIds = array_values(array_unique(array_filter([
+            $actor?->id,
+        ])));
+
+        $this->notifyAdmins(Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
+    }
+
+    /**
      * NOT-013: New Customer created -> notify Admins & Owner (excluding creator)
      */
     public function notifyNewCustomerCreated(Customer $customer, $actor = null): void

@@ -108,10 +108,73 @@ class OrdersToPackScreen extends ConsumerWidget {
                     ? 'لە پاکەتکردندایە'
                     : 'پشتڕاستکراوە';
 
+                void confirmDeleteEmptyOrder() {
+                  if (order.items.isNotEmpty && totalItems > 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تەنها ئەو پسوڵانە دەسڕدرێنەوە کە هیچ کاڵایەکیان تێدا تۆمار نەکراوە.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('سڕینەوەی پسوڵەی بەتاڵ', style: AppTextStyles.h3),
+                      content: Text(
+                        'ئایا دڵنیایت لە سڕینەوەی پسوڵەی "${order.customerName}" کە هیچ کاڵایەکی تێدا تۆمار نەکراوە؟\n\nنۆتیفیکەیشنی ئاگادارکردنەوە بۆ مەندوب (${order.salesmanName}) و خاوەن و ئادمین دەنێردرێت.',
+                        style: AppTextStyles.body,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('پەشیمانبوونەوە'),
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.error,
+                            foregroundColor: theme.colorScheme.onError,
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(dialogContext);
+                            try {
+                              await ref.read(warehouseActionsProvider).deleteOrder(order.id);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('پسوڵەکە بەسەرکەوتوویی سڕایەوە و نۆتیفیکەیشن نێردرا.'),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(Formatters.cleanError(e)),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          label: const Text('سڕینەوە'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return AppCard(
                   onTap: () {
                     context.push('/pack-order/${order.id}');
                   },
+                  onLongPress: confirmDeleteEmptyOrder,
                   child: Row(
                     children: [
                       Container(

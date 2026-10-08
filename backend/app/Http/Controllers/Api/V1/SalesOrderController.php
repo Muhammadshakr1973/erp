@@ -286,11 +286,17 @@ class SalesOrderController extends Controller
             ], 403);
         }
 
-        // Permission check: only those who can create orders or admin/owners can delete them
-        if (!$user->hasPermission('orders.create') && !$user->isAdmin() && !$user->isOwner()) {
+        // Warehouse staff or users with stock.pack can delete empty orders (items count == 0)
+        $isEmptyOrder = ($order->items()->count() === 0);
+        $canDelete = $user->hasPermission('orders.create') 
+            || $user->isAdmin() 
+            || $user->isOwner()
+            || ($isEmptyOrder && ($user->hasPermission('stock.pack') || $user->role?->name === 'warehouse'));
+
+        if (!$canDelete) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەیە.',
-                'error' => 'Forbidden. Missing permission: orders.create'
+                'error' => 'Forbidden. Missing permission to delete order.'
             ], 403);
         }
 

@@ -228,6 +228,19 @@ class WarehouseActions {
     }
   }
 
+  Future<void> deleteOrder(int orderId) async {
+    try {
+      await api.client.delete('/orders/$orderId');
+      ref.invalidate(ordersToPackProvider);
+      ref.invalidate(ordersListProvider);
+      ref.invalidate(readyOrdersForDeliveryProvider);
+      ref.invalidate(singleOrderProvider(orderId.toString()));
+      ref.invalidate(warehouseDashboardProvider);
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
   Future<void> adjustStock({
     required int warehouseId,
     required int productId,
