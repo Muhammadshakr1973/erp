@@ -198,7 +198,7 @@ class _AdminDriverCollectionsScreenState
                           child: _buildMetricCol(
                             title: 'ڕادەستکراو بە ئۆفیس',
                             value: summary.totalPaid,
-                            color: AppColors.success,
+                            color: AppColors.getAdaptiveColor(context, AppColors.success),
                           ),
                         ),
                         Container(
@@ -210,7 +210,9 @@ class _AdminDriverCollectionsScreenState
                           child: _buildMetricCol(
                             title: 'پارەی لای شۆفێر',
                             value: outstandingAmount,
-                            color: hasOutstanding ? AppColors.danger : AppColors.primary,
+                            color: hasOutstanding
+                                ? AppColors.getAdaptiveColor(context, AppColors.danger)
+                                : AppColors.getAdaptiveColor(context, AppColors.success),
                             isBold: true,
                           ),
                         ),
@@ -292,7 +294,9 @@ class _AdminDriverCollectionsScreenState
                         Text(col.driverName, style: AppTextStyles.bodyBold),
                         Text(
                           Formatters.currency(col.amount),
-                          style: AppTextStyles.price.copyWith(color: AppColors.success),
+                          style: AppTextStyles.price.copyWith(
+                            color: AppColors.getAdaptiveColor(context, AppColors.success),
+                          ),
                         ),
                       ],
                     ),
@@ -349,7 +353,10 @@ class _AdminDriverCollectionsScreenState
             return AlertDialog(
               title: Row(
                 children: [
-                  const Icon(Icons.monetization_on, color: AppColors.success),
+                  Icon(
+                    Icons.monetization_on,
+                    color: AppColors.getAdaptiveColor(context, AppColors.success),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -368,7 +375,9 @@ class _AdminDriverCollectionsScreenState
                     Text(
                       'کۆی پارەی ماوە لەلای شۆفێر: ${Formatters.currency(summary.remainingAmount)}',
                       style: AppTextStyles.caption.copyWith(
-                        color: summary.remainingAmount > 0 ? AppColors.danger : null,
+                        color: summary.remainingAmount > 0
+                            ? AppColors.getAdaptiveColor(context, AppColors.danger)
+                            : null,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
