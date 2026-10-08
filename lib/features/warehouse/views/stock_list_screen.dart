@@ -6,7 +6,7 @@ import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_text_field.dart';
-import '../../../core/components/app_button.dart';
+// import '../../../core/components/app_button.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/permission_guard.dart';
 import '../../../core/theme/app_colors.dart';

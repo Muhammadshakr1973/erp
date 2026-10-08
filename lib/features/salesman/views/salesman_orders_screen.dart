@@ -12,7 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
-import '../../shared/views/customer_selection_dialog.dart';
+// import '../../shared/views/customer_selection_dialog.dart';
 import '../../shared/views/map_picker_dialog.dart';
 import '../../shared/views/new_order_creation_dialog.dart';
 

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-import '../../orders/providers/orders_provider.dart';
+// import '../../orders/providers/orders_provider.dart';
 
 class WeeklyChartItem {
   final String date;

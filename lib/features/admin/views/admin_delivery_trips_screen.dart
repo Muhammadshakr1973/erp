@@ -9,7 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../../driver/models/delivery_trip_model.dart';
+// import '../../driver/models/delivery_trip_model.dart';
 import '../../driver/providers/driver_providers.dart';
 import 'create_delivery_trip_dialog.dart';
 

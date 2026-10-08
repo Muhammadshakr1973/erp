@@ -14,7 +14,7 @@ import '../../products/providers/products_provider.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/views/product_form_dialog.dart';
 import 'admin_categories_dialog.dart';
-import '../../products/views/product_details_dialog.dart';
+// import '../../products/views/product_details_dialog.dart';
 import '../../products/models/product_model.dart';
 import '../../products/views/barcode_generator_dialog.dart';
 
