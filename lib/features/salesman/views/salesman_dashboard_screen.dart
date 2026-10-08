@@ -776,7 +776,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                         : (isVisited
                             ? const Icon(Icons.check, color: AppColors.success, size: 18)
                             : Text(
-                                '${customer.visitOrder}',
+                                '${customer.visitOrder > 0 ? customer.visitOrder : index}',
                                 style: AppTextStyles.bodyBold.copyWith(
                                   color: theme.colorScheme.primary,
                                   fontSize: 12,

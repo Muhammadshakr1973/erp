@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/error_state.dart';
-import '../../../core/components/status_badge.dart';
 import '../../../core/components/customer_avatar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
@@ -36,6 +35,7 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final customersAsync = ref.watch(customerListProvider);
 
     return Scaffold(
@@ -78,45 +78,6 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
               },
             ),
           ),
-          // Mandatory visit order warning notice
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenHorizontal,
-              vertical: AppSpacing.xs,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.3),
-                ),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.warning,
-                    size: 20,
-                  ),
-                  SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'ئاگاداری: ڕێزبەندی سەردانەکان ناچارکەرە. تکایە بەپێی ئەم ڕێزبەندییەی خوارەوە سەردانی کڕیاران بکە.',
-                      style: TextStyle(
-                        fontFamily: 'Rudaw',
-                        fontSize: 12,
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: customersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -142,23 +103,12 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                 ),
               ),
               data: (customers) {
-                // Sort customers by routeId first, then by visitOrder, then by name,
-                // BUT make sure Customer 0 (Temporary Customer) is ALWAYS at the absolute top!
+                // Customer 0 (Temporary Customer) is ALWAYS at the absolute top,
+                // and other customers are sorted alphabetically by name
                 var sorted = List<Customer>.from(customers);
                 sorted.sort((a, b) {
                   if (a.id == 0) return -1;
                   if (b.id == 0) return 1;
-
-                  final aRouteId = a.routeId ?? 999999;
-                  final bRouteId = b.routeId ?? 999999;
-                  if (aRouteId != bRouteId) {
-                    return aRouteId.compareTo(bRouteId);
-                  }
-                  final aOrder = a.visitOrder ?? 999999;
-                  final bOrder = b.visitOrder ?? 999999;
-                  if (aOrder != bOrder) {
-                    return aOrder.compareTo(bOrder);
-                  }
                   return a.name.compareTo(b.name);
                 });
 
@@ -201,7 +151,6 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final customer = filtered[index];
-                      final bool isVisited = false; // Add real logic here later
 
                       return AppCard(
                         onTap: () {
@@ -209,41 +158,12 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                         },
                         child: Row(
                           children: [
-                            // Mandatory visit order sequence number badge
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.primary,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${customer.visitOrder ?? index + 1}',
-                                  style: const TextStyle(
-                                    fontFamily: 'Rudaw',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
                             CustomerAvatar(
                               imageUrl: customer.imageUrl,
                               size: 40,
                               borderRadius: 20,
                               iconSize: 20,
                               placeholderIcon: AppIcons.customer,
-                              backgroundColor: isVisited
-                                  ? AppColors.success.withValues(alpha: 0.1)
-                                  : null,
-                              iconColor: isVisited ? AppColors.success : null,
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -259,25 +179,31 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                                     customer.phone ?? 'بێ ژمارە',
                                     style: AppTextStyles.caption,
                                   ),
+                                  if (customer.route?.name != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      customer.route!.name,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: theme.colorScheme.primary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                StatusBadge(
-                                  label: isVisited ? 'سەردانکراوە' : 'چاوەڕێ',
-                                  type: isVisited
-                                      ? StatusBadgeType.success
-                                      : StatusBadgeType.neutral,
-                                ),
-                                const SizedBox(height: 8),
                                 Text(
-                                  'قەرز: ${Formatters.currency(customer.balance)}',
+                                  customer.balance > 0
+                                      ? 'قەرز: ${Formatters.currency(customer.balance)}'
+                                      : 'بێ قەرز',
                                   style: AppTextStyles.caption.copyWith(
                                     color: customer.balance > 0
                                         ? AppColors.danger
                                         : AppColors.success,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],

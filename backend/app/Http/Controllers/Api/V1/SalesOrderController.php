@@ -373,16 +373,22 @@ class SalesOrderController extends Controller
                 ->select('id', 'name', 'phone', 'address', 'current_balance', 'visit_order')
                 ->get();
 
+            $orderIndex = 1;
             foreach ($customers as $customer) {
+                $visitOrder = (int) $customer->visit_order;
+                if ($visitOrder <= 0) {
+                    $visitOrder = $orderIndex;
+                }
                 $todayRouteCustomers[] = [
                     'id' => (int) $customer->id,
                     'name' => (string) $customer->name,
                     'phone' => $customer->phone,
                     'address' => $customer->address,
                     'current_balance' => (int) $customer->current_balance,
-                    'visit_order' => (int) $customer->visit_order,
+                    'visit_order' => $visitOrder,
                     'visited' => in_array($customer->id, $todayOrderCustomerIds) || in_array($customer->id, $todayPaymentCustomerIds)
                 ];
+                $orderIndex++;
             }
         }
 
