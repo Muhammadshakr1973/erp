@@ -125,7 +125,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                       title: const Text('سڕینەوەی پسوڵەی بەتاڵ', style: AppTextStyles.h3),
                       content: Text(
                         'ئایا دڵنیایت لە سڕینەوەی پسوڵەی "${order.customerName}" کە هیچ کاڵایەکی تێدا تۆمار نەکراوە؟\n\nنۆتیفیکەیشنی ئاگادارکردنەوە بۆ مەندوب (${order.salesmanName}) و خاوەن و ئادمین دەنێردرێت.',
-                        style: AppTextStyles.body,
+                        style: AppTextStyles.bodyMedium,
                       ),
                       actions: [
                         TextButton(
