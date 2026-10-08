@@ -120,7 +120,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     super.dispose();
   }
 
-  Widget _buildUnitAutocomplete(ThemeData theme) {
+  Widget _buildUnitAutocomplete(ThemeData theme, {bool isUnified = false}) {
     final List<String> unitOptions = [
       'ج',
       'ک',
@@ -148,6 +148,26 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         _unitController.text = selection;
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        if (isUnified) {
+          return AppTextField(
+            controller: controller,
+            focusNode: focusNode,
+            customDecoration: InputDecoration(
+              labelText: 'یەکە',
+              labelStyle: AppTextStyles.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              hintText: 'دانە، کیلۆ یان کارتۆن',
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+          );
+        }
         return AppTextField(
           controller: controller,
           focusNode: focusNode,
@@ -1063,39 +1083,256 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           ),
                         const SizedBox(height: AppSpacing.md),
 
-                        // Quantities & Status
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                controller: _unitsPerCartonController,
-                                labelText: 'کارتۆن',
-                                hintText: 'کارتۆن',
-                                keyboardType: TextInputType.number,
+                        // Quantities & Stock Unified Cohesive Group
+                        if (isMobile)
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.4,
+                                ),
+                                width: 1,
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(child: _buildUnitAutocomplete(theme)),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppTextField(
-                                controller: _stockController,
-                                labelText: 'ستۆک',
-                                hintText: 'ستۆک',
-                                keyboardType: TextInputType.number,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // First row: Carton and Unit
+                                IntrinsicHeight(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          controller: _unitsPerCartonController,
+                                          keyboardType: TextInputType.number,
+                                          customDecoration: InputDecoration(
+                                            labelText: 'کارتۆن',
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                            hintText: 'کارتۆن',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: theme.colorScheme.outline
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                      Expanded(
+                                        child: _buildUnitAutocomplete(
+                                          theme,
+                                          isUnified: true,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: theme.colorScheme.outline.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
+                                // Second row: Stock and Min Stock
+                                IntrinsicHeight(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          controller: _stockController,
+                                          keyboardType: TextInputType.number,
+                                          customDecoration: InputDecoration(
+                                            labelText: 'ستۆک',
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                            hintText: 'ستۆک',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      VerticalDivider(
+                                        width: 1,
+                                        thickness: 1,
+                                        color: theme.colorScheme.outline
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                      Expanded(
+                                        child: AppTextField(
+                                          controller: _minStockController,
+                                          keyboardType: TextInputType.number,
+                                          customDecoration: InputDecoration(
+                                            labelText: 'کەمترین بڕ',
+                                            labelStyle: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                            hintText: 'ئاستی ئاگادارکردنەوە',
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.4,
+                                ),
+                                width: 1,
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppTextField(
-                                controller: _minStockController,
-                                labelText: 'کەمترین بڕ (ئاگاداری)',
-                                hintText: 'ئاستی ئاگادارکردنەوە',
-                                keyboardType: TextInputType.number,
+                            child: IntrinsicHeight(
+                              child: Row(
+                                children: [
+                                  // Carton
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _unitsPerCartonController,
+                                      keyboardType: TextInputType.number,
+                                      customDecoration: InputDecoration(
+                                        labelText: 'کارتۆن',
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                        hintText: 'کارتۆن',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                  // Unit
+                                  Expanded(
+                                    child: _buildUnitAutocomplete(
+                                      theme,
+                                      isUnified: true,
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                  // Stock
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _stockController,
+                                      keyboardType: TextInputType.number,
+                                      customDecoration: InputDecoration(
+                                        labelText: 'ستۆک',
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                        hintText: 'ستۆک',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                  // Min Stock
+                                  Expanded(
+                                    child: AppTextField(
+                                      controller: _minStockController,
+                                      keyboardType: TextInputType.number,
+                                      customDecoration: InputDecoration(
+                                        labelText: 'کەمترین بڕ',
+                                        labelStyle: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                        hintText: 'ئاستی ئاگادارکردنەوە',
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
                         if (!isMobile) ...[
                           const SizedBox(height: AppSpacing.md),
                           Row(
