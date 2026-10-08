@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ku" dir="rtl">
+<html lang="ku">
 <head>
   <base href="/">
 
@@ -28,20 +28,21 @@
   <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3"></script>
 
   <style>
-    /* Fix Platform View and Camera Video positioning in RTL web */
-    flutter-platform-view,
-    flt-platform-view {
+    /* Fix Platform View and Camera Video positioning for Fullscreen Viewfinder */
+    flt-platform-view,
+    flutter-platform-view {
       direction: ltr !important;
-      text-align: left !important;
+      overflow: hidden !important;
     }
-    flutter-platform-view video,
     flt-platform-view video,
+    flutter-platform-view video,
     video {
       direction: ltr !important;
-      object-fit: contain !important;
+      object-fit: cover !important;
+      width: 100% !important;
+      height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
-      margin: auto !important;
     }
   </style>
 

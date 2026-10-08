@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/theme/app_colors.dart';
@@ -27,7 +28,6 @@ class BarcodeGeneratorDialog extends StatefulWidget {
 class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
   late final TextEditingController _barcodeController;
   late final TextEditingController _nameController;
-  late final TextEditingController _priceController;
   final GlobalKey _repaintKey = GlobalKey();
   bool _isCapturing = false;
 
@@ -51,27 +51,6 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     return result;
   }
 
-  String _formatPriceToArabic(String input) {
-    final cleanInput = input.replaceAll(',', '').replaceAll(' ', '');
-    // Normalize Kurdish/Arabic digits to English digits for correct integer parsing
-    String normalized = cleanInput;
-    const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    for (int i = 0; i < 10; i++) {
-      normalized = normalized.replaceAll(arabicDigits[i], englishDigits[i]);
-    }
-
-    final number = int.tryParse(normalized);
-    if (number == null) {
-      return _toArabicIndicDigits(input);
-    }
-    final formatted = number.toString().replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
-    return _toArabicIndicDigits(formatted);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -83,19 +62,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
           ? widget.product!.name
           : 'لاستیق باریك سپی',
     );
-    final double? rawPrice = widget.product?.priceN1;
-    _priceController = TextEditingController(
-      text: (rawPrice != null && rawPrice > 0)
-          ? _toArabicIndicDigits(rawPrice.toInt().toString())
-          : _toArabicIndicDigits('1000'),
-    );
   }
 
   @override
   void dispose() {
     _barcodeController.dispose();
     _nameController.dispose();
-    _priceController.dispose();
     super.dispose();
   }
 
@@ -125,29 +97,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     if (bytes != null) {
       final name = _nameController.text.trim().isNotEmpty
           ? _nameController.text.trim()
-          : (widget.product?.name ?? 'barcode');
+          : (widget.product?.name ?? 'label');
       final cleanedName = name.replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_');
       final code = _barcodeController.text.trim();
       downloadBarcode(bytes, 'gardi_label_${cleanedName}_$code.png');
       _showSnackbar('وێنەی لایبڵەکە بە سەرکەوتوویی دابەزی');
     } else {
       _showSnackbar('کێشەیەک لە دروستکردنی وێنەکە ڕوویدا', isError: true);
-    }
-  }
-
-  void _handleShare() async {
-    final bytes = await _captureImage();
-    final code = _barcodeController.text.trim();
-    if (bytes != null) {
-      final name = _nameController.text.trim().isNotEmpty
-          ? _nameController.text.trim()
-          : (widget.product?.name ?? 'barcode');
-      final cleanedName = name.replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_');
-      shareBarcode(bytes, 'gardi_label_${cleanedName}_$code.png', text: 'کۆدی بارکۆد: $code');
-      _showSnackbar('دەتوانیت ئاپەکە هەڵبژێریت بۆ ناردنی وێنەی بارکۆدەکە');
-    } else {
-      Clipboard.setData(ClipboardData(text: code));
-      _showSnackbar('بارکۆدی "$code" کۆپیکرا بۆ Clipboard');
     }
   }
 
@@ -171,7 +127,6 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
     final isDark = theme.brightness == Brightness.dark;
     final barcodeText = _barcodeController.text.trim().toUpperCase();
     final productName = _nameController.text.trim().isEmpty ? 'ناوی کاڵا' : _nameController.text.trim();
-    final priceText = _priceController.text.trim().isEmpty ? '١٠٠٠' : _priceController.text.trim();
     final screenWidth = MediaQuery.of(context).size.width;
     final dialogWidth = min(660.0, screenWidth - 32.0);
 
@@ -201,12 +156,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.barcode_reader, color: AppColors.primary, size: 24),
+                          child: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 24),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'دروستکەری بارکۆد و لایبڵی کاڵا',
+                            'دروستکەری لایبڵ و کیو ئاڕ کۆدی کاڵا',
                             style: TextStyle(fontFamily: 'Rudaw', fontSize: 18, fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -224,7 +179,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // Inputs Section (پۆپئەپ بۆ گۆڕانکاری لە ناو، نرخ، و کۆدی بارکۆد پێش وێنەکە)
+              // Inputs Section (بۆ گۆڕانکاری لە ناو و کۆدی کاڵا پێش وێنەکە)
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -235,7 +190,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Row 1: Product Name (Full width on both mobile and desktop)
+                    // Field 1: Product Name
                     AppTextField(
                       controller: _nameController,
                       labelText: 'ناوی کاڵا',
@@ -245,113 +200,24 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Row 2: Price and Barcode Code as a Segmented Input with 0 gap
-                    Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Right input (first child in RTL: Price)
-                          Expanded(
-                            child: AppTextField(
-                              controller: _priceController,
-                              labelText: 'نرخ (دینار)',
-                              hintText: '١٠٠٠',
-                              prefixIcon: Icons.payments_outlined,
-                              keyboardType: TextInputType.number,
-                              borderRadius: const BorderRadius.only(
-                                topRight: Radius.circular(24),
-                                bottomRight: Radius.circular(24),
-                                topLeft: Radius.zero,
-                                bottomLeft: Radius.zero,
-                              ),
-                              onChanged: (value) {
-                                final converted = _toArabicIndicDigits(value);
-                                if (converted != value) {
-                                  _priceController.value = TextEditingValue(
-                                    text: converted,
-                                    selection: TextSelection.fromPosition(
-                                      TextPosition(offset: converted.length),
-                                    ),
-                                  );
-                                }
-                                setState(() {});
-                              },
+                    // Field 2: Barcode / QR Code
+                    AppTextField(
+                      controller: _barcodeController,
+                      labelText: 'کۆدی کاڵا (بارکۆد / QR)',
+                      hintText: '07849564845',
+                      prefixIcon: Icons.qr_code_2_outlined,
+                      onChanged: (value) {
+                        final normalized = _normalizeToEnglishDigits(value);
+                        if (normalized != value) {
+                          _barcodeController.value = TextEditingValue(
+                            text: normalized,
+                            selection: TextSelection.fromPosition(
+                              TextPosition(offset: normalized.length),
                             ),
-                          ),
-                          // Left input (second child in RTL: Barcode Code)
-                          Expanded(
-                            child: AppTextField(
-                              controller: _barcodeController,
-                              labelText: 'کۆدی بارکۆد',
-                              hintText: '07849564845',
-                              prefixIcon: Icons.barcode_reader,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(24),
-                                bottomLeft: Radius.circular(24),
-                                topRight: Radius.zero,
-                                bottomRight: Radius.zero,
-                              ),
-                              onChanged: (value) {
-                                final normalized = _normalizeToEnglishDigits(value);
-                                if (normalized != value) {
-                                  _barcodeController.value = TextEditingValue(
-                                    text: normalized,
-                                    selection: TextSelection.fromPosition(
-                                      TextPosition(offset: normalized.length),
-                                    ),
-                                  );
-                                }
-                                setState(() {});
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Quick Price Chips Selector
-                    const Text(
-                      'دیاریکردنی خێرای نرخ:',
-                      style: TextStyle(
-                        fontFamily: 'Rudaw',
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: ['250', '500', '750', '1000', '1500', '2000', '2500', '3000'].map((price) {
-                        final arabicPrice = _toArabicIndicDigits(price);
-                        final currentControllerTextClean = _toArabicIndicDigits(_priceController.text.replaceAll(',', '').replaceAll(' ', ''));
-                        final isSelected = currentControllerTextClean == arabicPrice;
-                        return ChoiceChip(
-                          showCheckmark: false,
-                          label: Text(
-                            arabicPrice,
-                            style: TextStyle(
-                              fontFamily: 'Rudaw',
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _priceController.text = arabicPrice;
-                              });
-                            }
-                          },
-                        );
-                      }).toList(),
+                          );
+                        }
+                        setState(() {});
+                      },
                     ),
                   ],
                 ),
@@ -359,7 +225,11 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // The Exact Printable 50 × 30 mm Sticker / Label Canvas (Matching Reference Image 100%)
+              // The Exact Printable 50 × 30 mm Sticker / Label Canvas
+              // 1mm = 10px -> Total: Width 500px (50mm), Height 300px (30mm)
+              // 1) Bottom (ناوی کاڵا): Width 50mm (500px), Height 8mm (80px, flex: 8)
+              // 2) Top Right (کیو ئاڕ کۆد + ژمارە لەژێرەوە): Width 35mm (350px), Height 22mm (220px, flex: 22)
+              // 3) Top Left (ئایکۆنی کۆمپانیا): Width 15mm (150px), Height 22mm (220px, flex: 22)
               Center(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -379,56 +249,70 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // ----------------- TOP ROW -----------------
+                            // ----------------- TOP ROW (Height: ~24.5mm / 245px) -----------------
                             Expanded(
-                              flex: 180,
+                              flex: 245,
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // Top Left: Logo Box
+                                  // ٣- بەشی سەرەوە لای چەپ: ئایکۆنی کۆمپانیا (فراوانترکراوە بۆ ٢١٠ پێکسڵ بەپێی هێڵە سوورەکە)
                                   SizedBox(
-                                    width: 175,
+                                    width: 210,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                      child: const GardiLogoWidget(
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        color: Colors.black,
+                                      padding: const EdgeInsets.all(6),
+                                      child: const Center(
+                                        child: FittedBox(
+                                          fit: BoxFit.contain,
+                                          child: GardiLogoWidget(
+                                            width: 200,
+                                            height: 200,
+                                            color: Colors.black,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
 
-                                  // Vertical divider between Logo and Barcode Box
+                                  // هێڵی جیاکەرەوەی ستوونی
                                   Container(
                                     width: 2.0,
                                     color: Colors.black,
                                   ),
 
-                                  // Top Right: Barcode Box (Maximized space, low margins, full width & height)
+                                  // ٢- بەشی سەرەوە لای ڕاست: کیو ئاڕ کۆد و ژمارەکەی لەژێری (بە گەورەیی و بۆشایی کەمکراوە)
                                   Expanded(
                                     child: Container(
-                                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 5),
+                                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
                                         children: [
-                                          // Barcode Bars filling maximum space
+                                          // کیو ئاڕ کۆدی کاڵا بە گەورەیی
                                           Expanded(
-                                            child: CustomPaint(
-                                              painter: Barcode128Painter(
+                                            child: Center(
+                                              child: QrImageView(
                                                 data: barcodeText.isEmpty ? '07849564845' : barcodeText,
-                                                barColor: Colors.black,
+                                                version: QrVersions.auto,
+                                                padding: const EdgeInsets.all(1),
+                                                backgroundColor: Colors.white,
+                                                eyeStyle: const QrEyeStyle(
+                                                  eyeShape: QrEyeShape.square,
+                                                  color: Colors.black,
+                                                ),
+                                                dataModuleStyle: const QrDataModuleStyle(
+                                                  dataModuleShape: QrDataModuleShape.square,
+                                                  color: Colors.black,
+                                                ),
                                               ),
-                                              size: Size.infinite,
                                             ),
                                           ),
-                                          const SizedBox(height: 3),
-                                          // Barcode code number underneath
+                                          const SizedBox(height: 2),
+                                          // ژمارەی کۆدەکە لەژێر کیو ئاڕ کۆدەکە بە گەورەیی و ڕوونی
                                           Text(
                                             barcodeText.isEmpty ? '07849564845' : barcodeText,
                                             textAlign: TextAlign.center,
                                             style: const TextStyle(
                                               fontFamily: 'Rudaw',
-                                              fontSize: 15,
+                                              fontSize: 22,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.black,
                                               letterSpacing: 2.5,
@@ -445,74 +329,37 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                               ),
                             ),
 
-                            // Horizontal divider between Top and Bottom Row
+                            // هێڵی جیاکەرەوەی ئاسۆیی نێوان سەرەوە و ناوی کاڵا (داخراوەتە خوارەوە)
                             Container(
                               height: 2.0,
                               color: Colors.black,
                             ),
 
-                            // ----------------- BOTTOM ROW -----------------
+                            // ----------------- BOTTOM ROW: ١- ناوی کاڵا لەژێرەوە (پێوانەی بچووکترکراوە بەپێی هێڵە سوورەکە) -----------------
                             Expanded(
-                              flex: 120,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Bottom Left: Price Box (Solid Black Container)
-                                  SizedBox(
-                                    width: 150,
-                                    child: Container(
-                                      color: Colors.black,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      child: Center(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            _formatPriceToArabic(priceText),
-                                            style: const TextStyle(
-                                              fontFamily: 'Rudaw',
-                                              fontSize: 90,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                              letterSpacing: 1.0,
-                                              height: 0.95,
-                                            ),
-                                          ),
-                                        ),
+                              flex: 55,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                alignment: Alignment.center,
+                                child: Directionality(
+                                  textDirection: TextDirection.rtl,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      productName,
+                                      style: const TextStyle(
+                                        fontFamily: 'Rudaw',
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black,
+                                        height: 1.0,
                                       ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-
-                                  // Vertical divider between Price and Product Name
-                                  Container(
-                                    width: 2.0,
-                                    color: Colors.black,
-                                  ),
-
-                                  // Bottom Right: Product Name Box
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      alignment: Alignment.center,
-                                      child: Directionality(
-                                        textDirection: TextDirection.rtl,
-                                        child: Text(
-                                          productName,
-                                          style: const TextStyle(
-                                            fontFamily: 'Rudaw',
-                                            fontSize: 30,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.black,
-                                            height: 1.15,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ],
@@ -525,66 +372,40 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Action Buttons Row (Print button removed, only Download and Copy/Share left)
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: Row(
-                  children: [
-                    // Download button (Right side in RTL)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
-                              topLeft: Radius.zero,
-                              bottomLeft: Radius.zero,
-                            ),
-                          ),
-                        ),
-                        onPressed: _isCapturing ? null : _handleDownload,
-                        icon: const Icon(Icons.download, size: 20),
-                        label: const Text(
-                          'وێنە دابەزێنە',
-                          style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ),
+              // Action Button (وێنە دابەزێنە)
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.success.withValues(alpha: 0.6),
+                    disabledForegroundColor: Colors.white70,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    // Copy/Share button (Left side in RTL)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDark ? AppColors.surfaceContainerDark : Colors.grey.shade100,
-                          foregroundColor: isDark ? Colors.white : AppColors.textPrimaryLight,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          side: BorderSide(
-                            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                            width: 1.0,
+                  ),
+                  onPressed: _isCapturing ? null : _handleDownload,
+                  icon: _isCapturing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                              topRight: Radius.zero,
-                              bottomRight: Radius.zero,
-                            ),
-                          ),
-                        ),
-                        onPressed: _isCapturing ? null : _handleShare,
-                        icon: const Icon(Icons.share, size: 18),
-                        label: const Text(
-                          'شەیرکردن / کۆپی',
-                          style: TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ),
+                        )
+                      : const Icon(Icons.download_rounded, size: 22),
+                  label: Text(
+                    _isCapturing ? 'خەریکی دروستکردنی وێنەیە...' : 'وێنە دابەزێنە',
+                    style: const TextStyle(
+                      fontFamily: 'Rudaw',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
