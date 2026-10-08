@@ -91,22 +91,38 @@ class NotificationService
     /**
      * Notify all active users with specific role(s)
      */
+    /**
+     * Notify all active users with specific role(s)
+     */
     public function notifyRole(
         string|array $roles,
         string $type,
         string $title,
         string $body,
-        array $data = []
+        array $data = [],
+        int|array|null $excludeUserId = null
     ): array {
         $roles = is_array($roles) ? $roles : [$roles];
         $rolesLower = array_map('strtolower', $roles);
         
-        $users = User::whereHas('role', function ($q) use ($rolesLower) {
+        $usersQuery = User::whereHas('role', function ($q) use ($rolesLower) {
             $q->whereIn(DB::raw('LOWER(name)'), $rolesLower)
               ->orWhereIn(DB::raw('LOWER(display_name)'), $rolesLower);
         })
-        ->where('is_active', true)
-        ->get();
+        ->where('is_active', true);
+
+        if ($excludeUserId !== null) {
+            if (is_array($excludeUserId)) {
+                $ids = array_values(array_filter($excludeUserId));
+                if (!empty($ids)) {
+                    $usersQuery->whereNotIn('id', $ids);
+                }
+            } else {
+                $usersQuery->where('id', '!=', $excludeUserId);
+            }
+        }
+
+        $users = $usersQuery->get();
 
         $notifications = [];
         $userIds = [];
@@ -141,9 +157,9 @@ class NotificationService
     /**
      * Notify Admin and Owner users
      */
-    public function notifyAdmins(string $type, string $title, string $body, array $data = []): array
+    public function notifyAdmins(string $type, string $title, string $body, array $data = [], int|array|null $excludeUserId = null): array
     {
-        return $this->notifyRole(['admin', 'owner'], $type, $title, $body, $data);
+        return $this->notifyRole(['admin', 'owner'], $type, $title, $body, $data, $excludeUserId);
     }
 
     // =========================================================================
@@ -151,7 +167,7 @@ class NotificationService
     // =========================================================================
 
     /**
-     * NOT-001: New Sales Order created -> notify Warehouse staff, Admins, Owner & Salesman
+     * NOT-001: New Sales Order created -> notify Warehouse staff, Admins & Owner (excluding creator/salesman)
      */
     public function notifyNewOrderCreated(SalesOrder $order, $actor = null): void
     {
@@ -181,17 +197,18 @@ class NotificationService
             'action' => 'open_order',
         ];
 
-        // Notify Warehouse staff, Admins, and Owners
-        $this->notifyRole(['warehouse', 'packer', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
+        // Exclude both creator ($actor) and salesman ($order->salesman_id) from receiving self-notification
+        $excludeUserIds = array_values(array_unique(array_filter([
+            $actor?->id,
+            $order->salesman_id,
+        ])));
 
-        // Also notify the salesman directly if distinct
-        if ($order->salesman_id) {
-            $this->notifyUser($order->salesman_id, Notification::TYPE_ORDER, $title, $body, $data);
-        }
+        // Notify Warehouse staff, Admins, and Owners (excluding creator & salesman)
+        $this->notifyRole(['warehouse', 'packer', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
     }
 
     /**
-     * NOT-013: New Customer created -> notify Admins & Owner
+     * NOT-013: New Customer created -> notify Admins & Owner (excluding creator)
      */
     public function notifyNewCustomerCreated(Customer $customer, $actor = null): void
     {
@@ -205,7 +222,12 @@ class NotificationService
             'action' => 'open_customer',
         ];
 
-        $this->notifyRole(['admin', 'owner'], Notification::TYPE_CUSTOMER, $title, $body, $data);
+        $excludeUserIds = array_values(array_unique(array_filter([
+            $actor?->id,
+            $customer->created_by ?? null,
+        ])));
+
+        $this->notifyRole(['admin', 'owner'], Notification::TYPE_CUSTOMER, $title, $body, $data, $excludeUserIds);
     }
 
     /**
@@ -261,7 +283,7 @@ class NotificationService
     }
 
     /**
-     * NOT-004: Payment received -> notify Admins, Owner
+     * NOT-004: Payment received -> notify Admins, Owner (excluding payment receiver)
      */
     public function notifyPaymentReceived(CustomerPayment $payment, $actor = null): void
     {
@@ -278,7 +300,12 @@ class NotificationService
             'action' => 'open_payment',
         ];
 
-        $this->notifyAdmins(Notification::TYPE_PAYMENT, $title, $body, $data);
+        $excludeUserIds = array_values(array_unique(array_filter([
+            $actor?->id,
+            $payment->received_by ?? null,
+        ])));
+
+        $this->notifyAdmins(Notification::TYPE_PAYMENT, $title, $body, $data, $excludeUserIds);
     }
 
     /**
