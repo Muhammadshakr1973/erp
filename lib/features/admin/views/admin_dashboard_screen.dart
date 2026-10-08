@@ -44,7 +44,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final routesAsync = ref.watch(routeListProvider);
 
     // Local function to compute today's assignments
-    List<_TodayAssignment> _getTodayAssignments(List<RouteModel> routes) {
+    List<_TodayAssignment> getTodayAssignments(List<RouteModel> routes) {
       final now = DateTime.now();
       final englishDays = [
         'Monday',
@@ -240,7 +240,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                 ),
                 data: (routes) {
-                  final assignments = _getTodayAssignments(routes);
+                  final assignments = getTodayAssignments(routes);
                   return _buildTodaySalesmenPlanList(context, assignments);
                 },
               ),
@@ -472,7 +472,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ],
                   ),
                 );
-              }() ?? const SizedBox.shrink(),
+              }(),
             
             // The Bar Chart Row
             SizedBox(
@@ -771,7 +771,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ],
                   ),
                 );
-              }() ?? const SizedBox.shrink(),
+              }(),
               
               // The Bar Chart Row
               SizedBox(

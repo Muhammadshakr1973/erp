@@ -13,13 +13,13 @@ class AppMoneyDisplay extends StatelessWidget {
   final bool forceSign;
 
   const AppMoneyDisplay({
-    Key? key,
+    super.key,
     required this.amount,
     this.type = MoneyStyleType.standard,
     this.color,
     this.showColorSemantics = false,
     this.forceSign = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,6 @@ class AppMoneyDisplay extends StatelessWidget {
         symbolSize = 10.0;
         break;
       case MoneyStyleType.standard:
-      default:
         numberStyle = AppTextStyles.price;
         symbolSize = 12.0;
         break;
@@ -81,7 +80,7 @@ class AppMoneyDisplay extends StatelessWidget {
             style: TextStyle(
               fontSize: symbolSize,
               fontWeight: FontWeight.normal,
-              color: displayColor.withOpacity(0.7),
+              color: displayColor.withValues(alpha: 0.7),
             ),
           ),
         ],

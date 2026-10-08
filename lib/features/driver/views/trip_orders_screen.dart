@@ -713,7 +713,6 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        final theme = Theme.of(dialogContext);
         return Dialog.fullscreen(
           backgroundColor: Colors.black.withValues(alpha: 0.95),
           child: SafeArea(

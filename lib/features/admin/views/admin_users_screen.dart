@@ -1667,7 +1667,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 class _LoginQrCodeDialog extends StatefulWidget {
   final String text;
 
-  const _LoginQrCodeDialog({super.key, required this.text});
+  const _LoginQrCodeDialog({required this.text});
 
   @override
   State<_LoginQrCodeDialog> createState() => _LoginQrCodeDialogState();
@@ -1712,7 +1712,6 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
             dataModuleShape: QrDataModuleShape.square,
             color: Color(0xFF0F172A),
           ),
-          emptyColor: const Color(0xFFFFFFFF),
           gapless: true,
         );
         final imageData = await painter.toImageData(512.0);

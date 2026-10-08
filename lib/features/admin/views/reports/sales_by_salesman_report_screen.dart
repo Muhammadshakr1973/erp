@@ -438,7 +438,7 @@ class _SalesBySalesmanReportScreenState
                   ],
                 ),
               );
-            }() ?? const SizedBox.shrink(),
+            }(),
             
             // The Bar Chart Row
             SizedBox(

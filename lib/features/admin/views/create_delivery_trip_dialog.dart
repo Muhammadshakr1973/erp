@@ -237,7 +237,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                               Icon(AppIcons.profile, color: theme.colorScheme.primary),
                               const SizedBox(width: AppSpacing.sm),
                               Text(
-                                currentUser?.name ?? '',
+                                currentUser.name,
                                 style: AppTextStyles.bodyBold,
                               ),
                             ],
@@ -330,9 +330,12 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    // ignore: deprecated_member_use
                                     Radio<TripDatePreset>(
                                       value: TripDatePreset.today,
+                                      // ignore: deprecated_member_use
                                       groupValue: _selectedPreset,
+                                      // ignore: deprecated_member_use
                                       onChanged: (val) {
                                         if (val != null) _selectPreset(val);
                                       },
@@ -361,9 +364,12 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    // ignore: deprecated_member_use
                                     Radio<TripDatePreset>(
                                       value: TripDatePreset.tomorrow,
+                                      // ignore: deprecated_member_use
                                       groupValue: _selectedPreset,
+                                      // ignore: deprecated_member_use
                                       onChanged: (val) {
                                         if (val != null) _selectPreset(val);
                                       },
@@ -392,9 +398,12 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    // ignore: deprecated_member_use
                                     Radio<TripDatePreset>(
                                       value: TripDatePreset.dayAfterTomorrow,
+                                      // ignore: deprecated_member_use
                                       groupValue: _selectedPreset,
+                                      // ignore: deprecated_member_use
                                       onChanged: (val) {
                                         if (val != null) _selectPreset(val);
                                       },
@@ -558,7 +567,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                                   final orderId = order.id;
                                   final isSelected = _selectedOrderIds.contains(orderId);
 
-                                  final routeText = (order.customerRouteName != null && order.customerRouteName.trim().isNotEmpty)
+                                  final routeText = order.customerRouteName.trim().isNotEmpty
                                       ? order.customerRouteName.trim()
                                       : 'دیاری نەکراوە';
                                   final noteText = (order.notes != null && order.notes!.trim().isNotEmpty)

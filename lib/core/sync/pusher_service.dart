@@ -11,7 +11,6 @@ final pusherServiceProvider = Provider<PusherService>((ref) {
 });
 
 class PusherService {
-  final Ref _ref;
   PusherChannelsFlutter? _pusher;
   bool _isConnected = false;
   bool _isInitialized = false;
@@ -22,7 +21,7 @@ class PusherService {
   bool _isFetchingConfig = false;
   Future<void>? _fetchFuture;
 
-  PusherService(this._ref);
+  PusherService([Ref? _]);
 
   bool get isConnected => _isConnected;
   bool get isInitialized => _isInitialized;

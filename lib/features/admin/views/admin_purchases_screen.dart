@@ -72,7 +72,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     });
   }
 
-  void _deleteSupplier(BuildContext context, SupplierModel supplier) async {
+  void _deleteSupplier(SupplierModel supplier) async {
     final confirmed = await AppDialog.showConfirm(
       context,
       title: 'سڕینەوەی کۆمپانیا',
@@ -889,7 +889,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
     return AppCard(
       onTap: () => _showEditSupplierDialog(context, supplier),
-      onLongPress: () => _deleteSupplier(context, supplier),
+      onLongPress: () => _deleteSupplier(supplier),
       padding: const EdgeInsets.symmetric(
         horizontal: 12.0,
         vertical: 8.0,
@@ -1101,7 +1101,6 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return AlertDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
