@@ -497,4 +497,85 @@ class NotificationAndWhatsAppTest extends TestCase
         $this->assertStringContainsString('لە دواوەی مارکێتەکە دابگرە', $log->message);
         $this->assertStringContainsString('Kawa Store', $log->message);
     }
+
+    /**
+     * Test that creating a new sales order notifies warehouse staff but does NOT notify admin or owner.
+     */
+    public function test_new_sales_order_does_not_notify_admin_or_owner(): void
+    {
+        $adminRole = Role::create([
+            'name' => Role::ADMIN,
+            'display_name' => 'Admin',
+            'permissions' => ['*'],
+        ]);
+
+        $adminUser = User::factory()->create([
+            'role_id' => $adminRole->id,
+            'is_active' => true,
+        ]);
+
+        $warehouseRole = Role::create([
+            'name' => 'warehouse',
+            'display_name' => 'Warehouse',
+            'permissions' => ['stock.pack'],
+        ]);
+
+        $warehouseUser = User::factory()->create([
+            'role_id' => $warehouseRole->id,
+            'is_active' => true,
+        ]);
+
+        $warehouse = \App\Models\Warehouse::create(['name' => 'Warehouse A', 'is_main' => true, 'is_active' => true]);
+        $product = Product::create([
+            'name' => 'Sample Item',
+            'sku' => 'SMP-11',
+            'unit' => 'PCS',
+            'cost_price' => 1000,
+            'price_n1' => 2000,
+            'price_n2' => 2000,
+            'price_n3' => 2000,
+            'is_active' => true,
+        ]);
+
+        \App\Models\WarehouseStock::create([
+            'warehouse_id' => $warehouse->id,
+            'product_id' => $product->id,
+            'quantity' => 50,
+            'reserved_quantity' => 0,
+        ]);
+
+        Notification::query()->delete();
+
+        $orderData = [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $warehouse->id,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 2]
+            ]
+        ];
+
+        $this->actingAs($this->salesman, 'sanctum')
+            ->postJson('/api/v1/orders', $orderData)
+            ->assertStatus(200);
+
+        // Verify warehouse user GOT the order notification
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $warehouseUser->id,
+            'type' => 'order',
+            'title' => 'پسوڵەی فرۆشتنی نوێ دروستکرا',
+        ]);
+
+        // Verify owner and admin did NOT get notification for new order creation
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $this->owner->id,
+            'type' => 'order',
+            'title' => 'پسوڵەی فرۆشتنی نوێ دروستکرا',
+        ]);
+
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $adminUser->id,
+            'type' => 'order',
+            'title' => 'پسوڵەی فرۆشتنی نوێ دروستکرا',
+        ]);
+    }
 }

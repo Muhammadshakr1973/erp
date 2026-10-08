@@ -203,8 +203,9 @@ class NotificationService
             $order->salesman_id,
         ])));
 
-        // Notify Warehouse staff, Admins, and Owners (excluding creator & salesman)
-        $this->notifyRole(['warehouse', 'packer', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
+        // Notify Warehouse staff & Packers only (excluding creator & salesman)
+        // Admin and Owner are excluded from new sales order notifications
+        $this->notifyRole(['warehouse', 'packer'], Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
     }
 
     /**
