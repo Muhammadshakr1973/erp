@@ -24,6 +24,27 @@
   <!-- Pusher Channels JavaScript SDK required by pusher_channels_flutter on Web -->
   <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
+  <!-- Preload ZXing Barcode Scanning Library to eliminate camera initialization delay -->
+  <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3"></script>
+
+  <style>
+    /* Fix Platform View and Camera Video positioning in RTL web */
+    flutter-platform-view,
+    flt-platform-view {
+      direction: ltr !important;
+      text-align: left !important;
+    }
+    flutter-platform-view video,
+    flt-platform-view video,
+    video {
+      direction: ltr !important;
+      object-fit: contain !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      margin: auto !important;
+    }
+  </style>
+
   <!-- Modern Flutter Web Initialization -->
   <script>
     window._flutter = window._flutter || {};
