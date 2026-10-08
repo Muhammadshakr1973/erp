@@ -22,6 +22,7 @@ class CameraBarcodeScanner extends StatefulWidget {
         child: Container(
           width: 480,
           height: 600,
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(24),
@@ -46,6 +47,7 @@ class CameraBarcodeScanner extends StatefulWidget {
 class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _keyboardFocusNode = FocusNode();
+  final FocusNode _inputFocusNode = FocusNode();
   final StringBuffer _barcodeBuffer = StringBuffer();
   DateTime? _lastKeyEventTime;
   bool _isProcessing = false;
@@ -55,15 +57,14 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) {
-      try {
-        _scannerController = MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          facing: CameraFacing.back,
-        );
-      } catch (e) {
-        debugPrint("Camera scanner initialization skipped: $e");
-      }
+    try {
+      _scannerController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.normal,
+        facing: CameraFacing.back,
+        autoStart: true,
+      );
+    } catch (e) {
+      debugPrint("Camera scanner initialization error: $e");
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _keyboardFocusNode.requestFocus();
@@ -74,6 +75,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
   void dispose() {
     _controller.dispose();
     _keyboardFocusNode.dispose();
+    _inputFocusNode.dispose();
     _scannerController?.dispose();
     super.dispose();
   }
@@ -163,9 +165,33 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                       ),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'گۆڕینی کامێرا',
+                        icon: const Icon(Icons.cameraswitch_outlined),
+                        onPressed: () async {
+                          try {
+                            await _scannerController?.switchCamera();
+                          } catch (_) {}
+                        },
+                      ),
+                      IconButton(
+                        tooltip: 'فلاش / تۆڕچ',
+                        icon: const Icon(Icons.flash_on_outlined),
+                        onPressed: () async {
+                          try {
+                            await _scannerController?.toggleTorch();
+                          } catch (_) {}
+                        },
+                      ),
+                      IconButton(
+                        tooltip: 'داخستن',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -173,7 +199,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
 
             // Camera Scanner & Instruction
             Expanded(
-              child: (_scannerController == null || kIsWeb)
+              child: _scannerController == null
                   ? Container(
                       color: Colors.black.withValues(alpha: 0.05),
                       padding: const EdgeInsets.all(24),
@@ -187,7 +213,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'سکانەری ئامێر یان بەکارهێنانی ئامێری سکانەری بێسیم ئامادەیە. تکایە بارکۆدەکە سکان بکە یان بە دەست بینوسە.',
+                            'سکانەری ئامێر یان بەکارهێنانی ئامێری سکانەری بێسیم ئامادەیە. تکایە بارکۆدەکە سکان بکە یان بە دەست بنووسە.',
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -203,7 +229,8 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                           onDetect: (capture) {
                             final List<Barcode> barcodes = capture.barcodes;
                             for (final barcode in barcodes) {
-                              if (barcode.rawValue != null) {
+                              if (barcode.rawValue != null &&
+                                  barcode.rawValue!.trim().isNotEmpty) {
                                 _onSuccessScan(barcode.rawValue!);
                                 break; // Only scan one
                               }
@@ -213,23 +240,59 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                             return Container(
                               color: Colors.black.withValues(alpha: 0.05),
                               padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.videocam_off_outlined,
-                                    size: 48,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'کامێرا کارناکات، تکایە ئامێری سکانەر بەکاربهێنە یان بە دەست بینوسە.',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.videocam_off_outlined,
+                                      size: 48,
+                                      color: theme.colorScheme.primary,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'دەستڕاگەیشتن بە کامێرا نییە یان مۆڵەت نەدراوە.',
+                                      style: AppTextStyles.h3.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'تکایە مۆڵەتی کامێرا بدە لە وێبگەڕ/ئامێردا، یان کامێراکە بگۆڕە، یاخود ئامێری سکانەری بێسیم/دەستی بەکاربهێنە.',
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      alignment: WrapAlignment.center,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          icon: const Icon(Icons.cameraswitch, size: 18),
+                                          label: const Text('گۆڕینی کامێرا'),
+                                          onPressed: () async {
+                                            try {
+                                              await _scannerController?.switchCamera();
+                                            } catch (_) {}
+                                          },
+                                        ),
+                                        OutlinedButton.icon(
+                                          icon: const Icon(Icons.refresh, size: 18),
+                                          label: const Text('دووبارە هەوڵدانەوە'),
+                                          onPressed: () async {
+                                            try {
+                                              await _scannerController?.start();
+                                            } catch (_) {}
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -245,6 +308,30 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                                 width: 3,
                               ),
                               borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                        // Helper guideline text
+                        Positioned(
+                          bottom: 16,
+                          left: 16,
+                          right: 16,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'بارکۆدەکە بخەرە بەرامبەر کامێرا',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -273,7 +360,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner> {
                       Expanded(
                         child: TextField(
                           controller: _controller,
-                          focusNode: FocusNode(),
+                          focusNode: _inputFocusNode,
                           style: AppTextStyles.bodyMedium,
                           decoration: InputDecoration(
                             hintText: 'کۆدی بارکۆدەکە بە دەست بنووسە...',
