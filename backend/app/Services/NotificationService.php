@@ -99,10 +99,14 @@ class NotificationService
         array $data = []
     ): array {
         $roles = is_array($roles) ? $roles : [$roles];
+        $rolesLower = array_map('strtolower', $roles);
         
-        $users = User::whereHas('role', fn($q) => $q->whereIn('name', $roles))
-            ->where('is_active', true)
-            ->get();
+        $users = User::whereHas('role', function ($q) use ($rolesLower) {
+            $q->whereIn(DB::raw('LOWER(name)'), $rolesLower)
+              ->orWhereIn(DB::raw('LOWER(display_name)'), $rolesLower);
+        })
+        ->where('is_active', true)
+        ->get();
 
         $notifications = [];
         $userIds = [];
@@ -147,7 +151,7 @@ class NotificationService
     // =========================================================================
 
     /**
-     * NOT-001: New Sales Order created -> notify Warehouse staff ONLY
+     * NOT-001: New Sales Order created -> notify Warehouse staff, Admins, Owner & Salesman
      */
     public function notifyNewOrderCreated(SalesOrder $order, $actor = null): void
     {
@@ -177,8 +181,13 @@ class NotificationService
             'action' => 'open_order',
         ];
 
-        // Notify ONLY Warehouse staff (supports 'warehouse', 'Warehouse', and 'packer' roles)
-        $this->notifyRole(['warehouse', 'Warehouse', 'packer'], Notification::TYPE_ORDER, $title, $body, $data);
+        // Notify Warehouse staff, Admins, and Owners
+        $this->notifyRole(['warehouse', 'packer', 'admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
+
+        // Also notify the salesman directly if distinct
+        if ($order->salesman_id) {
+            $this->notifyUser($order->salesman_id, Notification::TYPE_ORDER, $title, $body, $data);
+        }
     }
 
     /**

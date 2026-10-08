@@ -71,9 +71,9 @@ class NotificationsNotifier
 
   void _startAutoPolling() {
     _pollingTimer?.cancel();
-    // High-frequency background polling every 8 seconds guarantees instant updates
-    // on Web, Mobile, and when Websockets reconnect or drop.
-    _pollingTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    // High-frequency background polling every 4 seconds guarantees near-instant updates
+    // across Web, Mobile, and when Websockets reconnect or drop.
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       _pollForNewNotifications();
     });
   }
@@ -116,27 +116,30 @@ class NotificationsNotifier
           }
 
           final currentList = state.value ?? [];
-          final currentIds = currentList.map((n) => n.id).toSet();
+          
+          if (currentList.isEmpty && fetchedItems.isNotEmpty) {
+            state = AsyncValue.data(fetchedItems);
+          } else {
+            final currentIds = currentList.map((n) => n.id).toSet();
+            final newNotifications = fetchedItems.where((n) => !currentIds.contains(n.id)).toList();
 
-          // Identify newly arrived notifications that are not yet in state
-          final newNotifications = fetchedItems.where((n) => !currentIds.contains(n.id)).toList();
+            if (newNotifications.isNotEmpty) {
+              // Play notification sound if new items arrived
+              final soundEnabled = _ref.read(notificationSoundEnabledProvider);
+              NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
 
-          if (newNotifications.isNotEmpty) {
-            // Play notification sound if new items arrived
-            final soundEnabled = _ref.read(notificationSoundEnabledProvider);
-            NotificationSoundService.playNotificationSound(soundEnabled: soundEnabled);
+              // Display top notification toast overlay for incoming notifications
+              for (final n in newNotifications) {
+                AppSnackbar.info(null, n.body, title: n.title);
+              }
 
-            // Display top notification toast overlay for incoming notifications
-            for (final n in newNotifications) {
-              AppSnackbar.info(null, n.body, title: n.title);
-            }
+              final updatedList = [...newNotifications, ...currentList];
+              state = AsyncValue.data(updatedList);
 
-            final updatedList = [...newNotifications, ...currentList];
-            state = AsyncValue.data(updatedList);
-
-            // Invalidate screen providers so active views refresh immediately
-            for (final n in newNotifications) {
-              _invalidateProvidersForNotificationType(n.type);
+              // Invalidate screen providers so active views refresh immediately
+              for (final n in newNotifications) {
+                _invalidateProvidersForNotificationType(n.type);
+              }
             }
           }
 

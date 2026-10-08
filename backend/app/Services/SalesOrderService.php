@@ -1004,17 +1004,7 @@ class SalesOrderService
     private function dispatchOrderNotification(SalesOrder $order, $user): void
     {
         try {
-            if ($order->items()->count() === 0) {
-                return;
-            }
-
-            $alreadyNotified = \App\Models\Notification::where('type', \App\Models\Notification::TYPE_ORDER)
-                ->where('data->order_id', $order->id)
-                ->exists();
-
-            if (!$alreadyNotified) {
-                app(NotificationService::class)->notifyNewOrderCreated($order, $user);
-            }
+            app(NotificationService::class)->notifyNewOrderCreated($order, $user);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order #{$order->id}: " . $e->getMessage());
         }
