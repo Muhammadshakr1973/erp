@@ -261,7 +261,7 @@ class _AdminAiAssistantDialogState extends ConsumerState<AdminAiAssistantDialog>
                 children: [
                   SelectableText(
                     msg.content,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyMedium.copyWith(
                       color: isUser
                           ? Colors.white
                           : (isDark
@@ -386,7 +386,7 @@ class _AdminAiAssistantDialogState extends ConsumerState<AdminAiAssistantDialog>
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: _quickSuggestions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           final suggestion = _quickSuggestions[index];
           return ActionChip(
@@ -401,7 +401,7 @@ class _AdminAiAssistantDialogState extends ConsumerState<AdminAiAssistantDialog>
                 ? AppColors.surfaceContainerHighestDark
                 : AppColors.primaryLight.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.full),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
               side: BorderSide(
                 color: isDark ? AppColors.borderDark : AppColors.primaryLight,
                 width: 0.6,
@@ -426,12 +426,12 @@ class _AdminAiAssistantDialogState extends ConsumerState<AdminAiAssistantDialog>
               focusNode: _focusNode,
               enabled: !isLoading,
               textDirection: TextDirection.rtl,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyMedium.copyWith(
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               ),
               decoration: InputDecoration(
                 hintText: 'پرسیارێک لەسەر فرۆش، قازانج یان کۆگا بنووسە...',
-                hintStyle: AppTextStyles.body.copyWith(
+                hintStyle: AppTextStyles.bodyMedium.copyWith(
                   color: isDark ? AppColors.textDisabledDark : AppColors.textDisabledLight,
                   fontSize: 13,
                 ),
