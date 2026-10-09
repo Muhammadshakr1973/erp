@@ -49,7 +49,15 @@ class AdminAuditLogsScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('$action - $entity', style: AppTextStyles.bodyBold),
+                          Expanded(
+                            child: Text(
+                              '$action - $entity',
+                              style: AppTextStyles.bodyBold,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
                           Text(date, style: AppTextStyles.caption),
                         ],
                       ),

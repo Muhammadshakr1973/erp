@@ -17,6 +17,12 @@ import '../../../shared/providers/warehouse_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/reports_provider.dart';
 
+enum SalesReportDatePreset {
+  thisMonth,
+  lastMonth,
+  lastWeek,
+}
+
 class SalesReportScreen extends ConsumerStatefulWidget {
   const SalesReportScreen({super.key});
 
@@ -32,6 +38,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   String? _selectedStatus = 'DELIVERED';
   DateTime? _startDate;
   DateTime? _endDate;
+  SalesReportDatePreset? _selectedDatePreset = SalesReportDatePreset.thisMonth;
   bool _isFilterExpanded = false;
 
   Map<String, dynamic> _filters = {};
@@ -39,12 +46,80 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   @override
   void initState() {
     super.initState();
-    // Default to this month
+    // Default to this month: from 1st of month to today
     final now = DateTime.now();
+    _selectedDatePreset = SalesReportDatePreset.thisMonth;
     _startDate = DateTime(now.year, now.month, 1);
-    _endDate = DateTime(now.year, now.month + 1, 0);
+    _endDate = DateTime(now.year, now.month, now.day);
     _selectedStatus = 'DELIVERED';
     _applyFilters();
+  }
+
+  void _applyPreset(SalesReportDatePreset preset) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      _selectedDatePreset = preset;
+      switch (preset) {
+        case SalesReportDatePreset.thisMonth:
+          _startDate = DateTime(now.year, now.month, 1);
+          _endDate = today;
+          break;
+        case SalesReportDatePreset.lastMonth:
+          _startDate = DateTime(now.year, now.month - 1, 1);
+          _endDate = DateTime(now.year, now.month, 0);
+          break;
+        case SalesReportDatePreset.lastWeek:
+          _startDate = today.subtract(const Duration(days: 6));
+          _endDate = today;
+          break;
+      }
+    });
+  }
+
+  void _checkPresetMatch() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final isThisMonth = _startDate != null &&
+        _endDate != null &&
+        _startDate!.year == now.year &&
+        _startDate!.month == now.month &&
+        _startDate!.day == 1 &&
+        _endDate!.year == today.year &&
+        _endDate!.month == today.month &&
+        _endDate!.day == today.day;
+
+    final lastMonthStart = DateTime(now.year, now.month - 1, 1);
+    final lastMonthEnd = DateTime(now.year, now.month, 0);
+    final isLastMonth = _startDate != null &&
+        _endDate != null &&
+        _startDate!.year == lastMonthStart.year &&
+        _startDate!.month == lastMonthStart.month &&
+        _startDate!.day == lastMonthStart.day &&
+        _endDate!.year == lastMonthEnd.year &&
+        _endDate!.month == lastMonthEnd.month &&
+        _endDate!.day == lastMonthEnd.day;
+
+    final lastWeekStart = today.subtract(const Duration(days: 6));
+    final isLastWeek = _startDate != null &&
+        _endDate != null &&
+        _startDate!.year == lastWeekStart.year &&
+        _startDate!.month == lastWeekStart.month &&
+        _startDate!.day == lastWeekStart.day &&
+        _endDate!.year == today.year &&
+        _endDate!.month == today.month &&
+        _endDate!.day == today.day;
+
+    if (isThisMonth) {
+      _selectedDatePreset = SalesReportDatePreset.thisMonth;
+    } else if (isLastMonth) {
+      _selectedDatePreset = SalesReportDatePreset.lastMonth;
+    } else if (isLastWeek) {
+      _selectedDatePreset = SalesReportDatePreset.lastWeek;
+    } else {
+      _selectedDatePreset = null;
+    }
   }
 
   void _applyFilters() {
@@ -74,9 +149,10 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
       _selectedRouteId = null;
       _selectedWarehouseId = null;
       _selectedStatus = 'DELIVERED';
+      _selectedDatePreset = SalesReportDatePreset.thisMonth;
       final now = DateTime.now();
       _startDate = DateTime(now.year, now.month, 1);
-      _endDate = DateTime(now.year, now.month + 1, 0);
+      _endDate = DateTime(now.year, now.month, now.day);
       _filters = {
         'status': 'DELIVERED',
         'start_date': _startDate!.toIso8601String().split('T').first,
@@ -105,6 +181,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
         } else {
           _endDate = picked;
         }
+        _checkPresetMatch();
       });
     }
   }
@@ -281,6 +358,8 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                         ),
                       ] else ...[
                         const SizedBox(height: AppSpacing.md),
+                        _buildDatePresets(),
+                        const SizedBox(height: AppSpacing.sm),
                         if (isMobile) ...[
                           Row(
                             children: [
@@ -641,6 +720,88 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
               ],
             );
           }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePresets() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildPresetRadio(
+            title: 'ئەم مانگە',
+            preset: SalesReportDatePreset.thisMonth,
+          ),
+          _buildPresetRadio(
+            title: 'مانگی ڕابردوو',
+            preset: SalesReportDatePreset.lastMonth,
+          ),
+          _buildPresetRadio(
+            title: 'هەفتەی ڕابردوو',
+            preset: SalesReportDatePreset.lastWeek,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetRadio({
+    required String title,
+    required SalesReportDatePreset preset,
+  }) {
+    final isSelected = _selectedDatePreset == preset;
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: () => _applyPreset(preset),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline.withValues(alpha: 0.3),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: Radio<SalesReportDatePreset>(
+                value: preset,
+                groupValue: _selectedDatePreset,
+                onChanged: (val) {
+                  if (val != null) _applyPreset(val);
+                },
+                activeColor: theme.colorScheme.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
         ),
       ),
     );

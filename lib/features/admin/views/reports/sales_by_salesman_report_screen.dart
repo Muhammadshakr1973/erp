@@ -381,7 +381,7 @@ class _SalesBySalesmanReportScreenState
               }
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: theme.cardColor.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(10),
@@ -394,44 +394,81 @@ class _SalesBySalesmanReportScreenState
                     )
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      activeSalesman.salesmanName,
-                      style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
-                    ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.success,
-                            shape: BoxShape.circle,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              activeSalesman.salesmanName,
+                              style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'قازانج: ${Formatters.currency(activeSalesman.totalProfit)}',
-                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _activeSalesmanTooltipId = null;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    Row(
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 6,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.success,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'قازانج: ${Formatters.currency(activeSalesman.totalProfit)}',
+                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'پسوڵەکان: ${activeSalesman.deliveredOrders}',
-                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'پسوڵەکان: ${activeSalesman.deliveredOrders}',
+                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -302,12 +302,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(title, style: AppTextStyles.caption),
+            Text(title, style: AppTextStyles.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(value, style: AppTextStyles.h2),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value, style: AppTextStyles.h2),
+                  ),
+                ),
                 if (currency != null) ...[
                   const SizedBox(width: 4),
                   Padding(
@@ -321,6 +327,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               const SizedBox(height: 6),
               Text(
                 subText,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.caption.copyWith(
                   color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                   fontSize: 10,
@@ -404,15 +412,26 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             const SizedBox(height: 8),
               
               // Legend
-              Row(
+              Wrap(
+                spacing: 16,
+                runSpacing: 4,
                 children: [
-                  Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
-                  const SizedBox(width: 6),
-                  Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 16),
-                  Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
-                  const SizedBox(width: 6),
-                  Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
+                      const SizedBox(width: 6),
+                      Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
+                      const SizedBox(width: 6),
+                      Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
@@ -429,7 +448,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 if (activeSalesman == null) return const SizedBox.shrink();
                 return Container(
                   margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
@@ -442,30 +461,67 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       )
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        activeSalesman.salesmanName,
-                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
-                      ),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'ئەم مانگە: ${Formatters.currency(activeSalesman.totalProfit)}',
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person, size: 16, color: theme.colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                activeSalesman.salesmanName,
+                                style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
+                              ),
+                            ],
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _activeSalesmanTooltipId = null;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      Row(
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 6,
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'مانگی ڕابردوو: ${Formatters.currency(activeSalesman.lastMonthProfit)}',
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ئەم مانگە: ${Formatters.currency(activeSalesman.totalProfit)}',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'مانگی ڕابردوو: ${Formatters.currency(activeSalesman.lastMonthProfit)}',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -703,15 +759,26 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               const SizedBox(height: 8),
               
               // Legend
-              Row(
+              Wrap(
+                spacing: 16,
+                runSpacing: 4,
                 children: [
-                  Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
-                  const SizedBox(width: 6),
-                  Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 16),
-                  Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
-                  const SizedBox(width: 6),
-                  Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 12, height: 12, decoration: BoxDecoration(color: thisMonthColor, borderRadius: BorderRadius.circular(3))),
+                      const SizedBox(width: 6),
+                      Text('ئەم مانگە', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 12, height: 12, decoration: BoxDecoration(color: lastMonthColor, borderRadius: BorderRadius.circular(3))),
+                      const SizedBox(width: 6),
+                      Text('مانگی ڕابردوو', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
@@ -728,7 +795,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 if (activeSalesman == null) return const SizedBox.shrink();
                 return Container(
                   margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
@@ -741,30 +808,67 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       )
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        activeSalesman.salesmanName,
-                        style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
-                      ),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'ئەم مانگە: ${activeSalesman.newCustomersThisMonth} کڕیار',
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person, size: 16, color: theme.colorScheme.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                activeSalesman.salesmanName,
+                                style: AppTextStyles.bodyBold.copyWith(color: theme.colorScheme.primary),
+                              ),
+                            ],
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _activeCustomerChartTooltipId = null;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      Row(
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 6,
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'مانگی ڕابردوو: ${activeSalesman.newCustomersLastMonth} کڕیار',
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 8, height: 8, decoration: BoxDecoration(color: thisMonthColor, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'ئەم مانگە: ${activeSalesman.newCustomersThisMonth} کڕیار',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 8, height: 8, decoration: BoxDecoration(color: lastMonthColor, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'مانگی ڕابردوو: ${activeSalesman.newCustomersLastMonth} کڕیار',
+                                style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
                         ],
                       ),
