@@ -264,21 +264,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           AdminAiAssistantDialog.show(context);
         },
+        tooltip: 'یاریدەدەری زیرەک (Gemini)',
         backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.auto_awesome, size: 20),
-        label: const Text(
-          'یاریدەدەری زیرەک',
-          style: TextStyle(
-            fontFamily: 'Rudaw',
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
+        child: const Icon(Icons.auto_awesome, size: 24),
       ),
     );
   }
