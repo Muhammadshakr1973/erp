@@ -26,8 +26,8 @@ const MIME_TYPES = {
 
 const SEARCH_DIRS = [
   path.join(__dirname, 'build', 'web'),
-  path.join(__dirname, 'web'),
-  __dirname
+  __dirname,
+  path.join(__dirname, 'web')
 ];
 
 function findFile(relativePath) {
@@ -100,8 +100,16 @@ const server = http.createServer((req, res) => {
   }
 
   // For HTML pages or SPA routes (e.g. /, /orders, /customers, etc.)
-  let htmlPath = findFile(pathname === '/' ? 'index.html' : (pathname.endsWith('.html') ? pathname : 'index.html'));
-  if (!htmlPath) {
+  const compiledFlutterIndex = path.join(__dirname, 'build', 'web', 'index.html');
+  const compiledFlutterMain = path.join(__dirname, 'build', 'web', 'main.dart.js');
+  const rootIndex = path.join(__dirname, 'index.html');
+
+  let htmlPath = null;
+  if (fs.existsSync(compiledFlutterIndex) && fs.existsSync(compiledFlutterMain)) {
+    htmlPath = compiledFlutterIndex;
+  } else if (fs.existsSync(rootIndex)) {
+    htmlPath = rootIndex;
+  } else {
     htmlPath = findFile('index.html');
   }
 

@@ -631,7 +631,6 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
           headingTextStyle: AppTextStyles.bodyBold,
           dataTextStyle: AppTextStyles.bodyMedium,
           columns: const [
-            DataColumn(label: Text('ژ. پسوڵە')),
             DataColumn(label: Text('بەروار')),
             DataColumn(label: Text('کڕیار')),
             DataColumn(label: Text('ڕێگا')),
@@ -658,12 +657,6 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
 
             return DataRow(
               cells: [
-                DataCell(
-                  Text(
-                    o.orderNumber,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
                 DataCell(Text(o.orderDate.split('T').first)),
                 DataCell(Text(o.customerName)),
                 DataCell(Text(o.routeName)),

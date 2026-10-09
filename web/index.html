@@ -69,6 +69,12 @@
           config: window._flutter.buildConfig
         });
       }
+      // If no Flutter entrypoint canvas is mounted within 500ms, redirect to root GARDI ERP portal
+      setTimeout(function() {
+        if (!document.querySelector('flt-glass-pane') && !document.querySelector('flutter-view')) {
+          window.location.replace('/');
+        }
+      }, 500);
     });
   </script>
 </body>

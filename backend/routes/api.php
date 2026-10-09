@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\WarehouseController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\SalesReturnController;
+use App\Http\Controllers\Api\V1\GeminiAssistantController;
 
 Route::prefix('v1')->group(function () {
 
@@ -264,5 +265,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('/device-token', [NotificationController::class, 'removeDeviceToken']);
         Route::get('/notifications/whatsapp-logs', [NotificationController::class, 'whatsAppLogs'])->middleware('permission:users.manage');
         Route::post('/notifications/whatsapp/{id}/retry', [NotificationController::class, 'retryWhatsApp'])->middleware('permission:users.manage');
+
+        // AI Executive Assistant (Admin / Owner Only)
+        Route::post('/ai/assistant/chat', [GeminiAssistantController::class, 'chat'])->middleware('permission:users.manage');
     });
 });

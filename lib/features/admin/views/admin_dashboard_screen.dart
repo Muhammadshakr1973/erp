@@ -22,6 +22,7 @@ import '../../shared/models/report_models.dart';
 // import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
+import 'admin_ai_assistant_dialog.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -39,6 +40,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final dashboardAsync = ref.watch(dashboardProvider);
     final salesmenReportAsync = ref.watch(salesBySalesmanReportProvider(const {}));
     final routesAsync = ref.watch(routeListProvider);
@@ -259,6 +261,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.sectionGap),
             ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          AdminAiAssistantDialog.show(context);
+        },
+        backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.auto_awesome, size: 20),
+        label: const Text(
+          'یاریدەدەری زیرەک',
+          style: TextStyle(
+            fontFamily: 'Rudaw',
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
           ),
         ),
       ),
