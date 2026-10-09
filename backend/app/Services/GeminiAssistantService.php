@@ -28,8 +28,8 @@ class GeminiAssistantService
      */
     public function ask(string $userMessage, array $chatHistory = []): array
     {
-        $apiKey = config('services.gemini.api_key') ?: env('GEMINI_API_KEY');
-        $model = config('services.gemini.model', 'gemini-3.8-flash');
+        $apiKey = $this->resolveApiKey();
+        $model = $this->resolveModel();
 
         // ١. کۆکردنەوەی داتاکانی ERP بە تەواوی هاوتا لەگەڵ داشبۆردی فەرمی ئەدمین (ReportController::dashboard)
         $erpContext = $this->buildAuthoritativeErpContext();
@@ -74,52 +74,157 @@ class GeminiAssistantService
             'parts' => [['text' => $userMessage]],
         ];
 
-        // ٤. ناردنی داواکاری بۆ Google Gemini API
-        try {
-            $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        // ٤. ناردنی داواکاری بۆ Google Gemini API (بە پشتگیری مۆدێلە بەردەستەکان)
+        $modelsToTry = array_unique([$model, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']);
+        $googleError = null;
 
-            $response = Http::timeout(25)
-                ->withHeaders([
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($endpoint, [
-                    'systemInstruction' => [
-                        'parts' => [
-                            ['text' => $systemInstruction],
+        foreach ($modelsToTry as $candidateModel) {
+            try {
+                $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$candidateModel}:generateContent?key={$apiKey}";
+
+                $response = Http::timeout(25)
+                    ->withHeaders([
+                        'Content-Type' => 'application/json',
+                        'x-goog-api-key' => $apiKey,
+                    ])
+                    ->post($endpoint, [
+                        'systemInstruction' => [
+                            'parts' => [
+                                ['text' => $systemInstruction],
+                            ],
                         ],
-                    ],
-                    'contents' => $contents,
-                    'generationConfig' => [
-                        'temperature' => 0.2,
-                        'maxOutputTokens' => 1500,
-                    ],
-                ]);
+                        'contents' => $contents,
+                        'generationConfig' => [
+                            'temperature' => 0.2,
+                            'maxOutputTokens' => 1500,
+                        ],
+                    ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $replyText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $replyText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
-                if (!empty($replyText)) {
-                    return [
-                        'reply' => trim($replyText),
-                        'source' => 'gemini',
-                        'context_summary' => $erpContext['highlights'] ?? [],
-                    ];
+                    if (!empty($replyText)) {
+                        return [
+                            'reply' => trim($replyText),
+                            'source' => 'gemini',
+                            'context_summary' => $erpContext['highlights'] ?? [],
+                        ];
+                    }
                 }
-            }
 
-            Log::warning('Gemini API Error: ' . $response->body());
-        } catch (\Throwable $e) {
-            Log::error('Gemini Exception: ' . $e->getMessage());
+                $errBody = $response->json();
+                $googleError = $errBody['error']['message'] ?? $response->body();
+                Log::warning("Gemini API Error with model {$candidateModel}: " . $googleError);
+
+                // ئەگەر کلیلەکە لەلایەن گووگڵەوە بە نادروست ناسرا، پێویست ناکات مۆدێلەکانی تر تاقی بکرێنەوە
+                if ($response->status() === 400 || $response->status() === 403) {
+                    break;
+                }
+            } catch (\Throwable $e) {
+                $googleError = $e->getMessage();
+                Log::error('Gemini Exception: ' . $e->getMessage());
+            }
         }
 
-        // ئەگەر پەیوەندی بە Gemini سەری نەگرت، وەڵام بە داتای فەرمی لۆکاڵی دەگەڕێتەوە
+        // ئەگەر پەیوەندی بە گووگڵ سەری نەگرت، وەڵام بە داتای فەرمی لۆکاڵی دەگەڕێتەوە لەگەڵ هۆکارەکەی
         $fallbackReply = $this->generateLocalSummaryResponse($userMessage, $erpContext);
+        if (!empty($googleError)) {
+            $fallbackReply .= "\n\n⚠️ *سەرنج: گووگڵ ئەم هەڵەیەی گەڕاندەوە: {$googleError}*";
+        }
+
         return [
             'reply' => $fallbackReply,
             'source' => 'local_fallback',
             'context_summary' => $erpContext['highlights'] ?? [],
         ];
+    }
+
+    /**
+     * دەرهێنانی کلیل تەنانەت ئەگەر کاشی سێرڤەر ڕێگر بووبێت
+     */
+    public function resolveApiKey(): string
+    {
+        $apiKey = trim((string) (config('services.gemini.api_key') ?: env('GEMINI_API_KEY')));
+        if (empty($apiKey) && file_exists(base_path('.env'))) {
+            $lines = @file(base_path('.env'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if (str_starts_with($trimmed, 'GEMINI_API_KEY=')) {
+                    $val = substr($trimmed, strlen('GEMINI_API_KEY='));
+                    $apiKey = trim(trim($val), "\"'");
+                    break;
+                }
+            }
+        }
+        return $apiKey;
+    }
+
+    /**
+     * دیاریکردنی مۆدێل تەنانەت لە کاتی کاشدا
+     */
+    public function resolveModel(): string
+    {
+        $model = trim((string) (config('services.gemini.model') ?: env('GEMINI_MODEL')));
+        if (empty($model) && file_exists(base_path('.env'))) {
+            $lines = @file(base_path('.env'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if (str_starts_with($trimmed, 'GEMINI_MODEL=')) {
+                    $val = substr($trimmed, strlen('GEMINI_MODEL='));
+                    $model = trim(trim($val), "\"'");
+                    break;
+                }
+            }
+        }
+        return !empty($model) ? $model : 'gemini-2.5-flash';
+    }
+
+    /**
+     * پشکنینی ڕاستەوخۆی پەیوەندی لەگەڵ گووگڵ بۆ دیباگ
+     */
+    public function testKeyConnection(): array
+    {
+        $apiKey = $this->resolveApiKey();
+        $model = $this->resolveModel();
+
+        if (empty($apiKey)) {
+            return [
+                'status' => 'error',
+                'message' => 'GEMINI_API_KEY لە هیچ کوێ نەدۆزرایەوە لەناو .env یان config',
+                'key_found' => false,
+            ];
+        }
+
+        $maskedKey = substr($apiKey, 0, 8) . '...' . substr($apiKey, -4);
+        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'x-goog-api-key' => $apiKey,
+                ])
+                ->post($endpoint, [
+                    'contents' => [
+                        ['role' => 'user', 'parts' => [['text' => 'Hi']]],
+                    ],
+                ]);
+
+            return [
+                'status' => $response->successful() ? 'success' : 'failed',
+                'http_status' => $response->status(),
+                'masked_key' => $maskedKey,
+                'model_tested' => $model,
+                'google_response' => $response->json() ?? $response->body(),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'status' => 'exception',
+                'error' => $e->getMessage(),
+                'masked_key' => $maskedKey,
+            ];
+        }
     }
 
     /**

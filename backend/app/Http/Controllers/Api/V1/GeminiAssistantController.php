@@ -41,4 +41,14 @@ class GeminiAssistantController extends Controller
             'context_summary' => $result['context_summary'] ?? [],
         ]);
     }
+
+    /**
+     * پشکنینی ڕاستەوخۆی پەیوەندی لەگەڵ گووگڵ
+     * GET /api/v1/ai/assistant/test-key
+     */
+    public function testKey(): JsonResponse
+    {
+        $result = $this->assistantService->testKeyConnection();
+        return response()->json($result);
+    }
 }

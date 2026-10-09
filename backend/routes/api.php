@@ -44,6 +44,7 @@ Route::prefix('v1')->group(function () {
             ], 500);
         }
     });
+    Route::get('/ai-debug-key', [GeminiAssistantController::class, 'testKey']);
     Route::get('/whatsapp-debug', function () {
         try {
             $logs = \App\Models\WhatsAppNotificationLog::latest('id')
