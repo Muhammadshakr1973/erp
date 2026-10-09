@@ -288,26 +288,26 @@ class GeminiAssistantService
 
         $lowStockCount = $context['inventory']['low_stock_items_count'] ?? 0;
 
-        // ١. فرۆش و قازانجی ئەمڕۆ
+        // ١. پرسیاری مەندوبەکان (دەبێت پێش قازانجی گشتی بێت)
+        if (str_contains($q, 'مەندوب') || str_contains($q, 'مندوب')) {
+            if (!empty($context['salesmen_performance'])) {
+                $lines = [];
+                foreach ($context['salesmen_performance'] as $s) {
+                    $lines[] = "• **{$s['name']}**: " . number_format($s['total_profit']) . " د.ع قازانج (فرۆش: " . number_format($s['total_sales']) . " د.ع)";
+                }
+                return "👥 **ناوی مەندوبەکان و بڕی قازانجەکەیان:**\n" . implode("\n", $lines);
+            }
+            return "👥 **مەندوبەکان:** لەم مانگەدا فرۆش و قازانجی هیچ مەندوبێک تۆمار نەکراوە.";
+        }
+
+        // ٢. فرۆش و قازانجی ئەمڕۆ
         if (str_contains($q, 'ئەمڕۆ') || str_contains($q, 'امرو')) {
             return "📊 **فرۆش و قازانجی ئەمڕۆ:**\n"
                 . "• فرۆش: **{$todaySales} دینار** ({$todayOrders} داواکاری)\n"
                 . "• قازانج: **{$todayProfit} دینار**";
         }
 
-        // ٢. قازانجی ئەم مانگە
-        if (str_contains($q, 'قازانج')) {
-            return "📈 **قازانجی ئەم مانگەتان:** **{$monthProfit} دینار**\n"
-                . "(مانگی پێشوو: {$lastMonthProfit} د.ع | فرۆشی مانگ: {$monthSales} د.ع)";
-        }
-
-        // ٣. فرۆشی ئەم مانگە
-        if (str_contains($q, 'فرۆش') && str_contains($q, 'مانگ')) {
-            return "📈 **فرۆشتنی ئەم مانگەتان:** **{$monthSales} دینار**\n"
-                . "(مانگی پێشوو: {$lastMonthSales} د.ع | قازانج: {$monthProfit} د.ع)";
-        }
-
-        // ٤. قەرزی کڕیاران و بازاڕ
+        // ٣. قەرزی کڕیاران و بازاڕ
         if (str_contains($q, 'قەرز') || str_contains($q, 'قەرزدار')) {
             $msg = "💳 **کۆی قەرزی بازاڕ:** **{$totalDebt} دینار** (لای {$debtorsCount} کڕیار)";
             if (!empty($context['debts']['top_debtors'])) {
@@ -317,7 +317,7 @@ class GeminiAssistantService
             return $msg;
         }
 
-        // ٥. کۆگا و کەمیی کاڵاکان
+        // ٤. کۆگا و کەمیی کاڵاکان
         if (str_contains($q, 'کۆگا') || str_contains($q, 'کاڵا') || str_contains($q, 'مەخزەن')) {
             $msg = "📦 **کۆگا:** **{$lowStockCount} کاڵا** لە هێڵی سوورن و کەمبوونەتەوە.";
             if (!empty($context['inventory']['critical_items'])) {
@@ -327,19 +327,25 @@ class GeminiAssistantService
             return $msg;
         }
 
-        // ٦. فرۆشی مەندوبەکان
-        if (str_contains($q, 'مەندوب') || str_contains($q, 'مندوب')) {
-            if (!empty($context['salesmen_performance'])) {
-                $lines = [];
-                foreach (array_slice($context['salesmen_performance'], 0, 3) as $s) {
-                    $lines[] = "• **{$s['name']}**: " . number_format($s['total_sales']) . " د.ع فرۆش (" . number_format($s['total_profit']) . " د.ع قازانج)";
-                }
-                return "👥 **فرۆشی مەندوبەکان بۆ ئەم مانگە:**\n" . implode("\n", $lines);
-            }
-            return "👥 **مەندوبەکان:** هیچ فرۆشێکی مەندوب بۆ ئەم مانگە تۆمار نەکراوە.";
+        // ٥. پارەی لای شوفێر
+        if (str_contains($q, 'شوفێر') || str_contains($q, 'شۆفێر')) {
+            $driverCash = number_format($context['drivers']['remaining_cash'] ?? 0);
+            return "🚚 **پارەی لای شوفێران:** **{$driverCash} دینار**ە.";
         }
 
-        // ٧. وەڵامی کورت و پوخت بۆ پرسیاری گشتی
+        // ٦. قازانجی گشتی ئەم مانگە (ئەگەر پرسیار لەسەر مەندوب نەبوو)
+        if (str_contains($q, 'قازانج')) {
+            return "📈 **قازانجی پوختەی ئەم مانگەتان:** **{$monthProfit} دینار**\n"
+                . "(مانگی پێشوو: {$lastMonthProfit} د.ع | فرۆشی مانگ: {$monthSales} د.ع)";
+        }
+
+        // ٧. فرۆشی گشتی ئەم مانگە
+        if (str_contains($q, 'فرۆش')) {
+            return "📈 **فرۆشتنی ئەم مانگەتان:** **{$monthSales} دینار**\n"
+                . "(مانگی پێشوو: {$lastMonthSales} د.ع | قازانج: {$monthProfit} د.ع)";
+        }
+
+        // ٨. وەڵامی کورت و پوخت بۆ پرسیاری گشتی
         return "📊 فرۆشی مانگ: **{$monthSales} د.ع** | قازانج: **{$monthProfit} د.ع**\n"
             . "💳 قەرزی بازاڕ: **{$totalDebt} د.ع** | کۆگا: **{$lowStockCount} کاڵا کەمە**";
     }
