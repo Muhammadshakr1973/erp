@@ -22,7 +22,6 @@ import '../../shared/models/report_models.dart';
 // import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
-import 'admin_ai_assistant_dialog.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -263,15 +262,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          AdminAiAssistantDialog.show(context);
-        },
-        tooltip: 'یاریدەدەری زیرەک (Gemini)',
-        backgroundColor: isDark ? AppColors.primaryDark : AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.auto_awesome, size: 24),
       ),
     );
   }
