@@ -1,4 +1,4 @@
-import 'package:pos_app/core/utils/formatters.dart';
+import '../../../core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,7 +39,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final dashboardAsync = ref.watch(dashboardProvider);
     final salesmenReportAsync = ref.watch(salesBySalesmanReportProvider(const {}));
     final routesAsync = ref.watch(routeListProvider);
