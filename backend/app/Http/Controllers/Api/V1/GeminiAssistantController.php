@@ -39,7 +39,7 @@ class GeminiAssistantController extends Controller
                 'status' => 'success',
                 'reply' => $result['reply'],
                 'source' => $result['source'],
-                'context_summary' => $result['context_summary'] ?? [],
+                'context_summary' => (object) ($result['context_summary'] ?? []),
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             throw $ve;

@@ -46,7 +46,7 @@ class GeminiAssistantService
                 return [
                     'reply' => $fallbackReply,
                     'source' => 'local_fallback',
-                    'context_summary' => $erpContext['highlights'] ?? [],
+                    'context_summary' => (object) ($erpContext['highlights'] ?? []),
                 ];
             }
 
@@ -115,7 +115,7 @@ class GeminiAssistantService
                             return [
                                 'reply' => trim($replyText),
                                 'source' => 'gemini',
-                                'context_summary' => $erpContext['highlights'] ?? [],
+                                'context_summary' => (object) ($erpContext['highlights'] ?? []),
                             ];
                         }
                     }
@@ -142,7 +142,7 @@ class GeminiAssistantService
             return [
                 'reply' => $fallbackReply,
                 'source' => 'local_fallback',
-                'context_summary' => $erpContext['highlights'] ?? [],
+                'context_summary' => (object) ($erpContext['highlights'] ?? []),
             ];
         } catch (\Throwable $e) {
             Log::error('GeminiAssistantService top-level exception: ' . $e->getMessage(), [
@@ -157,7 +157,7 @@ class GeminiAssistantService
             return [
                 'reply' => $this->generateLocalSummaryResponse($userMessage, $safeContext),
                 'source' => 'safe_fallback',
-                'context_summary' => [],
+                'context_summary' => (object) [],
             ];
         }
     }

@@ -110,7 +110,10 @@ class AiAssistantNotifier extends StateNotifier<AiAssistantState> {
         final data = response.data;
         final replyText = data['reply']?.toString() ?? 'ببورە، وەڵامێک لە سێرڤەرەوە نەگەڕایەوە.';
         final source = data['source']?.toString();
-        final highlights = data['context_summary'] as Map<String, dynamic>?;
+        Map<String, dynamic>? highlights;
+        if (data['context_summary'] is Map) {
+          highlights = Map<String, dynamic>.from(data['context_summary'] as Map);
+        }
 
         final assistantMessage = AiChatMessage(
           id: 'assistant_${DateTime.now().millisecondsSinceEpoch}',
