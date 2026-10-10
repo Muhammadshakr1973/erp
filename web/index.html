@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ku">
+<html lang="ku" dir="rtl">
 <head>
   <base href="/">
 
@@ -10,7 +10,7 @@
   <meta property="og:description" content="Comprehensive Distribution and Inventory ERP with Laravel REST backend and Flutter client">
 
   <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="GARDI ERP">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -21,11 +21,11 @@
   <title>GARDI ERP</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Pusher Channels JavaScript SDK required by pusher_channels_flutter on Web -->
-  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+  <!-- Pusher Channels JavaScript SDK (deferred to prevent render-blocking) -->
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js" defer></script>
 
-  <!-- Preload ZXing Barcode Scanning Library to eliminate camera initialization delay -->
-  <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3"></script>
+  <!-- Preload ZXing Barcode Scanning Library (deferred) -->
+  <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3" defer></script>
 
   <style>
     /* Fix Platform View and Camera Video positioning for Fullscreen Viewfinder */
@@ -45,37 +45,8 @@
       max-height: 100% !important;
     }
   </style>
-
-  <!-- Modern Flutter Web Initialization -->
-  <script>
-    window._flutter = window._flutter || {};
-    window._flutter.buildConfig = window._flutter.buildConfig || {
-      builds: [
-        {
-          compileTarget: 'dart2js',
-          renderer: 'canvaskit',
-          mainImport: 'main.dart.js'
-        }
-      ]
-    };
-  </script>
-  <script src="flutter.js" defer></script>
 </head>
 <body>
-  <script>
-    window.addEventListener('load', function(ev) {
-      if (window._flutter && window._flutter.loader) {
-        window._flutter.loader.load({
-          config: window._flutter.buildConfig
-        });
-      }
-      // If no Flutter entrypoint canvas is mounted within 500ms, redirect to root GARDI ERP portal
-      setTimeout(function() {
-        if (!document.querySelector('flt-glass-pane') && !document.querySelector('flutter-view')) {
-          window.location.replace('/');
-        }
-      }, 500);
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

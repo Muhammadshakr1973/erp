@@ -7,17 +7,24 @@ import '../../../core/sync/pusher_service.dart';
 import '../models/user_model.dart';
 
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 
 String _getDeviceName() {
   if (kIsWeb) return 'Web';
-  if (Platform.isAndroid) return 'Android Device';
-  if (Platform.isIOS) return 'iOS Device';
-  if (Platform.isWindows) return 'Windows Device';
-  if (Platform.isMacOS) return 'macOS Device';
-  if (Platform.isLinux) return 'Linux Device';
-  return 'Unknown Device';
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return 'Android Device';
+    case TargetPlatform.iOS:
+      return 'iOS Device';
+    case TargetPlatform.windows:
+      return 'Windows Device';
+    case TargetPlatform.macOS:
+      return 'macOS Device';
+    case TargetPlatform.linux:
+      return 'Linux Device';
+    case TargetPlatform.fuchsia:
+      return 'Fuchsia Device';
+  }
 }
 
 

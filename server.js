@@ -123,8 +123,6 @@ const server = http.createServer((req, res) => {
       }
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
       res.end(content);
     });
     return;
