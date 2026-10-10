@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/components/responsive_shell.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
-import 'package:pos_app/features/admin/views/admin_dashboard_screen.dart';
+import 'admin_dashboard_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_customers_screen.dart';
 import 'admin_routes_screen.dart';
