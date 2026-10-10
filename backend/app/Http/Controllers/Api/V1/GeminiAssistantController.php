@@ -22,24 +22,38 @@ class GeminiAssistantController extends Controller
      */
     public function chat(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'message' => 'required|string|max:2000',
-            'history' => 'nullable|array|max:20',
-            'history.*.role' => 'required_with:history|string|in:user,assistant',
-            'history.*.content' => 'required_with:history|string|max:3000',
-        ]);
+        try {
+            $validated = $request->validate([
+                'message' => 'required|string|max:2000',
+                'history' => 'nullable|array|max:20',
+                'history.*.role' => 'required_with:history|string|in:user,assistant',
+                'history.*.content' => 'required_with:history|string|max:3000',
+            ]);
 
-        $userMessage = trim($validated['message']);
-        $chatHistory = $validated['history'] ?? [];
+            $userMessage = trim($validated['message']);
+            $chatHistory = $validated['history'] ?? [];
 
-        $result = $this->assistantService->ask($userMessage, $chatHistory);
+            $result = $this->assistantService->ask($userMessage, $chatHistory);
 
-        return response()->json([
-            'status' => 'success',
-            'reply' => $result['reply'],
-            'source' => $result['source'],
-            'context_summary' => $result['context_summary'] ?? [],
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'reply' => $result['reply'],
+                'source' => $result['source'],
+                'context_summary' => $result['context_summary'] ?? [],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            throw $ve;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gemini Assistant chat exception: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'reply' => '⚠️ نەتوانرا وەڵام وەربگیرێت: کێشەیەک لە پەیوەندی بە سیستەم ڕوویدا (' . $e->getMessage() . ')',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -269,5 +269,6 @@ Route::prefix('v1')->group(function () {
 
         // AI Executive Assistant (Admin / Owner Only)
         Route::post('/ai/assistant/chat', [GeminiAssistantController::class, 'chat'])->middleware('permission:users.manage');
+        Route::get('/ai/assistant/test-key', [GeminiAssistantController::class, 'testKey'])->middleware('permission:users.manage');
     });
 });

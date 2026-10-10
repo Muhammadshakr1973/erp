@@ -29,6 +29,7 @@ class _AdminAiAssistantDialogState extends ConsumerState<AdminAiAssistantDialog>
   final FocusNode _focusNode = FocusNode();
 
   final List<String> _quickSuggestions = [
+    '👥 چەند کڕیارمان هەیە؟',
     '📊 فرۆش و قازانجی ئەمڕۆ چەندە؟',
     '📈 قازانجی ئەم مانگە چەندە؟',
     '💳 کێ زۆرترین قەرزی لەسەرە؟',
