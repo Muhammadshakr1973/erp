@@ -8,6 +8,55 @@
   <meta property="og:description" content="Comprehensive Distribution and Inventory ERP with Laravel REST backend and Flutter client">
   <title>GARDI ERP</title>
   <link rel="icon" type="image/png" href="/web/favicon.png">
+  <script>
+    (function() {
+      function shouldSuppress(args) {
+        if (!args || !args.length) return false;
+        for (var i = 0; i < args.length; i++) {
+          var item = args[i];
+          if (!item) continue;
+          var str = '';
+          if (typeof item === 'string') {
+            str = item;
+          } else if (item instanceof Error || (typeof item === 'object' && item.message)) {
+            str = item.message || '';
+          } else {
+            try {
+              str = String(item);
+            } catch (e) {
+              str = '';
+            }
+          }
+          if (str.indexOf('Trying to play video that is already playing') !== -1 ||
+              str.indexOf('play video that is already playing') !== -1) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      var origWarn = (console.warn || function(){}).bind(console);
+      function filteredWarn() {
+        if (shouldSuppress(arguments)) return;
+        return origWarn.apply(console, arguments);
+      }
+
+      try {
+        Object.defineProperty(console, 'warn', {
+          get: function() { return filteredWarn; },
+          set: function(newWarn) {
+            if (typeof newWarn === 'function' && newWarn !== filteredWarn) {
+              origWarn = newWarn;
+            }
+          },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (e) {
+        console.warn = filteredWarn;
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg-main: #0f172a;

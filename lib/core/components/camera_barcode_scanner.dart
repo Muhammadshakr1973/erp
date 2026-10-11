@@ -151,6 +151,9 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
     _manualInputController.dispose();
     _keyboardFocusNode.dispose();
     _manualInputFocusNode.dispose();
+    try {
+      _scannerController?.stop();
+    } catch (_) {}
     _scannerController?.dispose();
     super.dispose();
   }
@@ -164,6 +167,10 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
     setState(() {
       _isProcessing = true;
     });
+
+    try {
+      _scannerController?.stop();
+    } catch (_) {}
 
     try {
       NotificationSoundService.playNotificationSound();
@@ -761,6 +768,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                   label: const Text('دووبارە هەوڵدانەوە'),
                   onPressed: () async {
                     try {
+                      await _scannerController?.stop();
                       await _scannerController?.start();
                     } catch (_) {}
                   },

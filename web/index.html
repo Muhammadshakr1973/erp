@@ -21,23 +21,62 @@
   <title>GARDI ERP</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Suppress benign ZXing library video playback warning before libraries load -->
+  <script>
+    (function() {
+      function shouldSuppress(args) {
+        if (!args || !args.length) return false;
+        for (var i = 0; i < args.length; i++) {
+          var item = args[i];
+          if (!item) continue;
+          var str = '';
+          if (typeof item === 'string') {
+            str = item;
+          } else if (item instanceof Error || (typeof item === 'object' && item.message)) {
+            str = item.message || '';
+          } else {
+            try {
+              str = String(item);
+            } catch (e) {
+              str = '';
+            }
+          }
+          if (str.indexOf('Trying to play video that is already playing') !== -1 ||
+              str.indexOf('play video that is already playing') !== -1) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      var origWarn = (console.warn || function(){}).bind(console);
+      function filteredWarn() {
+        if (shouldSuppress(arguments)) return;
+        return origWarn.apply(console, arguments);
+      }
+
+      try {
+        Object.defineProperty(console, 'warn', {
+          get: function() { return filteredWarn; },
+          set: function(newWarn) {
+            if (typeof newWarn === 'function' && newWarn !== filteredWarn) {
+              origWarn = newWarn;
+            }
+          },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (e) {
+        console.warn = filteredWarn;
+      }
+    })();
+  </script>
+
   <!-- Pusher Channels JavaScript SDK required by pusher_channels_flutter on Web -->
   <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
   <!-- Preload ZXing Barcode Scanning Library to eliminate camera initialization delay -->
   <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3"></script>
-  <script>
-    // Suppress benign ZXing library warning when video is already playing
-    (function() {
-      var origWarn = console.warn;
-      console.warn = function() {
-        if (arguments.length > 0 && typeof arguments[0] === 'string' && arguments[0].indexOf('Trying to play video that is already playing') !== -1) {
-          return;
-        }
-        origWarn.apply(console, arguments);
-      };
-    })();
-  </script>
 
   <style>
     /* Fix Platform View and Camera Video positioning for Fullscreen Viewfinder */
