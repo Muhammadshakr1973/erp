@@ -269,20 +269,20 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                     color: Colors.black,
                                   ),
 
-                                  // ٢- بەشی سەرەوە لای ڕاست: کیو ئاڕ کۆد و ژمارەکەی لەژێری (بە گەورەیی و بۆشایی کەمکراوە)
+                                  // ٢- بەشی سەرەوە لای ڕاست: کیو ئاڕ کۆد بە پادین لە چواردەوری و ژمارەکەی لەژێری بە گەورەتری
                                   Expanded(
                                     child: Container(
-                                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 2),
+                                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
                                         children: [
-                                          // کیو ئاڕ کۆدی کاڵا بە گەورەیی
+                                          // کیو ئاڕ کۆدی کاڵا بە پادین لە هەر چواردەوری
                                           Expanded(
                                             child: Center(
                                               child: QrImageView(
                                                 data: barcodeText.isEmpty ? '07849564845' : barcodeText,
                                                 version: QrVersions.auto,
-                                                padding: const EdgeInsets.all(1),
+                                                padding: const EdgeInsets.all(6),
                                                 backgroundColor: Colors.white,
                                                 eyeStyle: const QrEyeStyle(
                                                   eyeShape: QrEyeShape.square,
@@ -295,21 +295,23 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          // ژمارەی کۆدەکە لەژێر کیو ئاڕ کۆدەکە بە گەورەیی و ڕوونی
-                                          Text(
-                                            barcodeText.isEmpty ? '07849564845' : barcodeText,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontFamily: 'Rudaw',
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.black,
-                                              letterSpacing: 2.5,
-                                              height: 1.0,
+                                          const SizedBox(height: 3),
+                                          // ژمارەی کۆدەکە لەژێر کیو ئاڕ کۆدەکە بە گەورەتری و ڕوونی
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              barcodeText.isEmpty ? '07849564845' : barcodeText,
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                fontFamily: 'Rudaw',
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.black,
+                                                letterSpacing: 2.0,
+                                                height: 1.0,
+                                              ),
+                                              maxLines: 1,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
