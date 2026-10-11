@@ -19,12 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://pos.gardi.click'],
+    'allowed_origins' => ['*'],
 
-    'allowed_origins_patterns' => [
-        '#^http://localhost(:\d+)?$#',
-        '#^http://127\.0\.0\.1(:\d+)?$#',
-    ],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
