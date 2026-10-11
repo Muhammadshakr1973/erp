@@ -1,7 +1,6 @@
 <?php
 
 return [
-<<<<<<< HEAD
 
     /*
     |--------------------------------------------------------------------------
@@ -16,8 +15,6 @@ return [
     |
     */
 
-=======
->>>>>>> 5c9b059 (Update from VS Code)
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
@@ -25,13 +22,8 @@ return [
     'allowed_origins' => ['https://pos.gardi.click'],
 
     'allowed_origins_patterns' => [
-<<<<<<< HEAD
         '#^http://localhost(:\d+)?$#',
         '#^http://127\.0\.0\.1(:\d+)?$#',
-=======
-        '#^http://localhost(:\\d+)?$#',
-        '#^http://127\\.0\\.0\\.1(:\\d+)?$#',
->>>>>>> 5c9b059 (Update from VS Code)
     ],
 
     'allowed_headers' => ['*'],
@@ -41,9 +33,5 @@ return [
     'max_age' => 0,
 
     'supports_credentials' => false,
-<<<<<<< HEAD
 
 ];
-=======
-];
->>>>>>> 5c9b059 (Update from VS Code)
