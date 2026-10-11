@@ -102,9 +102,20 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
   bool _showManualField = false;
   CameraFacing _currentFacing = CameraFacing.back;
 
+  bool get _isCameraSupportedOnPlatform {
+    if (kIsWeb) return true;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
   @override
   void initState() {
     super.initState();
+
+    if (!_isCameraSupportedOnPlatform) {
+      _showManualField = true;
+    }
 
     _laserController = AnimationController(
       vsync: this,
@@ -115,12 +126,18 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _keyboardFocusNode.requestFocus();
+        if (!_isCameraSupportedOnPlatform) {
+          _manualInputFocusNode.requestFocus();
+        } else {
+          _keyboardFocusNode.requestFocus();
+        }
       }
     });
   }
 
   void _initializeController() {
+    if (!_isCameraSupportedOnPlatform) return;
+
     try {
       _scannerController = MobileScannerController(
         detectionSpeed: DetectionSpeed.noDuplicates,
@@ -264,6 +281,15 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (!_isCameraSupportedOnPlatform) {
+      return KeyboardListener(
+        focusNode: _keyboardFocusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: _buildDesktopScannerInterface(theme),
+      );
+    }
 
     return KeyboardListener(
       focusNode: _keyboardFocusNode,
@@ -834,6 +860,273 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopScannerInterface(ThemeData theme) {
+    return Container(
+      color: const Color(0xFF0B132B),
+      child: Column(
+        children: [
+          // Top Header Bar
+          SafeArea(
+            top: true,
+            bottom: false,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  _buildGlassIconButton(
+                    icon: widget.isFullscreen
+                        ? Icons.arrow_back_rounded
+                        : Icons.close_rounded,
+                    tooltip: 'داخستن',
+                    onPressed: () {
+                      if (mounted && Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.greenAccent,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.greenAccent.withValues(alpha: 0.8),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'سکانەری بارکۆدی دێسکتۆپ (POS Workstation)',
+                      style: AppTextStyles.bodyBold.copyWith(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Main Interactive Center Body
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Glowing Icon Centerpiece
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.18),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                            blurRadius: 28,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.qr_code_scanner_rounded,
+                        size: 46,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    Text(
+                      'سکانەری دەستی (USB / Wireless) چالاکە',
+                      style: AppTextStyles.h3.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Subtitle / Instruction
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Text(
+                        'ئامێری سکانەری بارکۆد ئامادەیە بۆ خوێندنەوە. تەنها بارکۆدی بەرهەمەکە بە دەمانچەی سکانەر لێبدە یان لە خوارەوە بە دەست بینوسە.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white70,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Active Scanning Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.greenAccent.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.sensors_rounded,
+                            size: 18,
+                            color: Colors.greenAccent,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'چاوەڕوانی لێدانی بارکۆدە (Listening for Scans)...',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.greenAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Manual Text Input Field
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _manualInputController,
+                                focusNode: _manualInputFocusNode,
+                                style: const TextStyle(color: Colors.white, fontSize: 15),
+                                autofocus: true,
+                                keyboardType: TextInputType.text,
+                                decoration: InputDecoration(
+                                  hintText: 'کۆدی بارکۆد بە دەست بنووسە...',
+                                  hintStyle: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.keyboard_alt_outlined,
+                                    color: Colors.white70,
+                                    size: 20,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(alpha: 0.08),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                onSubmitted: (value) {
+                                  if (value.trim().isNotEmpty) {
+                                    _onSuccessScan(value.trim());
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            AppButton(
+                              text: 'لێدان',
+                              icon: Icons.check_circle_outline,
+                              onPressed: () {
+                                if (_manualInputController.text.trim().isNotEmpty) {
+                                  _onSuccessScan(_manualInputController.text.trim());
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Linux Technical Note info
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: Colors.amberAccent,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'تێبینی: لە سیستەمی لینوکس، بەکارهێنانی دەمانچەی بارکۆدی USB ستانداردە. کامێرای ڕاستەوخۆ تەنها لە مۆبایل و وێب پشتگیری دەکرێت.',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.amber.shade200,
+                                  fontSize: 11.5,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
