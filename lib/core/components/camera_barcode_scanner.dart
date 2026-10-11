@@ -419,11 +419,15 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      'سکانەری بارکۆد',
-                                      style: AppTextStyles.bodyBold.copyWith(
-                                        color: Colors.white,
-                                        fontSize: 16,
+                                    Flexible(
+                                      child: Text(
+                                        'سکانەری بارکۆد',
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
@@ -493,11 +497,15 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                               color: Colors.white70,
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'بارکۆد یان QR لەناو چوارچێوەکە ڕابگرە',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                            Flexible(
+                              child: Text(
+                                'بارکۆد یان QR لەناو چوارچێوەکە ڕابگرە',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -610,30 +618,38 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   // Hardware Scanner Gun Status
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.qr_code_scanner_rounded,
-                                        size: 16,
-                                        color: Colors.white70,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'سکانەری دەرەکی (USB/BT) چالاکە',
-                                        style: AppTextStyles.caption.copyWith(
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.qr_code_scanner_rounded,
+                                          size: 16,
                                           color: Colors.white70,
-                                          fontSize: 12,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            'سکانەری دەرەکی (USB/BT) چالاکە',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: Colors.white70,
+                                              fontSize: 12,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                  const SizedBox(width: 8),
 
                                   // Manual entry button
                                   TextButton.icon(
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.white,
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
+                                        horizontal: 10,
                                         vertical: 6,
                                       ),
                                       backgroundColor: Colors.white.withValues(alpha: 0.12),
