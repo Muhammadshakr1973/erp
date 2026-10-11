@@ -249,6 +249,13 @@ class UserController extends Controller
                             ->where('week_number', $week)
                             ->delete();
                     } else {
+                        // Enforce Rule 14: Clear any other salesman assigned to this route on this same day & week
+                        \App\Models\RouteSalesman::where('route_id', $routeId)
+                            ->where('day_of_week', $day)
+                            ->where('week_number', $week)
+                            ->where('salesman_id', '!=', $user->id)
+                            ->delete();
+
                         \App\Models\RouteSalesman::updateOrCreate(
                             [
                                 'salesman_id' => $user->id,

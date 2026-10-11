@@ -23,7 +23,7 @@ class ReportController extends Controller
      */
     public function dashboard(): JsonResponse
     {
-        $cacheKey = 'admin_dashboard_kpis_v4';
+        $cacheKey = 'admin_dashboard_kpis_v5';
 
         $data = Cache::remember($cacheKey, 60, function () {
             $startOfMonth = Carbon::now()->startOfMonth();
@@ -95,6 +95,31 @@ class ReportController extends Controller
                 'last_collection_driver'   => $lastCollectionDriverName,
             ];
         });
+
+        // 10. Real-time authoritative salesmen plan for today (single source of truth)
+        $todaySalesmenPlan = [];
+        $salesmen = \App\Models\User::whereHas('role', function ($q) {
+            $q->where('name', \App\Models\Role::SALESMAN);
+        })->where('is_active', true)->orderBy('name')->get();
+
+        foreach ($salesmen as $salesman) {
+            $todayRouteId = $salesman->getTodayRouteId();
+            if ($todayRouteId) {
+                $route = \App\Models\Route::find($todayRouteId);
+                if ($route && $route->is_active) {
+                    $todaySalesmenPlan[] = [
+                        'salesman_id'     => $salesman->id,
+                        'salesman_name'   => $salesman->name,
+                        'salesman_phone'  => $salesman->phone,
+                        'route_id'        => $route->id,
+                        'route_name'      => $route->name,
+                        'route_color'     => $route->color,
+                        'customers_count' => (int) $route->customers()->where('is_active', true)->where('id', '!=', 0)->count(),
+                    ];
+                }
+            }
+        }
+        $data['today_salesmen_plan'] = $todaySalesmenPlan;
 
         return response()->json([
             'message' => 'ئامارەکانی داشبۆرد',

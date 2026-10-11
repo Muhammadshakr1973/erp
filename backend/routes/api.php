@@ -132,6 +132,7 @@ Route::prefix('v1')->group(function () {
         // Routes & Salesmen Assign (Admins manage, anyone reads)
         Route::get('/salesmen', [RouteController::class, 'getSalesmen']);
         Route::get('/routes', [RouteController::class, 'index']);
+        Route::get('/routes/today-assignments', [RouteController::class, 'todayAssignments']);
         Route::get('/routes/{route}', [RouteController::class, 'show']);
         Route::post('/routes', [RouteController::class, 'store'])->middleware('permission:routes.manage');
         Route::put('/routes/{route}', [RouteController::class, 'update'])->middleware('permission:routes.manage');

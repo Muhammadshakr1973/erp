@@ -149,6 +149,7 @@ class User extends Authenticatable
         $routeSalesman = $this->routeSalesmen()
             ->where('is_active', true)
             ->where('work_date', $today)
+            ->orderByDesc('id')
             ->first();
 
         if (!$routeSalesman) {
@@ -161,7 +162,13 @@ class User extends Authenticatable
             $routeSalesman = $this->routeSalesmen()
                 ->where('is_active', true)
                 ->where('day_of_week', $currentDayOfWeek)
-                ->where('week_number', $weekNumber)
+                ->where(function ($q) use ($weekNumber, $cycle) {
+                    $q->where('week_number', $weekNumber);
+                    if ($cycle === '1_week') {
+                        $q->orWhereNull('week_number');
+                    }
+                })
+                ->orderByDesc('id')
                 ->first();
         }
 

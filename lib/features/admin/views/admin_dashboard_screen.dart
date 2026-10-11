@@ -41,55 +41,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final theme = Theme.of(context);
     final dashboardAsync = ref.watch(dashboardProvider);
     final salesmenReportAsync = ref.watch(salesBySalesmanReportProvider(const {}));
-    final routesAsync = ref.watch(routeListProvider);
-
-    // Local function to compute today's assignments
-    List<_TodayAssignment> getTodayAssignments(List<RouteModel> routes) {
-      final now = DateTime.now();
-      final englishDays = [
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday'
-      ];
-      final todayDayName = englishDays[now.weekday - 1];
-      final todayDateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final englishToKurdishMap = {
-        'Saturday': 'شەممە',
-        'Sunday': 'یەکشەممە',
-        'Monday': 'دووشەممە',
-        'Tuesday': 'سێشەممە',
-        'Wednesday': 'چوارشەممە',
-        'Thursday': 'پێنجشەممە',
-        'Friday': 'هەینی',
-      };
-      final todayKurdishName = englishToKurdishMap[todayDayName] ?? '';
-
-      final list = <_TodayAssignment>[];
-      for (final route in routes) {
-        for (final salesman in route.salesmen) {
-          final isTodayDate = salesman.workDate != null &&
-              salesman.workDate!.trim() == todayDateStr;
-          final isTodayDay = salesman.dayOfWeek != null &&
-              (salesman.dayOfWeek == todayDayName ||
-                  salesman.dayOfWeek == todayKurdishName);
-
-          if (isTodayDate || isTodayDay) {
-            list.add(_TodayAssignment(
-              salesmanName: salesman.name,
-              salesmanPhone: salesman.phone,
-              routeName: route.name,
-              routeColor: route.color,
-              customersCount: route.customersCount,
-            ));
-          }
-        }
-      }
-      return list;
-    }
+    final todayAssignmentsAsync = ref.watch(todayRouteAssignmentsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -141,6 +93,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         onRefresh: () async {
           ref.invalidate(dashboardProvider);
           ref.invalidate(salesBySalesmanReportProvider(const {}));
+          ref.invalidate(todayRouteAssignmentsProvider);
           ref.invalidate(routeListProvider);
         },
         child: SingleChildScrollView(
@@ -227,20 +180,54 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.sectionGap),
 
-              // Today's Salesmen Plan Section
-              routesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Container(
-                  key: _todayPlanKey,
-                  child: Center(
-                    child: Text(
-                      'هەڵەیەک لە بارکردنی پلانی مەندوبەکاندا هەیە: ${Formatters.cleanError(error)}',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+              // Today's Salesmen Plan Section (Authoritative Server-Calculated)
+              todayAssignmentsAsync.when(
+                loading: () => dashboardAsync.maybeWhen(
+                  data: (dashboard) => _buildTodaySalesmenPlanList(
+                    context,
+                    dashboard.todaySalesmenPlan.map((p) => _TodayAssignment(
+                      salesmanName: p.salesmanName,
+                      salesmanPhone: p.salesmanPhone,
+                      routeName: p.routeName,
+                      routeColor: p.routeColor,
+                      customersCount: p.customersCount,
+                    )).toList(),
+                  ),
+                  orElse: () => const Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, stack) => dashboardAsync.maybeWhen(
+                  data: (dashboard) => _buildTodaySalesmenPlanList(
+                    context,
+                    dashboard.todaySalesmenPlan.map((p) => _TodayAssignment(
+                      salesmanName: p.salesmanName,
+                      salesmanPhone: p.salesmanPhone,
+                      routeName: p.routeName,
+                      routeColor: p.routeColor,
+                      customersCount: p.customersCount,
+                    )).toList(),
+                  ),
+                  orElse: () => Container(
+                    key: _todayPlanKey,
+                    child: Center(
+                      child: Text(
+                        'هەڵەیەک لە بارکردنی پلانی مەندوبەکاندا هەیە: ${Formatters.cleanError(error)}',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                      ),
                     ),
                   ),
                 ),
-                data: (routes) {
-                  final assignments = getTodayAssignments(routes);
+                data: (rawList) {
+                  final assignments = rawList.map((item) {
+                    return _TodayAssignment(
+                      salesmanName: item['salesman_name']?.toString() ?? '',
+                      salesmanPhone: item['salesman_phone']?.toString(),
+                      routeName: item['route_name']?.toString() ?? '',
+                      routeColor: item['route_color']?.toString(),
+                      customersCount: (item['customers_count'] is num)
+                          ? (item['customers_count'] as num).toInt()
+                          : (int.tryParse(item['customers_count']?.toString() ?? '0') ?? 0),
+                    );
+                  }).toList();
                   return _buildTodaySalesmenPlanList(context, assignments);
                 },
               ),

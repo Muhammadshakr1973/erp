@@ -44,6 +44,22 @@ final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
   }
 });
 
+final todayRouteAssignmentsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/routes/today-assignments');
+    if (response.statusCode == 200) {
+      return _parseListResponse(response.data);
+    }
+    return const [];
+  } catch (e) {
+    throw Exception(api.parseError(e));
+  }
+});
+
 final routeActionsProvider = Provider<RouteActions>((ref) {
   final api = ref.watch(apiClientProvider);
   return RouteActions(api, ref);

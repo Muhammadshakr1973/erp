@@ -131,6 +131,12 @@ class RouteController extends Controller
                 $dayOfWeek = $kurdishToEnglishMap[$dayOfWeek];
             }
 
+            // Enforce Rule 14: Clear any other salesman assigned to this route on this day
+            RouteSalesman::where('route_id', $route->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('salesman_id', '!=', $validated['salesman_id'])
+                ->delete();
+
             $assignment = RouteSalesman::updateOrCreate(
                 [
                     'salesman_id' => $validated['salesman_id'],
@@ -145,6 +151,12 @@ class RouteController extends Controller
             );
         } else {
             $workDate = $request->input('work_date') ?? now()->toDateString();
+
+            // Enforce Rule 14: Clear any other salesman assigned to this route on this work_date
+            RouteSalesman::where('route_id', $route->id)
+                ->where('work_date', $workDate)
+                ->where('salesman_id', '!=', $validated['salesman_id'])
+                ->delete();
 
             $assignment = RouteSalesman::updateOrCreate(
                 [
@@ -206,6 +218,36 @@ class RouteController extends Controller
 
         return response()->json([
             'data' => $salesmen
+        ], 200);
+    }
+
+    public function todayAssignments(Request $request): JsonResponse
+    {
+        $salesmen = User::whereHas('role', function ($q) {
+            $q->where('name', Role::SALESMAN);
+        })->where('is_active', true)->orderBy('name')->get();
+
+        $assignments = [];
+        foreach ($salesmen as $salesman) {
+            $todayRouteId = $salesman->getTodayRouteId();
+            if ($todayRouteId) {
+                $route = Route::find($todayRouteId);
+                if ($route && $route->is_active) {
+                    $assignments[] = [
+                        'salesman_id'     => $salesman->id,
+                        'salesman_name'   => $salesman->name,
+                        'salesman_phone'  => $salesman->phone,
+                        'route_id'        => $route->id,
+                        'route_name'      => $route->name,
+                        'route_color'     => $route->color,
+                        'customers_count' => (int) $route->customers()->where('is_active', true)->where('id', '!=', 0)->count(),
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'data' => $assignments
         ], 200);
     }
 
