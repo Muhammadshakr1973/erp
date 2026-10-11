@@ -279,36 +279,40 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
   }
 
   void _onScanBarcode(WarehouseOrderModel order) {
-    CameraBarcodeScanner.show(context, (scanned) {
-      WarehouseOrderItemModel? item;
-      for (final i in order.items) {
-        if (i.id.toString() == scanned || i.productId.toString() == scanned) {
-          item = i;
-          break;
+    CameraBarcodeScanner.show(
+      context,
+      (scanned) {
+        WarehouseOrderItemModel? item;
+        for (final i in order.items) {
+          if (i.id.toString() == scanned || i.productId.toString() == scanned) {
+            item = i;
+            break;
+          }
         }
-      }
 
-      if (item != null) {
-        final currentPacked = _unsavedChanges.containsKey(item.id)
-            ? _unsavedChanges[item.id]!
-            : (_optimisticPackedStates[item.id] ?? item.isPacked);
-        if (currentPacked) {
+        if (item != null) {
+          final currentPacked = _unsavedChanges.containsKey(item.id)
+              ? _unsavedChanges[item.id]!
+              : (_optimisticPackedStates[item.id] ?? item.isPacked);
+          if (currentPacked) {
+            AppSnackbar.show(
+              context,
+              message: 'ئەم کاڵایە پێشتر پاکەتکراوە',
+              type: SnackbarType.info,
+            );
+          } else {
+            _togglePack(item, true, order.items);
+          }
+        } else {
           AppSnackbar.show(
             context,
-            message: 'ئەم کاڵایە پێشتر پاکەتکراوە',
-            type: SnackbarType.info,
+            message: 'کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە',
+            type: SnackbarType.warning,
           );
-        } else {
-          _togglePack(item, true, order.items);
         }
-      } else {
-        AppSnackbar.show(
-          context,
-          message: 'کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە',
-          type: SnackbarType.warning,
-        );
-      }
-    });
+      },
+      closeOnScan: false,
+    );
   }
 
   List<Widget> _buildActions(AsyncValue<List<WarehouseOrderModel>> ordersAsync) {

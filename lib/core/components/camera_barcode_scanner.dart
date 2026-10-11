@@ -16,16 +16,23 @@ import 'app_snackbar.dart';
 class CameraBarcodeScanner extends StatefulWidget {
   final Function(String barcode) onScan;
   final bool isFullscreen;
+  final bool closeOnScan;
 
   const CameraBarcodeScanner({
     super.key,
     required this.onScan,
     this.isFullscreen = false,
+    this.closeOnScan = false,
   });
 
   /// Opens the scanner in True Fullscreen mode on mobile devices,
   /// or an expansive centered modal on desktop/tablets.
-  static Future<void> show(BuildContext context, Function(String barcode) onScan) {
+  /// If [closeOnScan] is false (default), it remains open until the user manually closes it.
+  static Future<void> show(
+    BuildContext context,
+    Function(String barcode) onScan, {
+    bool closeOnScan = false,
+  }) {
     final mediaQuery = MediaQuery.of(context);
     final isMobile = mediaQuery.size.width < 700;
 
@@ -39,6 +46,7 @@ class CameraBarcodeScanner extends StatefulWidget {
             body: CameraBarcodeScanner(
               onScan: onScan,
               isFullscreen: true,
+              closeOnScan: closeOnScan,
             ),
           ),
         ),
@@ -74,6 +82,7 @@ class CameraBarcodeScanner extends StatefulWidget {
               child: CameraBarcodeScanner(
                 onScan: onScan,
                 isFullscreen: false,
+                closeOnScan: closeOnScan,
               ),
             ),
           );
@@ -101,6 +110,12 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
   double _zoomScale = 1.0;
   bool _showManualField = false;
   CameraFacing _currentFacing = CameraFacing.back;
+
+  DateTime? _lastScanTime;
+  String? _lastScannedCode;
+  String? _recentFeedbackText;
+  Timer? _feedbackTimer;
+  Timer? _debounceTimer;
 
   bool get _isCameraSupportedOnPlatform {
     if (kIsWeb) return true;
@@ -168,6 +183,8 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
     _manualInputController.dispose();
     _keyboardFocusNode.dispose();
     _manualInputFocusNode.dispose();
+    _feedbackTimer?.cancel();
+    _debounceTimer?.cancel();
     try {
       _scannerController?.stop();
     } catch (_) {}
@@ -181,13 +198,32 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
     final barcode = rawCode.trim();
     if (barcode.isEmpty) return;
 
+    final now = DateTime.now();
+    // Debounce to prevent accidental duplicate reads in rapid succession
+    if (_lastScannedCode == barcode && _lastScanTime != null) {
+      if (now.difference(_lastScanTime!).inMilliseconds < 1500) {
+        return;
+      }
+    } else if (_lastScanTime != null && now.difference(_lastScanTime!).inMilliseconds < 600) {
+      return;
+    }
+
+    _lastScanTime = now;
+    _lastScannedCode = barcode;
+
     setState(() {
       _isProcessing = true;
+      _recentFeedbackText = barcode;
     });
 
-    try {
-      _scannerController?.stop();
-    } catch (_) {}
+    _feedbackTimer?.cancel();
+    _feedbackTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _recentFeedbackText = null;
+        });
+      }
+    });
 
     try {
       NotificationSoundService.playNotificationSound();
@@ -199,16 +235,35 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
 
     widget.onScan(barcode);
 
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
+    if (widget.closeOnScan) {
+      try {
+        _scannerController?.stop();
+      } catch (_) {}
 
-    AppSnackbar.show(
-      context,
-      message: 'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $barcode',
-      type: SnackbarType.success,
-      duration: const Duration(seconds: 2),
-    );
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      AppSnackbar.show(
+        context,
+        message: 'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $barcode',
+        type: SnackbarType.success,
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // In continuous scan mode: DO NOT CLOSE! Keep scanner open and active
+      _manualInputController.clear();
+      _scannerGunBuffer.clear();
+
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      });
+    }
   }
 
   /// Captures physical USB/Bluetooth barcode scanner gun input (HID keyboard emulation)
@@ -218,11 +273,15 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
 
       if (logicalKey == LogicalKeyboardKey.enter) {
         if (_scannerGunBuffer.isNotEmpty) {
-          final scannedCode = _scannerGunBuffer.toString();
+          final scannedCode = _scannerGunBuffer.toString().trim();
           _scannerGunBuffer.clear();
-          _onSuccessScan(scannedCode);
+          if (scannedCode.isNotEmpty) {
+            _onSuccessScan(scannedCode);
+          }
         } else if (_manualInputController.text.trim().isNotEmpty) {
-          _onSuccessScan(_manualInputController.text.trim());
+          final text = _manualInputController.text.trim();
+          _manualInputController.clear();
+          _onSuccessScan(text);
         }
       } else {
         final character = event.character;
@@ -508,24 +567,35 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
+                          color: _recentFeedbackText != null
+                              ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                              : Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.12),
+                            color: _recentFeedbackText != null
+                                ? Colors.greenAccent
+                                : Colors.white.withValues(alpha: 0.12),
+                            width: _recentFeedbackText != null ? 1.5 : 1.0,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.center_focus_strong_rounded,
+                            Icon(
+                              _recentFeedbackText != null
+                                  ? Icons.check_circle_rounded
+                                  : Icons.center_focus_strong_rounded,
                               size: 16,
-                              color: Colors.white70,
+                              color: _recentFeedbackText != null
+                                  ? Colors.greenAccent
+                                  : Colors.white70,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                'بارکۆد یان QR لەناو چوارچێوەکە ڕابگرە',
+                                _recentFeedbackText != null
+                                    ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                    : 'بارکۆد یان QR لەناو چوارچێوەکە ڕابگرە',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
@@ -668,7 +738,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                   const SizedBox(width: 8),
 
                                   // Manual entry button
                                   TextButton.icon(
@@ -703,6 +773,36 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                                         });
                                       } else {
                                         _keyboardFocusNode.requestFocus();
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 6),
+
+                                  // Done / Finish button
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      backgroundColor: Colors.redAccent.withValues(alpha: 0.25),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.check_circle_outline_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'تەواو',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: () {
+                                      if (mounted && Navigator.of(context).canPop()) {
+                                        Navigator.of(context).pop();
                                       }
                                     },
                                   ),
@@ -994,23 +1094,32 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.greenAccent.withValues(alpha: 0.12),
+                        color: _recentFeedbackText != null
+                            ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                            : Colors.greenAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.greenAccent.withValues(alpha: 0.3),
+                          color: _recentFeedbackText != null
+                              ? Colors.greenAccent
+                              : Colors.greenAccent.withValues(alpha: 0.3),
+                          width: _recentFeedbackText != null ? 1.5 : 1.0,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.sensors_rounded,
+                          Icon(
+                            _recentFeedbackText != null
+                                ? Icons.check_circle_rounded
+                                : Icons.sensors_rounded,
                             size: 18,
                             color: Colors.greenAccent,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'چاوەڕوانی لێدانی بارکۆدە (Listening for Scans)...',
+                            _recentFeedbackText != null
+                                ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                : 'چاوەڕوانی لێدانی بارکۆدە (Listening for Scans)...',
                             style: AppTextStyles.caption.copyWith(
                               color: Colors.greenAccent,
                               fontWeight: FontWeight.w600,
@@ -1120,6 +1229,27 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                           ],
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text(
+                        'تەواوکردن و داخستن',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        if (mounted && Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
+                      },
                     ),
                   ],
                 ),

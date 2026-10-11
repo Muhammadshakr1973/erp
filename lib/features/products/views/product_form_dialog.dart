@@ -505,13 +505,15 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         IconButton(
                                           icon: const Icon(Icons.qr_code_scanner),
                                           onPressed: () {
-                                            CameraBarcodeScanner.show(context, (
-                                              scanned,
-                                            ) {
-                                              setState(() {
-                                                _barcodeController.text = scanned;
-                                              });
-                                            });
+                                            CameraBarcodeScanner.show(
+                                              context,
+                                              (scanned) {
+                                                setState(() {
+                                                  _barcodeController.text = scanned;
+                                                });
+                                              },
+                                              closeOnScan: true,
+                                            );
                                           },
                                         ),
                                         if (widget.product != null)
@@ -574,13 +576,15 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       IconButton(
                                         icon: const Icon(Icons.qr_code_scanner),
                                         onPressed: () {
-                                          CameraBarcodeScanner.show(context, (
-                                            scanned,
-                                          ) {
-                                            setState(() {
-                                              _barcodeController.text = scanned;
-                                            });
-                                          });
+                                          CameraBarcodeScanner.show(
+                                            context,
+                                            (scanned) {
+                                              setState(() {
+                                                _barcodeController.text = scanned;
+                                              });
+                                            },
+                                            closeOnScan: true,
+                                          );
                                         },
                                       ),
                                       if (widget.product != null)

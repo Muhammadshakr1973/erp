@@ -1575,13 +1575,17 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         color: theme.colorScheme.primary,
                         tooltip: 'سکانی QR Code',
                         onPressed: () {
-                          CameraBarcodeScanner.show(context, (barcode) {
-                            if (mounted) {
-                              setState(() {
-                                _barcodeController.text = barcode;
-                              });
-                            }
-                          });
+                          CameraBarcodeScanner.show(
+                            context,
+                            (barcode) {
+                              if (mounted) {
+                                setState(() {
+                                  _barcodeController.text = barcode;
+                                });
+                              }
+                            },
+                            closeOnScan: true,
+                          );
                         },
                       ),
                       const SizedBox(width: 8),

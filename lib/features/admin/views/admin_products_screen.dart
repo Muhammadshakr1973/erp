@@ -193,14 +193,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   child: IconButton(
                     icon: const Icon(AppIcons.scan),
                     onPressed: () {
-                      CameraBarcodeScanner.show(context, (scannedBarcode) {
-                        setState(() {
-                          _searchController.text = scannedBarcode;
-                        });
-                        ref
-                            .read(productSearchProvider.notifier)
-                            .search(scannedBarcode);
-                      });
+                      CameraBarcodeScanner.show(
+                        context,
+                        (scannedBarcode) {
+                          setState(() {
+                            _searchController.text = scannedBarcode;
+                          });
+                          ref
+                              .read(productSearchProvider.notifier)
+                              .search(scannedBarcode);
+                        },
+                        closeOnScan: true,
+                      );
                     },
                     color: theme.colorScheme.primary,
                   ),

@@ -165,10 +165,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     type: AppButtonType.outline,
                     size: AppButtonSize.lg,
                     onPressed: () {
-                      CameraBarcodeScanner.show(context, (barcode) async {
-                        final success = await ref
-                            .read(authProvider.notifier)
-                            .loginByBarcode(barcode);
+                      CameraBarcodeScanner.show(
+                        context,
+                        (barcode) async {
+                          final success = await ref
+                              .read(authProvider.notifier)
+                              .loginByBarcode(barcode);
                         if (!mounted) return;
 
                         if (success) {
@@ -200,8 +202,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               type: SnackbarType.error,
                             );
                           }
-                        }
-                      });
+                        },
+                        closeOnScan: true,
+                      );
                     },
                   ),
                 ],

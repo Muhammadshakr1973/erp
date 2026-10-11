@@ -361,12 +361,16 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
             icon: const Icon(AppIcons.scan),
             tooltip: 'سکانی باڕکۆد',
             onPressed: () {
-              CameraBarcodeScanner.show(context, (barcode) {
-                setState(() {
-                  _searchQuery = barcode;
-                  _searchController.text = barcode;
-                });
-              });
+              CameraBarcodeScanner.show(
+                context,
+                (barcode) {
+                  setState(() {
+                    _searchQuery = barcode;
+                    _searchController.text = barcode;
+                  });
+                },
+                closeOnScan: true,
+              );
             },
           ),
           IconButton(

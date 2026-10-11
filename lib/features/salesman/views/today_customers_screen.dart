@@ -46,18 +46,22 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
             icon: const Icon(AppIcons.scan),
             tooltip: 'سکانی QR',
             onPressed: () {
-              CameraBarcodeScanner.show(context, (barcode) {
-                // If the barcode is in format CUST-123
-                if (barcode.startsWith('CUST-')) {
-                  final customerId = barcode.split('-')[1];
-                  context.push('/customer/$customerId');
-                } else {
-                  setState(() {
-                    _searchQuery = barcode;
-                    _searchController.text = barcode;
-                  });
-                }
-              });
+              CameraBarcodeScanner.show(
+                context,
+                (barcode) {
+                  // If the barcode is in format CUST-123
+                  if (barcode.startsWith('CUST-')) {
+                    final customerId = barcode.split('-')[1];
+                    context.push('/customer/$customerId');
+                  } else {
+                    setState(() {
+                      _searchQuery = barcode;
+                      _searchController.text = barcode;
+                    });
+                  }
+                },
+                closeOnScan: true,
+              );
             },
           ),
           IconButton(icon: const Icon(AppIcons.filter), onPressed: () {}),

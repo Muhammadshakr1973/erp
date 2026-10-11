@@ -718,25 +718,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _scanBarcode(List<ProductModel> products) {
-    CameraBarcodeScanner.show(context, (scannedBarcode) {
-      final matched = products
-          .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
-          .firstOrNull;
-      if (matched != null) {
-        _addToCart(matched.id);
-        AppSnackbar.show(
-          context,
-          message: '${matched.name} زیادکرا بۆ سەبەتە',
-          type: SnackbarType.success,
-        );
-      } else {
-        AppSnackbar.show(
-          context,
-          message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
-          type: SnackbarType.error,
-        );
-      }
-    });
+    CameraBarcodeScanner.show(
+      context,
+      (scannedBarcode) {
+        final matched = products
+            .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
+            .firstOrNull;
+        if (matched != null) {
+          _addToCart(matched.id);
+          AppSnackbar.show(
+            context,
+            message: '${matched.name} زیادکرا بۆ سەبەتە',
+            type: SnackbarType.success,
+          );
+        } else {
+          AppSnackbar.show(
+            context,
+            message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
+            type: SnackbarType.error,
+          );
+        }
+      },
+      closeOnScan: false,
+    );
   }
 
   Future<void> _autoSaveOrder(
