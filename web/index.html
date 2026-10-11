@@ -26,6 +26,18 @@
 
   <!-- Preload ZXing Barcode Scanning Library to eliminate camera initialization delay -->
   <script id="mobile-scanner-barcode-reader" src="https://unpkg.com/@zxing/library@0.21.3"></script>
+  <script>
+    // Suppress benign ZXing library warning when video is already playing
+    (function() {
+      var origWarn = console.warn;
+      console.warn = function() {
+        if (arguments.length > 0 && typeof arguments[0] === 'string' && arguments[0].indexOf('Trying to play video that is already playing') !== -1) {
+          return;
+        }
+        origWarn.apply(console, arguments);
+      };
+    })();
+  </script>
 
   <style>
     /* Fix Platform View and Camera Video positioning for Fullscreen Viewfinder */

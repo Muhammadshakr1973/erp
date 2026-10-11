@@ -57,8 +57,8 @@ final filteredCustomerListProvider =
       ref,
       filters,
     ) async {
-      final userId = ref.watch(authProvider.select((state) => state.user?.id));
-      if (userId == null) {
+      final user = ref.watch(authProvider.select((state) => state.user));
+      if (user == null) {
         return PaginatedResponse<Customer>(
           data: const [],
           currentPage: 1,
@@ -67,6 +67,19 @@ final filteredCustomerListProvider =
           perPage: 15,
         );
       }
+
+      final role = user.role.toLowerCase();
+      // Warehouse and driver roles do not have permission to view customer directory
+      if (role != 'admin' && role != 'owner' && role != 'salesman') {
+        return PaginatedResponse<Customer>(
+          data: const [],
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+          perPage: filters.perPage ?? 15,
+        );
+      }
+
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
 
@@ -119,6 +132,11 @@ final filteredCustomerListProvider =
     });
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) {
+  final user = ref.watch(authProvider.select((state) => state.user));
+  final role = user?.role.toLowerCase();
+  if (user == null || (role != 'admin' && role != 'owner' && role != 'salesman')) {
+    return const [];
+  }
   final paginatedAsync = ref.watch(
     filteredCustomerListProvider(const CustomerFilters(perPage: 500)),
   );
@@ -133,9 +151,13 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
   ref,
   id,
 ) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) {
+  final user = ref.watch(authProvider.select((state) => state.user));
+  if (user == null) {
     throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+  }
+  final role = user.role.toLowerCase();
+  if (role != 'admin' && role != 'owner' && role != 'salesman') {
+    throw Exception('بەکارهێنەر مۆڵەتی بینینی زانیارییەکانی ئەم کڕیارەی نییە');
   }
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
@@ -170,9 +192,13 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
 
 final customerReconciliationProvider =
     FutureProvider.family<CustomerReconciliationModel, int>((ref, id) async {
-      final userId = ref.watch(authProvider.select((state) => state.user?.id));
-      if (userId == null) {
+      final user = ref.watch(authProvider.select((state) => state.user));
+      if (user == null) {
         throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+      }
+      final role = user.role.toLowerCase();
+      if (role != 'admin' && role != 'owner') {
+        throw Exception('تەنها بەڕێوەبەر مۆڵەتی ئەم بەشەی هەیە');
       }
       final api = ref.watch(apiClientProvider);
       try {
@@ -199,8 +225,12 @@ final customerLedgerProvider =
       ref,
       filters,
     ) async {
-      final userId = ref.watch(authProvider.select((state) => state.user?.id));
-      if (userId == null) return const [];
+      final user = ref.watch(authProvider.select((state) => state.user));
+      if (user == null) return const [];
+      final role = user.role.toLowerCase();
+      if (role != 'admin' && role != 'owner' && role != 'salesman') {
+        return const [];
+      }
       final api = ref.watch(apiClientProvider);
       final pusher = ref.watch(pusherServiceProvider);
       final customerId = filters['customer_id'];

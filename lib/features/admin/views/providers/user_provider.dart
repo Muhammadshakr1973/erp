@@ -5,8 +5,12 @@ import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 
 final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) {
+  final user = ref.watch(authProvider.select((state) => state.user));
+  if (user == null) {
+    return {'users': <UserModel>[], 'roles': []};
+  }
+  final role = user.role.toLowerCase();
+  if (role != 'admin' && role != 'owner') {
     return {'users': <UserModel>[], 'roles': []};
   }
   final api = ref.watch(apiClientProvider);

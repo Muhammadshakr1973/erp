@@ -8,9 +8,25 @@ import '../../models/dashboard_model.dart';
 
 final FutureProvider<DashboardModel> dashboardProvider =
     FutureProvider<DashboardModel>((ref) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) {
+  final user = ref.watch(authProvider.select((state) => state.user));
+  if (user == null) {
     throw Exception('بەکارهێنەر لۆگئۆت بووە (User is logged out)');
+  }
+  final role = user.role.toLowerCase();
+  if (role != 'admin' && role != 'owner') {
+    return DashboardModel(
+      monthlySales: 0,
+      monthlyProfit: 0,
+      totalReceivables: 0,
+      totalCustomerDebts: 0,
+      totalPayables: 0,
+      monthlyCollected: 0,
+      deliveredToOffice: 0,
+      lastMonthSales: 0,
+      lastMonthProfit: 0,
+      driversRemainingCash: 0,
+      lastCollectionAmount: 0,
+    );
   }
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);

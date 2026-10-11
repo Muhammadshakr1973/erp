@@ -170,7 +170,10 @@ class NotificationsNotifier
       _ref.invalidate(dashboardProvider);
       _ref.invalidate(salesmanDashboardProvider);
     } else if (lowerType == 'customer') {
-      _ref.invalidate(customerListProvider);
+      final role = _userRole?.toLowerCase();
+      if (role == 'admin' || role == 'owner' || role == 'salesman') {
+        _ref.invalidate(customerListProvider);
+      }
     } else if (lowerType == 'stock') {
       _ref.invalidate(warehouseStocksProvider);
       _ref.invalidate(warehouseDashboardProvider);
