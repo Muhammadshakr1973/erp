@@ -441,7 +441,7 @@ class _AdminDriverCollectionsScreenState
                                 const SnackBar(
                                   content: Text(
                                     'پارەکە بەسەرکەوتوویی لە شۆفێر وەرگیرا و تۆمارکرا',
-                                    style: TextStyle(fontFamily: 'Rudaw'),
+                                    style: TextStyle(fontFamily: 'KJino'),
                                   ),
                                   backgroundColor: AppColors.success,
                                 ),
@@ -453,7 +453,7 @@ class _AdminDriverCollectionsScreenState
                                 SnackBar(
                                   content: Text(
                                     'تۆمارکردن سەرکەوتوو نەبوو: $e',
-                                    style: const TextStyle(fontFamily: 'Rudaw'),
+                                    style: const TextStyle(fontFamily: 'KJino'),
                                   ),
                                   backgroundColor: AppColors.danger,
                                 ),

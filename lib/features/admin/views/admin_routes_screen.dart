@@ -236,7 +236,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                 'بارکردنی ڕاوتەکان سەرکەوتوو نەبوو:\n${err.toString().replaceFirst('Exception: ', '')}',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  fontFamily: 'Rudaw',
+                                  fontFamily: 'KJino',
                                   color: Colors.red,
                                 ),
                               ),
@@ -246,7 +246,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                                 icon: const Icon(Icons.refresh),
                                 label: const Text(
                                   'دووبارە بارکردنەوە',
-                                  style: TextStyle(fontFamily: 'Rudaw'),
+                                  style: TextStyle(fontFamily: 'KJino'),
                                 ),
                               ),
                             ],
@@ -368,7 +368,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                       fontSize: 11,
                       color: Colors.green,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Rudaw',
+                      fontFamily: 'KJino',
                     ),
                   ),
                 ],
@@ -412,7 +412,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                   style: const TextStyle(
                     fontSize: 11,
                     color: Colors.grey,
-                    fontFamily: 'Rudaw',
+                    fontFamily: 'KJino',
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -423,7 +423,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Rudaw',
+                    fontFamily: 'KJino',
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -458,7 +458,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
             const Expanded(
               child: Text(
                 'دڵنیایی لە سڕینەوە',
-                style: TextStyle(fontFamily: 'Rudaw'),
+                style: TextStyle(fontFamily: 'KJino'),
               ),
             ),
             IconButton(
@@ -471,7 +471,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
         ),
         content: Text(
           'ئایا دڵنیای لە سڕینەوەی ڕاوتی "${route.name}"؟',
-          style: const TextStyle(fontFamily: 'Rudaw'),
+          style: const TextStyle(fontFamily: 'KJino'),
         ),
         actions: [
           TextButton(
@@ -487,7 +487,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     const SnackBar(
                       content: Text(
                         'ڕاوت بە سەرکەوتوویی سڕایەوە',
-                        style: TextStyle(fontFamily: 'Rudaw'),
+                        style: TextStyle(fontFamily: 'KJino'),
                       ),
                     ),
                   );
@@ -499,7 +499,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
                     SnackBar(
                       content: Text(
                         'شکستی هێنا لە سڕینەوە: $e',
-                        style: const TextStyle(fontFamily: 'Rudaw'),
+                        style: const TextStyle(fontFamily: 'KJino'),
                       ),
                     ),
                   );
@@ -508,7 +508,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
             },
             child: const Text(
               'سڕینەوە',
-              style: TextStyle(fontFamily: 'Rudaw'),
+              style: TextStyle(fontFamily: 'KJino'),
             ),
           ),
         ],
@@ -586,7 +586,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
               widget.route == null
                   ? 'ڕاوت زیادکرا'
                   : 'گۆڕانکارییەکان پاشەکەوت کران',
-              style: const TextStyle(fontFamily: 'Rudaw'),
+              style: const TextStyle(fontFamily: 'KJino'),
             ),
             backgroundColor: AppColors.success,
           ),
@@ -598,7 +598,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
           SnackBar(
             content: Text(
               'کێشە لە پاشەکەوتکردن: $e',
-              style: const TextStyle(fontFamily: 'Rudaw'),
+              style: const TextStyle(fontFamily: 'KJino'),
             ),
           ),
         );
@@ -702,7 +702,7 @@ class _RouteFormDialogState extends ConsumerState<_RouteFormDialog> {
                 title: const Text('دۆخی ڕاوت', style: AppTextStyles.bodyBold),
                 subtitle: const Text(
                   'ڕێگەدان بە مەندوب بۆ کارکردن لەسەر ئەم ڕاوتە',
-                  style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                  style: TextStyle(fontSize: 12, fontFamily: 'KJino'),
                 ),
                 activeColor: theme.colorScheme.primary,
                 onChanged: (val) => setState(() => _isActive = val),
@@ -830,7 +830,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey,
-                fontFamily: 'Rudaw',
+                fontFamily: 'KJino',
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -847,7 +847,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                         'شکست لە هێنانی کڕیارەکان:\n$_errorMessage',
                         style: const TextStyle(
                           color: Colors.red,
-                          fontFamily: 'Rudaw',
+                          fontFamily: 'KJino',
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -856,7 +856,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                         icon: const Icon(Icons.refresh),
                         label: const Text(
                           'دووبارە هەوڵبدەرەوە',
-                          style: TextStyle(fontFamily: 'Rudaw'),
+                          style: TextStyle(fontFamily: 'KJino'),
                         ),
                       ),
                     ],
@@ -868,7 +868,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                 child: Center(
                   child: Text(
                     'هیچ کڕیارێک لەم ڕاوتەدا تۆمار نەکراوە.',
-                    style: TextStyle(color: Colors.grey, fontFamily: 'Rudaw'),
+                    style: TextStyle(color: Colors.grey, fontFamily: 'KJino'),
                   ),
                 ),
               )
@@ -896,7 +896,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                         const SnackBar(
                           content: Text(
                             'ڕیزبەندی نوێی سەردانەکان پاشەکەوت کرا',
-                            style: TextStyle(fontFamily: 'Rudaw'),
+                            style: TextStyle(fontFamily: 'KJino'),
                           ),
                           duration: Duration(seconds: 1),
                         ),
@@ -906,7 +906,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                         SnackBar(
                           content: Text(
                             'سەرکەوتوو نەبوو لە نوێکردنەوەی ڕیزبەندی: $e',
-                            style: const TextStyle(fontFamily: 'Rudaw'),
+                            style: const TextStyle(fontFamily: 'KJino'),
                           ),
                         ),
                       );
@@ -937,12 +937,12 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                           c['name'] ?? '',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         subtitle: Text(
                           '${c['phone'] ?? ''} - ${c['address'] ?? 'بێ ناونیشان'}',
-                          style: const TextStyle(fontFamily: 'Rudaw'),
+                          style: const TextStyle(fontFamily: 'KJino'),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -956,7 +956,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: Colors.grey,
-                                    fontFamily: 'Rudaw',
+                                    fontFamily: 'KJino',
                                   ),
                                 ),
                                 Text(
@@ -967,7 +967,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
                                     color: balance > 0
                                         ? Colors.red
                                         : Colors.green,
-                                    fontFamily: 'Rudaw',
+                                    fontFamily: 'KJino',
                                   ),
                                 ),
                               ],
@@ -1066,7 +1066,7 @@ class __AssignCustomersDialogState
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.red,
-                          fontFamily: 'Rudaw',
+                          fontFamily: 'KJino',
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1075,7 +1075,7 @@ class __AssignCustomersDialogState
                         icon: const Icon(Icons.refresh),
                         label: const Text(
                           'دووبارە بارکردنەوە',
-                          style: TextStyle(fontFamily: 'Rudaw'),
+                          style: TextStyle(fontFamily: 'KJino'),
                         ),
                       ),
                     ],
@@ -1099,7 +1099,7 @@ class __AssignCustomersDialogState
                             ? 'هیچ کڕیارێک نەدۆزرایەوە بەم گەڕانە'
                             : 'هیچ کڕیارێکی تر بەردەست نییە بۆ دیاریکردن.',
                         style: const TextStyle(
-                          fontFamily: 'Rudaw',
+                          fontFamily: 'KJino',
                           color: Colors.grey,
                         ),
                       ),
@@ -1118,14 +1118,14 @@ class __AssignCustomersDialogState
                           c.name,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         subtitle: Text(
                           '${c.phone ?? ''}${c.address != null && c.address!.isNotEmpty ? " - ${c.address}" : ""}',
                           style: const TextStyle(
                             fontSize: 12,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         onChanged: (val) {
@@ -1167,7 +1167,7 @@ class __AssignCustomersDialogState
                         SnackBar(
                           content: Text(
                             'کێشە: ${e.toString().replaceFirst("Exception: ", "")}',
-                            style: const TextStyle(fontFamily: 'Rudaw'),
+                            style: const TextStyle(fontFamily: 'KJino'),
                           ),
                         ),
                       );
@@ -1184,7 +1184,7 @@ class __AssignCustomersDialogState
                   _selectedIds.isEmpty
                       ? 'دیاریکردن'
                       : 'دیاریکردن (${_selectedIds.length})',
-                  style: const TextStyle(fontFamily: 'Rudaw'),
+                  style: const TextStyle(fontFamily: 'KJino'),
                 ),
         ),
       ],

@@ -497,7 +497,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                           style: TextStyle(
                             fontSize: 9,
                             color: Colors.grey.shade700,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                       ),

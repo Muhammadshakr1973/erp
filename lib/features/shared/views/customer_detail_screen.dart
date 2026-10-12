@@ -573,7 +573,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                             : const Icon(Icons.my_location, size: 18),
                         label: const Text(
                           'شوێنی من',
-                          style: TextStyle(fontFamily: 'Rudaw'),
+                          style: TextStyle(fontFamily: 'KJino'),
                         ),
                       ),
                     ],

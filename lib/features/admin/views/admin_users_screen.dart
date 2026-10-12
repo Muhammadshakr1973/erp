@@ -165,7 +165,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 }
               }
             },
-            child: const Text('بسڕەوە', style: TextStyle(fontFamily: 'Rudaw')),
+            child: const Text('بسڕەوە', style: TextStyle(fontFamily: 'KJino')),
           ),
         ],
       ),
@@ -285,7 +285,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'تەنها مەندوبەکان',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'salesman'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -315,7 +315,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'هەموو بەکارهێنەران',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'all'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -346,7 +346,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'بەڕێوەبەران (Admin)',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'admin'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -376,7 +376,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'کۆگاداران (Warehouse)',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'warehouse'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -406,7 +406,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'شۆفێران (Driver)',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'driver'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -436,7 +436,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                             child: Text(
                               'خاوەن کار (Owner)',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: _selectedRoleFilter == 'owner'
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -650,7 +650,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     color: roleColor,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 10,
-                                    fontFamily: 'Rudaw',
+                                    fontFamily: 'KJino',
                                   ),
                                 ),
                               ),
@@ -676,7 +676,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                         : Colors.red,
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
-                                    fontFamily: 'Rudaw',
+                                    fontFamily: 'KJino',
                                   ),
                                 ),
                               ),
@@ -1156,7 +1156,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           ),
                           child: const Text(
                             'پشوو (نەگۆڕ)',
-                            style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Rudaw'),
+                            style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'KJino'),
                           ),
                         )
                       : DropdownButtonFormField<int>(
@@ -1168,16 +1168,16 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          hint: const Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey)),
+                          hint: const Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'KJino', color: Colors.grey)),
                           items: [
                             const DropdownMenuItem<int>(
                               value: null,
-                              child: Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'Rudaw', color: Colors.grey)),
+                              child: Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'KJino', color: Colors.grey)),
                             ),
                             ...filteredRoutes.map((r) {
                               return DropdownMenuItem<int>(
                                 value: r.id,
-                                child: Text(r.name, style: const TextStyle(fontSize: 12, fontFamily: 'Rudaw')),
+                                child: Text(r.name, style: const TextStyle(fontSize: 12, fontFamily: 'KJino')),
                               );
                             }),
                           ],
@@ -1403,7 +1403,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                       value: r['id'],
                       child: Text(
                         _getRoleDisplayName(r['name']),
-                        style: const TextStyle(fontFamily: 'Rudaw'),
+                        style: const TextStyle(fontFamily: 'KJino'),
                       ),
                     );
                   }).toList(),
@@ -1502,7 +1502,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                             value: w.id,
                             child: Text(
                               w.name,
-                              style: const TextStyle(fontFamily: 'Rudaw'),
+                              style: const TextStyle(fontFamily: 'KJino'),
                             ),
                           );
                         }).toList(),
@@ -1606,7 +1606,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text(
                     'باری بەکارهێنەر (چالاک بێت؟)',
-                    style: TextStyle(fontFamily: 'Rudaw'),
+                    style: TextStyle(fontFamily: 'KJino'),
                   ),
                   value: _isActive,
                   onChanged: (val) => setState(() => _isActive = val),
@@ -1632,11 +1632,11 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     items: const [
                       DropdownMenuItem(
                         value: '1_week',
-                        child: Text('یەک هەفتەیی (1-Week)', style: TextStyle(fontFamily: 'Rudaw')),
+                        child: Text('یەک هەفتەیی (1-Week)', style: TextStyle(fontFamily: 'KJino')),
                       ),
                       DropdownMenuItem(
                         value: '2_weeks',
-                        child: Text('دوو هەفتەیی (2-Weeks)', style: TextStyle(fontFamily: 'Rudaw')),
+                        child: Text('دوو هەفتەیی (2-Weeks)', style: TextStyle(fontFamily: 'KJino')),
                       ),
                     ],
                     onChanged: (val) {
@@ -1842,7 +1842,7 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
                     child: Text(
                       widget.text,
                       style: TextStyle(
-                        fontFamily: 'Rudaw',
+                        fontFamily: 'KJino',
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF334155),

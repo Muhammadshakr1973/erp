@@ -1344,7 +1344,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         label: const Text(
                           'تێگەیشتم / داخستن',
                           style: TextStyle(
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2278,7 +2278,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             hintStyle: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 12,
-              fontFamily: 'Rudaw',
+              fontFamily: 'KJino',
             ),
             prefixIcon: Icon(
               Icons.person_outline,
@@ -2323,7 +2323,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           dropdownColor: theme.colorScheme.surface,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface,
-            fontFamily: 'Rudaw',
+            fontFamily: 'KJino',
             fontSize: 12,
           ),
           iconEnabledColor: theme.colorScheme.onSurfaceVariant,
@@ -2334,7 +2334,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 c.name,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 12,
-                  fontFamily: 'Rudaw',
+                  fontFamily: 'KJino',
                   color: theme.colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -2519,7 +2519,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Rudaw',
+                        fontFamily: 'KJino',
                       ),
                       textAlign: TextAlign.center,
                     ),

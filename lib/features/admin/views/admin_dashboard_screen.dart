@@ -1134,7 +1134,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   Text(
                                     'کڕیاران: ${assignment.customersCount}',
                                     style: AppTextStyles.caption.copyWith(
-                                      fontFamily: 'Rudaw',
+                                      fontFamily: 'KJino',
                                     ),
                                   ),
                                   if (assignment.salesmanPhone != null && assignment.salesmanPhone!.isNotEmpty) ...[

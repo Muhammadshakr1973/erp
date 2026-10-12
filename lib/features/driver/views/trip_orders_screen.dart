@@ -154,7 +154,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                         color: isDark
                                             ? const Color(0xFF93C5FD)
                                             : const Color(0xFF1D4ED8),
-                                        fontFamily: 'Rudaw',
+                                        fontFamily: 'KJino',
                                       ),
                                     ),
                                   ],
@@ -229,7 +229,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                           fontSize: 11,
                                           color: theme.colorScheme.primary,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: 'Rudaw',
+                                          fontFamily: 'KJino',
                                         ),
                                       ),
                                     ],
@@ -762,7 +762,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                           color: Colors.white,
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: 'Rudaw',
+                                          fontFamily: 'KJino',
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -773,7 +773,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
-                                        fontFamily: 'Rudaw',
+                                        fontFamily: 'KJino',
                                       ),
                                     ),
                                   ],
@@ -798,7 +798,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                     color: Colors.white,
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
-                                    fontFamily: 'Rudaw',
+                                    fontFamily: 'KJino',
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -809,7 +809,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
-                                  fontFamily: 'Rudaw',
+                                  fontFamily: 'KJino',
                                 ),
                               ),
                             ],

@@ -45,8 +45,13 @@ flutter:
     - assets/fonts/
 
   fonts:
+    - family: KJino
+      fonts:
+        - asset: assets/fonts/KJino.TTF
     - family: Rudaw
       fonts:
+        - asset: assets/fonts/KJino.TTF
         - asset: assets/fonts/rudawregular2.ttf
         - asset: assets/fonts/rudawbold.ttf
           weight: 700
+

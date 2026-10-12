@@ -41,7 +41,7 @@ void printImage(Uint8List bytes) {
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: 'Rudaw', sans-serif;
+            font-family: 'KJino', 'KJino', sans-serif;
             background-color: white;
           }
           .container {

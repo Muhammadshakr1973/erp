@@ -37,7 +37,7 @@ class MapPickerDialog extends StatefulWidget {
         SnackBar(
           content: Text(
             'کڕیاری "$customerName" نیشانەی نەخشەی (GPS) بۆ تۆمار نەکراوە. ناونیشان: $customerAddress',
-            style: const TextStyle(fontFamily: 'Rudaw'),
+            style: const TextStyle(fontFamily: 'KJino'),
           ),
           backgroundColor: Colors.orangeAccent,
           duration: const Duration(seconds: 4),
@@ -144,7 +144,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               const SnackBar(
                 content: Text(
                   'تکایە لۆکەیشنی ئامێرەکەت (GPS) کار پێ بکە، یان بە دەستی شوێنەکە نیشان بکە.',
-                  style: TextStyle(fontFamily: 'Rudaw'),
+                  style: TextStyle(fontFamily: 'KJino'),
                 ),
                 backgroundColor: Colors.orangeAccent,
               ),
@@ -164,7 +164,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               const SnackBar(
                 content: Text(
                   'دەسەڵاتی خوێندنەوەی لۆکەیشن ڕەتکرایەوە، تکایە بە دەست لۆکەیشنەکە دیاری بکە.',
-                  style: TextStyle(fontFamily: 'Rudaw'),
+                  style: TextStyle(fontFamily: 'KJino'),
                 ),
                 backgroundColor: Colors.orangeAccent,
               ),
@@ -181,7 +181,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             const SnackBar(
               content: Text(
                 'دەسەڵاتی لۆکەیشن بلۆک کراوە. تکایە بە دەست لۆکەیشنەکە لەسەر نەخشەکە نیشان بکە.',
-                style: TextStyle(fontFamily: 'Rudaw'),
+                style: TextStyle(fontFamily: 'KJino'),
               ),
               backgroundColor: Colors.orangeAccent,
             ),
@@ -204,7 +204,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           const SnackBar(
             content: Text(
               'خزمەتگوزاری لۆکەیشن کار ناکات یان پێگەکەت چالاک نەکراوە. تکایە بە دەستی لەسەر نەخشەکە شوێنەکە دەستنیشان بکە.',
-              style: TextStyle(fontFamily: 'Rudaw'),
+              style: TextStyle(fontFamily: 'KJino'),
             ),
             backgroundColor: Colors.orangeAccent,
             duration: Duration(seconds: 5),
@@ -235,7 +235,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               const SnackBar(
                 content: Text(
                   'تکایە لۆکەیشنی ئامێرەکەت (GPS) کار پێ بکە بۆ دیاریکردنی ڕێگاکە.',
-                  style: TextStyle(fontFamily: 'Rudaw'),
+                  style: TextStyle(fontFamily: 'KJino'),
                 ),
                 backgroundColor: Colors.orangeAccent,
               ),
@@ -255,7 +255,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
               const SnackBar(
                 content: Text(
                   'دەسەڵاتی خوێندنەوەی لۆکەیشن ڕەتکرایەوە، ناتوانرێت ڕێگاکە بدۆزرێتەوە بەبێ لۆکەیشن.',
-                  style: TextStyle(fontFamily: 'Rudaw'),
+                  style: TextStyle(fontFamily: 'KJino'),
                 ),
                 backgroundColor: Colors.orangeAccent,
               ),
@@ -272,7 +272,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             const SnackBar(
               content: Text(
                 'دەسەڵاتی لۆکەیشن بلۆک کراوە. تکایە لە ڕێکخستنەکان کارای بکە.',
-                style: TextStyle(fontFamily: 'Rudaw'),
+                style: TextStyle(fontFamily: 'KJino'),
               ),
               backgroundColor: Colors.orangeAccent,
             ),
@@ -300,7 +300,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
           const SnackBar(
             content: Text(
               'خزمەتگوزاری لۆکەیشن کار ناکات یان پێگەکەت چالاک نەکراوە، تکایە دڵنیابەرەوە لە هەبوونی هێڵ و لۆکەیشن.',
-              style: TextStyle(fontFamily: 'Rudaw'),
+              style: TextStyle(fontFamily: 'KJino'),
             ),
             backgroundColor: Colors.orangeAccent,
             duration: Duration(seconds: 5),
@@ -447,7 +447,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Rudaw',
+                        fontFamily: 'KJino',
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -663,7 +663,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                                   Text(
                                     'بارکردنی ڕێگا و نەخشە...',
                                     style: TextStyle(
-                                      fontFamily: 'Rudaw',
+                                      fontFamily: 'KJino',
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -689,7 +689,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                                         const Text(
                                           'ئاسانترین ڕێگای پێشنیارکراو',
                                           style: TextStyle(
-                                            fontFamily: 'Rudaw',
+                                            fontFamily: 'KJino',
                                             fontSize: 10,
                                             color: Colors.grey,
                                             fontWeight: FontWeight.bold,
@@ -701,7 +701,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                                               ? 'دووری: ${_routeDistanceKm!.toStringAsFixed(1)} کم  |  ماوە: ${_routeDurationMinutes!.toStringAsFixed(0)} خولەک'
                                               : 'دووری: نەزانراو  |  لۆکەیشنی شۆفێر باردەکرێت...',
                                           style: const TextStyle(
-                                            fontFamily: 'Rudaw',
+                                            fontFamily: 'KJino',
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -740,7 +740,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                             child: const Text(
                               'داخستن',
                               style: TextStyle(
-                                fontFamily: 'Rudaw',
+                                fontFamily: 'KJino',
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -756,7 +756,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           onPressed: () => Navigator.pop(context),
                           child: const Text(
                             'پاشگەزبوونەوە',
-                            style: TextStyle(fontFamily: 'Rudaw'),
+                            style: TextStyle(fontFamily: 'KJino'),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -778,7 +778,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                           child: const Text(
                             'دیاریکردنی جێگا',
                             style: TextStyle(
-                              fontFamily: 'Rudaw',
+                              fontFamily: 'KJino',
                               fontWeight: FontWeight.bold,
                             ),
                           ),

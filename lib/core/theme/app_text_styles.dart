@@ -6,7 +6,7 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  static const String fontFamily = 'Rudaw';
+  static const String fontFamily = 'KJino';
 
   // Headings
   static const TextStyle displayLarge = TextStyle(

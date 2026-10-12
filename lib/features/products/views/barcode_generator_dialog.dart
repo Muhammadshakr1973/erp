@@ -102,7 +102,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(fontFamily: 'Rudaw', fontWeight: FontWeight.bold),
+          style: const TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         backgroundColor: isError ? AppColors.danger : AppColors.success,
@@ -152,7 +152,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                         const Expanded(
                           child: Text(
                             'دروستکەری لایبڵ و کیو ئاڕ کۆدی کاڵا',
-                            style: TextStyle(fontFamily: 'Rudaw', fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontFamily: 'KJino', fontSize: 18, fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -303,7 +303,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                               barcodeText.isEmpty ? '07849564845' : barcodeText,
                                               textAlign: TextAlign.center,
                                               style: const TextStyle(
-                                                fontFamily: 'Rudaw',
+                                                fontFamily: 'KJino',
                                                 fontSize: 28,
                                                 fontWeight: FontWeight.w900,
                                                 color: Colors.black,
@@ -340,7 +340,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                                     child: Text(
                                       productName,
                                       style: const TextStyle(
-                                        fontFamily: 'Rudaw',
+                                        fontFamily: 'KJino',
                                         fontSize: 28,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.black,
@@ -393,7 +393,7 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                   label: Text(
                     _isCapturing ? 'خەریکی دروستکردنی وێنەیە...' : 'وێنە دابەزێنە',
                     style: const TextStyle(
-                      fontFamily: 'Rudaw',
+                      fontFamily: 'KJino',
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -533,7 +533,7 @@ class GardiLogoPainter extends CustomPainter {
           fontSize: 5.6,
           fontWeight: FontWeight.bold,
           color: color,
-          fontFamily: 'Rudaw',
+          fontFamily: 'KJino',
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -552,7 +552,7 @@ class GardiLogoPainter extends CustomPainter {
           fontWeight: FontWeight.w900,
           color: color,
           letterSpacing: 4.0,
-          fontFamily: 'Rudaw',
+          fontFamily: 'KJino',
         ),
       ),
       textDirection: TextDirection.ltr,

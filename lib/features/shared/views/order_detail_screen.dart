@@ -458,7 +458,7 @@ class OrderDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.map_outlined, size: 16),
                   label: const Text(
                     'شوێنی کڕیار لەسەر نەخشە',
-                    style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                    style: TextStyle(fontSize: 12, fontFamily: 'KJino'),
                   ),
                   onPressed: () {
                     MapPickerDialog.showCustomerLocation(

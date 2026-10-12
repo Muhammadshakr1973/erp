@@ -34,7 +34,7 @@ class ProductDetailsDialog extends ConsumerWidget {
         ),
         content: Text(
           'دڵنیایت لە سڕینەوەی "${product.name}"؟',
-          style: const TextStyle(fontFamily: 'Rudaw'),
+          style: const TextStyle(fontFamily: 'KJino'),
         ),
         actions: [
           TextButton(
@@ -45,7 +45,7 @@ class ProductDetailsDialog extends ConsumerWidget {
             },
             child: const Text(
               'بەڵێ سڕینەوە',
-              style: TextStyle(color: AppColors.danger, fontFamily: 'Rudaw'),
+              style: TextStyle(color: AppColors.danger, fontFamily: 'KJino'),
             ),
           ),
         ],
@@ -179,7 +179,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                           'بارکۆد:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         Row(
@@ -187,7 +187,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                           children: [
                             Text(
                               product.barcode.isEmpty ? 'بێ بارکۆد' : product.barcode,
-                              style: const TextStyle(fontFamily: 'Rudaw'),
+                              style: const TextStyle(fontFamily: 'KJino'),
                             ),
                             if (product.barcode.isNotEmpty) ...[
                               const SizedBox(width: 8),
@@ -248,7 +248,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                           'تێچوو (کۆست):',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         Container(
@@ -276,7 +276,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                                   : const Color(0xFFE11D48),
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              fontFamily: 'Rudaw',
+                              fontFamily: 'KJino',
                             ),
                           ),
                         ),
@@ -341,7 +341,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                                   color: AppColors.danger,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'Rudaw',
+                                  fontFamily: 'KJino',
                                 ),
                               ),
                             ),
@@ -396,10 +396,10 @@ class ProductDetailsDialog extends ConsumerWidget {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontFamily: 'Rudaw',
+            fontFamily: 'KJino',
           ),
         ),
-        Text(value, style: const TextStyle(fontFamily: 'Rudaw')),
+        Text(value, style: const TextStyle(fontFamily: 'KJino')),
       ],
     );
   }
@@ -432,7 +432,7 @@ class ProductDetailsDialog extends ConsumerWidget {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Rudaw',
+                fontFamily: 'KJino',
               ),
             ),
           ],
@@ -443,7 +443,7 @@ class ProductDetailsDialog extends ConsumerWidget {
             color: color,
             fontWeight: FontWeight.bold,
             fontSize: 15,
-            fontFamily: 'Rudaw',
+            fontFamily: 'KJino',
           ),
         ),
       ],
@@ -463,7 +463,7 @@ class ProductDetailsDialog extends ConsumerWidget {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontFamily: 'Rudaw',
+            fontFamily: 'KJino',
           ),
         ),
         Container(
@@ -477,7 +477,7 @@ class ProductDetailsDialog extends ConsumerWidget {
             style: TextStyle(
               color: badgeColor,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Rudaw',
+              fontFamily: 'KJino',
             ),
           ),
         ),

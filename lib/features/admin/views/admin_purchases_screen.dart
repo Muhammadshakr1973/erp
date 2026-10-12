@@ -1048,7 +1048,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           color: Colors.white,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Rudaw',
+                          fontFamily: 'KJino',
                         ),
                       ),
                     ),

@@ -820,7 +820,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.primary,
-                              fontFamily: 'Rudaw',
+                              fontFamily: 'KJino',
                             ),
                           ),
                         ),
@@ -829,7 +829,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                           Formatters.currency(customer.currentBalance),
                           style: AppTextStyles.caption.copyWith(
                             color: customer.currentBalance > 0 ? AppColors.danger : Colors.grey,
-                            fontFamily: 'Rudaw',
+                            fontFamily: 'KJino',
                           ),
                         ),
                         const SizedBox(height: 4),

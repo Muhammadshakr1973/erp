@@ -449,7 +449,7 @@ class AdminOrdersScreen extends ConsumerWidget {
                                         fontSize: 11,
                                         color: theme.colorScheme.primary,
                                         fontWeight: FontWeight.bold,
-                                        fontFamily: 'Rudaw',
+                                        fontFamily: 'KJino',
                                       ),
                                     ),
                                   ],

@@ -99,7 +99,7 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
                   label: const Text(
                     'کڕیاری کاتی',
                     style: TextStyle(
-                      fontFamily: 'Rudaw',
+                      fontFamily: 'KJino',
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.orange,

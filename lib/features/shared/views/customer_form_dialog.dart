@@ -565,7 +565,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 icon: const Icon(Icons.map_outlined),
                 label: Text(
                   _latitude != null ? 'دیاریکراوە' : 'دیاریکردن',
-                  style: const TextStyle(fontFamily: 'Rudaw'),
+                  style: const TextStyle(fontFamily: 'KJino'),
                 ),
               ),
             ],
@@ -587,7 +587,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.green.shade700,
-                      fontFamily: 'Rudaw',
+                      fontFamily: 'KJino',
                     ),
                   ),
                   const Spacer(),
@@ -606,7 +606,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                     ),
                     child: const Text(
                       'سڕینەوە',
-                      style: TextStyle(fontSize: 12, fontFamily: 'Rudaw'),
+                      style: TextStyle(fontSize: 12, fontFamily: 'KJino'),
                     ),
                   ),
                 ],
@@ -709,7 +709,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                     'کێشە لە بارکردنی ڕاوتەکان: $err',
                     style: const TextStyle(
                       color: Colors.red,
-                      fontFamily: 'Rudaw',
+                      fontFamily: 'KJino',
                     ),
                   ),
                 ),
