@@ -473,6 +473,14 @@ class WhatsAppService
     }
 
     /**
+     * Check if WhatsApp service is enabled in the system
+     */
+    public function isEnabled(): bool
+    {
+        return (bool) config('services.whatsapp.enabled', false) && Setting::getValue('whatsapp_enabled', '0') === '1';
+    }
+
+    /**
      * Dispatch message to provider with fallback and full audit recording
      */
     public function dispatchMessage(
@@ -488,6 +496,29 @@ class WhatsAppService
         ?User $actor = null
     ): WhatsAppNotificationLog {
         $idempotencyKey = 'WA-' . md5($recipientPhone . '_' . $notificationType . '_' . $referenceType . '_' . $referenceId . '_' . date('YmdH'));
+
+        if (!$this->isEnabled()) {
+            return WhatsAppNotificationLog::create([
+                'customer_id' => $customerId,
+                'supplier_id' => $supplierId,
+                'recipient_phone' => $recipientPhone,
+                'recipient_name' => $recipientName,
+                'notification_type' => $notificationType,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'idempotency_key' => $idempotencyKey,
+                'message' => $message,
+                'status' => WhatsAppNotificationLog::STATUS_SIMULATED,
+                'provider' => 'disabled',
+                'payload' => $payload,
+                'last_attempt_at' => now(),
+                'created_by' => $actor?->id,
+                'response' => [
+                    'mode' => 'DISABLED',
+                    'note' => 'WhatsApp service is disabled in the system.',
+                ],
+            ]);
+        }
 
         $log = WhatsAppNotificationLog::create([
             'customer_id' => $customerId,
@@ -514,6 +545,19 @@ class WhatsAppService
      */
     public function executeProviderSend(WhatsAppNotificationLog $log): WhatsAppNotificationLog
     {
+        if (!$this->isEnabled()) {
+            $log->update([
+                'status' => WhatsAppNotificationLog::STATUS_SIMULATED,
+                'provider' => 'disabled',
+                'sent_at' => now(),
+                'response' => [
+                    'mode' => 'DISABLED',
+                    'note' => 'WhatsApp service is disabled in the system.',
+                ],
+            ]);
+            return $log;
+        }
+
         $provider = $log->provider ?: config('services.whatsapp.provider') ?: Setting::getValue('whatsapp_provider', 'unconfigured');
         $apiUrl = config('services.whatsapp.api_url') ?: Setting::getValue('whatsapp_api_url');
         $apiToken = config('services.whatsapp.api_token') ?: Setting::getValue('whatsapp_api_token');

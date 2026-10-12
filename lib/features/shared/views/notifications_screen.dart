@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
-import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -21,15 +20,10 @@ class NotificationsScreen extends ConsumerStatefulWidget {
       _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String? _selectedWhatsAppStatus;
-
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     
     // کاتێک شاشەکە دەکرێتەوە، هەموو ئاگادارکردنەوەکان دەبن بە خوێندراوە
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,12 +31,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         ref.read(notificationsListProvider.notifier).markAllAsRead();
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   void _handleNotificationTap(AppNotification notification) {
@@ -67,12 +55,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final user = ref.watch(authProvider).user;
-    final isPrivileged =
-        user != null &&
-        (user.role.toLowerCase() == 'admin' ||
-            user.role.toLowerCase() == 'owner');
-
     final notificationsAsync = ref.watch(notificationsListProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
     final selectedFilter = ref.watch(notificationFilterTypeProvider);
@@ -80,47 +62,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('ئاگادارکردنەوەکان', style: AppTextStyles.h2),
-        bottom: isPrivileged
-            ? TabBar(
-                controller: _tabController,
-                indicatorColor: theme.colorScheme.primary,
-                labelStyle: AppTextStyles.bodyBold,
-                unselectedLabelStyle: AppTextStyles.bodyMedium,
-                tabs: [
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('سیستەم'),
-                        if (unreadCount > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
-                              ),
-                            ),
-                            child: Text(
-                              '$unreadCount',
-                              style: AppTextStyles.caption.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const Tab(text: 'مێژووی وەتسئاپ'),
-                ],
-              )
-            : null,
         actions: [
           IconButton(
             icon: Icon(
@@ -168,23 +109,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
             ),
         ],
       ),
-      body: isPrivileged
-          ? TabBarView(
-              controller: _tabController,
-              children: [
-                _buildInAppNotificationsTab(
-                  context,
-                  notificationsAsync,
-                  selectedFilter,
-                ),
-                _buildWhatsAppLogsTab(context),
-              ],
-            )
-          : _buildInAppNotificationsTab(
-              context,
-              notificationsAsync,
-              selectedFilter,
-            ),
+      body: _buildInAppNotificationsTab(
+        context,
+        notificationsAsync,
+        selectedFilter,
+      ),
     );
   }
 
@@ -435,219 +364,5 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       ),
     );
   }
-
-  Widget _buildWhatsAppLogsTab(BuildContext context) {
-    final logsAsync = ref.watch(whatsAppLogsProvider(_selectedWhatsAppStatus));
-    final theme = Theme.of(context);
-
-    return Column(
-      children: [
-        // Filter bar for WhatsApp status
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          color: theme.colorScheme.surface,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                FilterChip(
-                  selected: _selectedWhatsAppStatus == null,
-                  label: const Text('هەموو'),
-                  onSelected: (_) =>
-                      setState(() => _selectedWhatsAppStatus = null),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: _selectedWhatsAppStatus == 'SENT',
-                  label: const Text('نێردراو'),
-                  onSelected: (_) =>
-                      setState(() => _selectedWhatsAppStatus = 'SENT'),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: _selectedWhatsAppStatus == 'SIMULATED',
-                  label: const Text('تۆمارکراو (ئامادەکاری)'),
-                  onSelected: (_) =>
-                      setState(() => _selectedWhatsAppStatus = 'SIMULATED'),
-                ),
-                const SizedBox(width: 8),
-                FilterChip(
-                  selected: _selectedWhatsAppStatus == 'FAILED',
-                  label: const Text('سەرکەوتوو نەبوو'),
-                  onSelected: (_) =>
-                      setState(() => _selectedWhatsAppStatus = 'FAILED'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(whatsAppLogsProvider(_selectedWhatsAppStatus));
-            },
-            child: logsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: AppColors.danger,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'هەڵە لە بارکردنی لۆگەکان: $error',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ElevatedButton(
-                        onPressed: () => ref.invalidate(
-                          whatsAppLogsProvider(_selectedWhatsAppStatus),
-                        ),
-                        child: const Text('دووبارە هەوڵ بدەرەوە'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              data: (logs) {
-                if (logs.isEmpty) {
-                  return const Center(
-                    child: Text('هیچ مێژوویەکی وەتسئاپ بەردەست نییە'),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: logs.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final log = logs[index];
-                    return _buildWhatsAppLogCard(context, log);
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWhatsAppLogCard(BuildContext context, WhatsAppLog log) {
-    final theme = Theme.of(context);
-
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.chat_bubble_outline,
-                    color: AppColors.success,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    log.recipientName ?? log.recipientPhone,
-                    style: AppTextStyles.bodyBold,
-                  ),
-                ],
-              ),
-              StatusBadge(
-                label: log.statusLabelKurdish,
-                type: log.statusBadgeType,
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text('ژمارە: ${log.recipientPhone}', style: AppTextStyles.caption),
-          const SizedBox(height: 8),
-
-          // Message Preview Container
-          Container(
-            padding: const EdgeInsets.all(10),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.3,
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(
-                color: theme.dividerColor.withValues(alpha: 0.1),
-              ),
-            ),
-            child: Text(
-              log.message,
-              style: AppTextStyles.caption.copyWith(
-                height: 1.5,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-              ),
-            ),
-          ),
-
-          if (log.errorMessage != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'هەڵە: ${log.errorMessage}',
-              style: AppTextStyles.caption.copyWith(color: AppColors.danger),
-            ),
-          ],
-
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${log.createdAt.year}/${log.createdAt.month}/${log.createdAt.day} ${log.createdAt.hour}:${log.createdAt.minute}',
-                style: AppTextStyles.caption,
-              ),
-              if (log.status == 'FAILED')
-                TextButton.icon(
-                  onPressed: () async {
-                    try {
-                      await ref
-                          .read(notificationActionsProvider)
-                          .retryWhatsApp(log.id);
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('دووبارە ناردنەوە ئەنجامدرا'),
-                        ),
-                      );
-                      ref.invalidate(
-                        whatsAppLogsProvider(_selectedWhatsAppStatus),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('نەتوانرا بنێردرێتەوە: $e')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('دووبارە بنێرەوە'),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
+
