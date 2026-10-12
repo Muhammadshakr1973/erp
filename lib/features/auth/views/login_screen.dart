@@ -75,6 +75,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleBarcodeLogin(String barcode) async {
+    final success = await ref
+        .read(authProvider.notifier)
+        .loginByBarcode(barcode);
+
+    if (!mounted) return;
+
+    if (success) {
+      resetAllNavigationTabs(ref);
+      final user = ref.read(authProvider).user;
+      if (user != null) {
+        if (user.role == 'admin' || user.role == 'owner') {
+          context.go('/admin');
+        } else if (user.role == 'salesman') {
+          context.go('/salesman');
+        } else if (user.role == 'warehouse') {
+          context.go('/warehouse');
+        } else if (user.role == 'driver') {
+          context.go('/driver');
+        } else {
+          AppSnackbar.show(
+            context,
+            message: 'ڕۆڵی بەکارهێنەر نەناسراوە',
+            type: SnackbarType.error,
+          );
+        }
+      }
+    } else {
+      final error = ref.read(authProvider).error;
+      if (error != null) {
+        AppSnackbar.show(
+          context,
+          message: error,
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -167,42 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () {
                       CameraBarcodeScanner.show(
                         context,
-                        (barcode) async {
-                          final success = await ref
-                              .read(authProvider.notifier)
-                              .loginByBarcode(barcode);
-                        if (!mounted) return;
-
-                        if (success) {
-                          resetAllNavigationTabs(ref);
-                          final user = ref.read(authProvider).user;
-                          if (user != null) {
-                            if (user.role == 'admin' || user.role == 'owner') {
-                              context.go('/admin');
-                            } else if (user.role == 'salesman') {
-                              context.go('/salesman');
-                            } else if (user.role == 'warehouse') {
-                              context.go('/warehouse');
-                            } else if (user.role == 'driver') {
-                              context.go('/driver');
-                            } else {
-                              AppSnackbar.show(
-                                context,
-                                message: 'ڕۆڵی بەکارهێنەر نەناسراوە',
-                                type: SnackbarType.error,
-                              );
-                            }
-                          }
-                        } else {
-                          final error = ref.read(authProvider).error;
-                          if (error != null) {
-                            AppSnackbar.show(
-                              context,
-                              message: error,
-                              type: SnackbarType.error,
-                            );
-                          }
-                        },
+                        _handleBarcodeLogin,
                         closeOnScan: true,
                       );
                     },
