@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // ignore: unused_import
 import 'app_colors.dart';
@@ -7,79 +6,93 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  static String get fontFamily => GoogleFonts.vazirmatn().fontFamily ?? 'Vazirmatn';
+  static const String fontFamily = 'Rudaw';
 
   // Headings
-  static TextStyle get displayLarge => GoogleFonts.vazirmatn(
+  static const TextStyle displayLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 32,
     fontWeight: FontWeight.w700, // Bold
   );
 
-  static TextStyle get displayMedium => GoogleFonts.vazirmatn(
+  static const TextStyle displayMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 26,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get h1 => GoogleFonts.vazirmatn(
+  static const TextStyle h1 = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 22,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get h2 => GoogleFonts.vazirmatn(
+  static const TextStyle h2 = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 18,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get h3 => GoogleFonts.vazirmatn(
+  static const TextStyle h3 = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w700,
   );
 
   // Body
-  static TextStyle get bodyLarge => GoogleFonts.vazirmatn(
+  static const TextStyle bodyLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.w400, // Regular
   );
 
-  static TextStyle get bodyMedium => GoogleFonts.vazirmatn(
+  static const TextStyle bodyMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle get bodyBold => GoogleFonts.vazirmatn(
+  static const TextStyle bodyBold = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get bodyMediumBold => bodyBold;
+  static const TextStyle bodyMediumBold = bodyBold;
 
-  static TextStyle get bodySmall => GoogleFonts.vazirmatn(
+  static const TextStyle bodySmall = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 13,
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle get caption => GoogleFonts.vazirmatn(
+  static const TextStyle caption = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle get overline => GoogleFonts.vazirmatn(
+  static const TextStyle overline = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 11,
     fontWeight: FontWeight.w400,
   );
 
   // Specific Elements
-  static TextStyle get price => GoogleFonts.vazirmatn(
+  static const TextStyle price = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get priceLarge => GoogleFonts.vazirmatn(
+  static const TextStyle priceLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 22,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle get button => GoogleFonts.vazirmatn(
+  static const TextStyle button = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 15,
     fontWeight: FontWeight.w700,
   );
