@@ -1735,13 +1735,21 @@ class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
 
     if (bytes != null) {
       _qrBytes = bytes;
-      downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
+      final success = await downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
       if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'وێنەی کۆدەکە (QR) بە سەرکەوتوویی دابەزی',
-          type: SnackbarType.success,
-        );
+        if (success) {
+          AppSnackbar.show(
+            context,
+            message: 'وێنەی کۆدەکە (QR) بە سەرکەوتوویی دابەزی',
+            type: SnackbarType.success,
+          );
+        } else {
+          AppSnackbar.show(
+            context,
+            message: 'کێشەیەک لە دابەزاندنی وێنەکە ڕوویدا',
+            type: SnackbarType.error,
+          );
+        }
       }
     } else if (mounted) {
       AppSnackbar.show(

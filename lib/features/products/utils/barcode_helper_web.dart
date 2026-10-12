@@ -7,7 +7,7 @@ import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 
-void saveAndDownloadImage(Uint8List bytes, String fileName) {
+Future<bool> saveAndDownloadImage(Uint8List bytes, String fileName) async {
   try {
     final blob = html.Blob([bytes], 'image/png');
     final url = html.Url.createObjectUrlFromBlob(blob);
@@ -18,8 +18,10 @@ void saveAndDownloadImage(Uint8List bytes, String fileName) {
     anchor.click();
     anchor.remove();
     html.Url.revokeObjectUrl(url);
+    return true;
   } catch (e) {
     debugPrint('Error downloading barcode image: $e');
+    return false;
   }
 }
 

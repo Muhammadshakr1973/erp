@@ -4,14 +4,14 @@ import 'dart:typed_data';
 import 'barcode_helper_stub.dart'
     if (dart.library.html) 'barcode_helper_web.dart' as helper;
 
-void downloadBarcode(Uint8List bytes, String fileName) {
-  helper.saveAndDownloadImage(bytes, fileName);
+Future<bool> downloadBarcode(Uint8List bytes, String fileName) async {
+  return await helper.saveAndDownloadImage(bytes, fileName);
 }
 
-void shareBarcode(Uint8List bytes, String fileName, {String? text}) {
-  helper.shareImage(bytes, fileName, text: text);
+Future<void> shareBarcode(Uint8List bytes, String fileName, {String? text}) async {
+  await helper.shareImage(bytes, fileName, text: text);
 }
 
-void printBarcode(Uint8List bytes) {
-  helper.printImage(bytes);
+Future<void> printBarcode(Uint8List bytes) async {
+  await helper.printImage(bytes);
 }

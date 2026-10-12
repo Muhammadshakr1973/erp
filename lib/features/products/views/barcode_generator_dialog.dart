@@ -90,8 +90,12 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
           : (widget.product?.name ?? 'label');
       final cleanedName = name.replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_');
       final code = _barcodeController.text.trim();
-      downloadBarcode(bytes, 'gardi_label_${cleanedName}_$code.png');
-      _showSnackbar('وێنەی لایبڵەکە بە سەرکەوتوویی دابەزی');
+      final success = await downloadBarcode(bytes, 'gardi_label_${cleanedName}_$code.png');
+      if (success) {
+        _showSnackbar('وێنەی لایبڵەکە بە سەرکەوتوویی دابەزی');
+      } else {
+        _showSnackbar('کێشەیەک لە دابەزاندنی وێنەکە ڕوویدا', isError: true);
+      }
     } else {
       _showSnackbar('کێشەیەک لە دروستکردنی وێنەکە ڕوویدا', isError: true);
     }
