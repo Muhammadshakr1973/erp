@@ -11,6 +11,16 @@ import '../../../core/utils/formatters.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
 
+class _MonthFilterOption {
+  final String key;
+  final String label;
+
+  const _MonthFilterOption({
+    required this.key,
+    required this.label,
+  });
+}
+
 class TodayTripsScreen extends ConsumerStatefulWidget {
   const TodayTripsScreen({super.key});
 
@@ -22,6 +32,133 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
   // 0 = نەگەیشتووەکان (Undelivered / Not completed)
   // 1 = گەیشتووەکان (Delivered / Completed)
   int _selectedSection = 0;
+
+  // فلتەری مانگ بۆ گەشتە تەواوبووەکان (بای دیفاوڵت مانگی ئێستا)
+  late String _selectedMonthKey;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
+  List<_MonthFilterOption> _buildMonthOptions(List<DeliveryTripModel> completedTrips) {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final currentMonth = now.month;
+
+    final Set<String> seenKeys = {};
+    final List<_MonthFilterOption> options = [];
+
+    // 1. ئەم مانگەی ئێستا
+    final currentKey = '$currentYear-${currentMonth.toString().padLeft(2, '0')}';
+    options.add(_MonthFilterOption(
+      key: currentKey,
+      label: 'ئەم مانگە ($currentMonth)',
+    ));
+    seenKeys.add(currentKey);
+
+    // 2. مانگەکانی پێشووی ئەمساڵ تا مانگی ١
+    for (int m = currentMonth - 1; m >= 1; m--) {
+      final key = '$currentYear-${m.toString().padLeft(2, '0')}';
+      options.add(_MonthFilterOption(
+        key: key,
+        label: 'مانگی $m',
+      ));
+      seenKeys.add(key);
+    }
+
+    // 3. ئەگەر گەشتی تەواوکراو لە ساڵانی تر یان مانگەکانی تر هەبێت
+    final List<DateTime> extraMonths = [];
+    for (final trip in completedTrips) {
+      final dt = DateTime.tryParse(trip.tripDate);
+      if (dt != null) {
+        final key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+        if (!seenKeys.contains(key)) {
+          seenKeys.add(key);
+          extraMonths.add(DateTime(dt.year, dt.month));
+        }
+      }
+    }
+    extraMonths.sort((a, b) => b.compareTo(a));
+    for (final dt in extraMonths) {
+      final key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+      options.add(_MonthFilterOption(
+        key: key,
+        label: dt.year == currentYear ? 'مانگی ${dt.month}' : 'مانگی ${dt.month} (${dt.year})',
+      ));
+    }
+
+    // 4. بژاردەی هەموو مانگەکان
+    options.add(const _MonthFilterOption(
+      key: 'ALL',
+      label: 'هەموو',
+    ));
+
+    return options;
+  }
+
+  Widget _buildMonthFilterBar(
+    BuildContext context,
+    ThemeData theme,
+    List<DeliveryTripModel> completedTrips,
+  ) {
+    final options = _buildMonthOptions(completedTrips);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal),
+        itemCount: options.length,
+        separatorBuilder: (context, index) => const SizedBox(width: AppSpacing.xs),
+        itemBuilder: (context, index) {
+          final option = options[index];
+          final isSelected = option.key == _selectedMonthKey;
+
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedMonthKey = option.key;
+                });
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                    width: 1.2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  option.label,
+                  style: AppTextStyles.caption.copyWith(
+                    color: isSelected
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.onSurface,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,47 +234,66 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
                   return a.tripDate.compareTo(b.tripDate);
                 });
 
+                final completedTrips = trips.where((t) => t.status.toUpperCase() == 'COMPLETED').toList();
+
                 final filteredTrips = trips.where((trip) {
                   final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
-                  return _selectedSection == 1 ? isCompleted : !isCompleted;
+                  if (_selectedSection == 0) {
+                    return !isCompleted;
+                  }
+
+                  if (!isCompleted) return false;
+                  if (_selectedMonthKey == 'ALL') return true;
+
+                  final dt = DateTime.tryParse(trip.tripDate);
+                  if (dt == null) return false;
+                  final tripKey = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+                  return tripKey == _selectedMonthKey;
                 }).toList();
 
-                if (filteredTrips.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _selectedSection == 1
-                                ? Icons.check_circle_outline_rounded
-                                : Icons.local_shipping_outlined,
-                            size: 56,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            _selectedSection == 1
-                                ? 'هیچ گەشتێکی گەیشتوو بۆ تۆ بەردەست نییە.'
-                                : 'هیچ گەشتێکی نەگەیشتوو بۆ تۆ بەردەست نییە.',
-                            style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(driverTripsProvider),
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                    itemCount: filteredTrips.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: AppSpacing.sm),
+                return Column(
+                  children: [
+                    if (_selectedSection == 1) ...[
+                      _buildMonthFilterBar(context, theme, completedTrips),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    Expanded(
+                      child: filteredTrips.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _selectedSection == 1
+                                          ? Icons.check_circle_outline_rounded
+                                          : Icons.local_shipping_outlined,
+                                      size: 56,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      _selectedSection == 1
+                                          ? (_selectedMonthKey == 'ALL'
+                                              ? 'هیچ گەشتێکی گەیشتوو بۆ تۆ بەردەست نییە.'
+                                              : 'هیچ گەشتێکی گەیشتوو لەم مانگەدا نییە.')
+                                          : 'هیچ گەشتێکی نەگەیشتوو بۆ تۆ بەردەست نییە.',
+                                      style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () async => ref.invalidate(driverTripsProvider),
+                              child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                                itemCount: filteredTrips.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       final trip = filteredTrips[index];
                       final isCompleted = trip.status.toUpperCase() == 'COMPLETED';
@@ -230,8 +386,11 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
                       );
                     },
                   ),
-                );
-              },
+                ),
+              ),
+            ],
+          );
+        },
             ),
           ),
         ],
