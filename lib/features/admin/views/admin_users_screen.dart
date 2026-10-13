@@ -1,9 +1,6 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:pos_app/features/products/utils/barcode_helper.dart';
 
 import 'dart:math';
 
@@ -1794,18 +1791,3 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   }
 }
 
-class _LoginQrCodeDialog extends StatelessWidget {
-  final String text;
-
-  const _LoginQrCodeDialog({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return UserQrDialog(
-      barcode: text,
-      userName: '',
-      userRole: 'کارمەند',
-      userPhone: '',
-    );
-  }
-}
