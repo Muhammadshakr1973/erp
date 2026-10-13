@@ -46,7 +46,8 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
           _repaintKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
       if (boundary == null) return null;
-      final image = await boundary.toImage(pixelRatio: 4.0);
+      // 500x300 at 2.0x generates a sharp 1000x600 px image (exact 50mm x 30mm ratio)
+      final image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (e) {
@@ -73,7 +74,7 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
         if (success) {
           AppSnackbar.show(
             context,
-            message: 'وێنەی کیو ئاڕ کۆد بە سەرکەوتوویی دابەزی',
+            message: 'وێنەی کیو ئاڕ کۆد (٥٠×٣٠ ملم) بە سەرکەوتوویی دابەزی',
             type: SnackbarType.success,
           );
         } else {
@@ -95,6 +96,47 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
     }
   }
 
+  Widget _buildInfoBlock({
+    required String label,
+    required String value,
+    bool isPrimary = false,
+    bool isPhone = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'KJino',
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 3),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Text(
+            value,
+            textDirection: isPhone ? TextDirection.ltr : null,
+            style: TextStyle(
+              fontFamily: isPhone ? null : 'KJino',
+              fontSize: isPrimary ? 20 : 17,
+              fontWeight: FontWeight.w900,
+              color: isPhone ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
+              height: 1.2,
+            ),
+            maxLines: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -106,11 +148,11 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 24,
+        horizontal: isMobile ? 12 : 24,
         vertical: 20,
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: const BoxConstraints(maxWidth: 540),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -150,188 +192,132 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // Customer Card Badge
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header Logo & GARDI ERP Title
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'GARDI ERP',
-                                style: TextStyle(
-                                  color: Color(0xFF1E293B),
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 18,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              Text(
-                                'سیستەمی بەڕێوەبردنی فرۆشتن',
-                                style: TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'KJino',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const GardiLogoWidget(
-                            width: 50,
-                            height: 42,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ],
+              // The Exact Printable 50 × 30 mm Sticker Canvas (1mm = 10px -> 500px × 300px)
+              Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: RepaintBoundary(
+                    key: _repaintKey,
+                    child: Container(
+                      width: 500,
+                      height: 300,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
                       ),
-                      const Divider(color: Color(0xFFE2E8F0), height: 22, thickness: 1.2),
-
-                      // Customer Details
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              customer.name,
-                              style: const TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                fontFamily: 'KJino',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (customer.customerName != null &&
-                                customer.customerName!.trim().isNotEmpty) ...[
-                              const SizedBox(height: 3),
-                              Text(
-                                'خاوەن: ${customer.customerName}',
-                                style: const TextStyle(
-                                  color: Color(0xFF475569),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'KJino',
+                            // ----------------- LEFT: QR CODE -----------------
+                            SizedBox(
+                              width: 230,
+                              height: 276,
+                              child: Center(
+                                child: QrImageView(
+                                  data: _qrData,
+                                  version: QrVersions.auto,
+                                  size: 230.0,
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  eyeStyle: const QrEyeStyle(
+                                    eyeShape: QrEyeShape.square,
+                                    color: Colors.black,
+                                  ),
+                                  dataModuleStyle: const QrDataModuleStyle(
+                                    dataModuleShape: QrDataModuleShape.square,
+                                    color: Colors.black,
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                            const SizedBox(height: 3),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                if (customer.phone != null &&
-                                    customer.phone!.isNotEmpty)
-                                  Text(
-                                    customer.phone!,
-                                    style: const TextStyle(
-                                      color: Color(0xFF2563EB),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                            ),
+
+                            const SizedBox(width: 14),
+
+                            // ----------------- RIGHT: CUSTOMER INFO -----------------
+                            Expanded(
+                              child: Directionality(
+                                textDirection: TextDirection.rtl,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    // ١- ناوی مارکێت
+                                    _buildInfoBlock(
+                                      label: 'ناوی مارکێت',
+                                      value: customer.name.isNotEmpty
+                                          ? customer.name
+                                          : '—',
+                                      isPrimary: true,
                                     ),
-                                  ),
-                                if (customer.route != null)
-                                  Text(
-                                    customer.route!.name,
-                                    style: const TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontSize: 11,
-                                      fontFamily: 'KJino',
+
+                                    // ٢- ناوی خاوەن
+                                    _buildInfoBlock(
+                                      label: 'ناوی خاوەن',
+                                      value: (customer.customerName != null &&
+                                              customer.customerName!.trim().isNotEmpty)
+                                          ? customer.customerName!
+                                          : '—',
                                     ),
-                                  ),
-                              ],
+
+                                    // ٣- ژمارە مۆبایل
+                                    _buildInfoBlock(
+                                      label: 'ژمارە مۆبایل',
+                                      value: (customer.phone != null &&
+                                              customer.phone!.trim().isNotEmpty)
+                                          ? customer.phone!
+                                          : '—',
+                                      isPhone: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // High Contrast QR Code (Captured for download)
-                      RepaintBoundary(
-                        key: _repaintKey,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-                          ),
-                          child: QrImageView(
-                            data: _qrData,
-                            version: QrVersions.auto,
-                            size: 190.0,
-                            backgroundColor: Colors.white,
-                            eyeStyle: const QrEyeStyle(
-                              eyeShape: QrEyeShape.square,
-                              color: Colors.black,
-                            ),
-                            dataModuleStyle: const QrDataModuleStyle(
-                              dataModuleShape: QrDataModuleShape.square,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Customer Code under QR
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _qrData,
-                          style: const TextStyle(
-                            color: Color(0xFF0F172A),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'بۆ خوێندنەوەی خێرا لەلایەن مەندوبەوە بە کامێرا',
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 10,
-                          fontFamily: 'KJino',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Label Size Notice
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.straighten_rounded,
+                      size: 16,
+                      color: Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'پێوانەی ستیکەر: ٥٠ملم پانی × ٣٠ملم بەرزی (بۆ چاپکەری حەراری)',
+                      style: TextStyle(
+                        fontFamily: 'KJino',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: AppSpacing.lg),
 
-              // Single Direct Download Button (زیادکردن)
+              // Action Button (دابەزاندنی وێنەی کیو ئاڕ)
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -339,7 +325,8 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+                    disabledBackgroundColor:
+                        AppColors.primary.withValues(alpha: 0.6),
                     disabledForegroundColor: Colors.white70,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -353,12 +340,13 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Icon(Icons.download_rounded, size: 22),
                   label: Text(
-                    _isCapturing ? 'خەریکی دابەزاندنە...' : 'زیادکردن',
+                    _isCapturing ? 'خەریکی دابەزاندنە...' : 'دابەزاندنی وێنەی کیو ئاڕ',
                     style: const TextStyle(
                       fontFamily: 'KJino',
                       fontWeight: FontWeight.bold,
