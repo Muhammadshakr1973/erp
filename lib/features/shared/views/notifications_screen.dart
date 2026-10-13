@@ -54,7 +54,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final notificationsAsync = ref.watch(notificationsListProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
     final selectedFilter = ref.watch(notificationFilterTypeProvider);
