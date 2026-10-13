@@ -228,9 +228,13 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
                   final dateA = DateTime.tryParse(a.tripDate);
                   final dateB = DateTime.tryParse(b.tripDate);
                   if (dateA != null && dateB != null) {
-                    return dateA.compareTo(dateB);
+                    final cmp = dateB.compareTo(dateA);
+                    if (cmp != 0) return cmp;
+                  } else {
+                    final cmp = b.tripDate.compareTo(a.tripDate);
+                    if (cmp != 0) return cmp;
                   }
-                  return a.tripDate.compareTo(b.tripDate);
+                  return b.id.compareTo(a.id);
                 });
 
                 final completedTrips = trips.where((t) => t.status.toUpperCase() == 'COMPLETED').toList();
