@@ -108,26 +108,24 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
           label,
           style: const TextStyle(
             fontFamily: 'KJino',
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF64748B),
-            height: 1.1,
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: Colors.black,
+            height: 1.15,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         FittedBox(
           fit: BoxFit.scaleDown,
-          alignment: Alignment.centerRight,
+          alignment: Alignment.centerLeft,
           child: Text(
             value,
             textDirection: isPhone ? TextDirection.ltr : null,
             style: TextStyle(
               fontFamily: isPhone ? null : 'KJino',
-              fontSize: isPrimary ? 20 : 17,
+              fontSize: isPrimary ? 25 : 21,
               fontWeight: FontWeight.w900,
-              color: isPhone
-                  ? const Color(0xFF1D4ED8)
-                  : const Color(0xFF0F172A),
+              color: Colors.black,
               height: 1.2,
             ),
             maxLines: 1,
@@ -206,8 +204,8 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFF0F172A),
-                          width: 1.5,
+                          color: Colors.black,
+                          width: 2.0,
                         ),
                       ),
                       child: Directionality(
@@ -217,15 +215,15 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                           children: [
                             // ----------------- LEFT: QR CODE -----------------
                             SizedBox(
-                              width: 230,
+                              width: 245,
                               height: 276,
                               child: Center(
                                 child: QrImageView(
                                   data: _qrData,
                                   version: QrVersions.auto,
-                                  size: 230.0,
+                                  size: 245.0,
                                   backgroundColor: Colors.white,
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(2),
                                   eyeStyle: const QrEyeStyle(
                                     eyeShape: QrEyeShape.square,
                                     color: Colors.black,
@@ -242,46 +240,43 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
 
                             // ----------------- RIGHT: CUSTOMER INFO -----------------
                             Expanded(
-                              child: Directionality(
-                                textDirection: TextDirection.rtl,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    // ١- ناوی مارکێت
-                                    _buildInfoBlock(
-                                      label: 'ناوی مارکێت',
-                                      value: customer.name.isNotEmpty
-                                          ? customer.name
-                                          : '—',
-                                      isPrimary: true,
-                                    ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  // ١- ناوی مارکێت
+                                  _buildInfoBlock(
+                                    label: 'ناوی مارکێت',
+                                    value: customer.name.isNotEmpty
+                                        ? customer.name
+                                        : '—',
+                                    isPrimary: true,
+                                  ),
 
-                                    // ٢- ناوی خاوەن
-                                    _buildInfoBlock(
-                                      label: 'ناوی خاوەن',
-                                      value:
-                                          (customer.customerName != null &&
-                                              customer.customerName!
-                                                  .trim()
-                                                  .isNotEmpty)
-                                          ? customer.customerName!
-                                          : '—',
-                                    ),
+                                  // ٢- ناوی خاوەن
+                                  _buildInfoBlock(
+                                    label: 'ناوی خاوەن',
+                                    value:
+                                        (customer.customerName != null &&
+                                            customer.customerName!
+                                                .trim()
+                                                .isNotEmpty)
+                                        ? customer.customerName!
+                                        : '—',
+                                  ),
 
-                                    // ٣- ژمارە مۆبایل
-                                    _buildInfoBlock(
-                                      label: 'ژمارە مۆبایل',
-                                      value:
-                                          (customer.phone != null &&
-                                              customer.phone!.trim().isNotEmpty)
-                                          ? customer.phone!
-                                          : '—',
-                                      isPhone: true,
-                                    ),
-                                  ],
-                                ),
+                                  // ٣- ژمارە مۆبایل
+                                  _buildInfoBlock(
+                                    label: 'ژمارە مۆبایل',
+                                    value:
+                                        (customer.phone != null &&
+                                            customer.phone!.trim().isNotEmpty)
+                                        ? customer.phone!
+                                        : '—',
+                                    isPhone: true,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
