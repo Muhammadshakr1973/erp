@@ -25,7 +25,7 @@ Future<bool> saveAndDownloadImage(Uint8List bytes, String fileName) async {
   }
 }
 
-void printImage(Uint8List bytes) {
+Future<void> printImage(Uint8List bytes) async {
   try {
     final imageBlob = html.Blob([bytes], 'image/png');
     final imageUrl = html.Url.createObjectUrlFromBlob(imageBlob);
@@ -152,6 +152,6 @@ Future<void> shareImage(Uint8List bytes, String fileName, {String? text}) async 
     debugPrint('Share not supported: $e');
   }
 
-  saveAndDownloadImage(bytes, fileName);
+  await saveAndDownloadImage(bytes, fileName);
 }
 
