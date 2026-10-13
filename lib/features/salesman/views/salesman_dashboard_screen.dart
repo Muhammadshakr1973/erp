@@ -1159,17 +1159,15 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         } catch (_) {}
       }
 
-      if (targetCustomer == null) {
-        targetCustomer = customerList
-            .where(
-              (c) =>
-                  c.phone != null &&
-                  (c.phone == cleanCode ||
-                      c.phone!.replaceAll(RegExp(r'\D'), '') ==
-                          cleanCode.replaceAll(RegExp(r'\D'), '')),
-            )
-            .firstOrNull;
-      }
+      targetCustomer ??= customerList
+          .where(
+            (c) =>
+                c.phone != null &&
+                (c.phone == cleanCode ||
+                    c.phone!.replaceAll(RegExp(r'\D'), '') ==
+                        cleanCode.replaceAll(RegExp(r'\D'), '')),
+          )
+          .firstOrNull;
 
       if (targetCustomer == null) {
         try {
@@ -1244,10 +1242,11 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         final warehouses =
             ref.read(warehouseListProvider).valueOrNull ??
             await ref.read(warehouseListProvider.future);
-        if (warehouses.isNotEmpty) {
-          final mainWh = warehouses.firstWhere(
+        if (warehouses != null && warehouses.isNotEmpty) {
+          final nonNullWarehouses = warehouses;
+          final mainWh = nonNullWarehouses.firstWhere(
             (w) => w.isMain,
-            orElse: () => warehouses.first,
+            orElse: () => nonNullWarehouses.first,
           );
           warehouseId = mainWh.id;
         }

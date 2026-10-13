@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -115,8 +115,6 @@ const server = http.createServer((req, res) => {
       }
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
       res.end(content);
     });
     return;
@@ -125,6 +123,18 @@ const server = http.createServer((req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end('<!DOCTYPE html><html lang="ku" dir="rtl"><head><title>GARDI ERP</title></head><body><h1>GARDI ERP</h1></body></html>');
+});
+
+server.on('error', (err) => {
+  console.error('Server encountered error:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 server.listen(PORT, '0.0.0.0', () => {
