@@ -183,6 +183,8 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     subtitle: 'داواکاری بۆ ئامادەکردن',
                     icon: AppIcons.orderStatus,
                     color: AppColors.warning,
+                    isAlert: data.pendingPackingCount > 0,
+                    isDimmed: data.pendingPackingCount == 0,
                     onTap: () {
                       ref.read(warehouseTabIndexProvider.notifier).state = 1;
                     },
