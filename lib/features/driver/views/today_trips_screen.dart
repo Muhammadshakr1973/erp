@@ -105,7 +105,6 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
     List<DeliveryTripModel> completedTrips,
   ) {
     final options = _buildMonthOptions(completedTrips);
-    final isDark = theme.brightness == Brightness.dark;
 
     return SizedBox(
       height: 40,
@@ -369,7 +368,7 @@ class _TodayTripsScreenState extends ConsumerState<TodayTripsScreen> {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(alpha: 0.1),
                                       blurRadius: 2,
                                       offset: const Offset(0, 1),
                                     ),
