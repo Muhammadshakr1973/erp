@@ -24,13 +24,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // کاتێک شاشەکە دەکرێتەوە، هەموو ئاگادارکردنەوەکان دەبن بە خوێندراوە
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(notificationsListProvider.notifier).markAllAsRead();
-      }
-    });
+    // ئاگادارکردنەوەکان لە کاتی کردنەوەدا ڕاستەوخۆ ناکرێن بە خوێندراوە بۆ ئەوەی بەکارهێنەر بتوانێت ئاگادارکردنەوە نوێیەکان بە ڕەنگی تۆختر ببینێت
+  }
+
+  void _markAllAsReadSilently() {
+    final unread = ref.read(unreadNotificationsCountProvider);
+    if (unread > 0) {
+      ref.read(notificationsListProvider.notifier).markAllAsRead();
+    }
   }
 
   void _handleNotificationTap(AppNotification notification) {
@@ -58,60 +59,68 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
     final selectedFilter = ref.watch(notificationFilterTypeProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ئاگادارکردنەوەکان', style: AppTextStyles.h2),
-        actions: [
-          IconButton(
-            icon: Icon(
-              ref.watch(notificationSoundEnabledProvider)
-                  ? Icons.volume_up_rounded
-                  : Icons.volume_off_rounded,
-            ),
-            tooltip: ref.watch(notificationSoundEnabledProvider)
-                ? 'دەنگی ئاگادارکردنەوەکان چالاکە'
-                : 'دەنگی ئاگادارکردنەوەکان ناچالاکە',
-            onPressed: () {
-              final current = ref.read(notificationSoundEnabledProvider);
-              final notifier = ref.read(notificationSoundEnabledProvider.notifier);
-              notifier.toggleSound(!current);
-              if (!current) {
-                NotificationSoundService.playNotificationSound(soundEnabled: true);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('دەنگی ئاگادارکردنەوەکان چالاککرا'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('دەنگی ئاگادارکردنەوەکان ناچالاککرا'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-          ),
-          if (unreadCount > 0)
-            TextButton.icon(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _markAllAsReadSilently();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('ئاگادارکردنەوەکان', style: AppTextStyles.h2),
+          actions: [
+            IconButton(
+              icon: Icon(
+                ref.watch(notificationSoundEnabledProvider)
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_off_rounded,
+              ),
+              tooltip: ref.watch(notificationSoundEnabledProvider)
+                  ? 'دەنگی ئاگادارکردنەوەکان چالاکە'
+                  : 'دەنگی ئاگادارکردنەوەکان ناچالاکە',
               onPressed: () {
-                ref.read(notificationsListProvider.notifier).markAllAsRead();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('هەموو ئاگادارکردنەوەکان خوێندرانەوە'),
-                  ),
-                );
+                final current = ref.read(notificationSoundEnabledProvider);
+                final notifier = ref.read(notificationSoundEnabledProvider.notifier);
+                notifier.toggleSound(!current);
+                if (!current) {
+                  NotificationSoundService.playNotificationSound(soundEnabled: true);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('دەنگی ئاگادارکردنەوەکان چالاککرا'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('دەنگی ئاگادارکردنەوەکان ناچالاککرا'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
-              icon: const Icon(Icons.done_all, size: 18),
-              label: const Text('هەمووی بخوێنەوە'),
             ),
-        ],
-      ),
-      body: _buildInAppNotificationsTab(
-        context,
-        notificationsAsync,
-        selectedFilter,
+            if (unreadCount > 0)
+              TextButton.icon(
+                onPressed: () {
+                  ref.read(notificationsListProvider.notifier).markAllAsRead();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('هەموو ئاگادارکردنەوەکان خوێندرانەوە'),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.done_all, size: 18),
+                label: const Text('هەمووی بخوێنەوە'),
+              ),
+          ],
+        ),
+        body: _buildInAppNotificationsTab(
+          context,
+          notificationsAsync,
+          selectedFilter,
+        ),
       ),
     );
   }
@@ -268,10 +277,32 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     AppNotification notification,
   ) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final adaptiveColor = notification.iconColorAdaptive(context);
+    final isUnread = !notification.isRead;
+
+    // جیاکردنەوەی نۆتیفیکەیشنی نوێ/نەبینراو:
+    // ئەوانەی بۆ جاری یەکەمە دەبینرێن ڕەنگیان تۆخترە بە چوارچێوەی دیار، و ئەوانی تر ناتۆخترن
+    final Color cardBgColor = isUnread
+        ? (isDark
+            ? const Color(0xFF162544) // ڕەنگی تۆخی دیار لە دۆخی تاریک
+            : const Color(0xFFE2EAF8)) // ڕەنگی تۆخی دیار لە دۆخی ڕووناک
+        : (isDark
+            ? theme.colorScheme.surface.withValues(alpha: 0.35) // ناتۆختر و کەمڕەنگتر
+            : Colors.white.withValues(alpha: 0.7)); // ناتۆختر و کاڵ
+
+    final Color cardBorderColor = isUnread
+        ? (isDark
+            ? theme.colorScheme.primary.withValues(alpha: 0.65)
+            : theme.colorScheme.primary.withValues(alpha: 0.45))
+        : (isDark
+            ? theme.colorScheme.outline.withValues(alpha: 0.12)
+            : AppColors.borderLight.withValues(alpha: 0.5));
 
     return AppCard(
       onTap: () => _handleNotificationTap(notification),
+      color: cardBgColor,
+      borderColor: cardBorderColor,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,12 +310,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: adaptiveColor.withValues(alpha: 0.15),
+              color: adaptiveColor.withValues(alpha: isUnread ? 0.22 : 0.08),
               borderRadius: BorderRadius.circular(AppRadius.md),
+              border: isUnread
+                  ? Border.all(
+                      color: adaptiveColor.withValues(alpha: 0.4),
+                      width: 1,
+                    )
+                  : null,
             ),
             child: Icon(
               notification.iconData,
-              color: adaptiveColor,
+              color: isUnread
+                  ? adaptiveColor
+                  : adaptiveColor.withValues(alpha: 0.45),
               size: 22,
             ),
           ),
@@ -296,42 +335,72 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: Text(
                         notification.title,
                         style: AppTextStyles.bodyBold.copyWith(
-                          color: notification.isRead
-                              ? theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                )
-                              : theme.colorScheme.onSurface,
-                          fontWeight: notification.isRead
-                              ? FontWeight.w500
-                              : FontWeight.bold,
+                          color: isUnread
+                              ? (isDark ? Colors.white : AppColors.textPrimaryLight)
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                          fontWeight: isUnread ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ),
-                    if (!notification.isRead)
+                    if (isUnread) ...[
+                      const SizedBox(width: 8),
                       Container(
-                        width: 9,
-                        height: 9,
-                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          shape: BoxShape.circle,
+                          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.xs),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.infoDark
+                                    : theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'نوێ',
+                              style: AppTextStyles.caption.copyWith(
+                                color: isDark
+                                    ? AppColors.infoDark
+                                    : theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   notification.body,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(
-                      alpha: notification.isRead ? 0.65 : 0.88,
-                    ),
+                    color: isUnread
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.95)
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.45),
                     height: 1.4,
                   ),
                 ),
@@ -343,15 +412,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       notification.timeAgoKurdish,
                       style: AppTextStyles.caption.copyWith(
                         color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.5,
+                          alpha: isUnread ? 0.65 : 0.4,
                         ),
                       ),
                     ),
                     Text(
                       notification.typeLabelKurdish,
                       style: AppTextStyles.caption.copyWith(
-                        color: adaptiveColor,
-                        fontWeight: FontWeight.w600,
+                        color: isUnread
+                            ? adaptiveColor
+                            : adaptiveColor.withValues(alpha: 0.55),
+                        fontWeight: isUnread ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
                   ],
