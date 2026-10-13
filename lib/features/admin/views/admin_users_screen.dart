@@ -7,7 +7,6 @@ import 'dart:math';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
-import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -1625,10 +1624,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           radius: 20,
                           highlightShape: BoxShape.circle,
                           onTap: () {
-                            AppDialog.showAlert(
+                            AppSnackbar.show(
                               context,
-                              title: 'ئاگاداری',
                               message: 'ئەم بەتنە بە لۆنگ پرێس کار دەکات',
+                              type: SnackbarType.success,
                             );
                           },
                           onLongPress: () {
