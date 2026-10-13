@@ -36,6 +36,11 @@ class NotificationSoundNotifier extends StateNotifier<bool> {
 class NotificationSoundService {
   /// Plays a distinct notification chime sound & vibration feedback across platforms
   static Future<void> playNotificationSound({bool soundEnabled = true}) async {
+    await playSuccessSound(soundEnabled: soundEnabled);
+  }
+
+  /// Plays success chime sound & haptic feedback for valid scans and confirmations
+  static Future<void> playSuccessSound({bool soundEnabled = true}) async {
     if (!soundEnabled) return;
 
     try {
@@ -44,9 +49,25 @@ class NotificationSoundService {
       } else {
         await SystemSound.play(SystemSoundType.alert);
       }
+      await HapticFeedback.mediumImpact();
+    } catch (e) {
+      debugPrint("Error playing success sound: $e");
+    }
+  }
+
+  /// Plays failure/error buzz sound & heavy haptic feedback for unrecognized barcodes or errors
+  static Future<void> playErrorSound({bool soundEnabled = true}) async {
+    if (!soundEnabled) return;
+
+    try {
+      if (kIsWeb) {
+        sound_helper.playErrorSoundWeb();
+      } else {
+        await SystemSound.play(SystemSoundType.alert);
+      }
       await HapticFeedback.heavyImpact();
     } catch (e) {
-      debugPrint("Error playing notification sound: $e");
+      debugPrint("Error playing error sound: $e");
     }
   }
 }

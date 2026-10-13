@@ -8,6 +8,7 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/permission_guard.dart';
+import '../../../core/utils/notification_sound_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -731,12 +732,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             message: '${matched.name} زیادکرا بۆ سەبەتە',
             type: SnackbarType.success,
           );
+          return true;
         } else {
           AppSnackbar.show(
             context,
             message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
             type: SnackbarType.error,
           );
+          return false;
         }
       },
       closeOnScan: false,
@@ -2590,6 +2593,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     if (match != null) {
       _addToCart(match.id);
+      try {
+        NotificationSoundService.playSuccessSound();
+      } catch (_) {}
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2601,6 +2607,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       controller.clear();
       focusNode.requestFocus();
     } else {
+      try {
+        NotificationSoundService.playErrorSound();
+      } catch (_) {}
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

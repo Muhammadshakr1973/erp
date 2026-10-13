@@ -10,11 +10,13 @@ import '../utils/notification_sound_service.dart';
 import 'app_button.dart';
 import 'app_snackbar.dart';
 
+typedef BarcodeScanCallback = FutureOr<dynamic> Function(String barcode);
+
 /// Professional, fully responsive Edge-to-Edge Camera Barcode & QR Scanner Component
 /// Designed for GARDI ERP with multi-platform support (Web, Android, iOS, Desktop)
 /// Supports camera streaming, physical USB/Bluetooth barcode guns, and manual input.
 class CameraBarcodeScanner extends StatefulWidget {
-  final Function(String barcode) onScan;
+  final BarcodeScanCallback onScan;
   final bool isFullscreen;
   final bool closeOnScan;
 
@@ -30,7 +32,7 @@ class CameraBarcodeScanner extends StatefulWidget {
   /// If [closeOnScan] is false (default), it remains open until the user manually closes it.
   static Future<void> show(
     BuildContext context,
-    Function(String barcode) onScan, {
+    BarcodeScanCallback onScan, {
     bool closeOnScan = false,
   }) {
     final mediaQuery = MediaQuery.of(context);
@@ -114,6 +116,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
   DateTime? _lastScanTime;
   String? _lastScannedCode;
   String? _recentFeedbackText;
+  bool _recentScanSuccess = true;
   Timer? _feedbackTimer;
   Timer? _debounceTimer;
 
@@ -193,7 +196,7 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
   }
 
   /// Handles barcode detection from camera, hardware scanner gun, or manual entry
-  void _onSuccessScan(String rawCode) {
+  Future<void> _onSuccessScan(String rawCode) async {
     if (_isProcessing) return;
     final barcode = rawCode.trim();
     if (barcode.isEmpty) return;
@@ -213,7 +216,24 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
 
     setState(() {
       _isProcessing = true;
+    });
+
+    // Execute scan callback to verify if barcode was recognized/valid
+    bool isSuccess = true;
+    try {
+      final dynamic scanResult = await widget.onScan(barcode);
+      if (scanResult == false) {
+        isSuccess = false;
+      }
+    } catch (_) {
+      isSuccess = false;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
       _recentFeedbackText = barcode;
+      _recentScanSuccess = isSuccess;
     });
 
     _feedbackTimer?.cancel();
@@ -221,19 +241,18 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
       if (mounted) {
         setState(() {
           _recentFeedbackText = null;
+          _recentScanSuccess = true;
         });
       }
     });
 
     try {
-      NotificationSoundService.playNotificationSound();
+      if (isSuccess) {
+        NotificationSoundService.playSuccessSound();
+      } else {
+        NotificationSoundService.playErrorSound();
+      }
     } catch (_) {}
-
-    try {
-      HapticFeedback.mediumImpact();
-    } catch (_) {}
-
-    widget.onScan(barcode);
 
     if (widget.closeOnScan) {
       try {
@@ -244,12 +263,14 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
         Navigator.of(context).pop();
       }
 
-      AppSnackbar.show(
-        context,
-        message: 'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $barcode',
-        type: SnackbarType.success,
-        duration: const Duration(seconds: 2),
-      );
+      if (isSuccess) {
+        AppSnackbar.show(
+          context,
+          message: 'بارکۆد بە سەرکەوتوویی خوێندرایەوە: $barcode',
+          type: SnackbarType.success,
+          duration: const Duration(seconds: 2),
+        );
+      }
     } else {
       // In continuous scan mode: DO NOT CLOSE! Keep scanner open and active
       _manualInputController.clear();
@@ -568,12 +589,14 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                         ),
                         decoration: BoxDecoration(
                           color: _recentFeedbackText != null
-                              ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                              ? (_recentScanSuccess
+                                  ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                                  : const Color(0xFF7F1D1D).withValues(alpha: 0.85))
                               : Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: _recentFeedbackText != null
-                                ? Colors.greenAccent
+                                ? (_recentScanSuccess ? Colors.greenAccent : Colors.redAccent)
                                 : Colors.white.withValues(alpha: 0.12),
                             width: _recentFeedbackText != null ? 1.5 : 1.0,
                           ),
@@ -583,18 +606,22 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                           children: [
                             Icon(
                               _recentFeedbackText != null
-                                  ? Icons.check_circle_rounded
+                                  ? (_recentScanSuccess
+                                      ? Icons.check_circle_rounded
+                                      : Icons.error_outline_rounded)
                                   : Icons.center_focus_strong_rounded,
                               size: 16,
                               color: _recentFeedbackText != null
-                                  ? Colors.greenAccent
+                                  ? (_recentScanSuccess ? Colors.greenAccent : Colors.redAccent)
                                   : Colors.white70,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 _recentFeedbackText != null
-                                    ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                    ? (_recentScanSuccess
+                                        ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                        : 'کۆدی نەناسراو: $_recentFeedbackText')
                                     : 'بارکۆد یان QR لەناو چوارچێوەکە ڕابگرە',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: Colors.white,
@@ -1095,12 +1122,14 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: _recentFeedbackText != null
-                            ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                            ? (_recentScanSuccess
+                                ? const Color(0xFF14532D).withValues(alpha: 0.85)
+                                : const Color(0xFF7F1D1D).withValues(alpha: 0.85))
                             : Colors.greenAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: _recentFeedbackText != null
-                              ? Colors.greenAccent
+                              ? (_recentScanSuccess ? Colors.greenAccent : Colors.redAccent)
                               : Colors.greenAccent.withValues(alpha: 0.3),
                           width: _recentFeedbackText != null ? 1.5 : 1.0,
                         ),
@@ -1110,18 +1139,26 @@ class _CameraBarcodeScannerState extends State<CameraBarcodeScanner>
                         children: [
                           Icon(
                             _recentFeedbackText != null
-                                ? Icons.check_circle_rounded
+                                ? (_recentScanSuccess
+                                    ? Icons.check_circle_rounded
+                                    : Icons.error_outline_rounded)
                                 : Icons.sensors_rounded,
                             size: 18,
-                            color: Colors.greenAccent,
+                            color: _recentFeedbackText != null
+                                ? (_recentScanSuccess ? Colors.greenAccent : Colors.redAccent)
+                                : Colors.greenAccent,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             _recentFeedbackText != null
-                                ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                ? (_recentScanSuccess
+                                    ? 'خوێندرایەوە: $_recentFeedbackText (ئامادەیە بۆ سکانی تر)'
+                                    : 'کۆدی نەناسراو: $_recentFeedbackText')
                                 : 'چاوەڕوانی لێدانی بارکۆدە (Listening for Scans)...',
                             style: AppTextStyles.caption.copyWith(
-                              color: Colors.greenAccent,
+                              color: _recentFeedbackText != null
+                                  ? (_recentScanSuccess ? Colors.greenAccent : Colors.redAccent)
+                                  : Colors.greenAccent,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

@@ -303,12 +303,14 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           } else {
             _togglePack(item, true, order.items);
           }
+          return true;
         } else {
           AppSnackbar.show(
             context,
             message: 'کۆدی کاڵاکە لەم پسوڵەیەدا نەدۆزرایەوە',
             type: SnackbarType.warning,
           );
+          return false;
         }
       },
       closeOnScan: false,
