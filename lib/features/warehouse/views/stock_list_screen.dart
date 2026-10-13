@@ -63,6 +63,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
                       value: adjustType,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'جۆری جوڵە',
                         border: OutlineInputBorder(),
@@ -70,7 +71,10 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                       items: const [
                         DropdownMenuItem(
                           value: 'ADJUSTMENT',
-                          child: Text('جیاوازی کۆگا (ADJUSTMENT)'),
+                          child: Text(
+                            'جیاوازی کۆگا (ADJUSTMENT)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                       onChanged: (val) {
