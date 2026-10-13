@@ -1624,10 +1624,9 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           radius: 20,
                           highlightShape: BoxShape.circle,
                           onTap: () {
-                            AppSnackbar.show(
+                            AppSnackbar.info(
                               context,
-                              message: 'ئەم بەتنە بە لۆنگ پرێس کار دەکات',
-                              type: SnackbarType.success,
+                              'ئەم بەتنە بە لۆنگ پرێس کار دەکات',
                             );
                           },
                           onLongPress: () {
