@@ -21,6 +21,7 @@ import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../shared/providers/route_provider.dart';
+import '../../shared/views/user_qr_dialog.dart';
 import 'providers/user_provider.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
@@ -84,6 +85,28 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         return 'شۆفێر';
       default:
         return role;
+    }
+  }
+
+  static String _formatRoleForQr(String role) {
+    switch (role.toLowerCase()) {
+      case 'salesman':
+        return 'مەندوب';
+      case 'driver':
+        return 'شۆفێر';
+      case 'warehouse':
+        return 'کارمەندی کۆگا';
+      case 'admin':
+        return 'بەڕێوەبەر';
+      case 'owner':
+        return 'خاوەن کار';
+      default:
+        if (role.contains('مەندوب')) return 'مەندوب';
+        if (role.contains('شۆفێر')) return 'شۆفێر';
+        if (role.contains('کۆگا')) return 'کارمەندی کۆگا';
+        if (role.contains('بەڕێوەبەر')) return 'بەڕێوەبەر';
+        if (role.contains('خاوەن کار')) return 'خاوەن کار';
+        return role.isNotEmpty ? role : 'کارمەند';
     }
   }
 
@@ -626,6 +649,27 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               ],
                             ),
                           ),
+                          if (user.barcode != null &&
+                              user.barcode!.trim().isNotEmpty) ...[
+                            IconButton(
+                              icon: const Icon(Icons.qr_code_2_rounded),
+                              color: theme.colorScheme.primary,
+                              iconSize: 22,
+                              tooltip: 'کیو ئاڕ کۆدی بەکارهێنەر',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                UserQrDialog.show(
+                                  context,
+                                  barcode: user.barcode!.trim(),
+                                  userName: user.name,
+                                  userRole: _formatRoleForQr(user.role),
+                                  userPhone: user.phone,
+                                  user: user,
+                                );
+                              },
+                            ),
+                          ],
                           const SizedBox(width: AppSpacing.sm),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -827,6 +871,45 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         return 'شۆفێر (Driver)';
       default:
         return name;
+    }
+  }
+
+  String _getUserRoleNameForQr() {
+    if (_selectedRoleId != null && widget.roles != null) {
+      final matched = widget.roles!.firstWhere(
+        (r) => r['id'] == _selectedRoleId,
+        orElse: () => null,
+      );
+      if (matched != null) {
+        final name = matched['name']?.toString() ?? '';
+        return _formatRoleForQr(name);
+      }
+    }
+    if (widget.user != null) {
+      return _formatRoleForQr(widget.user!.role);
+    }
+    return 'کارمەند';
+  }
+
+  String _formatRoleForQr(String role) {
+    switch (role.toLowerCase()) {
+      case 'salesman':
+        return 'مەندوب';
+      case 'driver':
+        return 'شۆفێر';
+      case 'warehouse':
+        return 'کارمەندی کۆگا';
+      case 'admin':
+        return 'بەڕێوەبەر';
+      case 'owner':
+        return 'خاوەن کار';
+      default:
+        if (role.contains('مەندوب')) return 'مەندوب';
+        if (role.contains('شۆفێر')) return 'شۆفێر';
+        if (role.contains('کۆگا')) return 'کارمەندی کۆگا';
+        if (role.contains('بەڕێوەبەر')) return 'بەڕێوەبەر';
+        if (role.contains('خاوەن کار')) return 'خاوەن کار';
+        return role.isNotEmpty ? role : 'کارمەند';
     }
   }
 
@@ -1555,9 +1638,17 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         onPressed: () {
                           final text = _barcodeController.text.trim();
                           if (text.isNotEmpty) {
-                            showDialog(
-                              context: context,
-                              builder: (_) => _LoginQrCodeDialog(text: text),
+                            UserQrDialog.show(
+                              context,
+                              barcode: text,
+                              userName: _nameController.text.trim().isNotEmpty
+                                  ? _nameController.text.trim()
+                                  : (widget.user?.name ?? ''),
+                              userRole: _getUserRoleNameForQr(),
+                              userPhone: _phoneController.text.trim().isNotEmpty
+                                  ? _phoneController.text.trim()
+                                  : (widget.user?.phone ?? ''),
+                              user: widget.user,
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1592,6 +1683,41 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                     ],
                   ),
                 ),
+                if (_barcodeController.text.trim().isNotEmpty || widget.user?.barcode?.isNotEmpty == true) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      final text = _barcodeController.text.trim().isNotEmpty
+                          ? _barcodeController.text.trim()
+                          : (widget.user?.barcode?.trim() ?? '');
+                      if (text.isNotEmpty) {
+                        UserQrDialog.show(
+                          context,
+                          barcode: text,
+                          userName: _nameController.text.trim().isNotEmpty
+                              ? _nameController.text.trim()
+                              : (widget.user?.name ?? ''),
+                          userRole: _getUserRoleNameForQr(),
+                          userPhone: _phoneController.text.trim().isNotEmpty
+                              ? _phoneController.text.trim()
+                              : (widget.user?.phone ?? ''),
+                          user: widget.user,
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.qr_code_2_rounded, size: 22),
+                    label: const Text(
+                      'پیشاندان و چاپکردنی کیو ئاڕ کۆدی بەکارهێنەر (QR)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'KJino'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(
@@ -1668,224 +1794,18 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   }
 }
 
-class _LoginQrCodeDialog extends StatefulWidget {
+class _LoginQrCodeDialog extends StatelessWidget {
   final String text;
 
   const _LoginQrCodeDialog({required this.text});
 
   @override
-  State<_LoginQrCodeDialog> createState() => _LoginQrCodeDialogState();
-}
-
-class _LoginQrCodeDialogState extends State<_LoginQrCodeDialog> {
-  Uint8List? _qrBytes;
-  bool _isGenerating = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _preGenerateQr();
-  }
-
-  Future<void> _preGenerateQr() async {
-    final bytes = await _generateQrBytes();
-    if (mounted) {
-      setState(() {
-        _qrBytes = bytes;
-        _isGenerating = false;
-      });
-    }
-  }
-
-  Future<Uint8List?> _generateQrBytes() async {
-    try {
-      final qrValidationResult = QrValidator.validate(
-        data: widget.text,
-        version: QrVersions.auto,
-        errorCorrectionLevel: QrErrorCorrectLevel.L,
-      );
-      if (qrValidationResult.status == QrValidationStatus.valid) {
-        final qrCode = qrValidationResult.qrCode;
-        final painter = QrPainter.withQr(
-          qr: qrCode!,
-          eyeStyle: const QrEyeStyle(
-            eyeShape: QrEyeShape.square,
-            color: Color(0xFF0F172A),
-          ),
-          dataModuleStyle: const QrDataModuleStyle(
-            dataModuleShape: QrDataModuleShape.square,
-            color: Color(0xFF0F172A),
-          ),
-          gapless: true,
-        );
-        final imageData = await painter.toImageData(512.0);
-        return imageData?.buffer.asUint8List();
-      }
-    } catch (e) {
-      debugPrint('Error generating QR: $e');
-    }
-    return null;
-  }
-
-  Future<void> _handleDownload() async {
-    if (_isGenerating && _qrBytes == null) return;
-    setState(() => _isGenerating = true);
-    final bytes = _qrBytes ?? await _generateQrBytes();
-    if (mounted) setState(() => _isGenerating = false);
-
-    if (bytes != null) {
-      _qrBytes = bytes;
-      final success = await downloadBarcode(bytes, 'gardi_qr_${widget.text}.png');
-      if (mounted) {
-        if (success) {
-          AppSnackbar.show(
-            context,
-            message: 'وێنەی کۆدەکە (QR) بە سەرکەوتوویی دابەزی',
-            type: SnackbarType.success,
-          );
-        } else {
-          AppSnackbar.show(
-            context,
-            message: 'کێشەیەک لە دابەزاندنی وێنەکە ڕوویدا',
-            type: SnackbarType.error,
-          );
-        }
-      }
-    } else if (mounted) {
-      AppSnackbar.show(
-        context,
-        message: 'کێشەیەک لە دروستکردنی وێنەکە ڕوویدا',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  void _handleCopy() {
-    Clipboard.setData(ClipboardData(text: widget.text));
-    if (!mounted) return;
-    AppSnackbar.show(
-      context,
-      message: 'کۆدەکە کۆپیکرا بۆ Clipboard',
-      type: SnackbarType.success,
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'کۆدی چوونەژوورەوە',
-                    style: AppTextStyles.h2.copyWith(
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                    textAlign: TextAlign.start,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  color: isDark ? Colors.white70 : Colors.black54,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: QrImageView(
-                data: widget.text,
-                version: QrVersions.auto,
-                size: 200.0,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Color(0xFF0F172A),
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.text,
-                      style: TextStyle(
-                        fontFamily: 'KJino',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF334155),
-                        letterSpacing: 0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 18),
-                    onPressed: _handleCopy,
-                    color: theme.colorScheme.primary,
-                    tooltip: 'کۆپیکردنی کۆدەکە',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: AppButton(
-                text: 'دابەزاندن',
-                icon: Icons.download_outlined,
-                onPressed: _isGenerating ? null : _handleDownload,
-                isLoading: _isGenerating,
-                type: AppButtonType.primary,
-                size: AppButtonSize.md,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return UserQrDialog(
+      barcode: text,
+      userName: '',
+      userRole: 'کارمەند',
+      userPhone: '',
     );
   }
 }

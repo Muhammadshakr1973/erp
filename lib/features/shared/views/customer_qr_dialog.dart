@@ -108,13 +108,13 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
           label,
           style: const TextStyle(
             fontFamily: 'KJino',
-            fontSize: 15,
+            fontSize: 19,
             fontWeight: FontWeight.w900,
             color: Colors.black,
             height: 1.15,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
@@ -123,10 +123,10 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
             textDirection: isPhone ? TextDirection.ltr : null,
             style: TextStyle(
               fontFamily: isPhone ? null : 'KJino',
-              fontSize: isPrimary ? 25 : 21,
+              fontSize: isPrimary ? 32 : 27,
               fontWeight: FontWeight.w900,
               color: Colors.black,
-              height: 1.2,
+              height: 1.15,
             ),
             maxLines: 1,
           ),
