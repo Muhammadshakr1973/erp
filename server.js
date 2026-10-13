@@ -1,5 +1,4 @@
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
@@ -58,44 +57,6 @@ const server = http.createServer((req, res) => {
   let pathname = decodeURIComponent(parsedUrl.pathname);
   if (pathname.endsWith('/') && pathname.length > 1) {
     pathname = pathname.slice(0, -1);
-  }
-
-  // Proxy API requests to backend to bypass CORS in web preview
-  if (pathname.startsWith('/api')) {
-    const targetUrl = new URL(req.url, 'https://pos.gardi.click');
-    const proxyHeaders = { ...req.headers };
-    proxyHeaders['host'] = 'pos.gardi.click';
-    delete proxyHeaders['origin'];
-    delete proxyHeaders['referer'];
-
-    const proxyReq = https.request(
-      targetUrl,
-      {
-        method: req.method,
-        headers: proxyHeaders,
-      },
-      (proxyRes) => {
-        const headers = { ...proxyRes.headers };
-        headers['access-control-allow-origin'] = '*';
-        headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
-        headers['access-control-allow-headers'] = 'Content-Type, Authorization, Accept, X-Requested-With';
-
-        res.writeHead(proxyRes.statusCode || 200, headers);
-        proxyRes.pipe(res);
-      }
-    );
-
-    proxyReq.on('error', (err) => {
-      console.error('API proxy error:', err);
-      if (!res.headersSent) {
-        res.statusCode = 502;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: 'Proxy error connecting to pos.gardi.click: ' + err.message }));
-      }
-    });
-
-    req.pipe(proxyReq);
-    return;
   }
 
   const ext = path.extname(pathname).toLowerCase();
