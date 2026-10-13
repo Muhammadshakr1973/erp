@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -9,17 +10,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/utils/barcode_helper.dart';
-import '../../products/views/barcode_generator_dialog.dart';
+// import '../../products/views/barcode_generator_dialog.dart';
 import '../models/customer.dart';
 
 /// Professional QR Code generation, preview, and direct download dialog for Customers
 class CustomerQrDialog extends StatefulWidget {
   final Customer customer;
 
-  const CustomerQrDialog({
-    super.key,
-    required this.customer,
-  });
+  const CustomerQrDialog({super.key, required this.customer});
 
   static Future<void> show(BuildContext context, Customer customer) {
     return showDialog<void>(
@@ -127,7 +125,9 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
               fontFamily: isPhone ? null : 'KJino',
               fontSize: isPrimary ? 20 : 17,
               fontWeight: FontWeight.w900,
-              color: isPhone ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
+              color: isPhone
+                  ? const Color(0xFF1D4ED8)
+                  : const Color(0xFF0F172A),
               height: 1.2,
             ),
             maxLines: 1,
@@ -178,10 +178,7 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      const Text(
-                        'کیو ئاڕ کۆدی کڕیار',
-                        style: AppTextStyles.h2,
-                      ),
+                      const Text('کیو ئاڕ کۆدی کڕیار', style: AppTextStyles.h2),
                     ],
                   ),
                   IconButton(
@@ -201,11 +198,17 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                     child: Container(
                       width: 500,
                       height: 300,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+                        border: Border.all(
+                          color: const Color(0xFF0F172A),
+                          width: 1.5,
+                        ),
                       ),
                       child: Directionality(
                         textDirection: TextDirection.ltr,
@@ -243,7 +246,8 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                                 textDirection: TextDirection.rtl,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
                                   children: [
                                     // ١- ناوی مارکێت
                                     _buildInfoBlock(
@@ -257,8 +261,11 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                                     // ٢- ناوی خاوەن
                                     _buildInfoBlock(
                                       label: 'ناوی خاوەن',
-                                      value: (customer.customerName != null &&
-                                              customer.customerName!.trim().isNotEmpty)
+                                      value:
+                                          (customer.customerName != null &&
+                                              customer.customerName!
+                                                  .trim()
+                                                  .isNotEmpty)
                                           ? customer.customerName!
                                           : '—',
                                     ),
@@ -266,7 +273,8 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                                     // ٣- ژمارە مۆبایل
                                     _buildInfoBlock(
                                       label: 'ژمارە مۆبایل',
-                                      value: (customer.phone != null &&
+                                      value:
+                                          (customer.phone != null &&
                                               customer.phone!.trim().isNotEmpty)
                                           ? customer.phone!
                                           : '—',
@@ -288,7 +296,10 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
 
               // Label Size Notice
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(10),
@@ -325,8 +336,9 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor:
-                        AppColors.primary.withValues(alpha: 0.6),
+                    disabledBackgroundColor: AppColors.primary.withValues(
+                      alpha: 0.6,
+                    ),
                     disabledForegroundColor: Colors.white70,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -340,13 +352,16 @@ class _CustomerQrDialogState extends State<CustomerQrDialog> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Icon(Icons.download_rounded, size: 22),
                   label: Text(
-                    _isCapturing ? 'خەریکی دابەزاندنە...' : 'دابەزاندنی وێنەی کیو ئاڕ',
+                    _isCapturing
+                        ? 'خەریکی دابەزاندنە...'
+                        : 'دابەزاندنی وێنەی کیو ئاڕ',
                     style: const TextStyle(
                       fontFamily: 'KJino',
                       fontWeight: FontWeight.bold,
