@@ -10,8 +10,6 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
-import '../../admin/views/create_delivery_trip_dialog.dart';
-import '../../orders/providers/orders_provider.dart';
 import '../providers/warehouse_provider.dart';
 
 class OrdersToPackScreen extends ConsumerWidget {
@@ -25,23 +23,6 @@ class OrdersToPackScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('پسوڵەکانی پاکەتکردن', style: AppTextStyles.h2),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: TextButton.icon(
-              onPressed: () {
-                ref.invalidate(ordersListProvider);
-                ref.invalidate(readyOrdersForDeliveryProvider);
-                showDialog(
-                  context: context,
-                  builder: (_) => const CreateDeliveryTripDialog(),
-                );
-              },
-              icon: const Icon(Icons.local_shipping_outlined, size: 20),
-              label: const Text('دروستکردنی گەشت', style: AppTextStyles.bodyBold),
-            ),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
