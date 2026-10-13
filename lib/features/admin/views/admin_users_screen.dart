@@ -7,6 +7,7 @@ import 'dart:math';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
@@ -1618,15 +1619,32 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.autorenew),
-                        color: theme.colorScheme.primary,
-                        tooltip: 'دروستکردنی کۆدی هەڕەمەکی',
-                        onPressed: () {
-                          setState(() {
-                            _barcodeController.text = _generateRandomString(12);
-                          });
-                        },
+                      Tooltip(
+                        message: 'دروستکردنی کۆدی هەڕەمەکی',
+                        child: InkResponse(
+                          radius: 20,
+                          highlightShape: BoxShape.circle,
+                          onTap: () {
+                            AppDialog.showAlert(
+                              context,
+                              title: 'ئاگاداری',
+                              message: 'ئەم بەتنە بە لۆنگ پرێس کار دەکات',
+                            );
+                          },
+                          onLongPress: () {
+                            setState(() {
+                              _barcodeController.text =
+                                  _generateRandomString(12);
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Icon(
+                              Icons.autorenew,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.qr_code_2),
