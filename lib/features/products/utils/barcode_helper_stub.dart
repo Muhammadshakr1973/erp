@@ -51,14 +51,21 @@ Future<bool> saveAndDownloadImage(Uint8List bytes, String fileName) async {
     }
   }
 
-  // Fallback for non-Android / desktop platforms
+  // Fallback for iOS / desktop platforms
   try {
+    if (!kIsWeb && Platform.isIOS) {
+      await Share.shareXFiles(
+        [XFile.fromData(bytes, name: fileName, mimeType: 'image/png')],
+        text: 'کیو ئاڕ کۆدی کڕیار',
+      );
+      return true;
+    }
     final tempDir = Directory.systemTemp;
     final file = File('${tempDir.path}/$fileName');
     await file.writeAsBytes(bytes);
     return true;
   } catch (e) {
-    debugPrint('Temp file save fallback error: $e');
+    debugPrint('File save fallback error: $e');
     return false;
   }
 }

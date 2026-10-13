@@ -17,7 +17,9 @@ Future<bool> saveAndDownloadImage(Uint8List bytes, String fileName) async {
     html.document.body?.children.add(anchor);
     anchor.click();
     anchor.remove();
-    html.Url.revokeObjectUrl(url);
+    Timer(const Duration(seconds: 3), () {
+      html.Url.revokeObjectUrl(url);
+    });
     return true;
   } catch (e) {
     debugPrint('Error downloading barcode image: $e');

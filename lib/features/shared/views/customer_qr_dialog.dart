@@ -2,24 +2,18 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../orders/providers/orders_provider.dart';
 import '../../products/utils/barcode_helper.dart';
 import '../../products/views/barcode_generator_dialog.dart';
 import '../models/customer.dart';
-import '../providers/warehouse_provider.dart';
 
-/// Professional QR Code generation, preview, download, and printing dialog for Customers
-class CustomerQrDialog extends ConsumerStatefulWidget {
+/// Professional QR Code generation, preview, and direct download dialog for Customers
+class CustomerQrDialog extends StatefulWidget {
   final Customer customer;
 
   const CustomerQrDialog({
@@ -35,13 +29,12 @@ class CustomerQrDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<CustomerQrDialog> createState() => _CustomerQrDialogState();
+  State<CustomerQrDialog> createState() => _CustomerQrDialogState();
 }
 
-class _CustomerQrDialogState extends ConsumerState<CustomerQrDialog> {
+class _CustomerQrDialogState extends State<CustomerQrDialog> {
   final GlobalKey _repaintKey = GlobalKey();
   bool _isCapturing = false;
-  bool _isCreatingOrder = false;
 
   String get _qrData => 'CUST-${widget.customer.id}';
 
@@ -69,10 +62,12 @@ class _CustomerQrDialogState extends ConsumerState<CustomerQrDialog> {
   Future<void> _handleDownload() async {
     final bytes = await _captureImage();
     if (bytes != null) {
-      final sanitizedName = widget.customer.name
-          .replaceAll(RegExp(r'[^\w\s\-\u0600-\u06FF]'), '_')
+      final safeCustomerName = widget.customer.name
+          .replaceAll(RegExp(r'\s+'), '_')
+          .replaceAll(RegExp(r'[^\w\-\u0600-\u06FF]'), '')
           .trim();
-      final filename = 'gardi_customer_${widget.customer.id}_$sanitizedName.png';
+      final filename =
+          'gardi_qr_${widget.customer.id}${safeCustomerName.isNotEmpty ? '_$safeCustomerName' : ''}.png';
       final success = await downloadBarcode(bytes, filename);
       if (mounted) {
         if (success) {
@@ -100,91 +95,11 @@ class _CustomerQrDialogState extends ConsumerState<CustomerQrDialog> {
     }
   }
 
-  Future<void> _handlePrint() async {
-    final bytes = await _captureImage();
-    if (bytes != null) {
-      await printBarcode(bytes);
-    } else {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'نەتوانرا بۆ چاپکردن ئامادە بکرێت',
-          type: SnackbarType.error,
-        );
-      }
-    }
-  }
-
-  void _handleCopyCode() {
-    Clipboard.setData(ClipboardData(text: _qrData));
-    AppSnackbar.show(
-      context,
-      message: 'کۆدی کڕیار کۆپیکرا: $_qrData',
-      type: SnackbarType.info,
-    );
-  }
-
-  Future<void> _handleCreateOrder() async {
-    setState(() => _isCreatingOrder = true);
-    try {
-      final warehouses = await ref.read(warehouseListProvider.future);
-      final currentUser = ref.read(authProvider).user;
-      final targetWarehouse = warehouses.isNotEmpty
-          ? (currentUser?.isSalesman == true && currentUser?.warehouseId != null
-              ? warehouses.where((w) => w.id == currentUser!.warehouseId).firstOrNull ??
-                  warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first)
-              : warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first))
-          : null;
-
-      final payload = {
-        'customer_id': widget.customer.id,
-        'warehouse_id': targetWarehouse?.id ?? 1,
-        'status': 'PACKING',
-        'discount_type': 'FIXED',
-        'discount_percent': 0.0,
-        'discount_amount': 0.0,
-        'shared_key': 'order_${DateTime.now().microsecondsSinceEpoch}',
-        'version': 1,
-        'notes': null,
-        'items': [],
-      };
-
-      final createdOrder =
-          await ref.read(orderActionsProvider).createOrder(payload);
-
-      if (mounted) {
-        Navigator.of(context).pop();
-        AppSnackbar.show(
-          context,
-          message: 'پسوڵە بۆ "${widget.customer.name}" دروستکرا، کاڵاکان زیادبکە',
-          type: SnackbarType.success,
-        );
-        context.push('/salesman/create-order', extra: createdOrder);
-      }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'هەڵە لە دروستکردنی پسوڵە: $e',
-          type: SnackbarType.error,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isCreatingOrder = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isMobile = MediaQuery.of(context).size.width < 600;
     final customer = widget.customer;
-    final currentUser = ref.watch(authProvider).user;
-    final canCreateOrder = currentUser?.isSalesman == true ||
-        currentUser?.isAdmin == true ||
-        currentUser?.isOwner == true;
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -416,94 +331,42 @@ class _CustomerQrDialogState extends ConsumerState<CustomerQrDialog> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // Action Buttons Row: Download & Print & Copy
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _handleCopyCode,
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('کۆپی کۆد'),
+              // Single Direct Download Button (زیادکردن)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+                    disabledForegroundColor: Colors.white70,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _isCapturing ? null : _handlePrint,
-                      icon: const Icon(Icons.print_rounded, size: 18),
-                      label: const Text('چاپکردن'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Main Download Button
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: _isCapturing ? null : _handleDownload,
-                icon: _isCapturing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.download_rounded, size: 20),
-                label: Text(
-                  _isCapturing ? 'خەریکی ئامادەکردنە...' : 'داگرتنی وێنەی کیو ئاڕ',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              // Direct "Create Order" button if user can create order
-              if (canCreateOrder) ...[
-                const SizedBox(height: AppSpacing.sm),
-                TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.success,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  onPressed: _isCreatingOrder ? null : _handleCreateOrder,
-                  icon: _isCreatingOrder
+                  onPressed: _isCapturing ? null : _handleDownload,
+                  icon: _isCapturing
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 20,
+                          height: 20,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.success,
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Icon(Icons.add_shopping_cart_rounded, size: 20),
+                      : const Icon(Icons.download_rounded, size: 22),
                   label: Text(
-                    _isCreatingOrder
-                        ? 'خەریکی دروستکردنی پسوڵەیە...'
-                        : 'دروستکردنی ڕاستەوخۆی پسوڵە بۆ ئەم کڕیارە',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    _isCapturing ? 'خەریکی دابەزاندنە...' : 'زیادکردن',
+                    style: const TextStyle(
+                      fontFamily: 'KJino',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
