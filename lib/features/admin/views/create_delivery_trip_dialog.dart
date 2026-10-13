@@ -50,6 +50,13 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
         setState(() {
           _selectedDriverId = user.id;
         });
+      } else {
+        final currentDrivers = ref.read(activeDriversProvider).asData?.value;
+        if (currentDrivers != null && currentDrivers.isNotEmpty) {
+          setState(() {
+            _selectedDriverId = currentDrivers.first.id;
+          });
+        }
       }
     });
   }
@@ -122,7 +129,16 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
   }
 
   Future<void> _submit() async {
-    if (_selectedDriverId == null) {
+    int? driverId = _selectedDriverId;
+    if (driverId == null) {
+      final drivers = ref.read(activeDriversProvider).asData?.value;
+      if (drivers != null && drivers.isNotEmpty) {
+        driverId = drivers.first.id;
+        _selectedDriverId = driverId;
+      }
+    }
+
+    if (driverId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تکایە شۆفێرێک دیاریبکە')),
       );
@@ -141,7 +157,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     try {
       final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
       await ref.read(driverActionsProvider).createDeliveryTrip(
-        driverId: _selectedDriverId!,
+        driverId: driverId,
         tripDate: formattedDate,
         orderIds: _selectedOrderIds.toList(),
         notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
@@ -179,6 +195,22 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
     final isDriver = currentUser != null && (currentUser.isDriver || currentUser.role.toLowerCase() == 'driver');
     final driversAsync = ref.watch(activeDriversProvider);
     final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
+
+    ref.listen<AsyncValue<List<DriverUserSummary>>>(activeDriversProvider, (previous, next) {
+      next.whenData((drivers) {
+        if (!isDriver && drivers.isNotEmpty) {
+          if (_selectedDriverId == null || !drivers.any((d) => d.id == _selectedDriverId)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _selectedDriverId = drivers.first.id;
+                });
+              }
+            });
+          }
+        }
+      });
+    }, fireImmediately: true);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -283,8 +315,23 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                               );
                             }
 
+                            final effectiveDriverId = (_selectedDriverId != null &&
+                                    drivers.any((d) => d.id == _selectedDriverId))
+                                ? _selectedDriverId
+                                : drivers.first.id;
+
+                            if (_selectedDriverId != effectiveDriverId) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted && _selectedDriverId != effectiveDriverId) {
+                                  setState(() {
+                                    _selectedDriverId = effectiveDriverId;
+                                  });
+                                }
+                              });
+                            }
+
                             return DropdownButtonFormField<int>(
-                              initialValue: _selectedDriverId,
+                              value: effectiveDriverId,
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
