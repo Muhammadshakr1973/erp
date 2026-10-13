@@ -18,6 +18,7 @@ import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
 import 'map_picker_dialog.dart';
+import 'customer_qr_dialog.dart';
 
 class CustomerFormDialog extends ConsumerStatefulWidget {
   final Customer? customer;
@@ -335,9 +336,26 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('بەڕێوەبردنی کڕیار', style: AppTextStyles.h2),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.qr_code_2_rounded,
+                            color: AppColors.primary,
+                            size: 26,
+                          ),
+                          tooltip: 'کیو ئاڕ کۆدی کڕیار',
+                          onPressed: () => CustomerQrDialog.show(
+                            context,
+                            widget.customer!,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -725,7 +743,22 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
             ),
           ],
           if (widget.customer != null) ...[
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => CustomerQrDialog.show(context, widget.customer!),
+              icon: const Icon(Icons.qr_code_2_rounded, size: 22),
+              label: const Text(
+                'پیشاندان و چاپکردنی کیو ئاڕ کۆد (QR)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             SizedBox(
               width: double.infinity,
               child: AppButton(

@@ -23,6 +23,7 @@ import '../providers/route_provider.dart';
 import '../models/customer.dart';
 import '../views/customer_form_dialog.dart';
 import '../views/customer_reconciliation_dialog.dart';
+import '../views/customer_qr_dialog.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -149,45 +150,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   void _showQrCodeDialog(BuildContext context, Customer customer) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            customer.name,
-            style: AppTextStyles.h3,
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 200,
-                height: 200,
-                child: QrImageView(
-                  data: 'CUST-${customer.id}',
-                  version: QrVersions.auto,
-                  size: 200.0,
-                  backgroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const Text(
-                'سکان بکە بۆ دۆزینەوەی خێرای کڕیار',
-                style: AppTextStyles.caption,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('داخستن'),
-            ),
-          ],
-        );
-      },
-    );
+    CustomerQrDialog.show(context, customer);
   }
 
   Future<void> _showPaymentDialog(

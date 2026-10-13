@@ -28,6 +28,8 @@ import '../../shared/providers/warehouse_provider.dart';
 import '../providers/salesman_dashboard_provider.dart';
 import 'salesman_my_commissions_screen.dart';
 import 'salesman_main_screen.dart';
+import '../../../core/api_client.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 
 class SalesmanDashboardScreen extends ConsumerWidget {
   const SalesmanDashboardScreen({super.key});
@@ -70,6 +72,25 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.25),
+              ),
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.qr_code_scanner_rounded,
+                color: theme.colorScheme.primary,
+                size: 22,
+              ),
+              tooltip: 'سکانی کیو ئاڕ و دروستکردنی پسوڵە',
+              onPressed: () => _handleScanCustomerAndCreateOrder(context, ref),
+            ),
+          ),
           const NotificationBadgeButton(),
         ],
       ),
@@ -132,6 +153,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     () {
                       NewOrderCreationDialog.show(context);
                     },
+                  ),
+                  _buildActionCard(
+                    context,
+                    'سکانی QR کڕیار',
+                    Icons.qr_code_scanner_rounded,
+                    () => _handleScanCustomerAndCreateOrder(context, ref),
                   ),
                   _buildActionCard(context, 'کۆمسیۆنەکانم', Icons.percent, () {
                     Navigator.push(
@@ -1022,6 +1049,244 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         // Pop the loading dialog
         Navigator.pop(context);
 
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە لە دروستکردنی پسوڵە: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _handleScanCustomerAndCreateOrder(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    CameraBarcodeScanner.show(
+      context,
+      (scannedCode) async {
+        await _processScannedCustomerCode(context, ref, scannedCode);
+      },
+      closeOnScan: true,
+    );
+  }
+
+  Future<void> _processScannedCustomerCode(
+    BuildContext context,
+    WidgetRef ref,
+    String scannedCode,
+  ) async {
+    final cleanCode = scannedCode.trim();
+    if (cleanCode.isEmpty) return;
+
+    if (!context.mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 20,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              SizedBox(width: 16),
+              Text(
+                'پشکنینی کیو ئاڕ و دروستکردنی پسوڵە...',
+                style: TextStyle(
+                  fontFamily: 'KJino',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      int? customerId;
+      final prefixMatch = RegExp(
+        r'^(?:CUST|CUSTOMER)[-:](\d+)$',
+        caseSensitive: false,
+      ).firstMatch(cleanCode);
+      if (prefixMatch != null) {
+        customerId = int.tryParse(prefixMatch.group(1)!);
+      } else {
+        customerId = int.tryParse(cleanCode);
+      }
+
+      Customer? targetCustomer;
+
+      final customerList = ref.read(customerListProvider).valueOrNull ?? [];
+      if (customerId != null) {
+        if (customerId == 0) {
+          targetCustomer = Customer.temporary;
+        } else {
+          targetCustomer = customerList
+              .where((c) => c.id == customerId)
+              .firstOrNull;
+        }
+      }
+
+      if (targetCustomer == null && customerId != null && customerId > 0) {
+        try {
+          final api = ref.read(apiClientProvider);
+          final res = await api.client.get('/customers/$customerId');
+          if (res.statusCode == 200 && res.data != null) {
+            final data = res.data['data'] ?? res.data;
+            if (data is Map<String, dynamic>) {
+              targetCustomer = Customer.fromJson(data);
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (targetCustomer == null) {
+        targetCustomer = customerList
+            .where(
+              (c) =>
+                  c.phone != null &&
+                  (c.phone == cleanCode ||
+                      c.phone!.replaceAll(RegExp(r'\D'), '') ==
+                          cleanCode.replaceAll(RegExp(r'\D'), '')),
+            )
+            .firstOrNull;
+      }
+
+      if (targetCustomer == null) {
+        try {
+          final api = ref.read(apiClientProvider);
+          final res = await api.client.get(
+            '/customers',
+            queryParameters: {'search': cleanCode},
+          );
+          if (res.statusCode == 200 && res.data != null) {
+            final resData = res.data['data'];
+            List items = [];
+            if (resData is Map && resData['data'] is List) {
+              items = resData['data'];
+            } else if (resData is List) {
+              items = resData;
+            }
+            if (items.isNotEmpty && items.first is Map) {
+              targetCustomer = Customer.fromJson(
+                Map<String, dynamic>.from(items.first),
+              );
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (targetCustomer == null) {
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          AppSnackbar.show(
+            context,
+            message: 'هیچ کڕیارێک بەم کیو ئاڕ کۆدە نەدۆزرایەوە: $cleanCode',
+            type: SnackbarType.error,
+          );
+        }
+        return;
+      }
+
+      // Check if there is already an open PACKING/DRAFT order for this customer
+      final orders = ref.read(ordersListProvider).valueOrNull;
+      OrderModel? existingOrder;
+      if (orders != null) {
+        try {
+          existingOrder = orders.firstWhere(
+            (o) =>
+                o.customerId == targetCustomer!.id &&
+                (o.status.toUpperCase() == 'PACKING' ||
+                    o.status.toUpperCase() == 'DRAFT'),
+          );
+        } catch (_) {
+          existingOrder = null;
+        }
+      }
+
+      if (existingOrder != null) {
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          AppSnackbar.show(
+            context,
+            message:
+                'پسوڵەی چالاکی "${targetCustomer.name}" کرایەوە، کاڵاکان زیادبکە',
+            type: SnackbarType.info,
+          );
+          context.push('/salesman/create-order', extra: existingOrder);
+        }
+        return;
+      }
+
+      // Create new order
+      final user = ref.read(authProvider).user;
+      int? warehouseId = user?.warehouseId;
+      if (warehouseId == null) {
+        final warehouses =
+            ref.read(warehouseListProvider).valueOrNull ??
+            await ref.read(warehouseListProvider.future);
+        if (warehouses.isNotEmpty) {
+          final mainWh = warehouses.firstWhere(
+            (w) => w.isMain,
+            orElse: () => warehouses.first,
+          );
+          warehouseId = mainWh.id;
+        }
+      }
+
+      if (warehouseId == null) {
+        throw Exception('هیچ کۆگایەک نەدۆزرایەوە بۆ دروستکردنی پسوڵە');
+      }
+
+      final payload = {
+        'customer_id': targetCustomer.id,
+        'warehouse_id': warehouseId,
+        'status': 'PACKING',
+        'discount_type': 'FIXED',
+        'discount_percent': 0.0,
+        'discount_amount': 0.0,
+        'shared_key': 'order_${DateTime.now().microsecondsSinceEpoch}',
+        'version': 1,
+        'notes': null,
+        'items': [],
+      };
+
+      final createdOrder = await ref
+          .read(orderActionsProvider)
+          .createOrder(payload);
+
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        AppSnackbar.show(
+          context,
+          message:
+              'پسوڵە بۆ "${targetCustomer.name}" دروستکرا، کاڵاکان دیاریبکە',
+          type: SnackbarType.success,
+        );
+        context.push('/salesman/create-order', extra: createdOrder);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
         AppSnackbar.show(
           context,
           message: 'هەڵە لە دروستکردنی پسوڵە: $e',

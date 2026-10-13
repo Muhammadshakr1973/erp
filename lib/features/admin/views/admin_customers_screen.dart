@@ -17,6 +17,7 @@ import '../../shared/models/route_model.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/route_provider.dart';
 import '../../shared/views/customer_form_dialog.dart';
+import '../../shared/views/customer_qr_dialog.dart';
 
 class AdminCustomersScreen extends ConsumerStatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -548,24 +549,40 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Price tier badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 7,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: tierColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  priceTierLabel,
-                  style: AppTextStyles.caption.copyWith(
-                    color: tierColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.qr_code_2_rounded,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    tooltip: 'کیو ئاڕ کۆد',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => CustomerQrDialog.show(context, customer),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      priceTierLabel,
+                      style: AppTextStyles.caption.copyWith(
+                        color: tierColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
 

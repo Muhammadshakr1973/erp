@@ -14,6 +14,8 @@ import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import 'customer_selection_dialog.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
+import '../providers/customer_provider.dart';
 
 class NewOrderCreationDialog extends ConsumerStatefulWidget {
   const NewOrderCreationDialog({super.key});
@@ -89,22 +91,64 @@ class _NewOrderCreationDialogState extends ConsumerState<NewOrderCreationDialog>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('کڕیار', style: AppTextStyles.bodyBold),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _selectedCustomer = Customer.temporary;
-                    });
-                  },
-                  icon: const Icon(Icons.flash_on, size: 16, color: Colors.orange),
-                  label: const Text(
-                    'کڕیاری کاتی',
-                    style: TextStyle(
-                      fontFamily: 'KJino',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                      tooltip: 'سکانی کیو ئاڕ',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        CameraBarcodeScanner.show(
+                          context,
+                          (barcode) async {
+                            final clean = barcode.trim();
+                            int? id;
+                            final match = RegExp(
+                              r'^(?:CUST|CUSTOMER)[-:](\d+)$',
+                              caseSensitive: false,
+                            ).firstMatch(clean);
+                            if (match != null) {
+                              id = int.tryParse(match.group(1)!);
+                            } else {
+                              id = int.tryParse(clean);
+                            }
+                            if (id != null) {
+                              try {
+                                final customers = await ref.read(
+                                  customerListProvider.future,
+                                );
+                                final found = customers
+                                    .where((c) => c.id == id)
+                                    .firstOrNull;
+                                if (found != null && mounted) {
+                                  setState(() => _selectedCustomer = found);
+                                }
+                              } catch (_) {}
+                            }
+                          },
+                          closeOnScan: true,
+                        );
+                      },
                     ),
-                  ),
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedCustomer = Customer.temporary;
+                        });
+                      },
+                      icon: const Icon(Icons.flash_on, size: 16, color: Colors.orange),
+                      label: const Text(
+                        'کڕیاری کاتی',
+                        style: TextStyle(
+                          fontFamily: 'KJino',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -14,6 +14,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
+import '../../shared/views/customer_qr_dialog.dart';
 
 class TodayCustomersScreen extends ConsumerStatefulWidget {
   const TodayCustomersScreen({super.key});
@@ -196,6 +197,16 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                                 ],
                               ),
                             ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_2_rounded,
+                                size: 22,
+                                color: AppColors.primary,
+                              ),
+                              tooltip: 'کیو ئاڕ کۆد',
+                              onPressed: () => CustomerQrDialog.show(context, customer),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
