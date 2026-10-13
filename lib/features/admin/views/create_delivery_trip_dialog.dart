@@ -210,7 +210,7 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
           }
         }
       });
-    }, fireImmediately: true);
+    });
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -331,7 +331,8 @@ class _CreateDeliveryTripDialogState extends ConsumerState<CreateDeliveryTripDia
                             }
 
                             return DropdownButtonFormField<int>(
-                              value: effectiveDriverId,
+                              key: ValueKey<int?>(_selectedDriverId ?? effectiveDriverId),
+                              initialValue: effectiveDriverId,
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.md,
