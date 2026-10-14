@@ -166,6 +166,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/customers/{customer}/special-prices', [CustomerController::class, 'getSpecialPrices'])->middleware('permission:customers.view');
         Route::post('/customers/{customer}/special-prices', [CustomerController::class, 'setSpecialPrice'])->middleware('permission:orders.create');
         Route::delete('/customers/{customer}/special-prices/{productId}', [CustomerController::class, 'deleteSpecialPrice'])->middleware('permission:orders.create');
+        Route::get('/customers/{customer}/last-product-price/{productId}', [CustomerController::class, 'getLastProductPrice'])->middleware('permission:customers.view');
         
         // Users (Admin only)
         Route::apiResource('users', UserController::class)->middleware('permission:users.manage');

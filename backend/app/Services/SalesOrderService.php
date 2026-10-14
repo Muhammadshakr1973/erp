@@ -806,9 +806,25 @@ class SalesOrderService
             $product = Product::find($productId);
             if (!$product) continue;
 
-            $unitPrice = isset($retItem['unit_price']) && (float)$retItem['unit_price'] > 0
-                ? (int)$retItem['unit_price']
-                : (int)($product->selling_price ?: ($product->price_n2 ?: $product->cost_price));
+            if (isset($retItem['unit_price']) && (float)$retItem['unit_price'] > 0) {
+                $unitPrice = (int)$retItem['unit_price'];
+            } else {
+                // هێنانی نرخ لە کۆتا پسوڵەی ئەم کڕیارە کە ئەم کاڵایەی تێدایە
+                $lastOrderItem = SalesOrderItem::where('product_id', $productId)
+                    ->whereHas('order', function ($q) use ($order) {
+                        $q->where('customer_id', $order->customer_id)
+                          ->where('id', '!=', $order->id)
+                          ->where('status', '!=', SalesOrder::STATUS_CANCELLED);
+                    })
+                    ->latest('id')
+                    ->first();
+
+                if ($lastOrderItem && (int)$lastOrderItem->unit_price > 0) {
+                    $unitPrice = (int)$lastOrderItem->unit_price;
+                } else {
+                    $unitPrice = (int)($product->selling_price ?: ($product->price_n2 ?: $product->cost_price));
+                }
+            }
 
             $itemTotal = $qty * $unitPrice;
             $totalReturnAmount += $itemTotal;

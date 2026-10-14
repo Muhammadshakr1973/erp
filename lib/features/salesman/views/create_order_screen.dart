@@ -542,6 +542,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final priceController = TextEditingController();
     final reasonController = TextEditingController(text: 'کاڵای بەسەرچوو');
     final searchProductController = TextEditingController();
+    String? lastPriceInfo;
+    bool isLoadingLastPrice = false;
 
     await showDialog(
       context: context,
@@ -604,19 +606,50 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                     selectedTileColor: AppColors.danger.withValues(alpha: 0.1),
                                     title: Text(p.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
                                     subtitle: Text('${p.unit} • ${Formatters.currency(_getProductUnitPrice(p))}', style: AppTextStyles.caption),
-                                    onTap: () {
+                                    onTap: () async {
+                                      final fallbackP = _getProductUnitPrice(p);
                                       setDialogState(() {
                                         selectedProduct = p;
-                                        final defaultP = _getProductUnitPrice(p);
-                                        priceController.text = defaultP.toInt().toString();
+                                        priceController.text = fallbackP.toInt().toString();
+                                        lastPriceInfo = 'چاوەڕوانبە... دەرهێنانی نرخی کۆتا پسوڵە';
+                                        isLoadingLastPrice = true;
                                       });
+
+                                      if (_selectedCustomer != null && _selectedCustomer!.id > 0) {
+                                        final lastPriceData = await ref.read(customerActionsProvider).fetchLastProductPrice(
+                                          _selectedCustomer!.id,
+                                          p.id,
+                                          excludeOrderId: widget.existingOrder?.id ?? _serverOrderId,
+                                        );
+                                        if (modalCtx.mounted && selectedProduct?.id == p.id) {
+                                          setDialogState(() {
+                                            isLoadingLastPrice = false;
+                                            if (lastPriceData != null && lastPriceData['found'] == true) {
+                                              final lp = lastPriceData['unit_price'];
+                                              final ordNum = lastPriceData['order_number'] ?? '';
+                                              final ordDate = lastPriceData['order_date'] ?? '';
+                                              if (lp != null) {
+                                                priceController.text = (lp as num).toInt().toString();
+                                              }
+                                              lastPriceInfo = 'نرخ لە کۆتا پسوڵە ($ordNum${ordDate.toString().isNotEmpty ? ' - $ordDate' : ''}): ${Formatters.currency((lp as num).toDouble())}';
+                                            } else {
+                                              lastPriceInfo = 'هیچ پسوڵەیەکی پێشوو نەدۆزرایەوە (نرخی فەرمی دانرا)';
+                                            }
+                                          });
+                                        }
+                                      } else {
+                                        setDialogState(() {
+                                          isLoadingLastPrice = false;
+                                          lastPriceInfo = null;
+                                        });
+                                      }
                                     },
                                   );
                                 },
                               ),
                       ),
                       if (selectedProduct != null) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -628,6 +661,58 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
                           ),
                         ),
+                        if (lastPriceInfo != null) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isLoadingLastPrice
+                                  ? Colors.amber.withValues(alpha: 0.1)
+                                  : (lastPriceInfo!.contains('کۆتا پسوڵە')
+                                      ? AppColors.success.withValues(alpha: 0.1)
+                                      : AppColors.info.withValues(alpha: 0.1)),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isLoadingLastPrice
+                                    ? Colors.amber.withValues(alpha: 0.4)
+                                    : (lastPriceInfo!.contains('کۆتا پسوڵە')
+                                        ? AppColors.success.withValues(alpha: 0.4)
+                                        : AppColors.info.withValues(alpha: 0.3)),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isLoadingLastPrice
+                                      ? Icons.hourglass_top_rounded
+                                      : (lastPriceInfo!.contains('کۆتا پسوڵە')
+                                          ? Icons.verified_rounded
+                                          : Icons.info_outline),
+                                  size: 16,
+                                  color: isLoadingLastPrice
+                                      ? Colors.amber.shade800
+                                      : (lastPriceInfo!.contains('کۆتا پسوڵە')
+                                          ? AppColors.success
+                                          : AppColors.info),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    lastPriceInfo!,
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: isLoadingLastPrice
+                                          ? Colors.amber.shade900
+                                          : (lastPriceInfo!.contains('کۆتا پسوڵە')
+                                              ? AppColors.success
+                                              : AppColors.textSecondary),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Row(
                           children: [

@@ -495,4 +495,25 @@ class CustomerActions {
       throw Exception(api.parseError(e));
     }
   }
+
+  Future<Map<String, dynamic>?> fetchLastProductPrice(
+    int customerId,
+    int productId, {
+    int? excludeOrderId,
+  }) async {
+    try {
+      final query = excludeOrderId != null ? '?exclude_order_id=$excludeOrderId' : '';
+      final response = await api.client.get('/customers/$customerId/last-product-price/$productId$query');
+      if (response.statusCode == 200 && response.data is Map) {
+        final data = Map<String, dynamic>.from(response.data as Map);
+        if (data['found'] == true) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }
+

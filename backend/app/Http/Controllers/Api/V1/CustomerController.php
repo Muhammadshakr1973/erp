@@ -250,4 +250,47 @@ class CustomerController extends Controller
             'deleted' => $deleted > 0,
         ], 200);
     }
+
+    /**
+     * هێنانی نرخی کاڵا لە کۆتا پسوڵەی ئەم کڕیارە بۆ گەڕاندنەوە (Returns)
+     */
+    public function getLastProductPrice(Request $request, Customer $customer, $productId): JsonResponse
+    {
+        if (!$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        $excludeOrderId = $request->query('exclude_order_id');
+
+        $lastItem = \App\Models\SalesOrderItem::where('product_id', $productId)
+            ->whereHas('order', function ($q) use ($customer, $excludeOrderId) {
+                $q->where('customer_id', $customer->id)
+                  ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED);
+                if ($excludeOrderId) {
+                    $q->where('id', '!=', $excludeOrderId);
+                }
+            })
+            ->with('order:id,order_number,created_at')
+            ->latest('id')
+            ->first();
+
+        if ($lastItem) {
+            return response()->json([
+                'found' => true,
+                'unit_price' => (int) $lastItem->unit_price,
+                'order_id' => $lastItem->order?->id,
+                'order_number' => $lastItem->order?->order_number,
+                'order_date' => $lastItem->order?->created_at?->toDateString(),
+            ], 200);
+        }
+
+        return response()->json([
+            'found' => false,
+            'unit_price' => null,
+            'message' => 'هیچ پسوڵەیەکی پێشوو بۆ ئەم کاڵایە لەگەڵ ئەم کڕیارە نەدۆزرایەوە',
+        ], 200);
+    }
 }
