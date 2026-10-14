@@ -594,8 +594,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             ? const Center(child: Text('هیچ کاڵایەک نەدۆزرایەوە', style: AppTextStyles.caption))
                             : ListView.separated(
                                 itemCount: filteredProducts.length,
-                                separatorBuilder: (_, __) => const Divider(height: 1),
-                                itemBuilder: (_, idx) {
+                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                itemBuilder: (context, idx) {
                                   final p = filteredProducts[idx];
                                   final isSel = selectedProduct?.id == p.id;
                                   return ListTile(
@@ -868,8 +868,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               );
                             }
                           } finally {
-                            if (modalCtx.mounted)
+                            if (modalCtx.mounted) {
                               setDialogState(() => isSaving = false);
+                            }
                           }
                         },
                   child: const Text('سڕینەوەی تایبەت'),
@@ -927,8 +928,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             );
                           }
                         } finally {
-                          if (modalCtx.mounted)
+                          if (modalCtx.mounted) {
                             setDialogState(() => isSaving = false);
+                          }
                         }
                       },
                 child: isSaving
@@ -2865,6 +2867,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Widget _buildCartPanel(List<ProductModel> allProducts) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final subtotal = _calculateSubtotal(allProducts);
     final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
     final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
@@ -2873,6 +2876,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ? (amountAfterPerm * _discountValue) / 100
         : _discountValue;
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
+    final totalReturnAmount = _returnedItems.fold<double>(
+      0.0,
+      (sum, item) => sum + (double.tryParse(item['subtotal']?.toString() ?? '0') ?? ((double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0) * (int.tryParse(item['quantity']?.toString() ?? '0') ?? 0))),
+    );
 
     return Container(
       color: theme.colorScheme.surface,
@@ -2886,12 +2893,104 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               bottom: AppSpacing.sm,
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(child: _buildProductAutocompleteInput(allProducts)),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAddReturnedItemDialog(allProducts),
+                    icon: const Icon(Icons.assignment_return_rounded, size: 16, color: AppColors.danger),
+                    label: const Text(
+                      'کاڵای گەڕاوە',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'KJino',
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      side: const BorderSide(color: AppColors.danger),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
+          if (_returnedItems.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade700, width: 1.2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.assignment_return_rounded, size: 16, color: Colors.amber.shade900),
+                          const SizedBox(width: 6),
+                          Text(
+                            'کاڵا گەڕاوەکان (${_returnedItems.length})',
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () => _showAddReturnedItemDialog(allProducts),
+                        child: Text(
+                          '+ زیادکردنی تر',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                            fontFamily: 'KJino',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ..._returnedItems.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final ret = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '↩ ${ret['product_name']} (${ret['quantity']} ${ret['product_unit'] ?? 'دانە'}) • ${Formatters.currency(ret['subtotal'] ?? (ret['unit_price'] * ret['quantity']))}${ret['reason'] != null && ret['reason'].toString().isNotEmpty ? ' (${ret['reason']})' : ''}',
+                              style: AppTextStyles.caption.copyWith(fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _removeReturnedItem(index),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
@@ -2904,9 +3003,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           constraints: BoxConstraints(
                             minHeight: constraints.maxHeight,
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'سەبەتە بەتاڵە',
+                              _returnedItems.isEmpty
+                                  ? 'سەبەتە بەتاڵە'
+                                  : 'کاڵای فرۆشتن لە سەبەتە نییە (تەنها کاڵای گەڕاوە هەیە)',
                               style: AppTextStyles.bodyMedium,
                             ),
                           ),
@@ -3228,6 +3329,28 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         '-${Formatters.currency(permDiscountAmount)}',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.danger,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
+                if (_returnedItems.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'کۆی کاڵای گەڕاوە:',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '-${Formatters.currency(totalReturnAmount)}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
