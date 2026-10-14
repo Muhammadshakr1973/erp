@@ -183,7 +183,7 @@ class OrderDetailScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           flex: 2,
-                          child: _buildMainContent(context, order),
+                          child: _buildMainContent(context, ref, order),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
@@ -194,7 +194,7 @@ class OrderDetailScreen extends ConsumerWidget {
                     )
                   : Column(
                       children: [
-                        _buildMainContent(context, order),
+                        _buildMainContent(context, ref, order),
                         const SizedBox(height: AppSpacing.md),
                         _buildSidePanel(context, ref, order),
                       ],
@@ -206,10 +206,145 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMainContent(BuildContext context, OrderModel order) {
+  Widget _buildMainContent(BuildContext context, WidgetRef ref, OrderModel order) {
+    final currentUser = ref.watch(authProvider).user;
+    final isDriver = currentUser?.isDriver ?? false;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (order.hasReturns) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.shade700, width: 1.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.amber.shade800,
+                      size: 24,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'ئاگاداری: ئەم پسوڵەیە کاڵای گەڕاوەی لەگەڵدایە! (${order.returnedItems.length} جۆر - ${order.totalReturnQuantity} دانە)',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.amber.shade300
+                              : Colors.amber.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isDriver) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'ئاگاداری بۆ شۆفێر: تکایە لە کاتی گەیاندنی ئەم پسوڵەیە، دڵنیابە لە وەرگرتنەوەی ئەم کاڵا گەڕاوانە لە کڕیار.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.amber.shade200
+                          : Colors.amber.shade900,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.assignment_return_rounded, color: AppColors.danger, size: 20),
+                        const SizedBox(width: 8),
+                        const Text('کاڵا گەڕاوەکان (Returned Items)', style: AppTextStyles.h3),
+                      ],
+                    ),
+                    Text(
+                      '${order.returnedItems.length} جۆر کاڵا',
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: order.returnedItems.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final theme = Theme.of(context);
+                    final item = order.returnedItems[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.keyboard_return_rounded,
+                            size: 20,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        item.productName,
+                        style: AppTextStyles.bodyBold,
+                      ),
+                      subtitle: Text(
+                        '${item.quantity.toInt()} ${item.productUnit ?? 'دانە'}   •   ${Formatters.currency(item.unitPrice)}${item.reason != null && item.reason!.isNotEmpty ? "   •   هۆکار: ${item.reason}" : ""}',
+                        style: AppTextStyles.caption.copyWith(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: Text(
+                        Formatters.currency(item.subtotal),
+                        style: AppTextStyles.price.copyWith(color: AppColors.danger),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(thickness: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('کۆی بڕی گەڕاوە', style: AppTextStyles.bodyBold),
+                      Text(
+                        Formatters.currency(order.totalReturnAmount),
+                        style: AppTextStyles.price.copyWith(color: AppColors.danger),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,6 +635,12 @@ class OrderDetailScreen extends ConsumerWidget {
                 'داشکاندن',
                 Formatters.currency(order.discountAmount),
               ),
+              if (order.hasReturns)
+                _buildInfoRow(
+                  context,
+                  'کۆی کاڵای گەڕاوە',
+                  '-${Formatters.currency(order.totalReturnAmount)}',
+                ),
             ],
           ),
         ),
@@ -521,7 +662,8 @@ class OrderDetailScreen extends ConsumerWidget {
             onPressed: () => _handleCancelOrder(context, ref),
           ),
         ],
-        if (order.status == OrderModel.statusDelivered) ...[
+        if (order.status == OrderModel.statusDelivered &&
+            (ref.watch(authProvider).user?.isSalesman ?? false)) ...[
           const SizedBox(height: AppSpacing.md),
           AppButton(
             text: 'گەڕاندنەوەی کاڵا',

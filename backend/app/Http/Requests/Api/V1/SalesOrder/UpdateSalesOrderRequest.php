@@ -40,6 +40,13 @@ class UpdateSalesOrderRequest extends FormRequest
             'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED'],
             'shared_key' => ['nullable', 'string'],
             'version' => ['nullable', 'integer', 'min:1'],
+
+            // پشکنینی کاڵا گەڕاوەکان لە هەمان پسوڵەدا
+            'returned_items' => ['nullable', 'array'],
+            'returned_items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'returned_items.*.quantity' => ['required', 'integer', 'min:1'],
+            'returned_items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'returned_items.*.reason' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

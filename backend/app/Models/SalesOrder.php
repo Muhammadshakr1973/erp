@@ -10,11 +10,36 @@ class SalesOrder extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $appends = ['price_type'];
+    protected $appends = ['price_type', 'returned_items'];
 
     public function getPriceTypeAttribute(): string
     {
         return $this->items()->first()?->price_type ?? 'N3';
+    }
+
+    public function getReturnedItemsAttribute()
+    {
+        if (!$this->relationLoaded('salesReturns')) {
+            $this->load(['salesReturns.items.product']);
+        }
+        return $this->salesReturns->flatMap(function ($return) {
+            return $return->items->map(function ($item) use ($return) {
+                return [
+                    'id' => $item->id,
+                    'sales_return_id' => $return->id,
+                    'sales_order_id' => $return->sales_order_id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product?->name ?? 'کاڵا',
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'total' => $item->total,
+                    'subtotal' => $item->total,
+                    'reason' => $item->reason ?? $return->reason,
+                    'product_unit' => $item->product?->unit ?? 'دانە',
+                    'product' => $item->product,
+                ];
+            });
+        })->values();
     }
 
     protected $fillable = [
@@ -114,6 +139,10 @@ class SalesOrder extends Model
     public function tripOrders()
     {
         return $this->hasMany(DeliveryTripOrder::class, 'sales_order_id');
+    }
+    public function salesReturns()
+    {
+        return $this->hasMany(SalesReturn::class, 'sales_order_id');
     }
     public function scopeByStatus($q, $s)
     {

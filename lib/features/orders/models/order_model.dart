@@ -194,6 +194,33 @@ class OrderModel {
           .toList();
     }
 
+    List<OrderReturnItemModel> parsedReturns = [];
+    if (json['returned_items'] is List) {
+      parsedReturns = (json['returned_items'] as List)
+          .map((rJson) => OrderReturnItemModel.fromJson(
+                rJson is Map<String, dynamic>
+                    ? rJson
+                    : Map<String, dynamic>.from(rJson as Map),
+              ))
+          .toList();
+    } else if (json['sales_returns'] is List) {
+      for (final ret in json['sales_returns']) {
+        if (ret is Map && ret['items'] is List) {
+          final generalReason = ret['reason']?.toString();
+          for (final item in ret['items']) {
+            if (item is Map) {
+              parsedReturns.add(OrderReturnItemModel.fromJson(
+                item is Map<String, dynamic>
+                    ? item
+                    : Map<String, dynamic>.from(item),
+                generalReason: generalReason,
+              ));
+            }
+          }
+        }
+      }
+    }
+
     return OrderModel(
       id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
       orderNumber: json['order_number'] ?? '',
@@ -229,6 +256,7 @@ class OrderModel {
       salesman: json['salesman'],
       warehouse: json['warehouse'],
       items: parsedItems,
+      returnedItems: parsedReturns,
       pendingSync: json['pending_sync'] == true || json['pending_sync'] == 1,
       priceType: json['price_type']?.toString(),
     );
@@ -257,6 +285,7 @@ class OrderModel {
     dynamic salesman,
     dynamic warehouse,
     List<OrderItemModel>? items,
+    List<OrderReturnItemModel>? returnedItems,
     bool? pendingSync,
     String? priceType,
   }) {
@@ -283,10 +312,15 @@ class OrderModel {
       salesman: salesman ?? this.salesman,
       warehouse: warehouse ?? this.warehouse,
       items: items ?? this.items,
+      returnedItems: returnedItems ?? this.returnedItems,
       pendingSync: pendingSync ?? this.pendingSync,
       priceType: priceType ?? this.priceType,
     );
   }
+
+  bool get hasReturns => returnedItems.isNotEmpty;
+  double get totalReturnAmount => returnedItems.fold<double>(0.0, (sum, i) => sum + i.subtotal);
+  int get totalReturnQuantity => returnedItems.fold<int>(0, (sum, i) => sum + i.quantity.toInt());
 
   String get customerName {
     if (customerId == 0) return 'کڕیاری کاتی (بێ ناو)';

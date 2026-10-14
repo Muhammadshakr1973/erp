@@ -68,11 +68,20 @@ class SalesReturnController extends Controller
     public function store(StoreSalesReturnRequest $request): JsonResponse
     {
         $user = $request->user();
+
+        // تەنها مەندوب دەتوانێت کاڵا بگەڕێنێتەوە
+        if ($user->role?->name !== 'salesman') {
+            return response()->json([
+                'message' => 'تەنها مەندوب دەتوانێت کاڵا بگەڕێنێتەوە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $orderId = $request->input('sales_order_id');
         $order = \App\Models\SalesOrder::findOrFail($orderId);
 
         // IDOR prevention: check if salesman is assigned to the customer or order
-        if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
+        if ($order->salesman_id !== $user->id) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی کردار لەسەر ئەم پسوڵەیە.',
                 'error' => 'Forbidden.'

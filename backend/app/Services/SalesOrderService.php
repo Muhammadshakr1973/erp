@@ -9,6 +9,8 @@ use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
 use App\Models\PurchaseRequirement;
 use App\Models\CustomerLedger;
+use App\Models\SalesReturn;
+use App\Models\SalesReturnItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -170,6 +172,11 @@ class SalesOrderService
             $this->reserveStock($order, $user);
             $this->logActivity($order, null, SalesOrder::STATUS_PACKING, $user);
 
+            // تۆمارکردنی کاڵای گەڕاوە لە هەمان پسوڵە ئەگەر هەبێت
+            if (isset($data['returned_items'])) {
+                $this->syncOrderReturns($order, $data['returned_items'], $user);
+            }
+
             return $order;
         });
 
@@ -308,6 +315,11 @@ class SalesOrderService
             $requestedStatus = $data['status'] ?? $order->status;
             if ($requestedStatus !== $order->status && !in_array($requestedStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_PACKING])) {
                 $order = $this->transitionTo($order, $requestedStatus, $user);
+            }
+
+            // تۆمارکردنی کاڵای گەڕاوە لە هەمان پسوڵە ئەگەر هەبێت
+            if (isset($data['returned_items'])) {
+                $this->syncOrderReturns($order, $data['returned_items'], $user);
             }
 
             return $order;
@@ -695,6 +707,139 @@ class SalesOrderService
         ]);
 
         $customer->update(['current_balance' => $newBalance]);
+
+        // پشکنینی کاڵای گەڕاوەی پەیوەست بەم پسوڵەیە ئەگەر هەبێت
+        $salesReturn = $order->salesReturns()->whereIn('status', [SalesReturn::STATUS_COMPLETED, SalesReturn::STATUS_COMPLETED_LOWER])->first();
+        if ($salesReturn && $salesReturn->total_return_amount > 0) {
+            $retAmount = $salesReturn->total_return_amount;
+            $balanceBeforeRet = $newBalance;
+            $newBalance = $newBalance - $retAmount;
+
+            CustomerLedger::create([
+                'customer_id'    => $customer->id,
+                'entry_type'     => 'RETURN',
+                'type'           => 'credit',
+                'debit'          => 0,
+                'credit'         => $retAmount,
+                'amount'         => $retAmount,
+                'balance_before' => $balanceBeforeRet,
+                'balance_after'  => $newBalance,
+                'reference_type' => 'sales_return',
+                'reference_id'   => $salesReturn->id,
+                'description'    => "گەڕانەوەی کاڵا بۆ پسوڵەی فرۆشتنی ژمارە #{$order->order_number}",
+                'created_by'     => $user->id,
+            ]);
+
+            $customer->update(['current_balance' => $newBalance]);
+
+            // زیادکردنەوەی ستۆکی کاڵا گەڕاوەکان بۆ کۆگا
+            foreach ($salesReturn->items as $retItem) {
+                $warehouseStock = WarehouseStock::lockForUpdate()->where([
+                    'warehouse_id' => $order->warehouse_id,
+                    'product_id'   => $retItem->product_id
+                ])->first();
+
+                if (!$warehouseStock) {
+                    $warehouseStock = WarehouseStock::create([
+                        'warehouse_id'      => $order->warehouse_id,
+                        'product_id'        => $retItem->product_id,
+                        'quantity'          => 0,
+                        'reserved_quantity' => 0,
+                        'average_cost'      => $retItem->product?->cost_price ?? 0,
+                    ]);
+                    $warehouseStock = WarehouseStock::lockForUpdate()->find($warehouseStock->id);
+                }
+
+                $warehouseStock->adjustStock(
+                    $retItem->quantity,
+                    'RETURN',
+                    $user->id,
+                    'sales_return',
+                    $salesReturn->id,
+                    "گەڕانەوەی کاڵا بۆ پسوڵەی #{$order->order_number}"
+                );
+            }
+        }
+    }
+
+    /**
+     * هاوکاتکردنی کاڵا گەڕاوەکان لە هەمان پسوڵەدا
+     */
+    public function syncOrderReturns(SalesOrder $order, array $returnedItems, $user): void
+    {
+        $salesReturn = SalesReturn::where('sales_order_id', $order->id)->first();
+
+        if (empty($returnedItems)) {
+            if ($salesReturn) {
+                $salesReturn->items()->delete();
+                $salesReturn->delete();
+            }
+            return;
+        }
+
+        if (!$salesReturn) {
+            $salesReturn = SalesReturn::create([
+                'return_number'       => 'RET-' . strtoupper(Str::random(8)),
+                'sales_order_id'      => $order->id,
+                'customer_id'         => $order->customer_id,
+                'reason'              => 'کاڵای گەڕاوە لەگەڵ پسوڵە',
+                'status'              => SalesReturn::STATUS_COMPLETED,
+                'total_return_amount' => 0,
+                'created_by'          => $user->id,
+            ]);
+        } else {
+            $salesReturn->update([
+                'customer_id' => $order->customer_id,
+            ]);
+        }
+
+        $existingItems = $salesReturn->items()->get()->keyBy('product_id');
+        $keepProductIds = [];
+        $totalReturnAmount = 0;
+
+        foreach ($returnedItems as $retItem) {
+            $productId = (int)$retItem['product_id'];
+            $qty = (int)$retItem['quantity'];
+            if ($qty <= 0) continue;
+
+            $keepProductIds[] = $productId;
+            $product = Product::find($productId);
+            if (!$product) continue;
+
+            $unitPrice = isset($retItem['unit_price']) && (float)$retItem['unit_price'] > 0
+                ? (int)$retItem['unit_price']
+                : (int)($product->selling_price ?: ($product->price_n2 ?: $product->cost_price));
+
+            $itemTotal = $qty * $unitPrice;
+            $totalReturnAmount += $itemTotal;
+
+            if ($existingItems->has($productId)) {
+                $existing = $existingItems->get($productId);
+                $existing->update([
+                    'quantity'   => $qty,
+                    'unit_price' => $unitPrice,
+                    'total'      => $itemTotal,
+                    'reason'     => $retItem['reason'] ?? $existing->reason ?? 'کاڵای گەڕاوە لەگەڵ پسوڵە',
+                ]);
+            } else {
+                SalesReturnItem::create([
+                    'sales_return_id'     => $salesReturn->id,
+                    'sales_order_item_id' => null,
+                    'product_id'          => $productId,
+                    'quantity'            => $qty,
+                    'unit_price'          => $unitPrice,
+                    'total'               => $itemTotal,
+                    'reason'              => $retItem['reason'] ?? 'کاڵای گەڕاوە لەگەڵ پسوڵە',
+                ]);
+            }
+        }
+
+        // سڕینەوەی ئەو ئایتمانەی کە لابراون لە لیستەکە
+        $salesReturn->items()->whereNotIn('product_id', $keepProductIds)->delete();
+
+        $salesReturn->update([
+            'total_return_amount' => $totalReturnAmount,
+        ]);
     }
 
     /**
@@ -953,6 +1098,11 @@ class SalesOrderService
             $requestedStatus = $data['status'] ?? $order->status;
             if ($requestedStatus !== $order->status && !in_array($requestedStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_PACKING])) {
                 $order = $this->transitionTo($order, $requestedStatus, $user);
+            }
+
+            // تۆمارکردنی کاڵای گەڕاوە لە هەمان پسوڵە ئەگەر هەبێت
+            if (isset($data['returned_items'])) {
+                $this->syncOrderReturns($order, $data['returned_items'], $user);
             }
 
             return $order;

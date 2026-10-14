@@ -20,7 +20,7 @@ class SalesOrderController extends Controller
     public function index(\Illuminate\Http\Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = \App\Models\SalesOrder::with(['customer.route', 'salesman', 'items.product', 'warehouse'])->orderBy('id', 'desc');
+        $query = \App\Models\SalesOrder::with(['customer.route', 'salesman', 'items.product', 'warehouse', 'salesReturns.items.product'])->orderBy('id', 'desc');
 
         if ($user->role?->name === 'salesman') {
             $query->where('salesman_id', $user->id);
@@ -101,7 +101,7 @@ class SalesOrderController extends Controller
             // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی گونجاو
             return response()->json([
                 'message' => $message,
-                'data' => $order->load('items') // هێنانەوەی ئایتمەکانیش لەگەڵیدا
+                'data' => $order->load(['items.product', 'salesReturns.items.product'])
             ], $statusCode);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -143,14 +143,14 @@ class SalesOrderController extends Controller
 
         return response()->json([
             'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
-            'data' => $updatedOrder->load('items')
+            'data' => $updatedOrder->load(['items.product', 'salesReturns.items.product'])
         ]);
     }
 
     public function show(\Illuminate\Http\Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $order = \App\Models\SalesOrder::with(['customer', 'salesman', 'items.product', 'warehouse'])->findOrFail($id);
+        $order = \App\Models\SalesOrder::with(['customer', 'salesman', 'items.product', 'warehouse', 'salesReturns.items.product'])->findOrFail($id);
 
         // IDOR Prevention Access Check
         if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {

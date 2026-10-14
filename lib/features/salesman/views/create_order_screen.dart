@@ -45,6 +45,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   String? _overridePriceType;
   final Map<int, int> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
+  final List<Map<String, dynamic>> _returnedItems = []; // returned items in this order
   Timer? _debounceTimer;
   Map<int, double> _customerSpecialPrices =
       {}; // product_id -> special unit price
@@ -171,6 +172,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         if (item.notes != null) {
           _cartNotes[item.productId] = item.notes!;
         }
+      }
+      _returnedItems.clear();
+      for (var ret in order.returnedItems) {
+        _returnedItems.add({
+          'product_id': ret.productId,
+          'product_name': ret.productName,
+          'quantity': ret.quantity.toInt(),
+          'unit_price': ret.unitPrice,
+          'subtotal': ret.subtotal,
+          'reason': ret.reason,
+          'product_unit': ret.productUnit,
+        });
       }
 
       // Clear all local error and saving states since we populated the pristine server-state!
@@ -523,6 +536,224 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
   }
 
+  Future<void> _showAddReturnedItemDialog(List<ProductModel> allProducts) async {
+    ProductModel? selectedProduct;
+    final qtyController = TextEditingController(text: '1');
+    final priceController = TextEditingController();
+    final reasonController = TextEditingController(text: 'کاڵای بەسەرچوو');
+    final searchProductController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setDialogState) {
+            final theme = Theme.of(context);
+            final filteredProducts = searchProductController.text.trim().isEmpty
+                ? allProducts.take(20).toList()
+                : allProducts.where((p) {
+                    final q = searchProductController.text.trim().toLowerCase();
+                    return p.name.toLowerCase().contains(q) ||
+                        p.barcode.toLowerCase().contains(q) ||
+                        (p.sku != null && p.sku!.toLowerCase().contains(q));
+                  }).take(20).toList();
+
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const Icon(Icons.assignment_return_rounded, color: AppColors.danger),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا', style: AppTextStyles.h3),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 450,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('کاڵا دیاریبکە:', style: AppTextStyles.bodyBold),
+                      const SizedBox(height: 6),
+                      AppTextField(
+                        controller: searchProductController,
+                        labelText: 'گەڕان بەپێی ناو یان بارکۆدی کاڵا...',
+                        prefixIcon: Icons.search,
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 140,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: filteredProducts.isEmpty
+                            ? const Center(child: Text('هیچ کاڵایەک نەدۆزرایەوە', style: AppTextStyles.caption))
+                            : ListView.separated(
+                                itemCount: filteredProducts.length,
+                                separatorBuilder: (_, __) => const Divider(height: 1),
+                                itemBuilder: (_, idx) {
+                                  final p = filteredProducts[idx];
+                                  final isSel = selectedProduct?.id == p.id;
+                                  return ListTile(
+                                    dense: true,
+                                    selected: isSel,
+                                    selectedTileColor: AppColors.danger.withValues(alpha: 0.1),
+                                    title: Text(p.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                                    subtitle: Text('${p.unit} • ${Formatters.currency(_getProductUnitPrice(p))}', style: AppTextStyles.caption),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedProduct = p;
+                                        final defaultP = _getProductUnitPrice(p);
+                                        priceController.text = defaultP.toInt().toString();
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                      if (selectedProduct != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'کاڵای دیاریکراو: ${selectedProduct!.name}',
+                            style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: AppTextField(
+                                controller: qtyController,
+                                keyboardType: TextInputType.number,
+                                labelText: 'بڕ (دانە)',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 1,
+                              child: AppTextField(
+                                controller: priceController,
+                                keyboardType: TextInputType.number,
+                                labelText: 'نرخی دانە (د.ع)',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text('هۆکاری گەڕانەوە:', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          children: ['بەسەرچوو', 'تێکچوو / شکاوە', 'داواکاری کڕیار', 'هەڵەی مەندوب'].map((r) {
+                            return ChoiceChip(
+                              label: Text(r, style: const TextStyle(fontSize: 11)),
+                              selected: reasonController.text == r,
+                              onSelected: (sel) {
+                                if (sel) setDialogState(() => reasonController.text = r);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 6),
+                        AppTextField(
+                          controller: reasonController,
+                          labelText: 'تێبینی / هۆکاری تر',
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('پاشگەزبوونەوە'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: selectedProduct == null
+                      ? null
+                      : () {
+                          final qty = int.tryParse(qtyController.text.trim()) ?? 1;
+                          final price = double.tryParse(priceController.text.trim()) ?? _getProductUnitPrice(selectedProduct!);
+                          if (qty <= 0) {
+                            AppSnackbar.show(context, message: 'تکایە بڕێکی دروست بنووسە', type: SnackbarType.warning);
+                            return;
+                          }
+                          final reason = reasonController.text.trim().isEmpty ? null : reasonController.text.trim();
+
+                          setState(() {
+                            final existingIndex = _returnedItems.indexWhere((r) => r['product_id'] == selectedProduct!.id);
+                            if (existingIndex >= 0) {
+                              _returnedItems[existingIndex] = {
+                                'product_id': selectedProduct!.id,
+                                'product_name': selectedProduct!.name,
+                                'quantity': qty,
+                                'unit_price': price,
+                                'subtotal': qty * price,
+                                'reason': reason,
+                                'product_unit': selectedProduct!.unit,
+                              };
+                            } else {
+                              _returnedItems.add({
+                                'product_id': selectedProduct!.id,
+                                'product_name': selectedProduct!.name,
+                                'quantity': qty,
+                                'unit_price': price,
+                                'subtotal': qty * price,
+                                'reason': reason,
+                                'product_unit': selectedProduct!.unit,
+                              });
+                            }
+                          });
+
+                          Navigator.pop(dialogCtx);
+                          _triggerDebouncedAutoSave();
+                          AppSnackbar.show(
+                            context,
+                            message: 'کاڵای گەڕاوە (${selectedProduct!.name}) تۆمارکرا لەم پسوڵەیەدا',
+                            type: SnackbarType.success,
+                          );
+                        },
+                  child: const Text('زیادکردن بۆ پسوڵە'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _removeReturnedItem(int index) {
+    if (index >= 0 && index < _returnedItems.length) {
+      final name = _returnedItems[index]['product_name'];
+      setState(() {
+        _returnedItems.removeAt(index);
+      });
+      _triggerDebouncedAutoSave();
+      AppSnackbar.show(
+        context,
+        message: 'کاڵای گەڕاوە ($name) سڕدرایەوە لە پسوڵە',
+        type: SnackbarType.info,
+      );
+    }
+  }
+
   Future<void> _showSpecialPriceDialog(ProductModel product) async {
     if (_selectedCustomer == null) {
       AppSnackbar.show(
@@ -755,7 +986,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final warehouses = warehousesAsync.asData!.value;
     if (warehouses.isEmpty) return;
     if (_selectedCustomer == null) return;
-    if (widget.existingOrder == null && _cart.isEmpty) return;
+    if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty) return;
 
     final warehouseId =
         _selectedWarehouseId ??
@@ -773,6 +1004,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           'quantity': qty,
           'notes': _cartNotes[productId],
         });
+      });
+    }
+
+    final List<Map<String, dynamic>> retList = [];
+    for (var ret in _returnedItems) {
+      retList.add({
+        'product_id': ret['product_id'],
+        'quantity': ret['quantity'],
+        'unit_price': ret['unit_price'],
+        'reason': ret['reason'],
       });
     }
 
@@ -794,6 +1035,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ? null
           : _notesController.text.trim(),
       'items': itemsList,
+      'returned_items': retList,
     };
 
     if (mounted) {

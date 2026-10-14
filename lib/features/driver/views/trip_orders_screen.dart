@@ -121,6 +121,40 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (order != null && order.hasReturns) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  margin: const EdgeInsets.only(left: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.amber.shade700,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.assignment_return_rounded,
+                                        size: 13,
+                                        color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'کاڵای گەڕاوە',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                                          fontFamily: 'KJino',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               const SizedBox(width: AppSpacing.sm),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -303,6 +337,79 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                     ),
                                   ),
                                 )).toList(),
+                              ),
+                            ),
+                          ],
+                          if (order != null && order.hasReturns) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.amber.shade700,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 20,
+                                        color: Colors.amber.shade800,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'ئاگاداری: کاڵای گەڕاوە لەم پسوڵەیەدا هەیە (${order.returnedItems.length} جۆر - ${order.totalReturnQuantity} دانە)',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'تکایە لە کاتی گەیاندن، ئەم کاڵا گەڕاوانە لە کڕیار وەربگرەوە:',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ...order.returnedItems.map((rItem) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '↩ ${rItem.productName} (${rItem.quantity.toInt()} ${rItem.productUnit ?? "دانە"})${rItem.reason != null && rItem.reason!.isNotEmpty ? " - ${rItem.reason}" : ""}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${_formatCurrency(rItem.subtotal)} د.ع',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                ],
                               ),
                             ),
                           ],
@@ -526,6 +633,32 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (tripOrder.order?.hasReturns == true) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade700, width: 1.5),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'ئاگاداربە: ئەم کڕیارە (${tripOrder.order!.totalReturnQuantity}) دانە کاڵای گەڕاوەی هەیە. دڵنیابە لە وەرگرتنەوەیان.',
+                              style: AppTextStyles.caption.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   AppTextField(
                     controller: amountController,
                     keyboardType: TextInputType.number,
