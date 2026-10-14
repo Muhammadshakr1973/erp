@@ -56,7 +56,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final notificationsAsync = ref.watch(notificationsListProvider);
-    final unreadCount = ref.watch(unreadNotificationsCountProvider);
     final selectedFilter = ref.watch(notificationFilterTypeProvider);
 
     return PopScope(
@@ -101,19 +100,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 }
               },
             ),
-            if (unreadCount > 0)
-              TextButton.icon(
-                onPressed: () {
-                  ref.read(notificationsListProvider.notifier).markAllAsRead();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('هەموو ئاگادارکردنەوەکان خوێندرانەوە'),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.done_all, size: 18),
-                label: const Text('هەمووی بخوێنەوە'),
-              ),
           ],
         ),
         body: _buildInAppNotificationsTab(
