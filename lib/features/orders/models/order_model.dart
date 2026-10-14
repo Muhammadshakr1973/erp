@@ -52,6 +52,77 @@ class OrderItemModel {
   }
 }
 
+class OrderReturnItemModel {
+  final int id;
+  final int orderId;
+  final int productId;
+  final String productName;
+  final double quantity;
+  final double unitPrice;
+  final double subtotal;
+  final String? reason;
+  final String? productUnit;
+  final int? unitsPerCarton;
+  final String? productImagePath;
+
+  OrderReturnItemModel({
+    required this.id,
+    this.orderId = 0,
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.subtotal,
+    this.reason,
+    this.productUnit,
+    this.unitsPerCarton,
+    this.productImagePath,
+  });
+
+  factory OrderReturnItemModel.fromJson(Map<String, dynamic> json, {String? generalReason}) {
+    final productJson = json['product'] as Map<String, dynamic>?;
+    final imgPath = productJson != null
+        ? (productJson['image_path'] ?? productJson['image_url'] ?? productJson['image'])
+        : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
+
+    final qty = double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0;
+    final price = double.tryParse((json['unit_price'] ?? json['price'])?.toString() ?? '0') ?? 0.0;
+    final total = double.tryParse((json['subtotal'] ?? json['total'] ?? json['total_price'] ?? json['line_total'])?.toString() ?? '0') ?? (qty * price);
+
+    return OrderReturnItemModel(
+      id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
+      orderId: json['sales_order_id'] ?? json['order_id'] ?? 0,
+      productId: json['product_id'] ?? (productJson?['id'] ?? 0),
+      productName: productJson != null
+          ? (productJson['name'] ?? 'کاڵا')
+          : (json['product_name'] ?? json['name'] ?? 'کاڵا'),
+      quantity: qty,
+      unitPrice: price,
+      subtotal: total,
+      reason: json['reason']?.toString() ?? generalReason,
+      productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
+      unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      productImagePath: imgPath?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'sales_order_id': orderId,
+      'product_id': productId,
+      'product_name': productName,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'subtotal': subtotal,
+      'reason': reason,
+      'product_unit': productUnit,
+      'units_per_carton': unitsPerCarton,
+      'product_image_path': productImagePath,
+    };
+  }
+}
+
 class OrderModel {
   static const String statusDraft = 'DRAFT';
   static const String statusConfirmed = 'CONFIRMED';
@@ -83,6 +154,7 @@ class OrderModel {
   final dynamic salesman;
   final dynamic warehouse;
   final List<OrderItemModel> items;
+  final List<OrderReturnItemModel> returnedItems;
   final bool pendingSync;
   final String? priceType;
 
@@ -109,6 +181,7 @@ class OrderModel {
     this.salesman,
     this.warehouse,
     this.items = const [],
+    this.returnedItems = const [],
     this.pendingSync = false,
     this.priceType,
   });

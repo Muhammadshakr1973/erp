@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../admin/views/providers/driver_collection_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/delivery_trip_model.dart';
 
@@ -51,6 +52,8 @@ final activeDriversProvider = FutureProvider<List<DriverUserSummary>>((ref) asyn
 });
 
 final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 

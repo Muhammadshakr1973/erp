@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 // import '../../shared/views/customer_selection_dialog.dart';
@@ -81,8 +82,12 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           ),
         ),
         data: (orders) {
+          final currentUser = ref.watch(authProvider).user;
+          final salesmanOrders = orders
+              .where((o) => currentUser == null || o.salesmanId == currentUser.id)
+              .toList();
           final nowString = DateTime.now().toIso8601String().substring(0, 10);
-          final filtered = orders.where((o) {
+          final filtered = salesmanOrders.where((o) {
             final isOrderToday = o.createdAt.startsWith(nowString);
             return isToday ? isOrderToday : !isOrderToday;
           }).toList();

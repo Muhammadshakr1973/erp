@@ -80,10 +80,33 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         );
       }
 
-      Position position = await Geolocator.getCurrentPosition();
-      if (mounted) {
+      // 1. Immediately try last known position for instant update
+      Position? lastKnown;
+      try {
+        lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && mounted) {
+          final known = lastKnown;
+          setState(() {
+            _driverLocation = LatLng(known.latitude, known.longitude);
+          });
+        }
+      } catch (_) {}
+
+      // 2. Fetch fresh high accuracy position with extended timeout (20s)
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } catch (e) {
+        if (lastKnown == null) rethrow;
+      }
+
+      if (position != null && mounted) {
+        final pos = position;
         setState(() {
-          _driverLocation = LatLng(position.latitude, position.longitude);
+          _driverLocation = LatLng(pos.latitude, pos.longitude);
         });
       }
     } catch (e) {
@@ -559,8 +582,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate:
+                                'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                             userAgentPackageName: 'com.gardipos.app',
+                            maxZoom: 20,
+                            maxNativeZoom: 20,
                           ),
                           MarkerLayer(
                             markers: [

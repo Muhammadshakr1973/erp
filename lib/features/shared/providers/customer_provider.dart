@@ -57,8 +57,9 @@ final filteredCustomerListProvider =
       ref,
       filters,
     ) async {
+      final userId = ref.watch(authProvider.select((state) => state.user?.id));
       final user = ref.watch(authProvider.select((state) => state.user));
-      if (user == null) {
+      if (userId == null || user == null) {
         return PaginatedResponse<Customer>(
           data: const [],
           currentPage: 1,
@@ -132,9 +133,10 @@ final filteredCustomerListProvider =
     });
 
 final customerListProvider = FutureProvider<List<Customer>>((ref) {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
   final user = ref.watch(authProvider.select((state) => state.user));
   final role = user?.role.toLowerCase();
-  if (user == null || (role != 'admin' && role != 'owner' && role != 'salesman')) {
+  if (userId == null || user == null || (role != 'admin' && role != 'owner' && role != 'salesman')) {
     return const [];
   }
   final paginatedAsync = ref.watch(

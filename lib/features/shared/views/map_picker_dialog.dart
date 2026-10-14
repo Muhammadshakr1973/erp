@@ -56,6 +56,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
   late TextEditingController _latController;
   late TextEditingController _lngController;
   bool _isLocating = false;
+  bool _isSatellite = false;
 
   // Driver/Routing state
   LatLng? _driverLocation;
@@ -191,13 +192,34 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 8),
-      );
+      // 1. First immediately try last known position for zero-latency response
+      Position? lastKnown;
+      try {
+        lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && mounted) {
+          final lastLoc = LatLng(lastKnown.latitude, lastKnown.longitude);
+          _updateLocation(lastLoc, moveMap: true);
+        }
+      } catch (_) {}
 
-      final userLoc = LatLng(position.latitude, position.longitude);
-      _updateLocation(userLoc, moveMap: true);
+      // 2. Fetch fresh high accuracy position with extended timeout (20 seconds)
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } catch (e) {
+        // If live GPS timed out or failed, but lastKnown was already set, don't fail
+        if (lastKnown == null) {
+          rethrow;
+        }
+      }
+
+      if (position != null && mounted) {
+        final userLoc = LatLng(position.latitude, position.longitude);
+        _updateLocation(userLoc, moveMap: true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -282,18 +304,39 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 8),
-      );
+      // 1. Immediately try last known position for instant driver location and route
+      Position? lastKnown;
+      try {
+        lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && mounted) {
+          final lastLoc = LatLng(lastKnown.latitude, lastKnown.longitude);
+          setState(() {
+            _driverLocation = lastLoc;
+          });
+          _fetchRoutePoints();
+        }
+      } catch (_) {}
 
-      final userLoc = LatLng(position.latitude, position.longitude);
-      
-      setState(() {
-        _driverLocation = userLoc;
-      });
+      // 2. Fetch fresh high accuracy position with extended timeout (20 seconds)
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } catch (e) {
+        if (lastKnown == null) {
+          rethrow;
+        }
+      }
 
-      await _fetchRoutePoints();
+      if (position != null && mounted) {
+        final userLoc = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _driverLocation = userLoc;
+        });
+        await _fetchRoutePoints();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -543,9 +586,12 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: _isSatellite
+                            ? 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+                            : 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                         userAgentPackageName: 'com.gardipos.app',
+                        maxZoom: 20,
+                        maxNativeZoom: 20,
                       ),
                       
                       // Show Polyline route ONLY in read-only / driver mode
@@ -556,7 +602,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                               points: _routePoints,
                               strokeWidth: 5.0,
                               color: Colors.blueAccent,
-                              borderColor: Colors.blue.withOpacity(0.3),
+                              borderColor: Colors.blue.withValues(alpha: 0.3),
                               borderStrokeWidth: 3.0,
                             ),
                           ],
@@ -587,7 +633,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                               alignment: Alignment.center,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.25),
+                                  color: Colors.blue.withValues(alpha: 0.25),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: Colors.blue, width: 2),
                                 ),
@@ -604,12 +650,35 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                     ],
                   ),
                   
+                  // Floating action button to toggle satellite/road layer
+                  Positioned(
+                    bottom: 68,
+                    left: 16,
+                    child: FloatingActionButton(
+                      mini: true,
+                      heroTag: 'map_layer_toggle_btn',
+                      tooltip: _isSatellite ? 'نەخشەی ئاسایی' : 'نەخشەی سەتەلایت',
+                      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      onPressed: () {
+                        setState(() {
+                          _isSatellite = !_isSatellite;
+                        });
+                      },
+                      child: Icon(
+                        _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
+                        color: isDark ? const Color(0xFF60A5FA) : Colors.blue,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+
                   // Floating action button to locate (Edit Mode) or recalculate/refresh route (ReadOnly Mode)
                   Positioned(
                     bottom: 16,
                     left: 16,
                     child: FloatingActionButton(
                       mini: true,
+                      heroTag: 'map_locate_btn',
                       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                       onPressed: _isLocating
                           ? null
@@ -636,11 +705,11 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B).withOpacity(0.95) : Colors.white.withOpacity(0.95),
+                          color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: Colors.black.withValues(alpha: 0.15),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -675,7 +744,7 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.1),
+                                      color: Colors.green.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.navigation_rounded, color: Colors.green, size: 20),

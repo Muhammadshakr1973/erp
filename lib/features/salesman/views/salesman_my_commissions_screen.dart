@@ -14,6 +14,8 @@ import '../../shared/models/commission_model.dart';
 
 final myCommissionsProvider =
     FutureProvider.family<List<CommissionModel>, String?>((ref, status) async {
+      final userId = ref.watch(authProvider.select((state) => state.user?.id));
+      if (userId == null) return const [];
       final api = ref.watch(apiClientProvider);
       try {
         final response = await api.client.get(
@@ -52,6 +54,8 @@ final myCommissionsProvider =
 final myCommissionSummaryProvider = FutureProvider<Map<String, dynamic>>((
   ref,
 ) async {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const {};
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/commissions/summary');

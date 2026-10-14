@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
-// import '../../orders/providers/orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class WeeklyChartItem {
   final String date;
@@ -110,6 +110,22 @@ class SalesmanDashboardData {
     required this.weeklyChartData,
   });
 
+  factory SalesmanDashboardData.empty() {
+    return SalesmanDashboardData(
+      routeName: 'گشتی',
+      todaySales: 0,
+      todayUnits: 0,
+      last7DaysSales: 0,
+      last7DaysUnits: 0,
+      monthUnits: 0,
+      lastMonthUnits: 0,
+      newCustomersWeek: 0,
+      newCustomersMonth: 0,
+      weeklyChartData: const [],
+      todayRouteCustomers: const [],
+    );
+  }
+
   factory SalesmanDashboardData.fromJson(Map<String, dynamic> json) {
     final rawChart = json['weekly_chart_data'] as List? ?? [];
     final rawCustomers = json['today_route_customers'] as List? ?? [];
@@ -161,6 +177,11 @@ class SalesmanDashboardData {
 class SalesmanDashboardNotifier extends AsyncNotifier<SalesmanDashboardData> {
   @override
   FutureOr<SalesmanDashboardData> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) {
+      return SalesmanDashboardData.empty();
+    }
+
     final api = ref.watch(apiClientProvider);
     final pusher = ref.watch(pusherServiceProvider);
 
@@ -199,6 +220,9 @@ class SalesmanDashboardNotifier extends AsyncNotifier<SalesmanDashboardData> {
   }
 
   Future<void> refreshSilently() async {
+    final userId = ref.read(authProvider).user?.id;
+    if (userId == null) return;
+
     final api = ref.read(apiClientProvider);
     try {
       final freshData = await _fetchDashboard(api);
