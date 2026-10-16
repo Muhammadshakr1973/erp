@@ -1801,13 +1801,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final currentUser = ref.watch(authProvider).user;
     final isSalesman = currentUser?.isSalesman ?? false;
     final isCashVan = currentUser?.isCashVan == true;
-    if (isSalesman &&
-        _selectedWarehouseId == null &&
-        currentUser?.warehouseId != null) {
-      _selectedWarehouseId = currentUser!.warehouseId;
+    final userWarehouseId = currentUser?.warehouseId;
+    if (isSalesman && _selectedWarehouseId == null && userWarehouseId != null) {
+      _selectedWarehouseId = userWarehouseId;
     }
-    if (isCashVan && currentUser?.warehouseId != null && _selectedWarehouseId != currentUser!.warehouseId) {
-      _selectedWarehouseId = currentUser!.warehouseId;
+    if (isCashVan && userWarehouseId != null && _selectedWarehouseId != userWarehouseId) {
+      _selectedWarehouseId = userWarehouseId;
     }
 
     final rawProducts = productsAsync.asData?.value ?? [];

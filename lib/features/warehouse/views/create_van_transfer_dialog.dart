@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/components/app_card.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
@@ -10,7 +9,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
-import '../models/stock_transfer_model.dart';
 import '../providers/warehouse_provider.dart' as wp;
 
 class CreateVanTransferDialog extends ConsumerStatefulWidget {
@@ -88,16 +86,18 @@ class _CreateVanTransferDialogState
                           IconButton(
                             icon: const Icon(Icons.qr_code_scanner),
                             tooltip: 'سکان بە کامێرا',
-                            onPressed: () async {
-                              final barcode =
-                                  await CameraBarcodeScanner.scanBarcode(
+                            onPressed: () {
+                              CameraBarcodeScanner.show(
                                 context,
+                                (barcode) {
+                                  if (barcode.isNotEmpty) {
+                                    setModalState(() {
+                                      search = barcode;
+                                    });
+                                  }
+                                },
+                                closeOnScan: true,
                               );
-                              if (barcode != null && barcode.isNotEmpty) {
-                                setModalState(() {
-                                  search = barcode;
-                                });
-                              }
                             },
                           ),
                         ],
@@ -117,7 +117,7 @@ class _CreateVanTransferDialogState
                         child: ListView.separated(
                           controller: scrollController,
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (context, index) =>
                               const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final p = filtered[index];
@@ -329,7 +329,7 @@ class _CreateVanTransferDialogState
                         }
 
                         return DropdownButtonFormField<int>(
-                          value: _selectedToWarehouseId,
+                          initialValue: _selectedToWarehouseId,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'کۆگای وەرگر (ئۆتۆمبێلی کاشڤان) *',

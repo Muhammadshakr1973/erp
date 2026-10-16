@@ -6,7 +6,6 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
