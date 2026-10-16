@@ -20,6 +20,7 @@ import 'warehouse_main_screen.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../orders/models/order_model.dart';
 import '../../admin/views/create_delivery_trip_dialog.dart';
+import '../../shared/providers/warehouse_provider.dart';
 
 class WarehouseDashboardScreen extends ConsumerWidget {
   const WarehouseDashboardScreen({super.key});
@@ -28,15 +29,120 @@ class WarehouseDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(warehouseDashboardProvider);
     final readyOrdersAsync = ref.watch(readyOrdersForDeliveryProvider);
+    final warehousesAsync = ref.watch(warehouseListProvider);
+    final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: dashboardAsync.when(
-          data: (data) => Text(data.warehouseName, style: AppTextStyles.h2),
-          loading: () => const Text('داشبۆردی کۆگا', style: AppTextStyles.h2),
-          error: (err, stack) => const Text('کۆگا', style: AppTextStyles.h2),
+        title: warehousesAsync.when(
+          data: (warehouses) {
+            final activeWarehouse = warehouses.firstWhere(
+              (w) => w.id == activeWarehouseId,
+              orElse: () => warehouses.firstWhere(
+                (w) => w.id == dashboardAsync.asData?.value.warehouseId,
+                orElse: () => warehouses.first,
+              ),
+            );
+
+            if (warehouses.length <= 1) {
+              return Text(activeWarehouse.name, style: AppTextStyles.h2);
+            }
+
+            return PopupMenuButton<int>(
+              tooltip: 'گۆڕینی کۆگای چالاک',
+              initialValue: activeWarehouse.id,
+              onSelected: (selectedId) {
+                ref.read(activeWarehouseIdProvider.notifier).state = selectedId;
+                ref.invalidate(warehouseDashboardProvider);
+                ref.invalidate(ordersToPackProvider);
+                ref.invalidate(warehouseStocksProvider);
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    activeWarehouse.isReserve
+                        ? Icons.inventory_2_outlined
+                        : (activeWarehouse.isVan ? Icons.local_shipping_outlined : Icons.warehouse_outlined),
+                    size: 20,
+                    color: activeWarehouse.isReserve
+                        ? Colors.purple
+                        : (activeWarehouse.isVan ? Colors.orange : AppColors.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      activeWarehouse.name,
+                      style: AppTextStyles.h2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_drop_down, size: 22),
+                ],
+              ),
+              itemBuilder: (ctx) {
+                return warehouses.map((w) {
+                  final isCurrent = w.id == activeWarehouse.id;
+                  return PopupMenuItem<int>(
+                    value: w.id,
+                    child: Row(
+                      children: [
+                        Icon(
+                          w.isReserve
+                              ? Icons.inventory_2_outlined
+                              : (w.isVan ? Icons.local_shipping_outlined : Icons.warehouse_outlined),
+                          size: 18,
+                          color: w.isReserve
+                              ? Colors.purple
+                              : (w.isVan ? Colors.orange : AppColors.primary),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                w.name,
+                                style: TextStyle(
+                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                              Text(
+                                w.typeDisplayName,
+                                style: AppTextStyles.caption.copyWith(fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isCurrent)
+                          const Icon(Icons.check, size: 18, color: AppColors.success),
+                      ],
+                    ),
+                  );
+                }).toList();
+              },
+            );
+          },
+          loading: () => dashboardAsync.when(
+            data: (data) => Text(data.warehouseName, style: AppTextStyles.h2),
+            loading: () => const Text('داشبۆردی کۆگا', style: AppTextStyles.h2),
+            error: (err, stack) => const Text('کۆگا', style: AppTextStyles.h2),
+          ),
+          error: (_, __) => const Text('داشبۆردی کۆگا', style: AppTextStyles.h2),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'نوێکردنەوە',
+            onPressed: () {
+              ref.invalidate(warehouseDashboardProvider);
+              ref.invalidate(ordersToPackProvider);
+              ref.invalidate(warehouseStocksProvider);
+              ref.invalidate(warehouseListProvider);
+            },
+          ),
           const NotificationBadgeButton(),
         ],
       ),

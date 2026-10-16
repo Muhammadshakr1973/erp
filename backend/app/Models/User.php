@@ -54,6 +54,38 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Warehouse::class);
     }
+
+    public function warehouses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'warehouse_user')->withTimestamps();
+    }
+
+    public function assignedWarehouseIds(): array
+    {
+        $ids = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('warehouse_user')) {
+            $ids = \Illuminate\Support\Facades\DB::table('warehouse_user')
+                ->where('user_id', $this->id)
+                ->pluck('warehouse_id')
+                ->toArray();
+        }
+        if ($this->warehouse_id && !in_array((int)$this->warehouse_id, $ids)) {
+            $ids[] = (int) $this->warehouse_id;
+        }
+        return array_map('intval', array_unique($ids));
+    }
+
+    public function hasWarehouseAccess($warehouseId): bool
+    {
+        if ($this->isAdmin() || $this->isOwner()) {
+            return true;
+        }
+        $assigned = $this->assignedWarehouseIds();
+        if (empty($assigned)) {
+            return true;
+        }
+        return in_array((int) $warehouseId, $assigned, true);
+    }
     public function deviceTokens(): HasMany
     {
         return $this->hasMany(DeviceToken::class);

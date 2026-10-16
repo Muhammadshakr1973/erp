@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../shared/providers/warehouse_provider.dart';
+import 'providers/user_provider.dart';
 
 class AdminWarehousesScreen extends ConsumerStatefulWidget {
   const AdminWarehousesScreen({super.key});
@@ -20,7 +21,7 @@ class AdminWarehousesScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
-  String _selectedFilter = 'ALL'; // ALL, PHYSICAL, VAN
+  String _selectedFilter = 'ALL'; // ALL, PHYSICAL_DIRECT, PHYSICAL_RESERVE, VAN
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -34,203 +35,496 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
     final nameController = TextEditingController(text: warehouse?.name ?? '');
     final addressController =
         TextEditingController(text: warehouse?.address ?? '');
-    final phoneController = TextEditingController(text: warehouse?.phone ?? '');
     bool isMain = warehouse?.isMain ?? false;
     bool isActive = warehouse?.isActive ?? true;
-    String type = warehouse?.type ?? 'PHYSICAL';
+
+    // Normalize type
+    String type = warehouse?.type ?? 'PHYSICAL_DIRECT';
+    if (type == 'PHYSICAL') {
+      type = 'PHYSICAL_DIRECT';
+    }
+
+    int? selectedCashVanUserId = warehouse?.cashVanUserId;
+    final List<int> selectedKeeperIds = List<int>.from(warehouse?.keeperIds ?? []);
+    final List<int> selectedSalesmanIds = List<int>.from(warehouse?.salesmanIds ?? []);
+
     bool isSubmitting = false;
 
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                warehouse == null ? 'زیادکردنی کۆگای نوێ' : 'دەستکاریکردنی کۆگا',
-                style: AppTextStyles.bodyBold,
-              ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 440,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppTextField(
-                        controller: nameController,
-                        labelText: 'ناوی کۆگا *',
-                        hintText: 'بۆ نموونە: کۆگای سەرەکی یان کاشڤان - هەژار',
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      DropdownButtonFormField<String>(
-                        initialValue: type,
-                        decoration: const InputDecoration(
-                          labelText: 'جۆری کۆگا',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'PHYSICAL',
-                            child: Row(
-                              children: [
-                                Icon(Icons.warehouse_outlined, size: 20),
-                                SizedBox(width: 8),
-                                Text('کۆگای فیزیایی (لق / سەرەکی)'),
-                              ],
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'VAN',
-                            child: Row(
-                              children: [
-                                Icon(Icons.local_shipping_outlined, size: 20),
-                                SizedBox(width: 8),
-                                Text('ئۆتۆمبێلی کاشڤان (گەڕۆک)'),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              type = val;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        controller: addressController,
-                        labelText: 'ناونیشان / شوێن',
-                        hintText: type == 'VAN'
-                            ? 'ژمارەی ئۆتۆمبێل یان ناوچە'
-                            : 'ناونیشانی فیزیکی کۆگا',
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        controller: phoneController,
-                        labelText: 'ژمارەی مۆبایل / پەیوەندی',
-                        keyboardType: TextInputType.phone,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      SwitchListTile(
-                        title: const Text('کۆگای بنەڕەتی و سەرەکی (Main)'),
-                        subtitle: const Text(
-                          'پسوڵەکان بە شێوەی خۆکار لەم کۆگایەوە دروست دەکرێن ئەگەر دیاری نەکرابێت.',
-                          style: AppTextStyles.caption,
-                        ),
-                        value: isMain,
-                        onChanged: (val) {
-                          setDialogState(() {
-                            isMain = val;
-                          });
-                        },
-                      ),
-                      if (warehouse != null)
-                        SwitchListTile(
-                          title: const Text('چالاکە'),
-                          value: isActive,
-                          onChanged: (val) {
-                            setDialogState(() {
-                              isActive = val;
-                            });
-                          },
-                        ),
-                    ],
+        return Consumer(
+          builder: (context, ref, _) {
+            final keepersAsync = ref.watch(warehouseKeepersListProvider);
+            final cashVanSalesmenAsync = ref.watch(cashVanSalesmenListProvider);
+            final presellSalesmenAsync = ref.watch(presellSalesmenListProvider);
+
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
+                final isVan = type == 'VAN';
+                final isReserve = type == 'PHYSICAL_RESERVE';
+                final isDirect = type == 'PHYSICAL_DIRECT';
+
+                return AlertDialog(
+                  title: Text(
+                    warehouse == null ? 'زیادکردنی کۆگای نوێ' : 'دەستکاریکردنی کۆگا',
+                    style: AppTextStyles.bodyBold,
                   ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                  child: const Text('پاشگەزبوونەوە'),
-                ),
-                isSubmitting
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : ElevatedButton(
-                        onPressed: () async {
-                          final name = nameController.text.trim();
-                          if (name.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('تکایە ناوی کۆگا بنووسە'),
+                  content: SingleChildScrollView(
+                    child: SizedBox(
+                      width: 520,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppTextField(
+                            controller: nameController,
+                            labelText: 'ناوی کۆگا *',
+                            hintText: 'بۆ نموونە: کۆگای سەرەکی، یەدەگی باکوور، یان کاشڤان - هەژار',
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Warehouse Type Selection
+                          DropdownButtonFormField<String>(
+                            initialValue: type,
+                            decoration: const InputDecoration(
+                              labelText: 'جۆری کۆگا *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'PHYSICAL_DIRECT',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.storefront_outlined,
+                                        size: 20, color: AppColors.primary),
+                                    SizedBox(width: 8),
+                                    Text('کۆگای فیزیکی - فرۆشتنی ڕاستەوخۆ'),
+                                  ],
+                                ),
                               ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() {
-                            isSubmitting = true;
-                          });
-
-                          try {
-                            final actions =
-                                ref.read(warehouseAdminActionsProvider);
-                            if (warehouse == null) {
-                              await actions.createWarehouse(
-                                name: name,
-                                address: addressController.text.trim(),
-                                phone: phoneController.text.trim(),
-                                isMain: isMain,
-                                type: type,
-                              );
-                            } else {
-                              await actions.updateWarehouse(
-                                id: warehouse.id,
-                                name: name,
-                                address: addressController.text.trim(),
-                                phone: phoneController.text.trim(),
-                                isMain: isMain,
-                                isActive: isActive,
-                                type: type,
-                              );
-                            }
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    warehouse == null
-                                        ? 'کۆگا بە سەرکەوتوویی زیادکرا'
-                                        : 'کۆگا بە سەرکەوتوویی نوێکرایەوە',
-                                  ),
-                                  backgroundColor: AppColors.success,
+                              DropdownMenuItem(
+                                value: 'PHYSICAL_RESERVE',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.inventory_2_outlined,
+                                        size: 20, color: Colors.purple),
+                                    SizedBox(width: 8),
+                                    Text('کۆگای فیزیکی - یەدەگ (تەنها بۆ پڕکردنەوە)'),
+                                  ],
                                 ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString().replaceAll('Exception: ', ''),
-                                  ),
-                                  backgroundColor: AppColors.danger,
+                              ),
+                              DropdownMenuItem(
+                                value: 'VAN',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.local_shipping_outlined,
+                                        size: 20, color: Colors.orange),
+                                    SizedBox(width: 8),
+                                    Text('ئۆتۆمبێلی کاشڤان (گەڕۆک)'),
+                                  ],
                                 ),
-                              );
-                            }
-                          } finally {
-                            if (context.mounted) {
-                              setDialogState(() {
-                                isSubmitting = false;
-                              });
-                            }
-                          }
-                        },
-                        child: Text(
-                          warehouse == null ? 'زیادکردن' : 'پاشکەوتکردن',
-                        ),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  type = val;
+                                  if (type == 'VAN' || type == 'PHYSICAL_RESERVE') {
+                                    isMain = false;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Conditional fields for VAN
+                          if (isVan) ...[
+                            Container(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline,
+                                      size: 18, color: Colors.orange),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'ئەم کۆگایە تایبەتە بە ئۆتۆمبێلی مەندوبێکی کاشڤان. ناونیشان و ژمارەی مۆبایل پێویست نییە چونکە کاشڤانەکە دیاریدەکرێت.',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            cashVanSalesmenAsync.when(
+                              loading: () => const LinearProgressIndicator(),
+                              error: (e, _) => Text(
+                                'کێشە لە بارکردنی کاشڤانەکان: ${Formatters.cleanError(e)}',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                              ),
+                              data: (cashVans) {
+                                return DropdownButtonFormField<int?>(
+                                  initialValue: selectedCashVanUserId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'دیاریکردنی کاشڤان (مەندوبی گەڕۆک) *',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.person_pin_outlined, color: Colors.orange),
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text('دیاری نەکراوە (هەڵبژێرە...)'),
+                                    ),
+                                    ...cashVans.map((cv) {
+                                      return DropdownMenuItem<int?>(
+                                        value: cv.id,
+                                        child: Text('${cv.name} (${cv.phone})'),
+                                      );
+                                    }),
+                                  ],
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      selectedCashVanUserId = val;
+                                      if (val != null && nameController.text.trim().isEmpty) {
+                                        final matched = cashVans.firstWhere((c) => c.id == val);
+                                        nameController.text = 'کۆگای کاشڤان - ${matched.name}';
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+
+                          // Conditional fields for Physical (DIRECT & RESERVE)
+                          if (!isVan) ...[
+                            AppTextField(
+                              controller: addressController,
+                              labelText: 'ناونیشان / شوێن',
+                              hintText: 'بۆ نموونە: هەولێر - شەقامی ٦٠ مەتری، کۆگاکانی باشوور',
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+
+                            // Main Warehouse Switch (Only for DIRECT sales physical warehouse)
+                            if (isDirect) ...[
+                              SwitchListTile(
+                                title: const Text('کۆگای بنەڕەتی و سەرەکی (Main)'),
+                                subtitle: const Text(
+                                  'پسوڵەکان بە شێوەی خۆکار لەم کۆگایەوە دروست دەکرێن ئەگەر دیاری نەکرابێت.',
+                                  style: AppTextStyles.caption,
+                                ),
+                                value: isMain,
+                                onChanged: (val) {
+                                  setDialogState(() {
+                                    isMain = val;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                            ] else if (isReserve) ...[
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.purple.withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.shield_outlined,
+                                        size: 18, color: Colors.purple),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                        'کۆگای یەدەگ تەنها بۆ پڕکردنەوە و گواستنەوەی کاڵایە بۆ کۆگاکانی تر. هیچ فرۆشێکی لێ ئەنجام نادرێت و نابێتە کۆگای سەرەکی.',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+
+                            // Multi-select for Warehouse Keepers (Both Direct & Reserve)
+                            Container(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.badge_outlined, size: 18),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'کارمەندانی کۆگا (Warehouse Keepers)',
+                                        style: AppTextStyles.bodyBold,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'دەتوانیت یەک یان چەند کارمەندێک دیاری بکەیت. هەر کارمەندێک دەتوانێت لە چەندین کۆگادا کاربکات.',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  keepersAsync.when(
+                                    loading: () => const LinearProgressIndicator(),
+                                    error: (e, _) => Text(
+                                      'کێشە لە بارکردنی کارمەندان: ${Formatters.cleanError(e)}',
+                                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                                    ),
+                                    data: (keepers) {
+                                      if (keepers.isEmpty) {
+                                        return const Text(
+                                          'هیچ بەکارهێنەرێک بە ڕۆڵی کارمەندی کۆگا (Warehouse) تۆمار نەکراوە.',
+                                          style: AppTextStyles.caption,
+                                        );
+                                      }
+                                      return Wrap(
+                                        spacing: 8,
+                                        runSpacing: 6,
+                                        children: keepers.map((k) {
+                                          final isSelected = selectedKeeperIds.contains(k.id);
+                                          return FilterChip(
+                                            avatar: Icon(
+                                              isSelected ? Icons.check_circle : Icons.person_outline,
+                                              size: 16,
+                                              color: isSelected ? Colors.white : null,
+                                            ),
+                                            label: Text(k.name),
+                                            selected: isSelected,
+                                            onSelected: (selected) {
+                                              setDialogState(() {
+                                                if (selected) {
+                                                  selectedKeeperIds.add(k.id);
+                                                } else {
+                                                  selectedKeeperIds.remove(k.id);
+                                                }
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+
+                            // Multi-select for Salesmen (Only for DIRECT sales physical warehouse)
+                            if (isDirect) ...[
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.support_agent_outlined, size: 18),
+                                        const SizedBox(width: 6),
+                                        const Text(
+                                          'مەندوبەکانی فرۆشتن لەم کۆگایەوە (Salesmen)',
+                                          style: AppTextStyles.bodyBold,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'دیاریکردنی ئەو مەندوبانەی لەم کۆگایەوە دەفرۆشن (ڕاستەوخۆ لە ستۆکی ئەم کۆگایە دەبڕدرێت).',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    presellSalesmenAsync.when(
+                                      loading: () => const LinearProgressIndicator(),
+                                      error: (e, _) => Text(
+                                        'کێشە لە بارکردنی مەندوبەکان: ${Formatters.cleanError(e)}',
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                                      ),
+                                      data: (salesmen) {
+                                        if (salesmen.isEmpty) {
+                                          return const Text(
+                                            'هیچ مەندوبێکی فرۆشتن (Pre-Sell) تۆمار نەکراوە.',
+                                            style: AppTextStyles.caption,
+                                          );
+                                        }
+                                        return Wrap(
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          children: salesmen.map((s) {
+                                            final isSelected = selectedSalesmanIds.contains(s.id);
+                                            return FilterChip(
+                                              avatar: Icon(
+                                                isSelected ? Icons.check_circle : Icons.person_outline,
+                                                size: 16,
+                                                color: isSelected ? Colors.white : null,
+                                              ),
+                                              label: Text(s.name),
+                                              selected: isSelected,
+                                              onSelected: (selected) {
+                                                setDialogState(() {
+                                                  if (selected) {
+                                                    selectedSalesmanIds.add(s.id);
+                                                  } else {
+                                                    selectedSalesmanIds.remove(s.id);
+                                                  }
+                                                });
+                                              },
+                                            );
+                                          }).toList(),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+                          ],
+
+                          if (warehouse != null)
+                            SwitchListTile(
+                              title: const Text('چالاکە'),
+                              value: isActive,
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  isActive = val;
+                                });
+                              },
+                            ),
+                        ],
                       ),
-              ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                      child: const Text('پاشگەزبوونەوە'),
+                    ),
+                    isSubmitting
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: () async {
+                              final name = nameController.text.trim();
+                              if (name.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تکایە ناوی کۆگا بنووسە'),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (isVan && selectedCashVanUserId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('تکایە کاشڤانێک بۆ ئەم ئۆتۆمبێلە دیاری بکە'),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setDialogState(() {
+                                isSubmitting = true;
+                              });
+
+                              try {
+                                final actions =
+                                    ref.read(warehouseAdminActionsProvider);
+                                if (warehouse == null) {
+                                  await actions.createWarehouse(
+                                    name: name,
+                                    address: isVan ? null : addressController.text.trim(),
+                                    isMain: isMain,
+                                    type: type,
+                                    cashVanUserId: isVan ? selectedCashVanUserId : null,
+                                    keeperIds: isVan ? null : selectedKeeperIds,
+                                    salesmanIds: isDirect ? selectedSalesmanIds : null,
+                                  );
+                                } else {
+                                  await actions.updateWarehouse(
+                                    id: warehouse.id,
+                                    name: name,
+                                    address: isVan ? null : addressController.text.trim(),
+                                    isMain: isMain,
+                                    isActive: isActive,
+                                    type: type,
+                                    cashVanUserId: isVan ? selectedCashVanUserId : null,
+                                    keeperIds: isVan ? null : selectedKeeperIds,
+                                    salesmanIds: isDirect ? selectedSalesmanIds : null,
+                                  );
+                                }
+
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        warehouse == null
+                                            ? 'کۆگا بە سەرکەوتوویی زیادکرا'
+                                            : 'کۆگا بە سەرکەوتوویی نوێکرایەوە',
+                                      ),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        Formatters.cleanError(e),
+                                      ),
+                                      backgroundColor: AppColors.danger,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (context.mounted) {
+                                  setDialogState(() {
+                                    isSubmitting = false;
+                                  });
+                                }
+                              }
+                            },
+                            child: Text(
+                              warehouse == null ? 'زیادکردن' : 'پاشکەوتکردن',
+                            ),
+                          ),
+                  ],
+                );
+              },
             );
           },
         );
@@ -294,7 +588,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    e.toString().replaceAll('Exception: ', ''),
+                                    Formatters.cleanError(e),
                                   ),
                                   backgroundColor: AppColors.danger,
                                 ),
@@ -345,24 +639,44 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
           child: ErrorState(
             title: 'کێشەیەک ڕوویدا لە بارکردنی کۆگاکان',
             message: Formatters.cleanError(err),
-            retryText: 'دووبارە هەوڵبدەرەوە',
             onRetry: () => ref.invalidate(warehouseListProvider),
           ),
         ),
         data: (warehouses) {
-          final physicalCount = warehouses.where((w) => !w.isVan).length;
+          final directCount = warehouses.where((w) => w.isDirectSale).length;
+          final reserveCount = warehouses.where((w) => w.isReserve).length;
           final vanCount = warehouses.where((w) => w.isVan).length;
 
           final filtered = warehouses.where((w) {
-            if (_selectedFilter == 'PHYSICAL' && w.isVan) return false;
-            if (_selectedFilter == 'VAN' && !w.isVan) return false;
+            if (_selectedFilter == 'PHYSICAL_DIRECT' && !w.isDirectSale) {
+              return false;
+            }
+            if (_selectedFilter == 'PHYSICAL_RESERVE' && !w.isReserve) {
+              return false;
+            }
+            if (_selectedFilter == 'VAN' && !w.isVan) {
+              return false;
+            }
+
             if (_searchQuery.isNotEmpty) {
-              final q = _searchQuery.toLowerCase();
-              final matchesName = w.name.toLowerCase().contains(q);
+              final query = _searchQuery.toLowerCase();
+              final matchesName = w.name.toLowerCase().contains(query);
               final matchesAddress =
-                  w.address?.toLowerCase().contains(q) ?? false;
-              final matchesPhone = w.phone?.toLowerCase().contains(q) ?? false;
-              return matchesName || matchesAddress || matchesPhone;
+                  w.address?.toLowerCase().contains(query) ?? false;
+              final matchesCashVan =
+                  w.cashVanUserName?.toLowerCase().contains(query) ?? false;
+              final matchesKeepers =
+                  w.keeperNames.any((k) => k.toLowerCase().contains(query));
+              final matchesSalesmen =
+                  w.salesmanNames.any((s) => s.toLowerCase().contains(query));
+
+              if (!matchesName &&
+                  !matchesAddress &&
+                  !matchesCashVan &&
+                  !matchesKeepers &&
+                  !matchesSalesmen) {
+                return false;
+              }
             }
             return true;
           }).toList();
@@ -373,9 +687,9 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
               await ref.read(warehouseListProvider.future);
             },
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+              padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                // 1. Stats Row
+                // 1. Overview Metric Cards
                 LayoutBuilder(
                   builder: (context, constraints) {
                     return Row(
@@ -386,7 +700,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('کۆی کۆگاکان',
+                                const Text('کۆی کۆگاکان',
                                     style: AppTextStyles.caption),
                                 const SizedBox(height: 4),
                                 Text(
@@ -406,11 +720,11 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('کۆگای فیزیایی',
+                                const Text('فرۆشتنی ڕاستەوخۆ',
                                     style: AppTextStyles.caption),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '$physicalCount',
+                                  '$directCount',
                                   style: AppTextStyles.h2.copyWith(
                                     color: AppColors.success,
                                   ),
@@ -426,7 +740,27 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('ئۆتۆمبێلی کاشڤان',
+                                const Text('یەدەگ (پڕکردنەوە)',
+                                    style: AppTextStyles.caption),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$reserveCount',
+                                  style: AppTextStyles.h2.copyWith(
+                                    color: Colors.purple,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: AppCard(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('ئۆتۆمبێلی کاشڤان',
                                     style: AppTextStyles.caption),
                                 const SizedBox(height: 4),
                                 Text(
@@ -445,13 +779,13 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                // 2. Search & Filter Bar
+                // 2. Search & Segment Filter Bar
                 Row(
                   children: [
                     Expanded(
                       child: AppTextField(
                         controller: _searchController,
-                        hintText: 'گەڕان بەپێی ناوی کۆگا یان ناونیشان...',
+                        hintText: 'گەڕان بەپێی ناوی کۆگا، ناونیشان، کارمەند، کاشڤان...',
                         prefixIcon: Icons.search,
                         onChanged: (val) {
                           setState(() {
@@ -461,19 +795,24 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'ALL', label: Text('هەموو')),
-                        ButtonSegment(
-                            value: 'PHYSICAL', label: Text('فیزیایی')),
-                        ButtonSegment(value: 'VAN', label: Text('کاشڤان')),
-                      ],
-                      selected: {_selectedFilter},
-                      onSelectionChanged: (set) {
-                        setState(() {
-                          _selectedFilter = set.first;
-                        });
-                      },
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'ALL', label: Text('هەموو')),
+                          ButtonSegment(
+                              value: 'PHYSICAL_DIRECT', label: Text('فرۆشتنی ڕاستەوخۆ')),
+                          ButtonSegment(
+                              value: 'PHYSICAL_RESERVE', label: Text('یەدەگ')),
+                          ButtonSegment(value: 'VAN', label: Text('کاشڤان')),
+                        ],
+                        selected: {_selectedFilter},
+                        onSelectionChanged: (set) {
+                          setState(() {
+                            _selectedFilter = set.first;
+                          });
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -493,29 +832,41 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                   )
                 else
                   ...filtered.map((warehouse) {
+                    Color badgeColor;
+                    IconData typeIcon;
+                    String typeLabel;
+
+                    if (warehouse.isVan) {
+                      badgeColor = Colors.orange;
+                      typeIcon = Icons.local_shipping_outlined;
+                      typeLabel = 'کاشڤان (گەڕۆک)';
+                    } else if (warehouse.isReserve) {
+                      badgeColor = Colors.purple;
+                      typeIcon = Icons.inventory_2_outlined;
+                      typeLabel = 'کۆگای یەدەگ (تەنها پڕکردنەوە)';
+                    } else {
+                      badgeColor = AppColors.primary;
+                      typeIcon = Icons.storefront_outlined;
+                      typeLabel = 'کۆگای فیزیکی (فرۆشتنی ڕاستەوخۆ)';
+                    }
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: AppCard(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: warehouse.isVan
-                                    ? Colors.orange.withValues(alpha: 0.15)
-                                    : theme.colorScheme.primary
-                                        .withValues(alpha: 0.15),
+                                color: badgeColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                warehouse.isVan
-                                    ? Icons.local_shipping_outlined
-                                    : Icons.warehouse_outlined,
-                                color: warehouse.isVan
-                                    ? Colors.orange
-                                    : theme.colorScheme.primary,
+                                typeIcon,
+                                color: badgeColor,
                                 size: 26,
                               ),
                             ),
@@ -533,8 +884,28 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: badgeColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: badgeColor.withValues(alpha: 0.4),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          typeLabel,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: badgeColor,
+                                          ),
+                                        ),
+                                      ),
                                       if (warehouse.isMain) ...[
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
@@ -549,7 +920,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            'سەرەکی',
+                                            'سەرەکی (Main)',
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
@@ -558,53 +929,119 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                           ),
                                         ),
                                       ],
-                                      if (warehouse.isVan) ...[
-                                        const SizedBox(width: 8),
+                                      if (!warehouse.isActive) ...[
+                                        const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: Colors.orange
+                                            color: AppColors.danger
                                                 .withValues(alpha: 0.15),
                                             borderRadius:
                                                 BorderRadius.circular(6),
-                                            border: Border.all(
-                                              color: Colors.orange
-                                                  .withValues(alpha: 0.4),
-                                            ),
                                           ),
                                           child: const Text(
-                                            'کاشڤان',
+                                            'ناچالاکە',
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.orange,
+                                              color: AppColors.danger,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ],
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    warehouse.address != null &&
-                                            warehouse.address!.isNotEmpty
-                                        ? warehouse.address!
-                                        : (warehouse.isVan
-                                            ? 'ئۆتۆمبێلی گەڕۆکی مەندوب'
-                                            : 'ناونیشان دیاری نەکراوە'),
-                                    style: AppTextStyles.caption,
-                                  ),
-                                  if (warehouse.phone != null &&
-                                      warehouse.phone!.isNotEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'پەیوەندی: ${warehouse.phone}',
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontFamily: 'KJino',
-                                      ),
+                                  const SizedBox(height: 6),
+
+                                  // Location info
+                                  if (warehouse.address != null &&
+                                      warehouse.address!.isNotEmpty) ...[
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on_outlined,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            warehouse.address!,
+                                            style: AppTextStyles.caption,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    const SizedBox(height: 4),
                                   ],
+
+                                  // Cash Van Driver info
+                                  if (warehouse.isVan) ...[
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person_pin_outlined,
+                                            size: 14, color: Colors.orange),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          warehouse.cashVanUserName != null
+                                              ? 'کاشڤان: ${warehouse.cashVanUserName}'
+                                              : 'کاشڤان دیاری نەکراوە',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange.shade800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+
+                                  // Keepers info for physical warehouses
+                                  if (!warehouse.isVan) ...[
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.badge_outlined,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            warehouse.keeperNames.isNotEmpty
+                                                ? 'کارمەندانی کۆگا: ${warehouse.keeperNames.join("، ")}'
+                                                : 'کارمەندی کۆگا: دیاری نەکراوە',
+                                            style: AppTextStyles.caption,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+
+                                  // Salesmen info for direct sales physical warehouses
+                                  if (warehouse.isDirectSale) ...[
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.support_agent_outlined,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            warehouse.salesmanNames.isNotEmpty
+                                                ? 'مەندوبەکانی فرۆشتن: ${warehouse.salesmanNames.join("، ")}'
+                                                : 'مەندوبی تایبەت: دیاری نەکراوە (گشتی)',
+                                            style: AppTextStyles.caption,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+
+                                  Text(
+                                    'ژمارەی جۆری کاڵاکان لە ستۆک: ${warehouse.stocksCount}',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -612,14 +1049,14 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined),
+                                  icon: const Icon(Icons.edit_outlined, size: 20),
                                   tooltip: 'دەستکاریکردن',
                                   onPressed: () =>
                                       _showWarehouseFormDialog(warehouse),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline,
-                                      color: AppColors.danger),
+                                      size: 20, color: AppColors.danger),
                                   tooltip: 'سڕینەوە',
                                   onPressed: () =>
                                       _showDeleteDialog(warehouse),
@@ -631,7 +1068,6 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                       ),
                     );
                   }),
-                const SizedBox(height: 80),
               ],
             ),
           );

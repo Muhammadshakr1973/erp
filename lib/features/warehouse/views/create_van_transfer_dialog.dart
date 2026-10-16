@@ -28,6 +28,7 @@ class CreateVanTransferDialog extends ConsumerStatefulWidget {
 
 class _CreateVanTransferDialogState
     extends ConsumerState<CreateVanTransferDialog> {
+  late int _selectedFromWarehouseId;
   int? _selectedToWarehouseId;
   final TextEditingController _notesController =
       TextEditingController(text: 'بارکردنی کاڵا بۆ ئۆتۆمبێلی کاشڤان');
@@ -37,6 +38,12 @@ class _CreateVanTransferDialogState
   final TextEditingController _productSearchController =
       TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFromWarehouseId = widget.fromWarehouseId;
+  }
 
   @override
   void dispose() {
@@ -296,43 +303,91 @@ class _CreateVanTransferDialogState
                       .withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  children: [
-                    Row(
+                child: warehousesAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (err, _) => const Text('هەڵە لە بارکردنی کۆگاکان'),
+                  data: (warehouses) {
+                    final fromWarehouses = warehouses;
+                    final targets = warehouses
+                        .where((w) => w.id != _selectedFromWarehouseId)
+                        .toList();
+
+                    // Prefer Van warehouses if any
+                    if (_selectedToWarehouseId == null && targets.isNotEmpty) {
+                      final firstVan = targets.firstWhere(
+                        (w) => w.isVan,
+                        orElse: () => targets.first,
+                      );
+                      _selectedToWarehouseId = firstVan.id;
+                    } else if (targets.isNotEmpty &&
+                        !targets.any((w) => w.id == _selectedToWarehouseId)) {
+                      _selectedToWarehouseId = targets.first.id;
+                    }
+
+                    return Column(
                       children: [
-                        const Icon(Icons.arrow_upward,
-                            color: AppColors.danger, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'کۆگای نێرەر: ${widget.fromWarehouseName}',
-                          style: AppTextStyles.bodyBold,
+                        // Source Warehouse Dropdown
+                        DropdownButtonFormField<int>(
+                          initialValue: _selectedFromWarehouseId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'کۆگای نێرەر (لە کۆگاوە) *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.arrow_upward,
+                                color: AppColors.danger, size: 18),
+                          ),
+                          items: fromWarehouses.map((w) {
+                            return DropdownMenuItem<int>(
+                              value: w.id,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    w.isReserve
+                                        ? Icons.inventory_2_outlined
+                                        : (w.isVan
+                                            ? Icons.local_shipping_outlined
+                                            : Icons.warehouse_outlined),
+                                    size: 16,
+                                    color: w.isReserve
+                                        ? Colors.purple
+                                        : (w.isVan
+                                            ? Colors.orange
+                                            : theme.colorScheme.primary),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '${w.name} (${w.isVan ? "کاشڤان" : (w.isReserve ? "یەدەگ" : "فیزیکی")})',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _selectedFromWarehouseId = val;
+                                final newTargets = warehouses
+                                    .where((w) => w.id != _selectedFromWarehouseId)
+                                    .toList();
+                                if (!newTargets.any((w) => w.id == _selectedToWarehouseId)) {
+                                  _selectedToWarehouseId =
+                                      newTargets.isNotEmpty ? newTargets.first.id : null;
+                                }
+                              });
+                            }
+                          },
                         ),
-                      ],
-                    ),
-                    const Divider(height: 16),
-                    warehousesAsync.when(
-                      loading: () => const LinearProgressIndicator(),
-                      error: (err, _) => const Text('هەڵە لە بارکردنی کۆگاکان'),
-                      data: (warehouses) {
-                        final targets = warehouses
-                            .where((w) => w.id != widget.fromWarehouseId)
-                            .toList();
+                        const SizedBox(height: AppSpacing.md),
 
-                        // Prefer Van warehouses if any
-                        if (_selectedToWarehouseId == null &&
-                            targets.isNotEmpty) {
-                          final firstVan = targets.firstWhere(
-                            (w) => w.isVan,
-                            orElse: () => targets.first,
-                          );
-                          _selectedToWarehouseId = firstVan.id;
-                        }
-
-                        return DropdownButtonFormField<int>(
+                        // Destination Warehouse Dropdown
+                        DropdownButtonFormField<int>(
                           initialValue: _selectedToWarehouseId,
                           isExpanded: true,
                           decoration: const InputDecoration(
-                            labelText: 'کۆگای وەرگر (ئۆتۆمبێلی کاشڤان) *',
+                            labelText: 'کۆگای وەرگر (بۆ کۆگای) *',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.arrow_downward,
                                 color: AppColors.success, size: 18),
@@ -343,18 +398,22 @@ class _CreateVanTransferDialogState
                               child: Row(
                                 children: [
                                   Icon(
-                                    w.isVan
-                                        ? Icons.local_shipping_outlined
-                                        : Icons.warehouse_outlined,
+                                    w.isReserve
+                                        ? Icons.inventory_2_outlined
+                                        : (w.isVan
+                                            ? Icons.local_shipping_outlined
+                                            : Icons.warehouse_outlined),
                                     size: 16,
-                                    color: w.isVan
-                                        ? Colors.orange
-                                        : theme.colorScheme.primary,
+                                    color: w.isReserve
+                                        ? Colors.purple
+                                        : (w.isVan
+                                            ? Colors.orange
+                                            : theme.colorScheme.primary),
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      '${w.name} ${w.isVan ? "(کاشڤان)" : ""}',
+                                      '${w.name} (${w.isVan ? "کاشڤان" : (w.isReserve ? "یەدەگ" : "فیزیکی")})',
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -366,13 +425,22 @@ class _CreateVanTransferDialogState
                             if (val != null) {
                               setState(() {
                                 _selectedToWarehouseId = val;
+                                final targetW = warehouses.firstWhere(
+                                  (w) => w.id == val,
+                                  orElse: () => warehouses.first,
+                                );
+                                if (targetW.isVan &&
+                                    _notesController.text.contains('گواستنەوە')) {
+                                  _notesController.text =
+                                      'بارکردنی کاڵا بۆ ئۆتۆمبێلی کاشڤان';
+                                }
                               });
                             }
                           },
-                        );
-                      },
-                    ),
-                  ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -549,7 +617,7 @@ class _CreateVanTransferDialogState
                     final result = await ref
                         .read(wp.warehouseActionsProvider)
                         .createStockTransfer(
-                          fromWarehouseId: widget.fromWarehouseId,
+                          fromWarehouseId: _selectedFromWarehouseId,
                           toWarehouseId: _selectedToWarehouseId!,
                           items: itemsPayload,
                           notes: _notesController.text.trim(),

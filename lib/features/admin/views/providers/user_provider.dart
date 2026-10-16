@@ -51,6 +51,27 @@ final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
   return allUsers.where((u) => u.role.toLowerCase() == 'salesman').toList();
 });
 
+final warehouseKeepersListProvider = FutureProvider<List<UserModel>>((ref) async {
+  final userData = await ref.watch(userAdminProvider.future);
+  final List<UserModel> allUsers =
+      (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
+  return allUsers.where((u) => u.role.toLowerCase() == 'warehouse').toList();
+});
+
+final cashVanSalesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
+  final userData = await ref.watch(userAdminProvider.future);
+  final List<UserModel> allUsers =
+      (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
+  return allUsers.where((u) => u.role.toLowerCase() == 'salesman' && u.isCashVan).toList();
+});
+
+final presellSalesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
+  final userData = await ref.watch(userAdminProvider.future);
+  final List<UserModel> allUsers =
+      (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
+  return allUsers.where((u) => u.role.toLowerCase() == 'salesman' && !u.isCashVan).toList();
+});
+
 final userActionsProvider = Provider<UserActions>((ref) {
   final api = ref.watch(apiClientProvider);
   return UserActions(api, ref);

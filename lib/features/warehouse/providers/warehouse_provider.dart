@@ -9,9 +9,12 @@ import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 import '../models/stock_transfer_model.dart';
 
+final activeWarehouseIdProvider = StateProvider<int?>((ref) => null);
+
 final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
     FutureProvider<List<WarehouseOrderModel>>((ref) async {
   ref.watch(authProvider.select((state) => state.user?.id));
+  final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -27,7 +30,10 @@ final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
   });
 
   try {
-    final response = await api.client.get('/warehouse/orders-to-pack');
+    final response = await api.client.get(
+      '/warehouse/orders-to-pack',
+      queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
+    );
     if (response.statusCode == 200) {
       final resData = response.data;
       if (resData is! Map || resData['data'] is! List) {
@@ -67,6 +73,7 @@ class WarehouseDashboardData {
 final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
     FutureProvider<WarehouseDashboardData>((ref) async {
   ref.watch(authProvider.select((state) => state.user?.id));
+  final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -84,7 +91,10 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
   });
 
   try {
-    final response = await api.client.get('/warehouse/dashboard');
+    final response = await api.client.get(
+      '/warehouse/dashboard',
+      queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
+    );
     if (response.statusCode == 200 &&
         response.data is Map &&
         response.data['data'] is Map) {
@@ -139,6 +149,7 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
 final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
     FutureProvider<List<WarehouseStockModel>>((ref) async {
   ref.watch(authProvider.select((state) => state.user?.id));
+  final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -154,7 +165,10 @@ final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
   });
 
   try {
-    final response = await api.client.get('/warehouse/stock');
+    final response = await api.client.get(
+      '/warehouse/stock',
+      queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
+    );
     if (response.statusCode == 200) {
       final resData = response.data;
       if (resData is! Map || resData['data'] is! List) {

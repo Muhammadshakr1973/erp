@@ -1099,7 +1099,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
 
-    final warehouses = warehousesAsync.asData!.value;
+    final rawWarehouses = warehousesAsync.asData!.value;
+    final warehouses = rawWarehouses.where((w) => w.canSell).toList();
     if (warehouses.isEmpty) return;
     if (_selectedCustomer == null) return;
     if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty) return;

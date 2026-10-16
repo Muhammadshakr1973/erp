@@ -68,6 +68,19 @@ class SalesOrderService
                 $data['warehouse_id'] = $vanWarehouseId;
             }
 
+            // ۴. دڵنیابوونەوە لەوەی کە کۆگاکە یەدەگ نییە (Reserve warehouse cannot be used for direct sales)
+            $targetWarehouse = Warehouse::find($data['warehouse_id']);
+            if (!$targetWarehouse) {
+                throw ValidationException::withMessages([
+                    'warehouse' => 'کۆگای دیاریکراو بوونی نییە.'
+                ]);
+            }
+            if ($targetWarehouse->isReserve()) {
+                throw ValidationException::withMessages([
+                    'warehouse' => 'ناتوانرێت لە کۆگای یەدەگەوە فرۆش ئەنجام بدرێت. ئەم کۆگایە تەنها بۆ پڕکردنەوەی کۆگاکانی ترە.'
+                ]);
+            }
+
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە (ORD-XXXXXXXX)
             $orderNumber = 'ORD-' . strtoupper(Str::random(8));
 

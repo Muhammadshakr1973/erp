@@ -24,11 +24,19 @@ class StockTransferController extends Controller
         $user = $request->user();
         $query = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])->orderBy('id', 'desc');
 
-        if ($user && $user->warehouse_id) {
-            $query->where(function ($q) use ($user) {
-                $q->where('from_warehouse_id', $user->warehouse_id)
-                  ->orWhere('to_warehouse_id', $user->warehouse_id);
-            });
+        if ($user && !$user->isAdmin() && !$user->isOwner()) {
+            $assignedIds = $user->assignedWarehouseIds();
+            if (!empty($assignedIds)) {
+                $query->where(function ($q) use ($assignedIds) {
+                    $q->whereIn('from_warehouse_id', $assignedIds)
+                      ->orWhereIn('to_warehouse_id', $assignedIds);
+                });
+            } elseif ($user->warehouse_id) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('from_warehouse_id', $user->warehouse_id)
+                      ->orWhere('to_warehouse_id', $user->warehouse_id);
+                });
+            }
         }
 
         $transfers = $query->get();
@@ -45,7 +53,7 @@ class StockTransferController extends Controller
         $transfer = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])->findOrFail($id);
         $user = $request->user();
 
-        if ($user && $user->warehouse_id && $transfer->from_warehouse_id !== $user->warehouse_id && $transfer->to_warehouse_id !== $user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($transfer->from_warehouse_id) && !$user->hasWarehouseAccess($transfer->to_warehouse_id)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم گواستنەوەیە.',
                 'error'   => 'Forbidden.'
@@ -64,9 +72,9 @@ class StockTransferController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        if ($user && $user->warehouse_id && (int)$validated['from_warehouse_id'] !== (int)$user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($validated['from_warehouse_id'])) {
             return response()->json([
-                'message' => 'تۆ ناتوانیت داواکاری گواستنەوە لە کۆگایەکی ترەوە تۆمار بکەیت.',
+                'message' => 'تۆ ناتوانیت داواکاری گواستنەوە لەم کۆگایەوە تۆمار بکەیت چونکە ڕێگەپێدراو نیت.',
                 'error'   => 'Forbidden.'
             ], 403);
         }
@@ -94,7 +102,7 @@ class StockTransferController extends Controller
         $transfer = StockTransfer::with('items')->findOrFail($id);
         $user = $request->user();
 
-        if ($user && $user->warehouse_id && (int)$transfer->to_warehouse_id !== (int)$user->warehouse_id && (int)$transfer->from_warehouse_id !== (int)$user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($transfer->to_warehouse_id) && !$user->hasWarehouseAccess($transfer->from_warehouse_id)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ پەسەندکردنی ئەم گواستنەوەیە.',
                 'error'   => 'Forbidden.'
@@ -115,7 +123,7 @@ class StockTransferController extends Controller
         $transfer = StockTransfer::findOrFail($id);
         $user = $request->user();
 
-        if ($user && $user->warehouse_id && (int)$transfer->from_warehouse_id !== (int)$user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($transfer->from_warehouse_id)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ هەڵوەشاندنەوەی ئەم گواستنەوەیە.',
                 'error'   => 'Forbidden.'

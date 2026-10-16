@@ -8,11 +8,13 @@ use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
+use App\Models\User;
 use App\Services\SalesOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class WarehouseController extends Controller
@@ -27,7 +29,21 @@ class WarehouseController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $user = $request->user();
-        $warehouseId = $user ? $user->warehouse_id : null;
+        $requestedWarehouseId = $request->input('warehouse_id');
+
+        if ($requestedWarehouseId && $user && !$user->hasWarehouseAccess($requestedWarehouseId)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم کۆگایە.'
+            ], 403);
+        }
+
+        $warehouseId = $requestedWarehouseId;
+        if (!$warehouseId) {
+            if ($user && !$user->isAdmin() && !$user->isOwner()) {
+                $assignedIds = $user->assignedWarehouseIds();
+                $warehouseId = !empty($assignedIds) ? $assignedIds[0] : $user->warehouse_id;
+            }
+        }
 
         $warehouseName = 'کۆگای سەرەکی';
         if ($warehouseId) {
@@ -106,27 +122,69 @@ class WarehouseController extends Controller
 
         if (!$showAll) {
             $query->where('is_active', true);
-            if ($user && $user->warehouse_id) {
-                $query->where('id', $user->warehouse_id);
+            if ($user && !$user->isAdmin() && !$user->isOwner()) {
+                $assignedIds = $user->assignedWarehouseIds();
+                if (!empty($assignedIds)) {
+                    $query->whereIn('id', $assignedIds);
+                } elseif ($user->warehouse_id) {
+                    $query->where('id', $user->warehouse_id);
+                }
             }
         } elseif ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
 
         if ($request->has('type')) {
-            $query->where('type', strtoupper($request->query('type')));
+            $requestedType = strtoupper($request->query('type'));
+            if ($requestedType === 'PHYSICAL') {
+                $query->whereIn('type', [Warehouse::TYPE_PHYSICAL_DIRECT, 'PHYSICAL', Warehouse::TYPE_PHYSICAL_RESERVE]);
+            } else {
+                $query->where('type', $requestedType);
+            }
+        }
+
+        if ($request->boolean('can_sell')) {
+            $query->where('type', '!=', Warehouse::TYPE_PHYSICAL_RESERVE);
         }
 
         $warehouses = $query->orderBy('is_main', 'desc')->orderBy('name', 'asc')->get();
 
-        if ($warehouses->isEmpty() && (!$user || !$user->warehouse_id)) {
+        if ($warehouses->isEmpty() && (!$user || empty($user->assignedWarehouseIds()))) {
             $mainWarehouse = Warehouse::create([
                 'name' => 'کۆگای سەرەکی',
                 'is_main' => true,
                 'is_active' => true,
-                'type' => 'PHYSICAL',
+                'type' => Warehouse::TYPE_PHYSICAL_DIRECT,
             ]);
             $warehouses = collect([$mainWarehouse]);
+        }
+
+        // Attach assigned keepers, salesmen, and cash van user info
+        foreach ($warehouses as $w) {
+            $assignedUsers = collect();
+            if (Schema::hasTable('warehouse_user')) {
+                $assignedUsers = DB::table('warehouse_user')
+                    ->join('users', 'warehouse_user.user_id', '=', 'users.id')
+                    ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+                    ->where('warehouse_user.warehouse_id', $w->id)
+                    ->select('users.id', 'users.name', 'users.phone', 'users.is_cash_van', 'roles.name as role_name')
+                    ->get();
+            }
+
+            if ($w->isVan()) {
+                $vanSalesman = User::where('warehouse_id', $w->id)->where('is_cash_van', true)->first();
+                if ($vanSalesman) {
+                    $w->cash_van_user_id = $vanSalesman->id;
+                    $w->cash_van_user_name = $vanSalesman->name;
+                }
+            }
+
+            $w->keepers = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'warehouse')->values();
+            $w->salesmen = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'salesman')->values();
+            $w->keeper_ids = $w->keepers->pluck('id')->all();
+            $w->salesman_ids = $w->salesmen->pluck('id')->all();
+            $w->keeper_names = $w->keepers->pluck('name')->all();
+            $w->salesman_names = $w->salesmen->pluck('name')->all();
         }
 
         return response()->json([
@@ -140,17 +198,35 @@ class WarehouseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:warehouses,name',
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:30',
             'is_main' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
-            'type' => 'nullable|string|in:PHYSICAL,VAN,physical,van',
+            'type' => 'nullable|string',
+            'cash_van_user_id' => 'nullable|integer|exists:users,id',
+            'keeper_ids' => 'nullable|array',
+            'keeper_ids.*' => 'integer|exists:users,id',
+            'salesman_ids' => 'nullable|array',
+            'salesman_ids.*' => 'integer|exists:users,id',
         ], [
             'name.required' => 'تکایە ناوی کۆگا بنووسە',
             'name.unique' => 'کۆگایەک بەم ناوە پێشتر تۆمارکراوە',
         ]);
 
-        $isMain = $validated['is_main'] ?? false;
-        $type = strtoupper($validated['type'] ?? 'PHYSICAL');
+        $rawType = strtoupper($validated['type'] ?? Warehouse::TYPE_PHYSICAL_DIRECT);
+        if ($rawType === 'PHYSICAL') {
+            $type = Warehouse::TYPE_PHYSICAL_DIRECT;
+        } elseif ($rawType === Warehouse::TYPE_PHYSICAL_RESERVE || $rawType === 'RESERVE') {
+            $type = Warehouse::TYPE_PHYSICAL_RESERVE;
+        } elseif ($rawType === Warehouse::TYPE_VAN || $rawType === 'VAN') {
+            $type = Warehouse::TYPE_VAN;
+        } else {
+            $type = Warehouse::TYPE_PHYSICAL_DIRECT;
+        }
+
+        $isMain = (bool) ($validated['is_main'] ?? false);
+        // Cash Van and Reserve warehouses CANNOT be main!
+        if ($type === Warehouse::TYPE_VAN || $type === Warehouse::TYPE_PHYSICAL_RESERVE) {
+            $isMain = false;
+        }
 
         if ($isMain) {
             Warehouse::where('is_main', true)->update(['is_main' => false]);
@@ -158,12 +234,14 @@ class WarehouseController extends Controller
 
         $warehouse = Warehouse::create([
             'name' => $validated['name'],
-            'address' => $validated['address'] ?? null,
-            'phone' => $validated['phone'] ?? null,
+            'address' => $type === Warehouse::TYPE_VAN ? null : ($validated['address'] ?? null),
+            'phone' => null,
             'is_main' => $isMain,
             'is_active' => $validated['is_active'] ?? true,
             'type' => $type,
         ]);
+
+        $this->syncWarehouseAssignments($warehouse, $validated, $type);
 
         app(\App\Services\AuditService::class)->log([
             'action' => 'CREATE_WAREHOUSE',
@@ -189,17 +267,35 @@ class WarehouseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:warehouses,name,' . $warehouse->id,
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:30',
             'is_main' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
-            'type' => 'nullable|string|in:PHYSICAL,VAN,physical,van',
+            'type' => 'nullable|string',
+            'cash_van_user_id' => 'nullable|integer|exists:users,id',
+            'keeper_ids' => 'nullable|array',
+            'keeper_ids.*' => 'integer|exists:users,id',
+            'salesman_ids' => 'nullable|array',
+            'salesman_ids.*' => 'integer|exists:users,id',
         ], [
             'name.required' => 'تکایە ناوی کۆگا بنووسە',
             'name.unique' => 'کۆگایەک بەم ناوە پێشتر تۆمارکراوە',
         ]);
 
         $oldValues = $warehouse->toArray();
-        $isMain = $validated['is_main'] ?? $warehouse->is_main;
+        $rawType = strtoupper($validated['type'] ?? $warehouse->type ?? Warehouse::TYPE_PHYSICAL_DIRECT);
+        if ($rawType === 'PHYSICAL') {
+            $type = Warehouse::TYPE_PHYSICAL_DIRECT;
+        } elseif ($rawType === Warehouse::TYPE_PHYSICAL_RESERVE || $rawType === 'RESERVE') {
+            $type = Warehouse::TYPE_PHYSICAL_RESERVE;
+        } elseif ($rawType === Warehouse::TYPE_VAN || $rawType === 'VAN') {
+            $type = Warehouse::TYPE_VAN;
+        } else {
+            $type = Warehouse::TYPE_PHYSICAL_DIRECT;
+        }
+
+        $isMain = (bool) ($validated['is_main'] ?? $warehouse->is_main);
+        if ($type === Warehouse::TYPE_VAN || $type === Warehouse::TYPE_PHYSICAL_RESERVE) {
+            $isMain = false;
+        }
 
         if ($isMain && !$warehouse->is_main) {
             Warehouse::where('id', '!=', $warehouse->id)->where('is_main', true)->update(['is_main' => false]);
@@ -207,12 +303,14 @@ class WarehouseController extends Controller
 
         $warehouse->update([
             'name' => $validated['name'],
-            'address' => $validated['address'] ?? $warehouse->address,
-            'phone' => $validated['phone'] ?? $warehouse->phone,
+            'address' => $type === Warehouse::TYPE_VAN ? null : ($validated['address'] ?? $warehouse->address),
+            'phone' => null,
             'is_main' => $isMain,
             'is_active' => $validated['is_active'] ?? $warehouse->is_active,
-            'type' => strtoupper($validated['type'] ?? $warehouse->type ?? 'PHYSICAL'),
+            'type' => $type,
         ]);
+
+        $this->syncWarehouseAssignments($warehouse, $validated, $type);
 
         app(\App\Services\AuditService::class)->log([
             'action' => 'UPDATE_WAREHOUSE',
@@ -229,6 +327,60 @@ class WarehouseController extends Controller
             'message' => 'زانیارییەکانی کۆگا بە سەرکەوتوویی نوێکرانەوە',
             'data' => $warehouse
         ], 200);
+    }
+
+    private function syncWarehouseAssignments(Warehouse $warehouse, array $validated, string $type): void
+    {
+        if ($type === Warehouse::TYPE_VAN) {
+            $cashVanUserId = $validated['cash_van_user_id'] ?? null;
+            if ($cashVanUserId) {
+                $cvUser = User::find($cashVanUserId);
+                if ($cvUser) {
+                    $cvUser->is_cash_van = true;
+                    $cvUser->warehouse_id = $warehouse->id;
+                    $cvUser->save();
+
+                    if (Schema::hasTable('warehouse_user')) {
+                        DB::table('warehouse_user')
+                            ->where('warehouse_id', $warehouse->id)
+                            ->orWhere('user_id', $cvUser->id)
+                            ->delete();
+
+                        DB::table('warehouse_user')->insert([
+                            'warehouse_id' => $warehouse->id,
+                            'user_id' => $cvUser->id,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+        } else {
+            // Physical warehouse (DIRECT or RESERVE)
+            if (Schema::hasTable('warehouse_user')) {
+                $userIdsToSync = [];
+                if (!empty($validated['keeper_ids']) && is_array($validated['keeper_ids'])) {
+                    $userIdsToSync = array_merge($userIdsToSync, $validated['keeper_ids']);
+                }
+                if ($type === Warehouse::TYPE_PHYSICAL_DIRECT && !empty($validated['salesman_ids']) && is_array($validated['salesman_ids'])) {
+                    $userIdsToSync = array_merge($userIdsToSync, $validated['salesman_ids']);
+                }
+                $userIdsToSync = array_values(array_unique(array_filter($userIdsToSync)));
+
+                DB::table('warehouse_user')
+                    ->where('warehouse_id', $warehouse->id)
+                    ->delete();
+
+                foreach ($userIdsToSync as $uId) {
+                    DB::table('warehouse_user')->insert([
+                        'warehouse_id' => $warehouse->id,
+                        'user_id' => $uId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        }
     }
 
     public function destroy(Request $request, $id): JsonResponse
@@ -270,7 +422,7 @@ class WarehouseController extends Controller
     public function adjustStock(Request $request, $warehouseId, $productId): JsonResponse
     {
         $user = $request->user();
-        if ($user && $user->warehouse_id && $warehouseId != $user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($warehouseId)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاری ستۆک لەم کۆگایەدا.'
             ], 403);
@@ -287,7 +439,6 @@ class WarehouseController extends Controller
         $hasTrueIdempotency = $request->hasHeader('X-Idempotency-Key') || $request->hasHeader('Idempotency-Key');
 
         if (!$hasTrueIdempotency) {
-            // Idempotency check: 15-second submission window for identical unkeyed manual adjustments
             $existingQuery = StockTransaction::where('warehouse_id', $warehouseId)
                 ->where('product_id', $productId)
                 ->where('type', $type)
@@ -349,7 +500,7 @@ class WarehouseController extends Controller
     public function reconcileStock(Request $request, $warehouseId, $productId): JsonResponse
     {
         $user = $request->user();
-        if ($user && $user->warehouse_id && $warehouseId != $user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($warehouseId)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ سەرلەنوێ هاوتاکردنەوەی ستۆک لەم کۆگایەدا.'
             ], 403);
@@ -373,8 +524,17 @@ class WarehouseController extends Controller
         $query = SalesOrder::with(['customer', 'warehouse', 'items.product', 'salesman'])
             ->whereIn('status', [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING]);
 
-        if ($user && $user->warehouse_id) {
-            $query->where('warehouse_id', $user->warehouse_id);
+        $requestedWarehouseId = $request->query('warehouse_id');
+        if ($requestedWarehouseId) {
+            if ($user && !$user->hasWarehouseAccess($requestedWarehouseId)) {
+                return response()->json(['message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم کۆگایە.'], 403);
+            }
+            $query->where('warehouse_id', $requestedWarehouseId);
+        } elseif ($user && !$user->isAdmin() && !$user->isOwner()) {
+            $assignedIds = $user->assignedWarehouseIds();
+            if (!empty($assignedIds)) {
+                $query->whereIn('warehouse_id', $assignedIds);
+            }
         }
 
         $orders = $query->orderBy('id', 'desc')->get();
@@ -403,8 +563,7 @@ class WarehouseController extends Controller
 
         $user = $request->user();
 
-        // Check if user is restricted to a warehouse
-        if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($order->warehouse_id)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.'
             ], 403);
@@ -419,7 +578,6 @@ class WarehouseController extends Controller
 
         $packed = $validated['packed'];
 
-        // Idempotency: if already matching requested value, return early
         if ($item->is_packed === $packed) {
             return response()->json([
                 'message' => 'کردارەکە پێشتر جێبەجێ کراوە',
@@ -429,13 +587,11 @@ class WarehouseController extends Controller
 
         try {
             DB::transaction(function () use ($item, $order, $packed, $user) {
-                // If the order status was CONFIRMED, transition to PACKING
                 if ($order->status === SalesOrder::STATUS_CONFIRMED) {
                     $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
                 }
 
                 if ($packed) {
-                    // Check physical stock in correct warehouse
                     $warehouseStock = WarehouseStock::lockForUpdate()->where([
                         'warehouse_id' => $order->warehouse_id,
                         'product_id' => $item->product_id
@@ -459,7 +615,6 @@ class WarehouseController extends Controller
 
                 $item->save();
 
-                // Log audit trail
                 app(\App\Services\AuditService::class)->log([
                     'action'      => 'PACK_ITEM',
                     'entity_type' => 'SalesOrderItem',
@@ -479,15 +634,16 @@ class WarehouseController extends Controller
                 ]);
             });
 
+            $freshOrder = $order->fresh(['customer', 'warehouse', 'items.product']);
             try {
-                event(new \App\Events\SalesOrderUpdated($order->fresh(['customer', 'warehouse', 'items.product']), 'pack_item'));
+                event(new \App\Events\SalesOrderUpdated($freshOrder, 'pack_item'));
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Broadcasting SalesOrderUpdated failed: " . $e->getMessage());
             }
 
             return response()->json([
-                'message' => $packed ? 'کاڵاکە بە سەرکەوتوویی پاکەت کرا' : 'کاڵاکە لە پاکەتکردن لادرا',
-                'data' => $order->fresh(['customer', 'warehouse', 'items.product'])
+                'message' => $packed ? 'کاڵا بە سەرکەوتوویی پاکەت کرا' : 'کاڵا لە پاکەتکردن لادرا',
+                'data' => $freshOrder
             ]);
         } catch (ValidationException $ve) {
             return response()->json([
@@ -522,30 +678,25 @@ class WarehouseController extends Controller
                         throw new \Exception("پسوڵە نەدۆزرایەوە.");
                     }
 
-                    // Check if user is restricted to a warehouse
-                    if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+                    if ($user && !$user->hasWarehouseAccess($order->warehouse_id)) {
                         throw new \Exception("تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.");
                     }
 
-                    // Check if status is CONFIRMED or PACKING
                     if (!in_array($order->status, [SalesOrder::STATUS_CONFIRMED, SalesOrder::STATUS_PACKING])) {
                         throw new \Exception("تەنها پسوڵەی پشتڕاستکراوە یان لە حاڵەتی پاکەتکردن دەتوانرێت دەستکاری بکرێت.");
                     }
 
                     $packed = $itemData['packed'];
 
-                    // If already matching requested value, skip to save performance or avoid errors
                     if ($item->is_packed === $packed) {
                         continue;
                     }
 
-                    // If the order status was CONFIRMED, transition to PACKING
                     if ($order->status === SalesOrder::STATUS_CONFIRMED) {
                         $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
                     }
 
                     if ($packed) {
-                        // Check physical stock in correct warehouse
                         $warehouseStock = WarehouseStock::lockForUpdate()->where([
                             'warehouse_id' => $order->warehouse_id,
                             'product_id' => $item->product_id
@@ -567,7 +718,6 @@ class WarehouseController extends Controller
 
                     $item->save();
 
-                    // Log audit trail
                     app(\App\Services\AuditService::class)->log([
                         'action'      => 'PACK_ITEM',
                         'entity_type' => 'SalesOrderItem',
@@ -590,7 +740,6 @@ class WarehouseController extends Controller
                 }
             });
 
-            // Broadcast and fresh orders outside transaction
             foreach ($updatedOrders as $orderId => $order) {
                 $freshOrder = $order->fresh(['customer', 'warehouse', 'items.product']);
                 try {
@@ -619,8 +768,7 @@ class WarehouseController extends Controller
         $order = SalesOrder::findOrFail($validated['order_id']);
         $user = $request->user();
 
-        // Check if user is restricted to a warehouse
-        if ($user && $user->warehouse_id && $order->warehouse_id !== $user->warehouse_id) {
+        if ($user && !$user->hasWarehouseAccess($order->warehouse_id)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە چونکە سەر بە کۆگایەکی ترە.'
             ], 403);
@@ -656,10 +804,19 @@ class WarehouseController extends Controller
         $user = $request->user();
         $query = WarehouseStock::with(['warehouse', 'product']);
 
-        if ($user && $user->warehouse_id) {
-            $query->where('warehouse_id', $user->warehouse_id);
-        } elseif ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->query('warehouse_id'));
+        $requestedWarehouseId = $request->query('warehouse_id');
+        if ($requestedWarehouseId) {
+            if ($user && !$user->hasWarehouseAccess($requestedWarehouseId)) {
+                return response()->json(['message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ستۆکی ئەم کۆگایە.'], 403);
+            }
+            $query->where('warehouse_id', $requestedWarehouseId);
+        } elseif ($user && !$user->isAdmin() && !$user->isOwner()) {
+            $assignedIds = $user->assignedWarehouseIds();
+            if (!empty($assignedIds)) {
+                $query->whereIn('warehouse_id', $assignedIds);
+            } elseif ($user->warehouse_id) {
+                $query->where('warehouse_id', $user->warehouse_id);
+            }
         }
 
         if ($request->has('product_id')) {
@@ -679,10 +836,19 @@ class WarehouseController extends Controller
         $user = $request->user();
         $query = StockTransaction::with(['warehouse', 'product', 'creator']);
 
-        if ($user && $user->warehouse_id) {
-            $query->where('warehouse_id', $user->warehouse_id);
-        } elseif ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->query('warehouse_id'));
+        $requestedWarehouseId = $request->query('warehouse_id');
+        if ($requestedWarehouseId) {
+            if ($user && !$user->hasWarehouseAccess($requestedWarehouseId)) {
+                return response()->json(['message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی جوڵەی ئەم کۆگایە.'], 403);
+            }
+            $query->where('warehouse_id', $requestedWarehouseId);
+        } elseif ($user && !$user->isAdmin() && !$user->isOwner()) {
+            $assignedIds = $user->assignedWarehouseIds();
+            if (!empty($assignedIds)) {
+                $query->whereIn('warehouse_id', $assignedIds);
+            } elseif ($user->warehouse_id) {
+                $query->where('warehouse_id', $user->warehouse_id);
+            }
         }
 
         if ($request->has('product_id')) {

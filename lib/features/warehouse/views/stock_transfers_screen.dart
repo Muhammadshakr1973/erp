@@ -11,6 +11,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/stock_transfer_model.dart';
 import '../providers/warehouse_provider.dart';
+import '../../shared/providers/warehouse_provider.dart';
 import 'create_van_transfer_dialog.dart';
 
 class StockTransfersScreen extends ConsumerStatefulWidget {
@@ -303,11 +304,111 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
     final theme = Theme.of(context);
     final transfersAsync = ref.watch(stockTransfersListProvider);
     final dashboardAsync = ref.watch(warehouseDashboardProvider);
+    final warehousesAsync = ref.watch(warehouseListProvider);
+    final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('بارکردنی کاشڤان و گواستنەوە',
-            style: AppTextStyles.h2),
+        title: warehousesAsync.when(
+          data: (warehouses) {
+            final activeWarehouse = warehouses.firstWhere(
+              (w) => w.id == activeWarehouseId,
+              orElse: () => warehouses.firstWhere(
+                (w) => w.id == dashboardAsync.asData?.value.warehouseId,
+                orElse: () => warehouses.first,
+              ),
+            );
+
+            if (warehouses.length <= 1) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('بارکردنی کاشڤان و گواستنەوە', style: AppTextStyles.h2),
+                  Text(activeWarehouse.name, style: AppTextStyles.caption),
+                ],
+              );
+            }
+
+            return PopupMenuButton<int>(
+              tooltip: 'گۆڕینی کۆگای چالاک',
+              initialValue: activeWarehouse.id,
+              onSelected: (selectedId) {
+                ref.read(activeWarehouseIdProvider.notifier).state = selectedId;
+                ref.invalidate(warehouseDashboardProvider);
+                ref.invalidate(ordersToPackProvider);
+                ref.invalidate(warehouseStocksProvider);
+                ref.invalidate(stockTransfersListProvider);
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    activeWarehouse.isReserve
+                        ? Icons.inventory_2_outlined
+                        : (activeWarehouse.isVan
+                            ? Icons.local_shipping_outlined
+                            : Icons.warehouse_outlined),
+                    size: 20,
+                    color: activeWarehouse.isReserve
+                        ? Colors.purple
+                        : (activeWarehouse.isVan
+                            ? Colors.orange
+                            : theme.colorScheme.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('بارکردنی کاشڤان و گواستنەوە',
+                            style: AppTextStyles.h3),
+                        Text(
+                          activeWarehouse.name,
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_drop_down, size: 22),
+                ],
+              ),
+              itemBuilder: (ctx) {
+                return warehouses.map((w) {
+                  return PopupMenuItem<int>(
+                    value: w.id,
+                    child: Row(
+                      children: [
+                        Icon(
+                          w.isReserve
+                              ? Icons.inventory_2_outlined
+                              : (w.isVan
+                                  ? Icons.local_shipping_outlined
+                                  : Icons.warehouse_outlined),
+                          size: 18,
+                          color: w.isReserve
+                              ? Colors.purple
+                              : (w.isVan
+                                  ? Colors.orange
+                                  : theme.colorScheme.primary),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(w.name),
+                      ],
+                    ),
+                  );
+                }).toList();
+              },
+            );
+          },
+          loading: () =>
+              const Text('بارکردنی کاشڤان و گواستنەوە', style: AppTextStyles.h2),
+          error: (_, __) =>
+              const Text('بارکردنی کاشڤان و گواستنەوە', style: AppTextStyles.h2),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -322,9 +423,16 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
         icon: const Icon(Icons.local_shipping),
         label: const Text('بارکردنی نوێ بۆ کاشڤان'),
         onPressed: () async {
-          final warehouseId = dashboardAsync.asData?.value.warehouseId ?? 1;
-          final warehouseName =
-              dashboardAsync.asData?.value.warehouseName ?? 'کۆگای سەرەکی';
+          final warehouseId = activeWarehouseId ??
+              dashboardAsync.asData?.value.warehouseId ??
+              1;
+          final currentW = warehousesAsync.asData?.value.firstWhere(
+            (w) => w.id == warehouseId,
+            orElse: () => warehousesAsync.asData!.value.first,
+          );
+          final warehouseName = currentW?.name ??
+              dashboardAsync.asData?.value.warehouseName ??
+              'کۆگای سەرەکی';
 
           final newTransfer = await showDialog<StockTransferModel?>(
             context: context,
