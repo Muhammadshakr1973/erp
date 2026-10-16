@@ -21,7 +21,9 @@ import '../../features/admin/views/admin_purchases_screen.dart';
 import '../../features/admin/views/admin_audit_logs_screen.dart';
 import '../../features/admin/views/admin_delivery_trips_screen.dart';
 import '../../features/admin/views/admin_driver_collections_screen.dart';
+import '../../features/admin/views/admin_warehouses_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
+import '../../features/warehouse/views/stock_transfers_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
 import 'navigation_tabs_provider.dart';
@@ -111,6 +113,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (location.startsWith('/admin-driver-collections') &&
           !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/admin-warehouses') &&
+          !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/stock-transfers') &&
+          !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
       }
 
@@ -231,6 +241,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin-driver-collections',
         name: 'adminDriverCollections',
         builder: (context, state) => const AdminDriverCollectionsScreen(),
+      ),
+      GoRoute(
+        path: '/admin-warehouses',
+        name: 'adminWarehouses',
+        builder: (context, state) => const AdminWarehousesScreen(),
+      ),
+      GoRoute(
+        path: '/stock-transfers',
+        name: 'stockTransfers',
+        builder: (context, state) => const StockTransfersScreen(),
       ),
       GoRoute(
         path: '/trip/:id',

@@ -769,6 +769,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
   int? _selectedRoleId;
   int? _selectedWarehouseId;
+  bool _isCashVan = false;
   bool _isActive = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -829,6 +830,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     }
 
     _isActive = widget.user?.isActive ?? true;
+    _isCashVan = widget.user?.isCashVan ?? false;
     _selectedWarehouseId = widget.user?.warehouseId;
 
     _selectedRoutingCycle = widget.user?.routingCycle ?? '1_week';
@@ -1071,6 +1073,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               fixedSalary: fixedSalary,
               barcode: barcode,
               isActive: _isActive,
+              isCashVan: isSalesmanSelected ? _isCashVan : false,
               warehouseId: warehouseId,
               imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
               routingCycle: isSalesmanSelected ? _selectedRoutingCycle : null,
@@ -1097,6 +1100,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
               fixedSalary: fixedSalary,
               barcode: barcode,
               isActive: _isActive,
+              isCashVan: isSalesmanSelected ? _isCashVan : false,
               warehouseId: warehouseId,
               imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
               routingCycle: isSalesmanSelected ? _selectedRoutingCycle : null,
@@ -1564,6 +1568,68 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
+                if (isSalesmanSelected) ...[
+                  const Text('جۆری مەندوب:', style: AppTextStyles.bodyBold),
+                  const SizedBox(height: 6),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(
+                        value: false,
+                        label: Text('مەندوبی ئاسایی (Pre-Sell)'),
+                        icon: Icon(Icons.person_pin_outlined),
+                      ),
+                      ButtonSegment<bool>(
+                        value: true,
+                        label: Text('کاشڤان (Cash Van)'),
+                        icon: Icon(Icons.local_shipping_outlined),
+                      ),
+                    ],
+                    selected: {_isCashVan},
+                    onSelectionChanged: (newSelection) {
+                      setState(() {
+                        _isCashVan = newSelection.first;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: (_isCashVan ? Colors.orange : theme.colorScheme.primary)
+                          .withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: (_isCashVan ? Colors.orange : theme.colorScheme.primary)
+                            .withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isCashVan
+                              ? Icons.local_shipping_outlined
+                              : Icons.info_outline,
+                          size: 18,
+                          color: _isCashVan ? Colors.orange : theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _isCashVan
+                                ? 'کاشڤان ئۆتۆمبێلەکەی کۆگای ئەوە و تەنها ئەو کاڵایانە دەبینێت و دەفرۆشێت کە دراوە پێی.'
+                                : 'مەندوبی ئاسایی لە کۆگای سەرەکی/لق داواکاری تۆمار دەکات.',
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 11,
+                              color: _isCashVan ? Colors.orange.shade800 : null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
                 if (isWarehouseSelected || isSalesmanSelected) ...[
                   warehousesAsync.when(
                     data: (warehouses) {
@@ -1571,28 +1637,48 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         key: _warehouseKey,
                         initialValue: _selectedWarehouseId,
                         decoration: InputDecoration(
-                          labelText: 'کۆگای دیاریکراو',
-                          prefixIcon: const Icon(Icons.warehouse_outlined),
+                          labelText: _isCashVan
+                              ? 'کۆگای ئۆتۆمبێلی کاشڤان (هەڵبژاردن یان دروستکردنی خۆکار)'
+                              : 'کۆگای سەرچاوەی فرۆشتن',
+                          prefixIcon: Icon(_isCashVan
+                              ? Icons.local_shipping_outlined
+                              : Icons.warehouse_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        items: warehouses.map((w) {
-                          return DropdownMenuItem<int>(
-                            value: w.id,
-                            child: Text(
-                              w.name,
-                              style: const TextStyle(fontFamily: 'KJino'),
+                        items: [
+                          if (_isCashVan && _selectedWarehouseId == null)
+                            const DropdownMenuItem<int>(
+                              value: null,
+                              child: Text(
+                                '✨ دروستکردنی کۆگای تایبەت بە خۆی بە خۆکار',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'KJino',
+                                ),
+                              ),
                             ),
-                          );
-                        }).toList(),
+                          ...warehouses.map((w) {
+                            return DropdownMenuItem<int>(
+                              value: w.id,
+                              child: Text(
+                                '${w.name} ${w.isVan ? "(کاشڤان)" : ""}',
+                                style: const TextStyle(fontFamily: 'KJino'),
+                              ),
+                            );
+                          }),
+                        ],
                         onChanged: (val) {
                           setState(() {
                             _selectedWarehouseId = val;
                           });
                         },
-                        validator: (val) =>
-                            val == null ? 'تکایە کۆگایەک دیاری بکە' : null,
+                        validator: (val) {
+                          if (_isCashVan) return null; // Can auto-create
+                          return val == null ? 'تکایە کۆگایەک دیاری بکە' : null;
+                        },
                       );
                     },
                     loading: () => const Center(

@@ -14,10 +14,12 @@ class StoreSalesOrderRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $user = $this->user();
-        if ($user && $user->role?->name === 'salesman' && $user->warehouse_id && !$this->has('warehouse_id')) {
-            $this->merge([
-                'warehouse_id' => $user->warehouse_id,
-            ]);
+        if ($user && $user->role?->name === 'salesman' && $user->warehouse_id) {
+            if ($user->isCashVan() || !$this->has('warehouse_id')) {
+                $this->merge([
+                    'warehouse_id' => $user->warehouse_id,
+                ]);
+            }
         }
     }
 

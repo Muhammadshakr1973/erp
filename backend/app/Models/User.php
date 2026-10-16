@@ -25,6 +25,7 @@ class User extends Authenticatable
         'is_active',
         'last_login_at',
         'warehouse_id',
+        'is_cash_van',
         'image_url',
         'routing_cycle'
     ];
@@ -33,11 +34,17 @@ class User extends Authenticatable
         'commission_rate' => 'decimal:2',
         'fixed_salary' => 'integer',
         'is_active' => 'boolean',
+        'is_cash_van' => 'boolean',
         'last_login_at' => 'datetime',
         'password' => 'hashed',
         'warehouse_id' => 'integer',
         'routing_cycle' => 'string'
     ];
+
+    public function isCashVan(): bool
+    {
+        return (bool) ($this->is_cash_van ?? false);
+    }
 
     public function role(): BelongsTo
     {

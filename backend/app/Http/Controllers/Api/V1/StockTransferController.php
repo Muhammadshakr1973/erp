@@ -73,9 +73,18 @@ class StockTransferController extends Controller
 
         $transfer = $this->transferService->createTransfer($validated, $user);
 
+        // If complete_now is passed (e.g., direct van loading by warehouse keeper), complete it immediately
+        if ($request->boolean('complete_now') || $request->boolean('direct_transfer')) {
+            $transfer = $this->transferService->completeTransfer($transfer, $user);
+            return response()->json([
+                'message' => 'کاڵاکان بە سەرکەوتوویی بارکران و گوازرانەوە بۆ کۆگای کاشڤان',
+                'data'    => $transfer->load(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])
+            ], 201);
+        }
+
         return response()->json([
             'message' => 'داواکاری گواستنەوە بەسەرکەوتوویی دروستکرا',
-            'data'    => $transfer->load('items')
+            'data'    => $transfer->load(['fromWarehouse', 'toWarehouse', 'creator', 'items.product'])
         ], 201);
     }
 

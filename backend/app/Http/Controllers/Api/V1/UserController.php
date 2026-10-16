@@ -14,7 +14,7 @@ class UserController extends Controller
 {
     public function index(): JsonResponse
     {
-        $users = User::with(['role', 'routeSalesmen' => function ($query) {
+        $users = User::with(['role', 'warehouse', 'routeSalesmen' => function ($query) {
             $query->whereNull('work_date')->with('route');
         }])->get();
         $roles = Role::all();
@@ -49,6 +49,7 @@ class UserController extends Controller
                 Rule::unique('users')->whereNull('deleted_at')
             ],
             'is_active' => 'nullable|boolean',
+            'is_cash_van' => 'nullable|boolean',
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'image_url' => 'nullable|string|max:2048',
             'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
@@ -63,6 +64,22 @@ class UserController extends Controller
             'barcode.unique' => 'ئەم بارکۆدە پێشتر بەکارهاتووە',
         ]);
 
+        $isCashVan = (bool) ($validated['is_cash_van'] ?? false);
+        $warehouseId = $validated['warehouse_id'] ?? null;
+
+        // If user is a cash van and no warehouse was explicitly chosen, auto-create a dedicated van warehouse
+        if ($isCashVan && !$warehouseId) {
+            $vanWarehouse = \App\Models\Warehouse::create([
+                'name' => 'کۆگای کاشڤان - ' . $validated['name'],
+                'address' => 'ئۆتۆمبێلی کاشڤان (' . $validated['phone'] . ')',
+                'phone' => $validated['phone'],
+                'is_main' => false,
+                'is_active' => true,
+                'type' => 'VAN',
+            ]);
+            $warehouseId = $vanWarehouse->id;
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
@@ -72,7 +89,8 @@ class UserController extends Controller
             'fixed_salary' => $validated['fixed_salary'] ?? 0,
             'barcode' => $validated['barcode'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
-            'warehouse_id' => $validated['warehouse_id'] ?? null,
+            'is_cash_van' => $isCashVan,
+            'warehouse_id' => $warehouseId,
             'image_url' => $validated['image_url'] ?? null,
             'routing_cycle' => $validated['routing_cycle'] ?? '1_week',
         ]);
@@ -171,6 +189,7 @@ class UserController extends Controller
                 Rule::unique('users')->ignore($user->id)->whereNull('deleted_at')
             ],
             'is_active' => 'nullable|boolean',
+            'is_cash_van' => 'nullable|boolean',
             'warehouse_id' => 'nullable|exists:warehouses,id',
             'image_url' => 'nullable|string|max:2048',
             'routing_cycle' => 'nullable|string|in:1_week,2_weeks'
@@ -202,9 +221,33 @@ class UserController extends Controller
         if (array_key_exists('is_active', $validated)) {
             $updateData['is_active'] = $validated['is_active'] ?? true;
         }
-        if (array_key_exists('warehouse_id', $validated)) {
-            $updateData['warehouse_id'] = $validated['warehouse_id'];
+
+        if (array_key_exists('is_cash_van', $validated)) {
+            $updateData['is_cash_van'] = (bool) $validated['is_cash_van'];
         }
+
+        $isNowCashVan = array_key_exists('is_cash_van', $validated)
+            ? (bool) $validated['is_cash_van']
+            : (bool) ($user->is_cash_van ?? false);
+
+        $targetWarehouseId = array_key_exists('warehouse_id', $validated)
+            ? $validated['warehouse_id']
+            : $user->warehouse_id;
+
+        if ($isNowCashVan && !$targetWarehouseId) {
+            $vanWarehouse = \App\Models\Warehouse::create([
+                'name' => 'کۆگای کاشڤان - ' . $validated['name'],
+                'address' => 'ئۆتۆمبێلی کاشڤان (' . $validated['phone'] . ')',
+                'phone' => $validated['phone'],
+                'is_main' => false,
+                'is_active' => true,
+                'type' => 'VAN',
+            ]);
+            $targetWarehouseId = $vanWarehouse->id;
+        }
+
+        $updateData['warehouse_id'] = $targetWarehouseId;
+
         if (array_key_exists('image_url', $validated)) {
             $updateData['image_url'] = $validated['image_url'];
         }

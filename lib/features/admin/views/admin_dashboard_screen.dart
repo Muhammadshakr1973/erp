@@ -61,6 +61,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.warehouse_outlined),
+            tooltip: 'بەڕێوەبردنی کۆگاکان و کاشڤان',
+            onPressed: () {
+              context.push('/admin-warehouses');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.history_toggle_off),
             tooltip: 'تۆماری کردارەکان (Audit Logs)',
             onPressed: () {

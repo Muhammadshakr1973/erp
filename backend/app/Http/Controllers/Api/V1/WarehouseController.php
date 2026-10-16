@@ -99,19 +99,32 @@ class WarehouseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Warehouse::where('is_active', true);
+        $isAdmin = $user && ($user->isAdmin() || $user->isOwner());
+        $showAll = $request->boolean('all') || $isAdmin;
 
-        if ($user && $user->warehouse_id) {
-            $query->where('id', $user->warehouse_id);
+        $query = Warehouse::withCount('stocks');
+
+        if (!$showAll) {
+            $query->where('is_active', true);
+            if ($user && $user->warehouse_id) {
+                $query->where('id', $user->warehouse_id);
+            }
+        } elseif ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
         }
 
-        $warehouses = $query->get();
+        if ($request->has('type')) {
+            $query->where('type', strtoupper($request->query('type')));
+        }
+
+        $warehouses = $query->orderBy('is_main', 'desc')->orderBy('name', 'asc')->get();
 
         if ($warehouses->isEmpty() && (!$user || !$user->warehouse_id)) {
             $mainWarehouse = Warehouse::create([
                 'name' => 'کۆگای سەرەکی',
                 'is_main' => true,
                 'is_active' => true,
+                'type' => 'PHYSICAL',
             ]);
             $warehouses = collect([$mainWarehouse]);
         }
@@ -120,6 +133,138 @@ class WarehouseController extends Controller
             'message' => 'لیستی کۆگاکان',
             'data' => $warehouses
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:warehouses,name',
+            'address' => 'nullable|string|max:500',
+            'phone' => 'nullable|string|max:30',
+            'is_main' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
+            'type' => 'nullable|string|in:PHYSICAL,VAN,physical,van',
+        ], [
+            'name.required' => 'تکایە ناوی کۆگا بنووسە',
+            'name.unique' => 'کۆگایەک بەم ناوە پێشتر تۆمارکراوە',
+        ]);
+
+        $isMain = $validated['is_main'] ?? false;
+        $type = strtoupper($validated['type'] ?? 'PHYSICAL');
+
+        if ($isMain) {
+            Warehouse::where('is_main', true)->update(['is_main' => false]);
+        }
+
+        $warehouse = Warehouse::create([
+            'name' => $validated['name'],
+            'address' => $validated['address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'is_main' => $isMain,
+            'is_active' => $validated['is_active'] ?? true,
+            'type' => $type,
+        ]);
+
+        app(\App\Services\AuditService::class)->log([
+            'action' => 'CREATE_WAREHOUSE',
+            'entity_type' => 'Warehouse',
+            'entity_id' => $warehouse->id,
+            'table_name' => 'warehouses',
+            'old_values' => null,
+            'new_values' => $warehouse->toArray(),
+            'description' => "کۆگای نوێ دروستکرا: {$warehouse->name} ({$warehouse->type})",
+            'user' => $request->user(),
+        ]);
+
+        return response()->json([
+            'message' => 'کۆگا بە سەرکەوتوویی دروستکرا',
+            'data' => $warehouse
+        ], 201);
+    }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $warehouse = Warehouse::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:warehouses,name,' . $warehouse->id,
+            'address' => 'nullable|string|max:500',
+            'phone' => 'nullable|string|max:30',
+            'is_main' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
+            'type' => 'nullable|string|in:PHYSICAL,VAN,physical,van',
+        ], [
+            'name.required' => 'تکایە ناوی کۆگا بنووسە',
+            'name.unique' => 'کۆگایەک بەم ناوە پێشتر تۆمارکراوە',
+        ]);
+
+        $oldValues = $warehouse->toArray();
+        $isMain = $validated['is_main'] ?? $warehouse->is_main;
+
+        if ($isMain && !$warehouse->is_main) {
+            Warehouse::where('id', '!=', $warehouse->id)->where('is_main', true)->update(['is_main' => false]);
+        }
+
+        $warehouse->update([
+            'name' => $validated['name'],
+            'address' => $validated['address'] ?? $warehouse->address,
+            'phone' => $validated['phone'] ?? $warehouse->phone,
+            'is_main' => $isMain,
+            'is_active' => $validated['is_active'] ?? $warehouse->is_active,
+            'type' => strtoupper($validated['type'] ?? $warehouse->type ?? 'PHYSICAL'),
+        ]);
+
+        app(\App\Services\AuditService::class)->log([
+            'action' => 'UPDATE_WAREHOUSE',
+            'entity_type' => 'Warehouse',
+            'entity_id' => $warehouse->id,
+            'table_name' => 'warehouses',
+            'old_values' => $oldValues,
+            'new_values' => $warehouse->toArray(),
+            'description' => "زانیارییەکانی کۆگای {$warehouse->name} نوێکرایەوە",
+            'user' => $request->user(),
+        ]);
+
+        return response()->json([
+            'message' => 'زانیارییەکانی کۆگا بە سەرکەوتوویی نوێکرانەوە',
+            'data' => $warehouse
+        ], 200);
+    }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $warehouse = Warehouse::findOrFail($id);
+
+        // Check if warehouse has positive stock
+        $hasActiveStock = WarehouseStock::where('warehouse_id', $warehouse->id)
+            ->where('quantity', '>', 0)
+            ->exists();
+
+        if ($hasActiveStock) {
+            return response()->json([
+                'message' => 'ناتوانرێت ئەم کۆگایە بسڕدرێتەوە چونکە کاڵا و ستۆکی بەردەستی تێدایە. سەرەتا پێویستە کاڵاکان بگوازرێنەوە یان سفر بکرێنەوە.',
+            ], 422);
+        }
+
+        $oldValues = $warehouse->toArray();
+        $warehouse->is_active = false;
+        $warehouse->save();
+        $warehouse->delete();
+
+        app(\App\Services\AuditService::class)->log([
+            'action' => 'DELETE_WAREHOUSE',
+            'entity_type' => 'Warehouse',
+            'entity_id' => $warehouse->id,
+            'table_name' => 'warehouses',
+            'old_values' => $oldValues,
+            'new_values' => null,
+            'description' => "کۆگای {$warehouse->name} سڕایەوە / ناچالاک کرا",
+            'user' => $request->user(),
+        ]);
+
+        return response()->json([
+            'message' => 'کۆگا بە سەرکەوتوویی سڕایەوە',
+        ], 200);
     }
 
     public function adjustStock(Request $request, $warehouseId, $productId): JsonResponse

@@ -182,6 +182,9 @@ Route::prefix('v1')->group(function () {
         
         // Warehouses & Stock
         Route::get('/warehouses', [WarehouseController::class, 'index']);
+        Route::post('/warehouses', [WarehouseController::class, 'store'])->middleware('permission:users.manage');
+        Route::put('/warehouses/{id}', [WarehouseController::class, 'update'])->middleware('permission:users.manage');
+        Route::delete('/warehouses/{id}', [WarehouseController::class, 'destroy'])->middleware('permission:users.manage');
         Route::get('/warehouse/dashboard', [WarehouseController::class, 'dashboard'])->middleware('permission:stock.view');
         Route::post('/warehouses/{warehouseId}/stock/{productId}/adjust', [WarehouseController::class, 'adjustStock'])->middleware(['permission:stock.pack', 'idempotent']);
         Route::get('/warehouses/{warehouseId}/stock/{productId}/reconcile', [WarehouseController::class, 'reconcileStock'])->middleware('permission:stock.view');

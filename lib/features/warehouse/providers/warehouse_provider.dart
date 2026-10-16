@@ -7,6 +7,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
+import '../models/stock_transfer_model.dart';
 
 final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
     FutureProvider<List<WarehouseOrderModel>>((ref) async {
@@ -315,21 +316,23 @@ class WarehouseActions {
     }
   }
 
-  Future<void> createStockTransfer({
+  Future<StockTransferModel?> createStockTransfer({
     required int fromWarehouseId,
     required int toWarehouseId,
     required List<Map<String, dynamic>> items,
     String? notes,
+    bool completeNow = false,
   }) async {
     try {
       final idempotencyKey = 'transfer_${DateTime.now().microsecondsSinceEpoch}';
-      await api.client.post(
+      final response = await api.client.post(
         '/stock-transfers',
         data: {
           'from_warehouse_id': fromWarehouseId,
           'to_warehouse_id': toWarehouseId,
           'items': items,
           if (notes != null && notes.isNotEmpty) 'notes': notes,
+          if (completeNow) 'complete_now': true,
         },
         options: Options(
           headers: {
@@ -338,6 +341,11 @@ class WarehouseActions {
         ),
       );
       ref.invalidate(warehouseStocksProvider);
+      ref.invalidate(stockTransfersListProvider);
+      if (response.data is Map && response.data['data'] is Map) {
+        return StockTransferModel.fromJson(response.data['data']);
+      }
+      return null;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -356,6 +364,7 @@ class WarehouseActions {
         ),
       );
       ref.invalidate(warehouseStocksProvider);
+      ref.invalidate(stockTransfersListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -374,9 +383,33 @@ class WarehouseActions {
         ),
       );
       ref.invalidate(warehouseStocksProvider);
+      ref.invalidate(stockTransfersListProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
   }
 }
+
+final stockTransfersListProvider =
+    FutureProvider<List<StockTransferModel>>((ref) async {
+  ref.watch(authProvider.select((state) => state.user?.id));
+  final api = ref.watch(apiClientProvider);
+  try {
+    final response = await api.client.get('/stock-transfers');
+    if (response.statusCode == 200) {
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw const FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە',
+        );
+      }
+      final List data = resData['data'] as List;
+      return data.map((json) => StockTransferModel.fromJson(json)).toList();
+    }
+    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە: ${response.statusCode}');
+  } catch (e) {
+    throw Exception(api.parseError(e));
+  }
+});
+
 

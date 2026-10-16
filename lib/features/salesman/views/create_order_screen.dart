@@ -432,6 +432,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _addToCart(int productId) {
+    final currentUser = ref.read(authProvider).user;
+    if (currentUser?.isCashVan == true && _selectedWarehouseId != null) {
+      final products = ref.read(productsListProvider).asData?.value ?? [];
+      final product = products.where((p) => p.id == productId).firstOrNull;
+      final maxStock = product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
+      final currentQty = _cart[productId] ?? 0;
+      if (currentQty + 1 > maxStock) {
+        AppSnackbar.show(
+          context,
+          message: 'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر بفرۆشیت',
+          type: SnackbarType.warning,
+        );
+        return;
+      }
+    }
     _lastChangedField = 'product_qty_$productId';
     setState(() {
       _cart[productId] = (_cart[productId] ?? 0) + 1;
@@ -516,6 +531,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             onPressed: () {
               final parsed = int.tryParse(controller.text.trim());
               if (parsed != null && parsed > 0) {
+                final currentUser = ref.read(authProvider).user;
+                if (currentUser?.isCashVan == true && _selectedWarehouseId != null) {
+                  final products = ref.read(productsListProvider).asData?.value ?? [];
+                  final product = products.where((p) => p.id == productId).firstOrNull;
+                  final maxStock = product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
+                  if (parsed > maxStock) {
+                    AppSnackbar.show(
+                      context,
+                      message: 'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
+                      type: SnackbarType.warning,
+                    );
+                    return;
+                  }
+                }
                 Navigator.pop(context, parsed);
               } else {
                 Navigator.pop(context);
@@ -1771,13 +1800,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final currentUser = ref.watch(authProvider).user;
     final isSalesman = currentUser?.isSalesman ?? false;
+    final isCashVan = currentUser?.isCashVan == true;
     if (isSalesman &&
         _selectedWarehouseId == null &&
         currentUser?.warehouseId != null) {
       _selectedWarehouseId = currentUser!.warehouseId;
     }
+    if (isCashVan && currentUser?.warehouseId != null && _selectedWarehouseId != currentUser!.warehouseId) {
+      _selectedWarehouseId = currentUser!.warehouseId;
+    }
 
-    final allProducts = productsAsync.asData?.value ?? [];
+    final rawProducts = productsAsync.asData?.value ?? [];
+    final allProducts = (isCashVan && _selectedWarehouseId != null)
+        ? rawProducts.where((p) => p.getStockForWarehouse(_selectedWarehouseId) > 0).toList()
+        : rawProducts;
 
     return Scaffold(
       appBar: AppBar(
@@ -1960,7 +1996,31 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               },
             ),
           ),
-          if (!isSalesman) ...[
+          if (currentUser?.isCashVan == true) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.local_shipping_outlined, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Text(
+                    'کاشڤان: ${currentUser?.warehouseName ?? "ئۆتۆمبێل"}',
+                    style: AppTextStyles.caption.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (!isSalesman) ...[
             const SizedBox(width: AppSpacing.sm),
 
             // 2. Warehouse Selection

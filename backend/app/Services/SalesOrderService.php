@@ -58,6 +58,16 @@ class SalesOrderService
             // ٣. دڵنیابوونەوە لەوەی کە کڕیارەکە بۆ ئەم مەندوبە دەستنیشان کراوە (Authorization & Assignment)
             $this->checkCustomerAssignment($customer, $user);
 
+            if ($user && method_exists($user, 'isCashVan') && $user->isCashVan()) {
+                $vanWarehouseId = $user->warehouse_id;
+                if (!$vanWarehouseId) {
+                    throw ValidationException::withMessages([
+                        'warehouse' => 'هیچ کۆگایەکی ئۆتۆمبێل (کاشڤان) بۆ ئەم مەندوبە دیاری نەکراوە.'
+                    ]);
+                }
+                $data['warehouse_id'] = $vanWarehouseId;
+            }
+
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە (ORD-XXXXXXXX)
             $orderNumber = 'ORD-' . strtoupper(Str::random(8));
 
@@ -97,6 +107,23 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
+
+                if ($user && method_exists($user, 'isCashVan') && $user->isCashVan()) {
+                    $stockRecord = WarehouseStock::where('warehouse_id', $order->warehouse_id)
+                        ->where('product_id', $product->id)
+                        ->first();
+                    $availQty = (int) ($stockRecord->quantity ?? 0);
+                    if ($availQty <= 0) {
+                        throw ValidationException::withMessages([
+                            'items' => "کاڵای '{$product->name}' لە کۆگای ئۆتۆمبێلەکەتدا بەردەست نییە."
+                        ]);
+                    }
+                    if ($quantity > $availQty) {
+                        throw ValidationException::withMessages([
+                            'items' => "بڕی داواکراو بۆ '{$product->name}' ({$quantity}) لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ({$availQty}) زیاترە."
+                        ]);
+                    }
+                }
 
                 // دیاریکردنی نرخ بەپێی تایپ و کڕیار (تۆمارکردنی مێژوویی - Snapshot)
                 if (isset($data['price_type'])) {

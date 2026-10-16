@@ -36,6 +36,8 @@ class UserModel {
   final String? barcode;
   final bool? isActive;
   final int? warehouseId;
+  final String? warehouseName;
+  final bool isCashVan;
   final List<String>? permissions;
   final String? imageUrl;
   final String? routingCycle;
@@ -52,6 +54,8 @@ class UserModel {
     this.barcode,
     this.isActive,
     this.warehouseId,
+    this.warehouseName,
+    this.isCashVan = false,
     this.permissions,
     this.imageUrl,
     this.routingCycle,
@@ -109,6 +113,10 @@ class UserModel {
           ? json['is_active']
           : (json['is_active'] == 1),
       warehouseId: json['warehouse_id'],
+      warehouseName: json['warehouse'] is Map ? json['warehouse']['name']?.toString() : null,
+      isCashVan: json['is_cash_van'] == 1 ||
+          json['is_cash_van'] == true ||
+          (json['warehouse'] is Map && json['warehouse']['type'] == 'VAN'),
       permissions: parsedPermissions,
       imageUrl: json['image_url'],
       routingCycle: json['routing_cycle']?.toString(),
@@ -128,6 +136,8 @@ class UserModel {
       'barcode': barcode,
       'is_active': isActive,
       'warehouse_id': warehouseId,
+      'warehouse_name': warehouseName,
+      'is_cash_van': isCashVan,
       'permissions': permissions,
       'image_url': imageUrl,
       'routing_cycle': routingCycle,
@@ -143,6 +153,9 @@ class UserModel {
   bool get isDriver => role.toLowerCase() == 'driver';
   bool get isSalesman => role.toLowerCase() == 'salesman';
   bool get isWarehouse => role.toLowerCase() == 'warehouse';
+  bool get isCashVanSalesman =>
+      isSalesman &&
+      (isCashVan || (warehouseName != null && warehouseName!.contains('کاشڤان')));
 
   bool hasPermission(String permission) {
     final lowerRole = role.toLowerCase();

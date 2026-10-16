@@ -11,17 +11,50 @@ use Illuminate\Http\JsonResponse;
 
 class ProductController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $products = Product::with(['category', 'supplier', 'stocks'])->orderBy('id', 'desc')->get();
+        $user = $request->user();
+        $query = Product::with(['category', 'supplier', 'stocks'])->orderBy('id', 'desc');
+
+        if ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
+            $vanWarehouseId = $user->warehouse_id;
+            if ($vanWarehouseId) {
+                $query->whereHas('stocks', function ($q) use ($vanWarehouseId) {
+                    $q->where('warehouse_id', $vanWarehouseId)->where('quantity', '>', 0);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        } elseif ($request->has('warehouse_id')) {
+            $warehouseId = (int) $request->query('warehouse_id');
+            if ($request->boolean('in_stock_only') || $request->boolean('van_only')) {
+                $query->whereHas('stocks', function ($q) use ($warehouseId) {
+                    $q->where('warehouse_id', $warehouseId)->where('quantity', '>', 0);
+                });
+            }
+        }
+
+        $products = $query->get();
         return response()->json([
             'message' => 'لیستی کاڵاکان',
             'data' => $products
         ]);
     }
 
-    public function show(Product $product): JsonResponse
+    public function show(Request $request, Product $product): JsonResponse
     {
+        $user = $request->user();
+        if ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
+            $vanWarehouseId = $user->warehouse_id;
+            $hasStock = $vanWarehouseId && $product->stocks()->where('warehouse_id', $vanWarehouseId)->where('quantity', '>', 0)->exists();
+            if (!$hasStock) {
+                return response()->json([
+                    'message' => 'ئەم کاڵایە لە کۆگای ئۆتۆمبێلەکەتدا بوونی نییە یان ستۆکەکەی سفرە.',
+                    'error' => 'Not Found'
+                ], 404);
+            }
+        }
+
         return response()->json([
             'message' => 'زانیاریی کاڵا',
             'data' => $product->load(['category', 'supplier', 'stocks'])

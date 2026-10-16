@@ -120,6 +120,16 @@ class ProductModel {
     return total;
   }
 
+  int getStockForWarehouse(int? warehouseId) {
+    if (warehouseId == null || stocks.isEmpty) return 0;
+    for (var s in stocks) {
+      if (s is Map && (s['warehouse_id'] as num?)?.toInt() == warehouseId) {
+        return (s['quantity'] as num?)?.toInt() ?? 0;
+      }
+    }
+    return 0;
+  }
+
   bool get isLowStock {
     final min = minStockLevel;
     if (min > 0) {
