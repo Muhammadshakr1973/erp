@@ -205,6 +205,10 @@ Do not introduce a new dependency for something that can reasonably be implement
 
 ## 10. Database and Backend Protection
 
+> [!IMPORTANT]
+> **Server Limitation (No Terminal / SSH):**
+> بەکارهێنەر دەستی بە تێرمیناڵ و SSH ناگات لەسەر سێرڤەرەکەی و ناتوانێت `php artisan migrate` ئەنجام بدات. دەبێت تەواوی گۆڕانکارییەکانی داتابەیس بە کۆدی SQL ئامادەکراو بێت بۆ ئەوەی بە دەستی لە ڕێگەی **phpMyAdmin** جێبەجێی بکات. هەرگیز داوای لێدانی فەرمانی تێرمیناڵ لەسەر سێرڤەر مەکە.
+
 Do not modify:
 
 * migrations

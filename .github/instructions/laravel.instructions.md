@@ -43,6 +43,12 @@ Do not perform unrelated refactoring.
 
 Treat the database structure as protected.
 
+> [!IMPORTANT]
+> **ڕێنمایی دەستی بۆ سێرڤەر (No Terminal/SSH Access):**
+> لەبەر ئەوەی بەکارهێنەر دەستی ناگات بە Terminal / SSH لەسەر سێرڤەرەکەی، ناتوانێت فەرمانی `php artisan migrate` جێبەجێ بکات. لەبەر ئەوە:
+> 1. هەر گۆڕانکارییەکی داتابەیس پێویست بوو، دەبێت کۆدی ئامادەکراوی SQL (بۆ جێبەجێکردن لە phpMyAdmin) بە شێوەیەکی سەلامەت و ڕوون پێشکەش بکرێت.
+> 2. داوا لە بەکارهێنەر مەکە لە سێرڤەر فەرمانی تێرمیناڵ وەک `migrate` لێبدات.
+
 Do NOT modify:
 
 * migrations
