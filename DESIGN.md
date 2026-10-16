@@ -258,6 +258,10 @@ Do not expose raw backend exceptions, stack traces, database errors, or implemen
 
 Do not use different local `AlertDialog` styles for delete/confirm/error flows when the shared dialog component can be used.
 
+Dialog / Popup Button Rules:
+- **Never include cancel or close buttons at the bottom**: No "پاشگەزبوونەوە" (Cancel) or "داخستن" (Close) buttons in the dialog footer or actions row.
+- **Top-left close button**: Always place a close (`Icons.close`) button at the top-left of the dialog/popup header for dismissing/canceling.
+
 ---
 
 ## 12. Forms and Inputs

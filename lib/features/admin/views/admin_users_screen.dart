@@ -9,7 +9,6 @@ import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/error_state.dart';
-import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/customer_avatar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -588,13 +587,74 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  user.name,
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    fontSize: 14,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        user.name,
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (user.role.toLowerCase() == 'salesman') ...[
+                                      const SizedBox(width: 6),
+                                      Builder(
+                                        builder: (context) {
+                                          final isVan = user.isCashVan || user.isCashVanSalesman;
+                                          final isDark = theme.brightness == Brightness.dark;
+                                          final badgeColor = isVan ? Colors.teal : Colors.blue;
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: badgeColor.withValues(
+                                                alpha: isDark ? 0.2 : 0.1,
+                                              ),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: badgeColor.withValues(
+                                                  alpha: isDark ? 0.45 : 0.35,
+                                                ),
+                                                width: 0.8,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  isVan
+                                                      ? Icons.local_shipping_outlined
+                                                      : Icons.storefront_outlined,
+                                                  size: 11,
+                                                  color: isDark
+                                                      ? (isVan ? Colors.tealAccent : Colors.lightBlueAccent)
+                                                      : (isVan ? Colors.teal.shade800 : Colors.blue.shade800),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  isVan ? 'کاشڤان (Cash Van)' : 'ئاسایی (Pre-Sell)',
+                                                  style: TextStyle(
+                                                    fontFamily: 'KJino',
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDark
+                                                        ? (isVan ? Colors.tealAccent : Colors.lightBlueAccent)
+                                                        : (isVan ? Colors.teal.shade800 : Colors.blue.shade800),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -615,7 +675,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                         Text(
                                           'سابت: ${Formatters.currency(user.fixedSalary ?? 0)}',
                                           style: AppTextStyles.caption.copyWith(
-                                            color: AppColors.primary,
+                                            color: theme.colorScheme.primary,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 10,
                                           ),
@@ -637,7 +697,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   Text(
                                     'مووچەی سابت: ${Formatters.currency(user.fixedSalary ?? 0)}',
                                     style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.primary,
+                                      color: theme.colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 10,
                                     ),
@@ -870,45 +930,6 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         return 'شۆفێر (Driver)';
       default:
         return name;
-    }
-  }
-
-  String _getUserRoleNameForQr() {
-    if (_selectedRoleId != null && widget.roles != null) {
-      final matched = widget.roles!.firstWhere(
-        (r) => r['id'] == _selectedRoleId,
-        orElse: () => null,
-      );
-      if (matched != null) {
-        final name = matched['name']?.toString() ?? '';
-        return _formatRoleForQr(name);
-      }
-    }
-    if (widget.user != null) {
-      return _formatRoleForQr(widget.user!.role);
-    }
-    return 'کارمەند';
-  }
-
-  String _formatRoleForQr(String role) {
-    switch (role.toLowerCase()) {
-      case 'salesman':
-        return 'مەندوب';
-      case 'driver':
-        return 'شۆفێر';
-      case 'warehouse':
-        return 'کارمەندی کۆگا';
-      case 'admin':
-        return 'بەڕێوەبەر';
-      case 'owner':
-        return 'خاوەن کار';
-      default:
-        if (role.contains('مەندوب')) return 'مەندوب';
-        if (role.contains('شۆفێر')) return 'شۆفێر';
-        if (role.contains('کۆگا')) return 'کارمەندی کۆگا';
-        if (role.contains('بەڕێوەبەر')) return 'بەڕێوەبەر';
-        if (role.contains('خاوەن کار')) return 'خاوەن کار';
-        return role.isNotEmpty ? role : 'کارمەند';
     }
   }
 
@@ -1730,93 +1751,10 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_2),
-                        color: theme.colorScheme.primary,
-                        tooltip: 'پیشاندانی QR Code',
-                        onPressed: () {
-                          final text = _barcodeController.text.trim();
-                          if (text.isNotEmpty) {
-                            UserQrDialog.show(
-                              context,
-                              barcode: text,
-                              userName: _nameController.text.trim().isNotEmpty
-                                  ? _nameController.text.trim()
-                                  : (widget.user?.name ?? ''),
-                              userRole: _getUserRoleNameForQr(),
-                              userPhone: _phoneController.text.trim().isNotEmpty
-                                  ? _phoneController.text.trim()
-                                  : (widget.user?.phone ?? ''),
-                              user: widget.user,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'تکایە سەرەتا کۆدێک بنووسە یان دروست بکە',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_scanner),
-                        color: theme.colorScheme.primary,
-                        tooltip: 'سکانی QR Code',
-                        onPressed: () {
-                          CameraBarcodeScanner.show(
-                            context,
-                            (barcode) {
-                              if (mounted) {
-                                setState(() {
-                                  _barcodeController.text = barcode;
-                                });
-                              }
-                            },
-                            closeOnScan: true,
-                          );
-                        },
-                      ),
                       const SizedBox(width: 8),
                     ],
                   ),
                 ),
-                if (_barcodeController.text.trim().isNotEmpty || widget.user?.barcode?.isNotEmpty == true) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      final text = _barcodeController.text.trim().isNotEmpty
-                          ? _barcodeController.text.trim()
-                          : (widget.user?.barcode?.trim() ?? '');
-                      if (text.isNotEmpty) {
-                        UserQrDialog.show(
-                          context,
-                          barcode: text,
-                          userName: _nameController.text.trim().isNotEmpty
-                              ? _nameController.text.trim()
-                              : (widget.user?.name ?? ''),
-                          userRole: _getUserRoleNameForQr(),
-                          userPhone: _phoneController.text.trim().isNotEmpty
-                              ? _phoneController.text.trim()
-                              : (widget.user?.phone ?? ''),
-                          user: widget.user,
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.qr_code_2_rounded, size: 22),
-                    label: const Text(
-                      'پیشاندان و چاپکردنی کیو ئاڕ کۆدی بەکارهێنەر (QR)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'KJino'),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: AppSpacing.md),
 
                 AppTextField(

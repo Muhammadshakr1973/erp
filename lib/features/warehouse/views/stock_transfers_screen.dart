@@ -51,6 +51,12 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
                   // Receipt Header
                   Row(
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'داخستن',
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -284,12 +290,6 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('داخستن'),
-                  ),
                 ],
               ),
             ),
@@ -423,13 +423,18 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
         icon: const Icon(Icons.local_shipping),
         label: const Text('بارکردنی نوێ بۆ کاشڤان'),
         onPressed: () async {
-          final warehouseId = activeWarehouseId ??
+          final wList = warehousesAsync.asData?.value ?? [];
+          final currentW = (activeWarehouseId != null && wList.any((w) => w.id == activeWarehouseId))
+              ? wList.firstWhere((w) => w.id == activeWarehouseId)
+              : (dashboardAsync.asData?.value.warehouseId != null &&
+                      wList.any((w) => w.id == dashboardAsync.asData!.value.warehouseId))
+                  ? wList.firstWhere((w) => w.id == dashboardAsync.asData!.value.warehouseId)
+                  : (wList.isNotEmpty ? wList.first : null);
+
+          final warehouseId = currentW?.id ??
+              activeWarehouseId ??
               dashboardAsync.asData?.value.warehouseId ??
-              1;
-          final currentW = warehousesAsync.asData?.value.firstWhere(
-            (w) => w.id == warehouseId,
-            orElse: () => warehousesAsync.asData!.value.first,
-          );
+              (wList.isNotEmpty ? wList.first.id : 1);
           final warehouseName = currentW?.name ??
               dashboardAsync.asData?.value.warehouseName ??
               'کۆگای سەرەکی';

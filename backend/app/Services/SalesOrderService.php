@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\SalesOrder;
+use App\Models\Warehouse;
 use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
 use App\Models\PurchaseRequirement;

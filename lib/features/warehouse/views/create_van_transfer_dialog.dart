@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -84,11 +85,18 @@ class _CreateVanTransferDialogState
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'دیاریکردنی کاڵا بۆ بارکردن',
-                            style: AppTextStyles.h3,
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'داخستن',
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'دیاریکردنی کاڵا بۆ بارکردن',
+                              style: AppTextStyles.h3,
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.qr_code_scanner),
@@ -202,7 +210,19 @@ class _CreateVanTransferDialogState
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text('بڕی ${product.name}', style: AppTextStyles.bodyBold),
+          title: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'داخستن',
+                onPressed: () => Navigator.pop(ctx),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('بڕی ${product.name}', style: AppTextStyles.bodyBold),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,10 +241,6 @@ class _CreateVanTransferDialogState
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('پاشگەزبوونەوە'),
-            ),
             ElevatedButton(
               onPressed: () {
                 final qty = int.tryParse(qtyController.text.trim()) ?? 0;
@@ -266,10 +282,41 @@ class _CreateVanTransferDialogState
     final productsAsync = ref.watch(productsListProvider);
 
     final allProducts = productsAsync.asData?.value ?? [];
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = AppBreakpoints.isMobile(screenWidth);
 
     return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 0 : 40,
+        vertical: isMobile ? 12 : 24,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
+      ),
+      titlePadding: EdgeInsets.fromLTRB(
+        isMobile ? 16 : 24,
+        isMobile ? 16 : 24,
+        isMobile ? 16 : 24,
+        0,
+      ),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 24,
+        vertical: 16,
+      ),
+      actionsPadding: EdgeInsets.fromLTRB(
+        isMobile ? 16 : 24,
+        0,
+        isMobile ? 16 : 24,
+        isMobile ? 16 : 24,
+      ),
       title: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'داخستن',
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -289,7 +336,7 @@ class _CreateVanTransferDialogState
         ],
       ),
       content: SizedBox(
-        width: 520,
+        width: isMobile ? double.infinity : 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -306,29 +353,39 @@ class _CreateVanTransferDialogState
                 child: warehousesAsync.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (err, _) => const Text('هەڵە لە بارکردنی کۆگاکان'),
-                  data: (warehouses) {
-                    final fromWarehouses = warehouses;
-                    final targets = warehouses
-                        .where((w) => w.id != _selectedFromWarehouseId)
-                        .toList();
+                  data: (rawWarehouses) {
+                    final Map<int, WarehouseModel> uniqueMap = {};
+                    for (final w in rawWarehouses) {
+                      uniqueMap[w.id] = w;
+                    }
+                    final fromWarehouses = uniqueMap.values.toList();
 
-                    // Prefer Van warehouses if any
-                    if (_selectedToWarehouseId == null && targets.isNotEmpty) {
-                      final firstVan = targets.firstWhere(
-                        (w) => w.isVan,
-                        orElse: () => targets.first,
-                      );
-                      _selectedToWarehouseId = firstVan.id;
-                    } else if (targets.isNotEmpty &&
-                        !targets.any((w) => w.id == _selectedToWarehouseId)) {
-                      _selectedToWarehouseId = targets.first.id;
+                    final effectiveFromId = fromWarehouses.any((w) => w.id == _selectedFromWarehouseId)
+                        ? _selectedFromWarehouseId
+                        : (fromWarehouses.isNotEmpty ? fromWarehouses.first.id : null);
+
+                    final targets = effectiveFromId != null
+                        ? fromWarehouses.where((w) => w.id != effectiveFromId).toList()
+                        : <WarehouseModel>[];
+
+                    int? effectiveToId = _selectedToWarehouseId;
+                    if (effectiveToId == null || !targets.any((w) => w.id == effectiveToId)) {
+                      if (targets.isNotEmpty) {
+                        final firstVan = targets.firstWhere(
+                          (w) => w.isVan,
+                          orElse: () => targets.first,
+                        );
+                        effectiveToId = firstVan.id;
+                      } else {
+                        effectiveToId = null;
+                      }
                     }
 
                     return Column(
                       children: [
                         // Source Warehouse Dropdown
                         DropdownButtonFormField<int>(
-                          initialValue: _selectedFromWarehouseId,
+                          initialValue: effectiveFromId,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'کۆگای نێرەر (لە کۆگاوە) *',
@@ -369,8 +426,8 @@ class _CreateVanTransferDialogState
                             if (val != null) {
                               setState(() {
                                 _selectedFromWarehouseId = val;
-                                final newTargets = warehouses
-                                    .where((w) => w.id != _selectedFromWarehouseId)
+                                final newTargets = fromWarehouses
+                                    .where((w) => w.id != val)
                                     .toList();
                                 if (!newTargets.any((w) => w.id == _selectedToWarehouseId)) {
                                   _selectedToWarehouseId =
@@ -383,61 +440,70 @@ class _CreateVanTransferDialogState
                         const SizedBox(height: AppSpacing.md),
 
                         // Destination Warehouse Dropdown
-                        DropdownButtonFormField<int>(
-                          initialValue: _selectedToWarehouseId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'کۆگای وەرگر (بۆ کۆگای) *',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.arrow_downward,
-                                color: AppColors.success, size: 18),
-                          ),
-                          items: targets.map((w) {
-                            return DropdownMenuItem<int>(
-                              value: w.id,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    w.isReserve
-                                        ? Icons.inventory_2_outlined
-                                        : (w.isVan
-                                            ? Icons.local_shipping_outlined
-                                            : Icons.warehouse_outlined),
-                                    size: 16,
-                                    color: w.isReserve
-                                        ? Colors.purple
-                                        : (w.isVan
-                                            ? Colors.orange
-                                            : theme.colorScheme.primary),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      '${w.name} (${w.isVan ? "کاشڤان" : (w.isReserve ? "یەدەگ" : "فیزیکی")})',
-                                      overflow: TextOverflow.ellipsis,
+                        if (targets.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'هیچ کۆگایەکی تر بەردەست نییە بۆ گواستنەوە',
+                              style: TextStyle(color: AppColors.danger),
+                            ),
+                          )
+                        else
+                          DropdownButtonFormField<int>(
+                            initialValue: effectiveToId,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'کۆگای وەرگر (بۆ کۆگای) *',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.arrow_downward,
+                                  color: AppColors.success, size: 18),
+                            ),
+                            items: targets.map((w) {
+                              return DropdownMenuItem<int>(
+                                value: w.id,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      w.isReserve
+                                          ? Icons.inventory_2_outlined
+                                          : (w.isVan
+                                              ? Icons.local_shipping_outlined
+                                              : Icons.warehouse_outlined),
+                                      size: 16,
+                                      color: w.isReserve
+                                          ? Colors.purple
+                                          : (w.isVan
+                                              ? Colors.orange
+                                              : theme.colorScheme.primary),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedToWarehouseId = val;
-                                final targetW = warehouses.firstWhere(
-                                  (w) => w.id == val,
-                                  orElse: () => warehouses.first,
-                                );
-                                if (targetW.isVan &&
-                                    _notesController.text.contains('گواستنەوە')) {
-                                  _notesController.text =
-                                      'بارکردنی کاڵا بۆ ئۆتۆمبێلی کاشڤان';
-                                }
-                              });
-                            }
-                          },
-                        ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '${w.name} (${w.isVan ? "کاشڤان" : (w.isReserve ? "یەدەگ" : "فیزیکی")})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _selectedToWarehouseId = val;
+                                  final targetW = fromWarehouses.firstWhere(
+                                    (w) => w.id == val,
+                                    orElse: () => fromWarehouses.first,
+                                  );
+                                  if (targetW.isVan &&
+                                      _notesController.text.contains('گواستنەوە')) {
+                                    _notesController.text =
+                                        'بارکردنی کاڵا بۆ ئۆتۆمبێلی کاشڤان';
+                                  }
+                                });
+                              }
+                            },
+                          ),
                       ],
                     );
                   },
@@ -565,10 +631,6 @@ class _CreateVanTransferDialogState
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('پاشگەزبوونەوە'),
-        ),
         _isSubmitting
             ? const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
@@ -578,16 +640,18 @@ class _CreateVanTransferDialogState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               )
-            : ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('بارکردن و دەرکردنی پسوڵە'),
-                onPressed: () async {
+            : SizedBox(
+                width: isMobile ? double.infinity : null,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('بارکردن و دەرکردنی پسوڵە'),
+                  onPressed: () async {
                   if (_selectedToWarehouseId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('تکایە کۆگای وەرگر دیاری بکە')),
@@ -655,6 +719,7 @@ class _CreateVanTransferDialogState
                   }
                 },
               ),
+            ),
       ],
     );
   }

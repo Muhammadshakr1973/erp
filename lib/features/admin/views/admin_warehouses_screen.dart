@@ -66,9 +66,22 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                 final isDirect = type == 'PHYSICAL_DIRECT';
 
                 return AlertDialog(
-                  title: Text(
-                    warehouse == null ? 'زیادکردنی کۆگای نوێ' : 'دەستکاریکردنی کۆگا',
-                    style: AppTextStyles.bodyBold,
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          warehouse == null ? 'زیادکردنی کۆگای نوێ' : 'دەستکاریکردنی کۆگا',
+                          style: AppTextStyles.bodyBold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                        tooltip: 'داخستن',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
                   content: SingleChildScrollView(
                     child: ConstrainedBox(
@@ -87,6 +100,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                           // Warehouse Type Selection
                           DropdownButtonFormField<String>(
                             initialValue: type,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'جۆری کۆگا *',
                               border: OutlineInputBorder(),
@@ -99,7 +113,12 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                     Icon(Icons.storefront_outlined,
                                         size: 20, color: AppColors.primary),
                                     SizedBox(width: 8),
-                                    Text('کۆگای فیزیکی - فرۆشتنی ڕاستەوخۆ'),
+                                    Expanded(
+                                      child: Text(
+                                        'کۆگای فیزیکی - فرۆشتنی ڕاستەوخۆ',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -110,7 +129,12 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                     Icon(Icons.inventory_2_outlined,
                                         size: 20, color: Colors.purple),
                                     SizedBox(width: 8),
-                                    Text('کۆگای فیزیکی - یەدەگ (تەنها بۆ پڕکردنەوە)'),
+                                    Expanded(
+                                      child: Text(
+                                        'کۆگای فیزیکی - یەدەگ (تەنها بۆ پڕکردنەوە)',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -121,7 +145,12 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                     Icon(Icons.local_shipping_outlined,
                                         size: 20, color: Colors.orange),
                                     SizedBox(width: 8),
-                                    Text('ئۆتۆمبێلی کاشڤان (گەڕۆک)'),
+                                    Expanded(
+                                      child: Text(
+                                        'ئۆتۆمبێلی کاشڤان (گەڕۆک)',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -174,6 +203,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                               data: (cashVans) {
                                 return DropdownButtonFormField<int?>(
                                   initialValue: selectedCashVanUserId,
+                                  isExpanded: true,
                                   decoration: const InputDecoration(
                                     labelText: 'دیاریکردنی کاشڤان (مەندوبی گەڕۆک) *',
                                     border: OutlineInputBorder(),
@@ -182,12 +212,18 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                   items: [
                                     const DropdownMenuItem<int?>(
                                       value: null,
-                                      child: Text('دیاری نەکراوە (هەڵبژێرە...)'),
+                                      child: Text(
+                                        'دیاری نەکراوە (هەڵبژێرە...)',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     ...cashVans.map((cv) {
                                       return DropdownMenuItem<int?>(
                                         value: cv.id,
-                                        child: Text('${cv.name} (${cv.phone})'),
+                                        child: Text(
+                                          '${cv.name} (${cv.phone})',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       );
                                     }),
                                   ],
@@ -217,6 +253,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                             // Main Warehouse Switch (Only for DIRECT sales physical warehouse)
                             if (isDirect) ...[
                               SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
                                 title: const Text('کۆگای بنەڕەتی و سەرەکی (Main)'),
                                 subtitle: const Text(
                                   'پسوڵەکان بە شێوەی خۆکار لەم کۆگایەوە دروست دەکرێن ئەگەر دیاری نەکرابێت.',
@@ -273,9 +310,11 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                     children: [
                                       const Icon(Icons.badge_outlined, size: 18),
                                       const SizedBox(width: 6),
-                                      const Text(
-                                        'کارمەندانی کۆگا (Warehouse Keepers)',
-                                        style: AppTextStyles.bodyBold,
+                                      const Expanded(
+                                        child: Text(
+                                          'کارمەندانی کۆگا (Warehouse Keepers)',
+                                          style: AppTextStyles.bodyBold,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -347,9 +386,11 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                       children: [
                                         const Icon(Icons.support_agent_outlined, size: 18),
                                         const SizedBox(width: 6),
-                                        const Text(
-                                          'مەندوبەکانی فرۆشتن لەم کۆگایەوە (Salesmen)',
-                                          style: AppTextStyles.bodyBold,
+                                        const Expanded(
+                                          child: Text(
+                                            'مەندوبەکانی فرۆشتن لەم کۆگایەوە (Salesmen)',
+                                            style: AppTextStyles.bodyBold,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -408,6 +449,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
 
                           if (warehouse != null)
                             SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
                               title: const Text('چالاکە'),
                               value: isActive,
                               onChanged: (val) {
@@ -421,10 +463,6 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                     ),
                   ),
                   actions: [
-                    TextButton(
-                      onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                      child: const Text('پاشگەزبوونەوە'),
-                    ),
                     isSubmitting
                         ? const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -541,15 +579,24 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text('سڕینەوەی کۆگای ${warehouse.name}'),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text('سڕینەوەی کۆگای ${warehouse.name}'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                    tooltip: 'داخستن',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
               content: const Text(
                 'ئایا دڵنیایت لە سڕینەوەی ئەم کۆگایە؟\nتێبینی: ئەگەر کۆگاکە هەر کاڵایەکی تێدا مابێت سڕینەوەکە ڕەتدەکرێتەوە تاوەکو کاڵاکان بەتاڵ دەکرێن.',
               ),
               actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                  child: const Text('پاشگەزبوونەوە'),
-                ),
                 isSubmitting
                     ? const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
@@ -628,10 +675,10 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showWarehouseFormDialog(),
-        icon: const Icon(Icons.add),
-        label: const Text('کۆگای نوێ'),
+        tooltip: 'کۆگای نوێ',
+        child: const Icon(Icons.add),
       ),
       body: warehousesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -905,6 +952,8 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: AppCard(
                         padding: const EdgeInsets.all(AppSpacing.md),
+                        onTap: () => _showWarehouseFormDialog(warehouse),
+                        onLongPress: () => _showDeleteDialog(warehouse),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1095,24 +1144,6 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                   ),
                                 ],
                               ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20),
-                                  tooltip: 'دەستکاریکردن',
-                                  onPressed: () =>
-                                      _showWarehouseFormDialog(warehouse),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 20, color: AppColors.danger),
-                                  tooltip: 'سڕینەوە',
-                                  onPressed: () =>
-                                      _showDeleteDialog(warehouse),
-                                ),
-                              ],
                             ),
                           ],
                         ),
