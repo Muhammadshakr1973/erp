@@ -71,8 +71,8 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                     style: AppTextStyles.bodyBold,
                   ),
                   content: SingleChildScrollView(
-                    child: SizedBox(
-                      width: 520,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,85 +692,106 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                 // 1. Overview Metric Cards
                 LayoutBuilder(
                   builder: (context, constraints) {
+                    Widget buildStatCard(
+                        String title, String value, Color color) {
+                      return AppCard(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: AppTextStyles.caption,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              value,
+                              style: AppTextStyles.h2.copyWith(color: color),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (constraints.maxWidth < 600) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: buildStatCard(
+                                  'کۆی کۆگاکان',
+                                  '${warehouses.length}',
+                                  theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: buildStatCard(
+                                  'فرۆشتنی ڕاستەوخۆ',
+                                  '$directCount',
+                                  AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: buildStatCard(
+                                  'یەدەگ (پڕکردنەوە)',
+                                  '$reserveCount',
+                                  Colors.purple,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: buildStatCard(
+                                  'ئۆتۆمبێلی کاشڤان',
+                                  '$vanCount',
+                                  Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
                     return Row(
                       children: [
                         Expanded(
-                          child: AppCard(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('کۆی کۆگاکان',
-                                    style: AppTextStyles.caption),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${warehouses.length}',
-                                  style: AppTextStyles.h2.copyWith(
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: buildStatCard(
+                            'کۆی کۆگاکان',
+                            '${warehouses.length}',
+                            theme.colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
-                          child: AppCard(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('فرۆشتنی ڕاستەوخۆ',
-                                    style: AppTextStyles.caption),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '$directCount',
-                                  style: AppTextStyles.h2.copyWith(
-                                    color: AppColors.success,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: buildStatCard(
+                            'فرۆشتنی ڕاستەوخۆ',
+                            '$directCount',
+                            AppColors.success,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
-                          child: AppCard(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('یەدەگ (پڕکردنەوە)',
-                                    style: AppTextStyles.caption),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '$reserveCount',
-                                  style: AppTextStyles.h2.copyWith(
-                                    color: Colors.purple,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: buildStatCard(
+                            'یەدەگ (پڕکردنەوە)',
+                            '$reserveCount',
+                            Colors.purple,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
-                          child: AppCard(
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('ئۆتۆمبێلی کاشڤان',
-                                    style: AppTextStyles.caption),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '$vanCount',
-                                  style: AppTextStyles.h2.copyWith(
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: buildStatCard(
+                            'ئۆتۆمبێلی کاشڤان',
+                            '$vanCount',
+                            Colors.orange,
                           ),
                         ),
                       ],
@@ -780,28 +801,17 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                 const SizedBox(height: AppSpacing.md),
 
                 // 2. Search & Segment Filter Bar
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        controller: _searchController,
-                        hintText: 'گەڕان بەپێی ناوی کۆگا، ناونیشان، کارمەند، کاشڤان...',
-                        prefixIcon: Icons.search,
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val.trim();
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    SingleChildScrollView(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 700;
+                    final filterButton = SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SegmentedButton<String>(
                         segments: const [
                           ButtonSegment(value: 'ALL', label: Text('هەموو')),
                           ButtonSegment(
-                              value: 'PHYSICAL_DIRECT', label: Text('فرۆشتنی ڕاستەوخۆ')),
+                              value: 'PHYSICAL_DIRECT',
+                              label: Text('فرۆشتنی ڕاستەوخۆ')),
                           ButtonSegment(
                               value: 'PHYSICAL_RESERVE', label: Text('یەدەگ')),
                           ButtonSegment(value: 'VAN', label: Text('کاشڤان')),
@@ -813,8 +823,49 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                           });
                         },
                       ),
-                    ),
-                  ],
+                    );
+
+                    if (isCompact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppTextField(
+                            controller: _searchController,
+                            hintText:
+                                'گەڕان بەپێی ناوی کۆگا، ناونیشان، کارمەند، کاشڤان...',
+                            prefixIcon: Icons.search,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim();
+                              });
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          filterButton,
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: AppTextField(
+                            controller: _searchController,
+                            hintText:
+                                'گەڕان بەپێی ناوی کۆگا، ناونیشان، کارمەند، کاشڤان...',
+                            prefixIcon: Icons.search,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim();
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        filterButton,
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
 
@@ -875,16 +926,18 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Text(
+                                    warehouse.name,
+                                    style: AppTextStyles.bodyBold,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
-                                      Flexible(
-                                        child: Text(
-                                          warehouse.name,
-                                          style: AppTextStyles.bodyBold,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 8, vertical: 2),
@@ -904,8 +957,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                           ),
                                         ),
                                       ),
-                                      if (warehouse.isMain) ...[
-                                        const SizedBox(width: 6),
+                                      if (warehouse.isMain)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
@@ -928,9 +980,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                             ),
                                           ),
                                         ),
-                                      ],
-                                      if (!warehouse.isActive) ...[
-                                        const SizedBox(width: 6),
+                                      if (!warehouse.isActive)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
@@ -949,7 +999,6 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                             ),
                                           ),
                                         ),
-                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 6),
@@ -980,13 +1029,15 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
                                         const Icon(Icons.person_pin_outlined,
                                             size: 14, color: Colors.orange),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          warehouse.cashVanUserName != null
-                                              ? 'کاشڤان: ${warehouse.cashVanUserName}'
-                                              : 'کاشڤان دیاری نەکراوە',
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.orange.shade800,
+                                        Expanded(
+                                          child: Text(
+                                            warehouse.cashVanUserName != null
+                                                ? 'کاشڤان: ${warehouse.cashVanUserName}'
+                                                : 'کاشڤان دیاری نەکراوە',
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade800,
+                                            ),
                                           ),
                                         ),
                                       ],
