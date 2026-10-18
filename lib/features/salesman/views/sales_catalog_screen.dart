@@ -806,13 +806,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF13171F) : const Color(0xFFF4F6F9),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 1. TOP BAR (Matching image 8.png)
-            _buildTopBar(context, unpackedOrders),
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF13171F) : const Color(0xFFF4F6F9),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 1. TOP BAR (Matching image 8.png in LTR)
+              _buildTopBar(context, unpackedOrders),
 
             // 2. 10-SECOND BATCH COUNTDOWN & PERSISTENT FAILURE BAR
             _buildSyncCountdownBanner(context),
@@ -900,8 +902,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Top Bar matching design in 8.png
   Widget _buildTopBar(BuildContext context, List<OrderModel> unpackedOrders) {
