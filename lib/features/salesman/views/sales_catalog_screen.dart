@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/app_text_field.dart';
-import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
@@ -22,7 +20,6 @@ import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/views/customer_selection_dialog.dart';
-import '../../warehouse/providers/warehouse_provider.dart';
 
 class SalesCatalogScreen extends ConsumerStatefulWidget {
   const SalesCatalogScreen({super.key});
@@ -147,7 +144,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     });
 
     _startOrRestart10SecondDebounce(
-      actionDesc: 'زیادکردنی ${product.name} بۆ ${_selectedOrderCustomerName}',
+      actionDesc: 'زیادکردنی ${product.name} بۆ $_selectedOrderCustomerName',
     );
   }
 
@@ -171,7 +168,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     });
 
     _startOrRestart10SecondDebounce(
-      actionDesc: 'کەمکردنی ${product.name} بۆ ${_selectedOrderCustomerName}',
+      actionDesc: 'کەمکردنی ${product.name} بۆ $_selectedOrderCustomerName',
     );
   }
 
@@ -273,7 +270,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       });
 
       _startOrRestart10SecondDebounce(
-        actionDesc: 'نوێکردنەوەی بڕی ${product.name} بۆ ${_selectedOrderCustomerName}',
+        actionDesc: 'نوێکردنەوەی بڕی ${product.name} بۆ $_selectedOrderCustomerName',
       );
     }
   }
@@ -419,10 +416,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
+        bool isRetrying = false;
         return StatefulBuilder(
           builder: (dialogCtx, setModalState) {
             final theme = Theme.of(context);
-            bool isRetrying = false;
 
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -552,9 +549,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
   /// Create New Order Dialog (+)
   Future<void> _showCreateOrderDialog() async {
-    final customersAsync = ref.read(customerListProvider);
-    final customers = customersAsync.asData?.value ?? [];
-
     await showDialog(
       context: context,
       builder: (dialogCtx) {
