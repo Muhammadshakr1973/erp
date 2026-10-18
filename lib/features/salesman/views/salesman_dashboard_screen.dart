@@ -152,6 +152,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 children: [
                   _buildActionCard(
                     context,
+                    'فرۆشتن (بە وێنە)',
+                    Icons.point_of_sale_rounded,
+                    () {
+                      ref.read(salesmanTabIndexProvider.notifier).state = 2;
+                    },
+                  ),
+                  _buildActionCard(
+                    context,
                     'پسوڵەی نوێ',
                     AppIcons.newOrder,
                     () {
@@ -208,7 +216,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   Text('دوایین پسوڵەکان', style: AppTextStyles.h2),
                   TextButton(
                     onPressed: () {
-                      ref.read(salesmanTabIndexProvider.notifier).state = 2; // Swaps to the orders tab
+                      ref.read(salesmanTabIndexProvider.notifier).state = 3; // Swaps to the orders tab
                     },
                     child: const Text('هەمووی'),
                   ),

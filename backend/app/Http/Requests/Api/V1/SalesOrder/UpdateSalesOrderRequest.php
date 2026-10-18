@@ -19,6 +19,26 @@ class UpdateSalesOrderRequest extends FormRequest
                 'warehouse_id' => $user->warehouse_id,
             ]);
         }
+
+        if ($this->has('customer_id') && (int)$this->input('customer_id') === 0) {
+            $tempCustomer = \App\Models\Customer::where('id', 0)->first();
+            if (!$tempCustomer) {
+                $defaultRoute = \App\Models\Route::firstOrCreate(
+                    ['name' => 'گشتی'],
+                    ['color' => '#888888', 'is_active' => true]
+                );
+                \Illuminate\Support\Facades\DB::statement('SET SESSION sql_mode = "NO_AUTO_VALUE_ON_ZERO";');
+                \App\Models\Customer::create([
+                    'id' => 0,
+                    'name' => 'کڕیاری کاتی (بێ ناو)',
+                    'phone' => '00000000000',
+                    'route_id' => $defaultRoute->id,
+                    'price_type' => 'N3',
+                    'current_balance' => 0,
+                    'is_active' => true,
+                ]);
+            }
+        }
     }
 
     public function rules(): array

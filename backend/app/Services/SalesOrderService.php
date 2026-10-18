@@ -1134,7 +1134,7 @@ class SalesOrderService
             // Increment version and save order
             $order->update([
                 'customer_id' => $customer->id,
-                'warehouse_id' => $data['warehouse_id'],
+                'warehouse_id' => $data['warehouse_id'] ?? $order->warehouse_id,
                 'notes' => $data['notes'] ?? $order->notes,
                 'subtotal' => $subtotal,
                 'permanent_discount_percent' => $permDiscountPercent,

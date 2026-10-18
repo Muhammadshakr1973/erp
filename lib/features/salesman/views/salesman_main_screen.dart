@@ -6,6 +6,7 @@ import '../../../core/components/responsive_shell.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
 import 'salesman_dashboard_screen.dart';
 import 'today_customers_screen.dart';
+import 'sales_catalog_screen.dart';
 import 'salesman_orders_screen.dart';
 import '../../shared/views/profile_screen.dart';
 
@@ -22,6 +23,7 @@ class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
   final List<Widget> _screens = [
     const SalesmanDashboardScreen(),
     const TodayCustomersScreen(),
+    const SalesCatalogScreen(),
     const SalesmanOrdersScreen(),
     const ProfileScreen(),
   ];
@@ -64,6 +66,10 @@ class _SalesmanMainScreenState extends ConsumerState<SalesmanMainScreen> {
         NavigationDestination(
           icon: Icon(AppIcons.customers),
           label: 'کڕیارەکان',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.point_of_sale_rounded),
+          label: 'فرۆشتن',
         ),
         NavigationDestination(icon: Icon(AppIcons.order), label: 'پسوڵەکان'),
         NavigationDestination(icon: Icon(AppIcons.profile), label: 'پڕۆفایل'),
