@@ -41,6 +41,10 @@ class _CustomerSelectionDialogState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final bool isMobile = screenWidth < 600;
+
     final customersAsync = ref.watch(customerListProvider);
     final dashboardAsync = ref.watch(salesmanDashboardProvider);
 
@@ -48,11 +52,22 @@ class _CustomerSelectionDialogState
     final todayRouteName = dashboardAsync.asData?.value.routeName;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 24,
+        vertical: isMobile ? 16 : 24,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+      ),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 620),
-        width: double.maxFinite,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        constraints: BoxConstraints(
+          maxWidth: 500,
+          maxHeight: isMobile ? screenHeight * 0.90 : 620,
+        ),
+        width: double.infinity,
+        padding: EdgeInsets.all(isMobile ? 12 : AppSpacing.md),
         child: Column(
           children: [
             Row(
