@@ -140,23 +140,28 @@ class _CustomerSelectionDialogState
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: Colors.orange,
-                              shape: BoxShape.circle,
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          clipBehavior: Clip.antiAlias,
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.flash_on, color: Colors.white, size: 20),
                             ),
-                            child: const Icon(Icons.flash_on, color: Colors.white, size: 20),
+                            title: Text(
+                              tempCustomer.name,
+                              style: AppTextStyles.bodyBold.copyWith(color: Colors.orange.shade800),
+                            ),
+                            subtitle: const Text('دروستکردنی پسوڵە بەبێ دیاریکردنی پێشوەختەی کڕیار'),
+                            onTap: () {
+                              Navigator.of(context).pop(tempCustomer);
+                            },
                           ),
-                          title: Text(
-                            tempCustomer.name,
-                            style: AppTextStyles.bodyBold.copyWith(color: Colors.orange.shade800),
-                          ),
-                          subtitle: const Text('دروستکردنی پسوڵە بەبێ دیاریکردنی پێشوەختەی کڕیار'),
-                          onTap: () {
-                            Navigator.of(context).pop(tempCustomer);
-                          },
                         ),
                       ),
                     );
