@@ -11,14 +11,25 @@ import '../../../../core/utils/formatters.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../models/customer.dart';
 import '../providers/customer_provider.dart';
+import 'customer_form_dialog.dart';
 
 class CustomerSelectionDialog extends ConsumerStatefulWidget {
-  const CustomerSelectionDialog({super.key});
+  final bool allowTemporaryCustomer;
 
-  static Future<Customer?> show(BuildContext context) {
+  const CustomerSelectionDialog({
+    super.key,
+    this.allowTemporaryCustomer = false,
+  });
+
+  static Future<Customer?> show(
+    BuildContext context, {
+    bool allowTemporaryCustomer = false,
+  }) {
     return showDialog<Customer>(
       context: context,
-      builder: (context) => const CustomerSelectionDialog(),
+      builder: (context) => CustomerSelectionDialog(
+        allowTemporaryCustomer: allowTemporaryCustomer,
+      ),
     );
   }
 
@@ -36,6 +47,17 @@ class _CustomerSelectionDialogState
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openNewCustomerDialog() async {
+    final result = await showDialog<dynamic>(
+      context: context,
+      builder: (ctx) => const CustomerFormDialog(),
+    );
+
+    if (result != null && result is Customer && mounted) {
+      Navigator.of(context).pop(result);
+    }
   }
 
   @override
@@ -71,11 +93,23 @@ class _CustomerSelectionDialogState
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('دیاریکردنی کڕیار', style: AppTextStyles.h2),
+                const Expanded(
+                  child: Text('دیاریکردنی کڕیار', style: AppTextStyles.h2),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  tooltip: 'تۆمارکردنی کڕیاری نوێ',
+                  onPressed: _openNewCustomerDialog,
+                ),
+                const SizedBox(width: 4),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: 'داخستن',
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -83,7 +117,7 @@ class _CustomerSelectionDialogState
             const SizedBox(height: AppSpacing.sm),
             AppTextField(
               controller: _searchController,
-              hintText: 'گەڕان بەپێی ناوی کڕیار یان تەلەفۆن...',
+              hintText: 'گەڕان بەپێی ناوی کڕیار، مارکێت یان تەلەفۆن...',
               prefixIcon: AppIcons.search,
               onChanged: (val) {
                 setState(() {
@@ -91,28 +125,109 @@ class _CustomerSelectionDialogState
                 });
               },
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                label: const Text(
+                  'زیادکردنی کڕیاری نوێ',
+                  style: TextStyle(
+                    fontFamily: 'KJino',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                onPressed: _openNewCustomerDialog,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: customersAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) =>
                     Center(child: Text('هەڵە لە بارکردنی کڕیاران: $err')),
                 data: (customers) {
-                  final filtered = customers.where((c) {
+                  final availableCustomers = customers.where((c) {
+                    if (c.id == 0 || c.name.contains('کڕیاری کاتی')) {
+                      return widget.allowTemporaryCustomer;
+                    }
+                    return true;
+                  }).toList();
+
+                  final filtered = availableCustomers.where((c) {
                     final matchesName = c.name.toLowerCase().contains(
                       _searchQuery,
                     );
+                    final matchesCustomerName = (c.customerName ?? '')
+                        .toLowerCase()
+                        .contains(_searchQuery);
                     final matchesPhone = (c.phone ?? '').toLowerCase().contains(
                       _searchQuery,
                     );
-                    return matchesName || matchesPhone;
+                    final matchesRoute = (c.route?.name ?? '')
+                        .toLowerCase()
+                        .contains(_searchQuery);
+                    return matchesName || matchesCustomerName || matchesPhone || matchesRoute;
                   }).toList();
 
                   if (filtered.isEmpty) {
-                    return const Center(child: Text('هیچ کڕیارێک نەدۆزرایەوە'));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_search_outlined,
+                              size: 48,
+                              color: theme.colorScheme.outlineVariant,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            const Text(
+                              'هیچ کڕیارێک نەدۆزرایەوە',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                              label: const Text(
+                                'دروستکردنی کڕیاری نوێ',
+                                style: TextStyle(
+                                  fontFamily: 'KJino',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onPressed: _openNewCustomerDialog,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
-                  // Separate into today's route customers, other route customers & temporary customer
+                  // Separate into today's route customers, other route customers & temporary customer (if allowed)
                   final List<Customer> todayCustomers = [];
                   final List<Customer> otherCustomers = [];
                   Customer? tempCustomer;
@@ -130,8 +245,8 @@ class _CustomerSelectionDialogState
                   // Build list items
                   final List<Widget> listItems = [];
 
-                  // Section 0: Highlighted Temporary Customer Card
-                  if (tempCustomer != null) {
+                  // Section 0: Highlighted Temporary Customer Card (Only if explicitly allowed)
+                  if (widget.allowTemporaryCustomer && tempCustomer != null) {
                     listItems.add(
                       Container(
                         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -291,6 +406,16 @@ class _CustomerSelectionDialogState
   }
 
   Widget _buildCustomerTile(BuildContext context, Customer customer) {
+    final hasCustomerName = customer.customerName != null && customer.customerName!.trim().isNotEmpty;
+    final subtitleParts = <String>[];
+    if (hasCustomerName) {
+      subtitleParts.add(customer.customerName!.trim());
+    }
+    subtitleParts.add(customer.phone ?? 'بێ ژمارە');
+    if (customer.route?.name != null && customer.route!.name.isNotEmpty) {
+      subtitleParts.add(customer.route!.name);
+    }
+
     return ListTile(
       leading: CustomerAvatar(
         imageUrl: customer.imageUrl,
@@ -303,7 +428,8 @@ class _CustomerSelectionDialogState
         style: AppTextStyles.bodyBold,
       ),
       subtitle: Text(
-        '${customer.phone ?? 'بێ ژمارە'}${customer.route?.name != null ? " • ${customer.route!.name}" : ""}',
+        subtitleParts.join(' • '),
+        style: AppTextStyles.caption,
       ),
       trailing: customer.balance > 0
           ? Text(

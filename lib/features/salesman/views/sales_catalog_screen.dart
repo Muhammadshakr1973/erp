@@ -654,12 +654,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   ),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
                   label: const Text('تۆمارکردنی کڕیاری نوێ لە سیستەمدا', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(dialogCtx);
-                    showDialog(
+                    final newCust = await showDialog<dynamic>(
                       context: context,
                       builder: (ctx) => const CustomerFormDialog(),
                     );
+                    if (newCust != null && newCust is Customer && mounted) {
+                      _createOrderForCustomer(newCust);
+                    }
                   },
                 ),
               ],
