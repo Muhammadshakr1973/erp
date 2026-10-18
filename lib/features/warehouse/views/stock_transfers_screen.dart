@@ -421,7 +421,7 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.local_shipping),
-        label: const Text('بارکردنی نوێ بۆ کاشڤان'),
+        label: const Text('گواستنەوە'),
         onPressed: () async {
           final wList = warehousesAsync.asData?.value ?? [];
           final currentW = (activeWarehouseId != null && wList.any((w) => w.id == activeWarehouseId))

@@ -23,7 +23,13 @@ class Warehouse extends Model
     public function isVan(): bool
     {
         $normalizedType = strtoupper($this->type ?? '');
-        return $normalizedType === self::TYPE_VAN || str_contains($this->name, 'کاشڤان');
+        if ($normalizedType === self::TYPE_VAN || str_contains($this->name, 'کاشڤان')) {
+            return true;
+        }
+        if (isset($this->cash_van_user_id) && $this->cash_van_user_id) {
+            return true;
+        }
+        return false;
     }
 
     public function isReserve(): bool

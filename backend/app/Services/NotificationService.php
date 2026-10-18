@@ -371,8 +371,14 @@ class NotificationService
      */
     public function notifyLowStock(WarehouseStock $stock, Product $product): void
     {
-        $title = 'ئاگاداری کەمبوونەوەی کاڵا لە کۆگا';
-        $body = "کاڵای '{$product->name}' گەیشتە ئاستی کەمبوونەوە ({$stock->quantity} دانە ماوە).";
+        $warehouse = $stock->warehouse;
+        $isVan = $warehouse ? $warehouse->isVan() : false;
+        $whName = $warehouse ? $warehouse->name : 'کۆگا';
+
+        $title = $isVan ? 'ئاگاداری کەمبوونەوەی کاڵا لە کاشڤان' : 'ئاگاداری کەمبوونەوەی کاڵا لە کۆگا';
+        $body = $isVan
+            ? "کاڵای '{$product->name}' لە ({$whName}) گەیشتە ئاستی کەمبوونەوە ({$stock->quantity} دانە ماوە)."
+            : "کاڵای '{$product->name}' گەیشتە ئاستی کەمبوونەوە ({$stock->quantity} دانە ماوە).";
 
         $data = [
             'product_id' => $product->id,
@@ -382,7 +388,16 @@ class NotificationService
             'action' => 'open_stock',
         ];
 
+        // Notify standard warehouse, admin, and owner roles
         $this->notifyRole(['warehouse', 'admin', 'owner'], Notification::TYPE_STOCK, $title, $body, $data);
+
+        // If this is a cash van warehouse, also notify the assigned cash van user/salesman
+        if ($isVan && $warehouse) {
+            $vanUserId = $warehouse->cash_van_user_id ?? User::where('warehouse_id', $warehouse->id)->where('is_cash_van', true)->value('id');
+            if ($vanUserId) {
+                $this->notifyUser($vanUserId, Notification::TYPE_STOCK, $title, $body, $data);
+            }
+        }
     }
 
     /**
@@ -390,8 +405,14 @@ class NotificationService
      */
     public function notifyOutOfStock(WarehouseStock $stock, Product $product): void
     {
-        $title = 'تەواوبوونی ستۆکی کاڵا';
-        $body = "ستۆکی کاڵای '{$product->name}' تەواو بوو.";
+        $warehouse = $stock->warehouse;
+        $isVan = $warehouse ? $warehouse->isVan() : false;
+        $whName = $warehouse ? $warehouse->name : 'کۆگا';
+
+        $title = $isVan ? 'تەواوبوونی ستۆک لە کاشڤان' : 'تەواوبوونی ستۆکی کاڵا';
+        $body = $isVan
+            ? "ستۆکی کاڵای '{$product->name}' لە ({$whName}) بە تەواوی تەواو بوو (٠ دانە)."
+            : "ستۆکی کاڵای '{$product->name}' تەواو بوو.";
 
         $data = [
             'product_id' => $product->id,
@@ -400,7 +421,16 @@ class NotificationService
             'action' => 'open_stock',
         ];
 
+        // Notify warehouse staff (main warehouse), admin, and owner
         $this->notifyRole(['warehouse', 'admin', 'owner'], Notification::TYPE_STOCK, $title, $body, $data);
+
+        // If this is a cash van warehouse, also notify the assigned cash van user/salesman
+        if ($isVan && $warehouse) {
+            $vanUserId = $warehouse->cash_van_user_id ?? User::where('warehouse_id', $warehouse->id)->where('is_cash_van', true)->value('id');
+            if ($vanUserId) {
+                $this->notifyUser($vanUserId, Notification::TYPE_STOCK, $title, $body, $data);
+            }
+        }
     }
 
     /**

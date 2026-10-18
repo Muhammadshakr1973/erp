@@ -6,7 +6,6 @@ import '../../../core/components/responsive_shell.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
 import '../../shared/providers/notification_provider.dart';
 import 'warehouse_dashboard_screen.dart';
-import 'orders_to_pack_screen.dart';
 import 'stock_transfers_screen.dart';
 import 'stock_list_screen.dart';
 import '../../shared/views/profile_screen.dart';
@@ -26,7 +25,6 @@ class WarehouseMainScreen extends ConsumerStatefulWidget {
 class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
   final List<Widget> _screens = [
     const WarehouseDashboardScreen(),
-    const OrdersToPackScreen(),
     const StockTransfersScreen(),
     const StockListScreen(),
     const ProfileScreen(),
@@ -71,12 +69,8 @@ class _WarehouseMainScreenState extends ConsumerState<WarehouseMainScreen> {
       destinations: const [
         NavigationDestination(icon: Icon(AppIcons.home), label: 'سەرەکی'),
         NavigationDestination(
-          icon: Icon(AppIcons.orderStatus),
-          label: 'پاکەتکردن',
-        ),
-        NavigationDestination(
           icon: Icon(Icons.local_shipping_outlined),
-          label: 'بارکردنی کاشڤان',
+          label: 'گواستنەوە',
         ),
         NavigationDestination(
           icon: Icon(Icons.inventory_2_outlined),

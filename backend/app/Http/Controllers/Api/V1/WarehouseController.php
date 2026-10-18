@@ -124,10 +124,23 @@ class WarehouseController extends Controller
             $query->where('is_active', true);
             if ($user && !$user->isAdmin() && !$user->isOwner()) {
                 $assignedIds = $user->assignedWarehouseIds();
-                if (!empty($assignedIds)) {
-                    $query->whereIn('id', $assignedIds);
-                } elseif ($user->warehouse_id) {
-                    $query->where('id', $user->warehouse_id);
+                if ($user->isWarehouse()) {
+                    // Warehouse keepers need to see their physical warehouses AND all cash van warehouses to load/transfer items to vans
+                    $query->where(function ($q) use ($assignedIds, $user) {
+                        if (!empty($assignedIds)) {
+                            $q->whereIn('id', $assignedIds);
+                        } elseif ($user->warehouse_id) {
+                            $q->where('id', $user->warehouse_id);
+                        }
+                        $q->orWhere('type', Warehouse::TYPE_VAN)
+                          ->orWhere('name', 'LIKE', '%کاشڤان%');
+                    });
+                } else {
+                    if (!empty($assignedIds)) {
+                        $query->whereIn('id', $assignedIds);
+                    } elseif ($user->warehouse_id) {
+                        $query->where('id', $user->warehouse_id);
+                    }
                 }
             }
         } elseif ($request->has('is_active')) {
@@ -173,6 +186,12 @@ class WarehouseController extends Controller
 
             if ($w->isVan()) {
                 $vanSalesman = User::where('warehouse_id', $w->id)->where('is_cash_van', true)->first();
+                if (!$vanSalesman && $assignedUsers->isNotEmpty()) {
+                    $vanSalesmanFromPivot = $assignedUsers->first(fn($u) => (bool) ($u->is_cash_van ?? false) || strtolower($u->role_name ?? '') === 'salesman');
+                    if ($vanSalesmanFromPivot) {
+                        $vanSalesman = User::find($vanSalesmanFromPivot->id);
+                    }
+                }
                 if ($vanSalesman) {
                     $w->cash_van_user_id = $vanSalesman->id;
                     $w->cash_van_user_name = $vanSalesman->name;

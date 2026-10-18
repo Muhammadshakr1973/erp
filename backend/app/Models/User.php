@@ -84,7 +84,16 @@ class User extends Authenticatable
         if (empty($assigned)) {
             return true;
         }
-        return in_array((int) $warehouseId, $assigned, true);
+        if (in_array((int) $warehouseId, $assigned, true)) {
+            return true;
+        }
+        if ($this->isWarehouse()) {
+            $warehouse = Warehouse::find($warehouseId);
+            if ($warehouse && $warehouse->isVan()) {
+                return true;
+            }
+        }
+        return false;
     }
     public function deviceTokens(): HasMany
     {
@@ -264,6 +273,7 @@ class User extends Authenticatable
                 'products.view',
                 'commissions.view',
                 'suppliers.view',
+                'stock.view',
             ])) {
                 return true;
             }

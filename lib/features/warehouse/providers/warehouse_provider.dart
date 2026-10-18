@@ -426,4 +426,35 @@ final stockTransfersListProvider =
   }
 });
 
+class VanTransferDraft {
+  final int? fromWarehouseId;
+  final int? toWarehouseId;
+  final String notes;
+  final Map<int, int> items; // productId -> quantity
+
+  const VanTransferDraft({
+    this.fromWarehouseId,
+    this.toWarehouseId,
+    this.notes = 'بارکردنی کاڵا بۆ ئۆتۆمبێلی کاشڤان',
+    this.items = const {},
+  });
+
+  VanTransferDraft copyWith({
+    int? fromWarehouseId,
+    int? toWarehouseId,
+    String? notes,
+    Map<int, int>? items,
+  }) {
+    return VanTransferDraft(
+      fromWarehouseId: fromWarehouseId ?? this.fromWarehouseId,
+      toWarehouseId: toWarehouseId ?? this.toWarehouseId,
+      notes: notes ?? this.notes,
+      items: items ?? this.items,
+    );
+  }
+}
+
+final vanTransferDraftStateProvider =
+    StateProvider<VanTransferDraft>((ref) => const VanTransferDraft());
+
 

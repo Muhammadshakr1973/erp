@@ -292,7 +292,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                     isAlert: data.pendingPackingCount > 0,
                     isDimmed: data.pendingPackingCount == 0,
                     onTap: () {
-                      ref.read(warehouseTabIndexProvider.notifier).state = 1;
+                      context.push('/orders-to-pack');
                     },
                   ),
                   _buildInteractiveStatCard(
@@ -520,7 +520,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
                 text: packingText,
                 icon: AppIcons.orderStatus,
                 onPressed: () {
-                  ref.read(warehouseTabIndexProvider.notifier).state = 1;
+                  context.push('/orders-to-pack');
                 },
               ),
             ),
@@ -564,7 +564,7 @@ class WarehouseDashboardScreen extends ConsumerWidget {
             if (orders.isNotEmpty)
               TextButton.icon(
                 onPressed: () {
-                  ref.read(warehouseTabIndexProvider.notifier).state = 1;
+                  context.push('/orders-to-pack');
                 },
                 icon: const Icon(Icons.arrow_forward, size: 16),
                 label: const Text('بینینی هەمووی'),

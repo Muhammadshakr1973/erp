@@ -17,6 +17,7 @@ import '../../auth/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../shared/providers/route_provider.dart';
+import '../../shared/models/route_model.dart';
 import '../../shared/views/user_qr_dialog.dart';
 import 'providers/user_provider.dart';
 
@@ -1264,32 +1265,67 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                             style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'KJino'),
                           ),
                         )
-                      : DropdownButtonFormField<int>(
-                          initialValue: selectedRouteId,
-                          isDense: true,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          hint: const Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'KJino', color: Colors.grey)),
-                          items: [
-                            const DropdownMenuItem<int>(
-                              value: null,
-                              child: Text('پشوو / بێ ڕاوت', style: TextStyle(fontSize: 12, fontFamily: 'KJino', color: Colors.grey)),
-                            ),
-                            ...filteredRoutes.map((r) {
-                              return DropdownMenuItem<int>(
-                                value: r.id,
-                                child: Text(r.name, style: const TextStyle(fontSize: 12, fontFamily: 'KJino')),
-                              );
-                            }),
-                          ],
-                          onChanged: (val) {
-                            setState(() {
-                              _routeAssignments[assignmentKey] = val;
-                            });
+                      : Builder(
+                          builder: (context) {
+                            final Map<int, RouteModel> uniqueRouteMap = {};
+                            for (final r in filteredRoutes) {
+                              uniqueRouteMap[r.id] = r;
+                            }
+
+                            if (selectedRouteId != null &&
+                                !uniqueRouteMap.containsKey(selectedRouteId)) {
+                              final matched = routes
+                                  .where((r) => r.id == selectedRouteId)
+                                  .firstOrNull;
+                              if (matched != null) {
+                                uniqueRouteMap[selectedRouteId] = matched;
+                              }
+                            }
+
+                            final effectiveRouteId = (selectedRouteId != null &&
+                                    uniqueRouteMap.containsKey(selectedRouteId))
+                                ? selectedRouteId
+                                : null;
+
+                            return DropdownButtonFormField<int>(
+                              initialValue: effectiveRouteId,
+                              isDense: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              hint: const Text('پشوو / بێ ڕاوت',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'KJino',
+                                      color: Colors.grey)),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: null,
+                                  child: Text('پشوو / بێ ڕاوت',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontFamily: 'KJino',
+                                          color: Colors.grey)),
+                                ),
+                                ...uniqueRouteMap.values.map((r) {
+                                  return DropdownMenuItem<int>(
+                                    value: r.id,
+                                    child: Text(r.name,
+                                        style: const TextStyle(
+                                            fontSize: 12, fontFamily: 'KJino')),
+                                  );
+                                }),
+                              ],
+                              onChanged: (val) {
+                                setState(() {
+                                  _routeAssignments[assignmentKey] = val;
+                                });
+                              },
+                            );
                           },
                         ),
                 ),
@@ -1493,29 +1529,48 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                DropdownButtonFormField<int>(
-                  key: _roleKey,
-                  initialValue: _selectedRoleId,
-                  decoration: InputDecoration(
-                    labelText: 'ڕۆڵی بەکارهێنەر',
-                    prefixIcon: const Icon(Icons.badge_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: rolesList.map((r) {
-                    return DropdownMenuItem<int>(
-                      value: r['id'],
-                      child: Text(
-                        _getRoleDisplayName(r['name']),
-                        style: const TextStyle(fontFamily: 'KJino'),
+                Builder(
+                  builder: (context) {
+                    final Map<int, dynamic> uniqueRoles = {};
+                    for (final r in rolesList) {
+                      final rId = (r['id'] as num?)?.toInt();
+                      if (rId != null) {
+                        uniqueRoles[rId] = r;
+                      }
+                    }
+
+                    final effectiveRoleId = (_selectedRoleId != null &&
+                            uniqueRoles.containsKey(_selectedRoleId))
+                        ? _selectedRoleId
+                        : (uniqueRoles.isNotEmpty ? uniqueRoles.keys.first : null);
+
+                    return DropdownButtonFormField<int>(
+                      key: _roleKey,
+                      initialValue: effectiveRoleId,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'ڕۆڵی بەکارهێنەر',
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
+                      items: uniqueRoles.values.map((r) {
+                        return DropdownMenuItem<int>(
+                          value: (r['id'] as num).toInt(),
+                          child: Text(
+                            _getRoleDisplayName(r['name']?.toString() ?? ''),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'KJino'),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedRoleId = val;
+                        });
+                      },
                     );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedRoleId = val;
-                    });
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -1654,9 +1709,36 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 if (isWarehouseSelected || isSalesmanSelected) ...[
                   warehousesAsync.when(
                     data: (warehouses) {
+                      final Map<int, WarehouseModel> uniqueMap = {};
+                      for (final w in warehouses) {
+                        uniqueMap[w.id] = w;
+                      }
+
+                      // If user has a selected warehouse missing from current list, add it as fallback so dropdown doesn't crash
+                      if (_selectedWarehouseId != null &&
+                          !uniqueMap.containsKey(_selectedWarehouseId)) {
+                        uniqueMap[_selectedWarehouseId!] = WarehouseModel(
+                          id: _selectedWarehouseId!,
+                          name: widget.user?.warehouseName ??
+                              'کۆگا #$_selectedWarehouseId',
+                          isMain: false,
+                          isActive: true,
+                        );
+                      }
+
+                      final effectiveWarehouseId = (_selectedWarehouseId != null &&
+                              uniqueMap.containsKey(_selectedWarehouseId))
+                          ? _selectedWarehouseId
+                          : (_isCashVan
+                              ? null
+                              : (uniqueMap.isNotEmpty
+                                  ? uniqueMap.keys.first
+                                  : null));
+
                       return DropdownButtonFormField<int>(
                         key: _warehouseKey,
-                        initialValue: _selectedWarehouseId,
+                        initialValue: effectiveWarehouseId,
+                        isExpanded: true,
                         decoration: InputDecoration(
                           labelText: _isCashVan
                               ? 'کۆگای ئۆتۆمبێلی کاشڤان (هەڵبژاردن یان دروستکردنی خۆکار)'
@@ -1669,11 +1751,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                           ),
                         ),
                         items: [
-                          if (_isCashVan && _selectedWarehouseId == null)
+                          if (_isCashVan)
                             const DropdownMenuItem<int>(
                               value: null,
                               child: Text(
                                 '✨ دروستکردنی کۆگای تایبەت بە خۆی بە خۆکار',
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: Colors.orange,
                                   fontWeight: FontWeight.bold,
@@ -1681,11 +1764,24 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                                 ),
                               ),
                             ),
-                          ...warehouses.map((w) {
+                          if (!_isCashVan && effectiveWarehouseId == null)
+                            const DropdownMenuItem<int>(
+                              value: null,
+                              child: Text(
+                                'دیاریکردنی کۆگا...',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontFamily: 'KJino',
+                                ),
+                              ),
+                            ),
+                          ...uniqueMap.values.map((w) {
                             return DropdownMenuItem<int>(
                               value: w.id,
                               child: Text(
                                 '${w.name} ${w.isVan ? "(کاشڤان)" : ""}',
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontFamily: 'KJino'),
                               ),
                             );

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class WarehouseModel {
   final int id;
@@ -35,7 +36,10 @@ class WarehouseModel {
     this.cashVanUserName,
   });
 
-  bool get isVan => type.toUpperCase() == 'VAN' || name.contains('کاشڤان');
+  bool get isVan =>
+      type.toUpperCase() == 'VAN' ||
+      name.contains('کاشڤان') ||
+      cashVanUserId != null;
   bool get isReserve => type.toUpperCase() == 'PHYSICAL_RESERVE';
   bool get isDirectSale =>
       type.toUpperCase() == 'PHYSICAL_DIRECT' ||
@@ -101,6 +105,10 @@ class WarehouseModel {
 }
 
 final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
+  // Watch authProvider so that when a user logs in, logs out, or user details update,
+  // the warehouse cache is automatically refreshed with the correct permissions.
+  ref.watch(authProvider);
+
   final api = ref.watch(apiClientProvider);
   try {
     final response = await api.client.get('/warehouses');
@@ -118,6 +126,20 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   } catch (e) {
     throw Exception(api.parseError(e));
   }
+});
+
+/// Returns the assigned cash van warehouse for the currently logged-in salesman
+final myAssignedVanWarehouseProvider = Provider<WarehouseModel?>((ref) {
+  final user = ref.watch(authProvider).user;
+  if (user == null) return null;
+  final warehouses = ref.watch(warehouseListProvider).asData?.value ?? [];
+
+  if (user.warehouseId != null) {
+    final match = warehouses.where((w) => w.id == user.warehouseId).firstOrNull;
+    if (match != null) return match;
+  }
+
+  return warehouses.where((w) => w.isVan && w.cashVanUserId == user.id).firstOrNull;
 });
 
 final warehouseAdminActionsProvider = Provider<WarehouseAdminActions>((ref) {

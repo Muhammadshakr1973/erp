@@ -23,6 +23,7 @@ import '../../features/admin/views/admin_delivery_trips_screen.dart';
 import '../../features/admin/views/admin_driver_collections_screen.dart';
 import '../../features/admin/views/admin_warehouses_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
+import '../../features/warehouse/views/orders_to_pack_screen.dart';
 import '../../features/warehouse/views/stock_transfers_screen.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
@@ -95,6 +96,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Shared route-specific checks
+      if (location.startsWith('/orders-to-pack') &&
+          !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
       if (location.startsWith('/pack-order') &&
           !(role == 'warehouse' || role == 'admin' || role == 'owner')) {
         return _getDashboardForRole(role);
@@ -213,6 +218,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return SalesReturnDetailScreen(returnId: id);
         },
+      ),
+      GoRoute(
+        path: '/orders-to-pack',
+        name: 'ordersToPack',
+        builder: (context, state) => const OrdersToPackScreen(),
       ),
       GoRoute(
         path: '/pack-order/:id',

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/navigation_tabs_provider.dart';
+
 import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
 import '../../../core/components/status_badge.dart';
@@ -27,7 +29,8 @@ import '../../../core/components/app_snackbar.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../providers/salesman_dashboard_provider.dart';
 import 'salesman_my_commissions_screen.dart';
-import 'salesman_main_screen.dart';
+import '../../warehouse/views/stock_list_screen.dart';
+import '../../warehouse/providers/warehouse_provider.dart';
 import '../../../core/api_client.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 
@@ -42,6 +45,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     final syncStatus = ref.watch(syncStatusProvider);
     final syncService = ref.watch(syncServiceProvider);
     final dashboardAsync = ref.watch(salesmanDashboardProvider);
+    final myVan = ref.watch(myAssignedVanWarehouseProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -113,7 +117,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 data: (dashboard) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSalesmanDashboardStats(context, dashboard),
+                    _buildSalesmanDashboardStats(context, ref, dashboard, user, myVan),
                     _buildTodayVisitPlan(context, ref, dashboard),
                   ],
                 ),
@@ -570,30 +574,59 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     BuildContext context,
     String title,
     IconData icon,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Color? color,
+    Color? iconColor,
+    String? badge,
+  }) {
     final theme = Theme.of(context);
+    final effectiveColor = iconColor ?? color ?? theme.colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.radiusLg,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outline),
+          color: color?.withValues(alpha: 0.08),
+          border: Border.all(
+            color: color != null
+                ? color.withValues(alpha: 0.5)
+                : theme.colorScheme.outline,
+          ),
           borderRadius: AppRadius.radiusLg,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
-            Icon(icon, color: theme.colorScheme.primary, size: 24),
+            Icon(icon, color: effectiveColor, size: 24),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 title,
-                style: AppTextStyles.bodyBold,
+                style: AppTextStyles.bodyBold.copyWith(
+                  color: color != null ? effectiveColor : null,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (badge != null) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: effectiveColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -663,13 +696,40 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSalesmanDashboardStats(BuildContext context, SalesmanDashboardData dashboard) {
+  Widget _buildSalesmanDashboardStats(
+    BuildContext context,
+    WidgetRef ref,
+    SalesmanDashboardData dashboard,
+    dynamic user,
+    dynamic myVan,
+  ) {
     final theme = Theme.of(context);
     final ext = theme.extension<AppThemeExtension>();
     final successColor = ext?.success ?? AppColors.success;
     final warningColor = ext?.warning ?? AppColors.warning;
     final purpleColor = ext?.purple ?? AppColors.purple;
-    final infoColor = ext?.info ?? AppColors.info;
+
+    final vanWhId = myVan?.id ?? user?.warehouseId;
+    final stocksAsync = ref.watch(warehouseStocksProvider);
+    final vanStocks = stocksAsync.asData?.value
+            .where((s) => s.warehouseId == vanWhId)
+            .toList() ??
+        [];
+    final outOfStocks = vanStocks.where((s) => s.quantity <= 0).toList();
+    final lowStocks = vanStocks.where((s) => s.quantity <= s.minStockLevel).toList();
+
+    final Color vanStockColor;
+    final String vanStockSubtitle;
+    if (outOfStocks.isNotEmpty) {
+      vanStockColor = AppColors.danger;
+      vanStockSubtitle = '${outOfStocks.length} تەواوبووە';
+    } else if (lowStocks.isNotEmpty) {
+      vanStockColor = Colors.orange;
+      vanStockSubtitle = '${lowStocks.length} کەمبووە';
+    } else {
+      vanStockColor = Colors.orange;
+      vanStockSubtitle = '${vanStocks.length} جۆر بەردەستە';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,15 +742,27 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.35,
+          childAspectRatio: 1.15,
           children: [
-            // 1. فرۆشی هەفتە
+            // 1. ستۆکی ناو ئۆتۆمبێل (لە شوێنی فرۆشی هەفتە)
             _buildStatCard(
               context,
-              title: 'فرۆشی هەفتە',
-              value: Formatters.currency(dashboard.last7DaysSales),
-              icon: AppIcons.order,
-              iconColor: infoColor,
+              title: 'ستۆکی ناو ئۆتۆمبێل',
+              value: '${vanStocks.length} جۆر',
+              subtitle: vanStockSubtitle,
+              icon: Icons.local_shipping_outlined,
+              iconColor: vanStockColor,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StockListScreen(
+                      customWarehouseId: vanWhId,
+                      customTitle: 'ستۆکی ئۆتۆمبێل (کاشڤان)',
+                    ),
+                  ),
+                );
+              },
             ),
             // 2. یەکەکانی هەفتە
             _buildStatCard(
@@ -884,11 +956,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     BuildContext context, {
     required String title,
     required String value,
+    String? subtitle,
     required IconData icon,
     required Color iconColor,
+    VoidCallback? onTap,
   }) {
     return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -897,8 +972,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
@@ -907,35 +982,57 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   child: Icon(icon, color: iconColor, size: 20),
                 ),
               ),
+              if (onTap != null)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 13,
+                  color: iconColor.withValues(alpha: 0.6),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  value,
-                  style: AppTextStyles.bodyBold.copyWith(
-                    color: iconColor,
-                    fontSize: 15,
+          const SizedBox(height: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.caption.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    value,
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: iconColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 10,
+                      color: iconColor.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

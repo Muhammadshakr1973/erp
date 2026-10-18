@@ -20,7 +20,14 @@ import '../../shared/providers/warehouse_provider.dart';
 import 'warehouse_main_screen.dart';
 
 class StockListScreen extends ConsumerStatefulWidget {
-  const StockListScreen({super.key});
+  final int? customWarehouseId;
+  final String? customTitle;
+
+  const StockListScreen({
+    super.key,
+    this.customWarehouseId,
+    this.customTitle,
+  });
 
   @override
   ConsumerState<StockListScreen> createState() => _StockListScreenState();
@@ -63,7 +70,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     DropdownButtonFormField<String>(
-                      value: adjustType,
+                      initialValue: adjustType,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'جۆری جوڵە',
@@ -360,102 +367,123 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
     final warehousesAsync = ref.watch(warehouseListProvider);
     final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
 
+    final isCustomScope = widget.customWarehouseId != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: warehousesAsync.when(
-          data: (warehouses) {
-            final activeWarehouse = warehouses.firstWhere(
-              (w) => w.id == activeWarehouseId,
-              orElse: () => warehouses.first,
-            );
-
-            if (warehouses.length <= 1) {
-              return Column(
+        title: isCustomScope
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('لیستی ستۆک', style: AppTextStyles.h2),
-                  Text(activeWarehouse.name, style: AppTextStyles.caption),
-                ],
-              );
-            }
-
-            return PopupMenuButton<int>(
-              tooltip: 'گۆڕینی کۆگای چالاک',
-              initialValue: activeWarehouse.id,
-              onSelected: (selectedId) {
-                ref.read(activeWarehouseIdProvider.notifier).state = selectedId;
-                ref.invalidate(warehouseDashboardProvider);
-                ref.invalidate(ordersToPackProvider);
-                ref.invalidate(warehouseStocksProvider);
-                ref.invalidate(stockTransfersListProvider);
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    activeWarehouse.isReserve
-                        ? Icons.inventory_2_outlined
-                        : (activeWarehouse.isVan
-                            ? Icons.local_shipping_outlined
-                            : Icons.warehouse_outlined),
-                    size: 20,
-                    color: activeWarehouse.isReserve
-                        ? Colors.purple
-                        : (activeWarehouse.isVan
-                            ? Colors.orange
-                            : theme.colorScheme.primary),
+                  Text(widget.customTitle ?? 'ستۆکی ئۆتۆمبێل (کاشڤان)',
+                      style: AppTextStyles.h2),
+                  warehousesAsync.when(
+                    data: (warehouses) {
+                      final matched = warehouses
+                          .where((w) => w.id == widget.customWarehouseId)
+                          .firstOrNull;
+                      return Text(matched?.name ?? 'کۆگای کاشڤان',
+                          style: AppTextStyles.caption);
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Column(
+                ],
+              )
+            : warehousesAsync.when(
+                data: (warehouses) {
+                  final activeWarehouse = warehouses.firstWhere(
+                    (w) => w.id == activeWarehouseId,
+                    orElse: () => warehouses.first,
+                  );
+
+                  if (warehouses.length <= 1) {
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('لیستی ستۆک', style: AppTextStyles.h3),
-                        Text(
-                          activeWarehouse.name,
-                          style: AppTextStyles.caption.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        const Text('لیستی ستۆک', style: AppTextStyles.h2),
+                        Text(activeWarehouse.name, style: AppTextStyles.caption),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down, size: 22),
-                ],
-              ),
-              itemBuilder: (ctx) {
-                return warehouses.map((w) {
-                  return PopupMenuItem<int>(
-                    value: w.id,
+                    );
+                  }
+
+                  return PopupMenuButton<int>(
+                    tooltip: 'گۆڕینی کۆگای چالاک',
+                    initialValue: activeWarehouse.id,
+                    onSelected: (selectedId) {
+                      ref.read(activeWarehouseIdProvider.notifier).state = selectedId;
+                      ref.invalidate(warehouseDashboardProvider);
+                      ref.invalidate(ordersToPackProvider);
+                      ref.invalidate(warehouseStocksProvider);
+                      ref.invalidate(stockTransfersListProvider);
+                    },
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          w.isReserve
+                          activeWarehouse.isReserve
                               ? Icons.inventory_2_outlined
-                              : (w.isVan
+                              : (activeWarehouse.isVan
                                   ? Icons.local_shipping_outlined
                                   : Icons.warehouse_outlined),
-                          size: 18,
-                          color: w.isReserve
+                          size: 20,
+                          color: activeWarehouse.isReserve
                               ? Colors.purple
-                              : (w.isVan
+                              : (activeWarehouse.isVan
                                   ? Colors.orange
                                   : theme.colorScheme.primary),
                         ),
                         const SizedBox(width: 8),
-                        Text(w.name),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('لیستی ستۆک', style: AppTextStyles.h3),
+                              Text(
+                                activeWarehouse.name,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_drop_down, size: 22),
                       ],
                     ),
+                    itemBuilder: (ctx) {
+                      return warehouses.map((w) {
+                        return PopupMenuItem<int>(
+                          value: w.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                w.isReserve
+                                    ? Icons.inventory_2_outlined
+                                    : (w.isVan
+                                        ? Icons.local_shipping_outlined
+                                        : Icons.warehouse_outlined),
+                                size: 18,
+                                color: w.isReserve
+                                    ? Colors.purple
+                                    : (w.isVan
+                                        ? Colors.orange
+                                        : theme.colorScheme.primary),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(w.name),
+                            ],
+                          ),
+                        );
+                      }).toList();
+                    },
                   );
-                }).toList();
-              },
-            );
-          },
-          loading: () => const Text('لیستی ستۆک', style: AppTextStyles.h2),
-          error: (_, __) => const Text('لیستی ستۆک', style: AppTextStyles.h2),
-        ),
+                },
+                loading: () => const Text('لیستی ستۆک', style: AppTextStyles.h2),
+                error: (_, _) => const Text('لیستی ستۆک', style: AppTextStyles.h2),
+              ),
         actions: [
           IconButton(
             icon: const Icon(AppIcons.scan),
@@ -529,6 +557,9 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                 ),
                 data: (stocks) {
                   var filtered = stocks.where((stock) {
+                    if (widget.customWarehouseId != null && stock.warehouseId != widget.customWarehouseId) {
+                      return false;
+                    }
                     final searchLower = _searchQuery.toLowerCase();
                     final matchesSearch =
                         stock.productName.toLowerCase().contains(searchLower) ||
