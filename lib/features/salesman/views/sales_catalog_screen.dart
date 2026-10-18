@@ -16,7 +16,6 @@ import '../../products/models/product_model.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/providers/products_provider.dart';
 import '../../shared/models/customer.dart';
-import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/views/customer_selection_dialog.dart';
