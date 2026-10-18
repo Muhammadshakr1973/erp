@@ -1006,7 +1006,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       return DropdownMenuItem<int?>(
                         value: order.id,
                         child: Text(
-                          '${order.orderNumber} • $custName',
+                          '\u202A${order.orderNumber}\u202C • $custName',
                           style: const TextStyle(fontFamily: 'KJino', fontSize: 12, fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

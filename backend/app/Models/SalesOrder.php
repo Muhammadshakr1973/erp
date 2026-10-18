@@ -75,11 +75,59 @@ class SalesOrder extends Model
         'version' => 'integer',
     ];
 
+    /**
+     * دروستکردنی ژمارەی پسوڵە بە پێی ساڵ و زنجیرەی ژمارە (YY-N)
+     * بۆ نموونە ساڵی ٢٠٢٦ دەبێتە: 26-1, 26-2, ..., 26-1000
+     * بۆ ساڵی ٢٠٢٧ دەبێتە: 27-1, 27-2, ...
+     */
+    public static function generateOrderNumber($orderDate = null): string
+    {
+        try {
+            $yearShort = !empty($orderDate)
+                ? \Illuminate\Support\Carbon::parse($orderDate)->format('y')
+                : now()->format('y');
+        } catch (\Throwable $e) {
+            $yearShort = now()->format('y');
+        }
+        $prefix = $yearShort . '-';
+
+        $candidates = static::withTrashed()
+            ->where('order_number', 'like', "{$prefix}%")
+            ->orderByRaw('LENGTH(order_number) DESC')
+            ->orderBy('order_number', 'desc')
+            ->take(50)
+            ->pluck('order_number');
+
+        $maxNum = 0;
+        foreach ($candidates as $numStr) {
+            $suffix = substr($numStr, strlen($prefix));
+            if (ctype_digit($suffix)) {
+                $val = (int) $suffix;
+                if ($val > $maxNum) {
+                    $maxNum = $val;
+                }
+            }
+        }
+
+        $candidateNum = $maxNum + 1;
+        $orderNumber = "{$prefix}{$candidateNum}";
+
+        while (static::withTrashed()->where('order_number', $orderNumber)->exists()) {
+            $candidateNum++;
+            $orderNumber = "{$prefix}{$candidateNum}";
+        }
+
+        return $orderNumber;
+    }
+
     protected static function booted()
     {
         static::creating(function ($order) {
+            if (empty($order->order_date)) {
+                $order->order_date = now()->toDateString();
+            }
             if (empty($order->order_number)) {
-                $order->order_number = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(8));
+                $order->order_number = static::generateOrderNumber($order->order_date);
             }
             if (empty($order->salesman_id)) {
                 $order->salesman_id = $order->created_by ?: (auth()->id() ?: (\App\Models\User::whereHas('role', function($q) {

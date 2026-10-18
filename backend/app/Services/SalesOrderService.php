@@ -82,8 +82,8 @@ class SalesOrderService
                 ]);
             }
 
-            // دروستکردنی ژمارەی تایبەت بۆ پسوڵە (ORD-XXXXXXXX)
-            $orderNumber = 'ORD-' . strtoupper(Str::random(8));
+            // دروستکردنی ژمارەی تایبەت بۆ پسوڵە بە پێی ساڵ و زنجیرە (YY-N وەک 26-1, 26-2)
+            $orderNumber = SalesOrder::generateOrderNumber($data['order_date'] ?? now()->toDateString());
 
             // دروستکردنی پسوڵە ڕاستەوخۆ بە شێوەی PACKING بەپێی داواکاری سیستەم
             $order = SalesOrder::create([
