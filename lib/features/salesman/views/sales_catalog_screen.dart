@@ -1078,20 +1078,24 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     );
   }
 
-  /// 10-Second Countdown & Sync Status Banner
+  /// 10-Second Countdown & Sync Status Banner (Preserves fixed height to prevent layout shift)
   Widget _buildSyncCountdownBanner(BuildContext context) {
+    const double bannerHeight = 36.0;
+
     if (_lastFailedBatch != null) {
       return Container(
+        height: bannerHeight,
         color: AppColors.danger.withValues(alpha: 0.15),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+            const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'فەشەل لە پاشەکەوتکردنی کاڵاکان بۆ ${_lastFailedBatch!['customerName']}',
-                style: const TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.danger),
+                style: const TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.danger),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1099,10 +1103,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             TextButton(
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.danger,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: _showFailedActionPersistentDialog,
-              child: const Text('چارەسەرکردن', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
+              child: const Text('چارەسەرکردن', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11)),
             ),
           ],
         ),
@@ -1111,8 +1117,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     if (_isSavingBatch) {
       return Container(
+        height: bannerHeight,
         color: AppColors.primary.withValues(alpha: 0.15),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1124,7 +1132,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             SizedBox(width: 8),
             Text(
               'پاشەکەوتکردن بە یەک کۆنێکشن لە داتابەیس...',
-              style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.primary),
+              style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.primary),
             ),
           ],
         ),
@@ -1133,8 +1141,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     if (_secondsRemaining > 0) {
       return Container(
+        height: bannerHeight,
         color: Colors.blue.withValues(alpha: 0.12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
         child: Row(
           children: [
             const Icon(Icons.timer_outlined, size: 16, color: Colors.blue),
@@ -1147,8 +1157,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             ),
             InkWell(
               onTap: _saveImmediately,
+              borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.blue,
                   borderRadius: BorderRadius.circular(6),
@@ -1164,7 +1175,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       );
     }
 
-    return const SizedBox.shrink();
+    // Keep the exact same height empty/reserved so elements below never shift
+    return const SizedBox(
+      height: bannerHeight,
+      width: double.infinity,
+    );
   }
 
   /// Category Header & Filter Chips
