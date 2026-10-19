@@ -1074,22 +1074,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               onPressed: _changeOrderCustomer,
             ),
 
-          // Logo & Brand Icon
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.domain_rounded, size: 20, color: AppColors.primary),
-              const SizedBox(width: 4),
-              Text(
-                'GARDI',
-                style: AppTextStyles.h3.copyWith(
-                  letterSpacing: 1.2,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: isDark ? Colors.white : AppColors.primary,
-                ),
-              ),
-            ],
+          // Logo image only (no text)
+          Image.asset(
+            'assets/images/1.png',
+            height: 36,
+            fit: BoxFit.contain,
           ),
         ],
       ),
