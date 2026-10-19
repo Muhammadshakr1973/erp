@@ -84,7 +84,9 @@ class SalesmanOrdersScreen extends ConsumerWidget {
         data: (orders) {
           final currentUser = ref.watch(authProvider).user;
           final salesmanOrders = orders
-              .where((o) => currentUser == null || o.salesmanId == currentUser.id)
+              .where(
+                (o) => currentUser == null || o.salesmanId == currentUser.id,
+              )
               .toList();
           final nowString = DateTime.now().toIso8601String().substring(0, 10);
           final filtered = salesmanOrders.where((o) {
@@ -169,7 +171,22 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                   }
                 },
                 onLongPress: () {
-                  _showDeleteConfirmationDialog(context, ref, order, customerName);
+                  if (!order.canBeDeleted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'ناتوانرێت پسوڵەی لە ڕێگەی گەیاندندایە یان گەیشتووە بسڕدرێتەوە.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  _showDeleteConfirmationDialog(
+                    context,
+                    ref,
+                    order,
+                    customerName,
+                  );
                 },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +213,12 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(customerName, style: AppTextStyles.bodyBold, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(
+                                customerName,
+                                style: AppTextStyles.bodyBold,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 'پسوڵەی #${order.orderNumber}',
@@ -223,7 +245,11 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -246,11 +272,18 @@ class SalesmanOrdersScreen extends ConsumerWidget {
                           },
                           borderRadius: BorderRadius.circular(4),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.map_outlined, size: 14, color: theme.colorScheme.primary),
+                                Icon(
+                                  Icons.map_outlined,
+                                  size: 14,
+                                  color: theme.colorScheme.primary,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
                                   'شوێن',
@@ -313,7 +346,9 @@ class SalesmanOrdersScreen extends ConsumerWidget {
               onPressed: () async {
                 Navigator.pop(context);
                 try {
-                  await ref.read(orderActionsProvider).deleteOrder(order.id.toString());
+                  await ref
+                      .read(orderActionsProvider)
+                      .deleteOrder(order.id.toString());
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -334,7 +369,10 @@ class SalesmanOrdersScreen extends ConsumerWidget {
               },
               child: const Text(
                 'سڕینەوە',
-                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],

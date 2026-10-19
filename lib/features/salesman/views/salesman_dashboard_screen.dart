@@ -318,6 +318,16 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                           }
                         },
                         onLongPress: () {
+                          if (!order.canBeDeleted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'ناتوانرێت پسوڵەی لە ڕێگەی گەیاندندایە یان گەیشتووە بسڕدرێتەوە.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           _showDeleteConfirmationDialog(context, ref, order, customerName);
                         },
                         child: Row(

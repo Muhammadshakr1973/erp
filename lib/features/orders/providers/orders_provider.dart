@@ -106,9 +106,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
 
   void upsertOrderLocally(OrderModel newOrder) {
     final currentOrders = state.valueOrNull ?? [];
-    final Map<int, OrderModel> map = {
-      newOrder.id: newOrder,
-    };
+    final Map<int, OrderModel> map = {newOrder.id: newOrder};
     for (final o in currentOrders) {
       if (!map.containsKey(o.id)) {
         map[o.id] = o;
@@ -116,8 +114,12 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     }
     final updated = map.values.toList();
     updated.sort((a, b) {
-      final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aDate =
+          DateTime.tryParse(a.createdAt) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate =
+          DateTime.tryParse(b.createdAt) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
       return bDate.compareTo(aDate);
     });
     state = AsyncData(updated);
@@ -312,7 +314,16 @@ class OrderActions {
 
     try {
       // 2. Call backend API
-      await api.client.delete('/orders/$orderId');
+      final response = await api.client.delete('/orders/$orderId');
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+        );
+      }
 
       // 3. Silently update providers in background without resetting UI state
       ref.read(ordersListProvider.notifier).refreshSilently();

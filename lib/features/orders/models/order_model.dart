@@ -186,6 +186,12 @@ class OrderModel {
     this.priceType,
   });
 
+  bool get canBeDeleted {
+    final normalizedStatus = status.toUpperCase();
+    return normalizedStatus != statusInDelivery &&
+        normalizedStatus != statusDelivered;
+  }
+
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     List<OrderItemModel> parsedItems = [];
     if (json['items'] is List) {
