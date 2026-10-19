@@ -1179,7 +1179,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.blue,
+                  color:  ,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
