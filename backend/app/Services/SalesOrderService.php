@@ -85,7 +85,7 @@ class SalesOrderService
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە بە پێی ساڵ و زنجیرە (YY-N وەک 26-1, 26-2)
             $orderNumber = SalesOrder::generateOrderNumber($data['order_date'] ?? now()->toDateString());
 
-            // دروستکردنی پسوڵە ڕاستەوخۆ بە شێوەی PACKING بەپێی داواکاری سیستەم
+            // Cash-van orders go straight to delivery; other sales orders enter packing.
             $order = SalesOrder::create([
                 'order_number' => $orderNumber,
                 'shared_key' => $data['shared_key'] ?? null,
@@ -94,7 +94,9 @@ class SalesOrderService
                 'salesman_id' => $user->id,
                 'warehouse_id' => $data['warehouse_id'],
                 'order_date' => now()->toDateString(),
-                'status' => SalesOrder::STATUS_PACKING,
+                'status' => $user && method_exists($user, 'isCashVan') && $user->isCashVan() && $targetWarehouse->isVan()
+                    ? SalesOrder::STATUS_IN_DELIVERY
+                    : SalesOrder::STATUS_PACKING,
                 'confirmed_at' => now(),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $user->id,
@@ -240,20 +242,30 @@ class SalesOrderService
             return $this->updateSharedOrder($order, $data, $user);
         }
 
-        if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])) {
+        $order->loadMissing('warehouse');
+        $isCashVanOrder = $user
+            && method_exists($user, 'isCashVan')
+            && $user->isCashVan()
+            && method_exists($user, 'isSalesman')
+            && $user->isSalesman()
+            && $order->salesman_id === $user->id
+            && $order->warehouse?->isVan();
+
+        if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])
+            && !($isCashVanOrder && $order->status === SalesOrder::STATUS_IN_DELIVERY)) {
             throw ValidationException::withMessages([
                 'status' => 'تەنها پسوڵەی PACKING دەتوانرێت دەستکاری بکرێت.'
             ]);
         }
 
-        $updatedOrder = DB::transaction(function () use ($order, $data, $user) {
+        $updatedOrder = DB::transaction(function () use ($order, $data, $user, $isCashVanOrder) {
             $customerId = $data['customer_id'] ?? $order->customer_id;
             $customer = $this->getCustomerForOrder($customerId);
 
             $this->checkCustomerAssignment($customer, $user);
 
             // ئەگەر پێشتر لە PACKING بوو، ستۆکی حجزکراو ئازاد دەکەین پێش نوێکردنەوەی ئایتمەکان
-            if ($order->status === SalesOrder::STATUS_PACKING) {
+            if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->releaseStock($order, $user);
             }
 
@@ -349,7 +361,7 @@ class SalesOrderService
             ]);
 
             // ئەگەر لە دۆخی PACKING بوو، ستۆک بۆ ئایتمە نوێیەکان حجز دەکەینەوە
-            if ($order->status === SalesOrder::STATUS_PACKING) {
+            if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->reserveStock($order, $user);
             }
 
@@ -375,12 +387,13 @@ class SalesOrderService
     /**
      * جێبەجێکردنی گواستنەوەی دۆخی پسوڵەکان بە شێوەی دەوڵەتی (State Machine)
      */
-    public function transitionTo(SalesOrder $order, string $newStatus, $user): SalesOrder
+    public function transitionTo(SalesOrder $order, string $newStatus, $user, array $options = []): SalesOrder
     {
         $oldStatus = null;
-        $updatedOrder = DB::transaction(function () use ($order, $newStatus, $user, &$oldStatus) {
+        $updatedOrder = DB::transaction(function () use ($order, $newStatus, $user, $options, &$oldStatus) {
             // Lock order for update to prevent race conditions and concurrent transitions (Idempotency)
             $lockedOrder = SalesOrder::lockForUpdate()->findOrFail($order->id);
+            $lockedOrder->loadMissing('warehouse');
             $currentStatus = $lockedOrder->status;
             $oldStatus = $currentStatus;
 
@@ -388,8 +401,19 @@ class SalesOrderService
                 return $lockedOrder;
             }
 
+            $isCashVanDirectDelivery = $newStatus === SalesOrder::STATUS_DELIVERED
+                && $currentStatus === SalesOrder::STATUS_IN_DELIVERY
+                && $user
+                && method_exists($user, 'isCashVan')
+                && $user->isCashVan()
+                && method_exists($user, 'isSalesman')
+                && $user->isSalesman()
+                && $lockedOrder->salesman_id === $user->id
+                && $lockedOrder->warehouse?->isVan();
+
             // ١. دڵنیابوونەوە لەوەی کە گواستنەوەکە یاساییە بەپێی نەخشەی گواستنەوەی دۆخەکان
-            if (!isset($this->validTransitions[$currentStatus]) || !in_array($newStatus, $this->validTransitions[$currentStatus])) {
+            if ((!isset($this->validTransitions[$currentStatus]) || !in_array($newStatus, $this->validTransitions[$currentStatus]))
+                && !$isCashVanDirectDelivery) {
                 throw ValidationException::withMessages([
                     'status' => "گواستنەوەی دۆخەکە نادروستە. ناتوانرێت لە دۆخی {$currentStatus} بگۆڕدرێت بۆ {$newStatus}."
                 ]);
@@ -409,7 +433,13 @@ class SalesOrderService
                     ]);
                 }
             } elseif (in_array($newStatus, [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_DELIVERED])) {
-                if (!$user->hasPermission('delivery.update')) {
+                if ($isCashVanDirectDelivery) {
+                    if (!$user->hasPermission('orders.create')) {
+                        throw ValidationException::withMessages([
+                            'status' => 'تۆ ڕێگەپێدراو نیت بۆ تەواوکردنی پسوڵەی کاشڤان.'
+                        ]);
+                    }
+                } elseif (!$user->hasPermission('delivery.update')) {
                     throw ValidationException::withMessages([
                         'status' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $newStatus
                     ]);
@@ -446,6 +476,41 @@ class SalesOrderService
             }
 
             // ٣. ئەنجامدانی کردارە لۆجیکییە پەیوەندیدارەکان بە هەر دۆخێکەوە
+            if ($isCashVanDirectDelivery) {
+                $checkedItemIds = $options['checked_item_ids'] ?? null;
+                $orderItemIds = $lockedOrder->items()->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->all();
+                $checkedItemIds = is_array($checkedItemIds)
+                    ? array_map('intval', $checkedItemIds)
+                    : [];
+                sort($checkedItemIds);
+
+                if (empty($orderItemIds) || $checkedItemIds !== $orderItemIds) {
+                    throw ValidationException::withMessages([
+                        'checked_item_ids' => 'پێویستە هەموو کاڵاکانی پسوڵەکە پشکنین بکرێن.'
+                    ]);
+                }
+
+                if (!array_key_exists('discount_amount', $options)) {
+                    throw ValidationException::withMessages([
+                        'discount_amount' => 'بڕی داشکاندنی پسوڵە دیاری بکە.'
+                    ]);
+                }
+
+                $lockedOrder->items()->update(['is_packed' => true]);
+                $discountableAmount = max(0, (int) $lockedOrder->subtotal - (int) $lockedOrder->permanent_discount_amount);
+                $invoiceDiscountAmount = min($discountableAmount, max(0, (int) $options['discount_amount']));
+                $totalProfitBeforeInvoiceDiscount = (int) $lockedOrder->items()->sum('profit')
+                    - (int) $lockedOrder->permanent_discount_amount;
+
+                $lockedOrder->update([
+                    'discount_type' => 'FIXED',
+                    'discount_percent' => 0,
+                    'discount_amount' => $invoiceDiscountAmount,
+                    'total_amount' => max(0, $discountableAmount - $invoiceDiscountAmount),
+                    'total_profit' => $totalProfitBeforeInvoiceDiscount - $invoiceDiscountAmount,
+                ]);
+            }
+
             switch ($newStatus) {
                 case SalesOrder::STATUS_CONFIRMED:
                     $this->reserveStock($lockedOrder, $user);
@@ -1035,12 +1100,22 @@ class SalesOrderService
      */
     public function updateSharedOrder(SalesOrder $order, array $data, $user): SalesOrder
     {
-        return DB::transaction(function () use ($order, $data, $user) {
+        $order->loadMissing('warehouse');
+        $isCashVanOrder = $user
+            && method_exists($user, 'isCashVan')
+            && $user->isCashVan()
+            && method_exists($user, 'isSalesman')
+            && $user->isSalesman()
+            && $order->salesman_id === $user->id
+            && $order->warehouse?->isVan();
+
+        return DB::transaction(function () use ($order, $data, $user, $isCashVanOrder) {
             // Lock order for update to prevent concurrent race conditions
             $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
             // Status consistency check: Shared order can only be edited while it is in PACKING or DRAFT status
-            if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])) {
+            if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])
+                && !($isCashVanOrder && $order->status === SalesOrder::STATUS_IN_DELIVERY)) {
                 throw new \RuntimeException('ناتوانرێت دەستکاری پسوڵەی هاوبەش بکرێت چونکە پێشتر ئامادەکراوە یان لە پرۆسەدایە.');
             }
 
@@ -1055,7 +1130,7 @@ class SalesOrderService
             $this->checkCustomerAssignment($customer, $user);
 
             // ئەگەر لە دۆخی PACKING بوو، ستۆک ئازاد دەکەین پێش سڕینەوەی ئایتمە کۆنەکان
-            if ($order->status === SalesOrder::STATUS_PACKING) {
+            if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->releaseStock($order, $user);
             }
 
@@ -1148,7 +1223,7 @@ class SalesOrderService
             ]);
 
             // ئەگەر لە PACKING بوو، ستۆک بۆ ئایتمە نوێکراوەکان حجز دەکەینەوە
-            if ($order->status === SalesOrder::STATUS_PACKING) {
+            if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->reserveStock($order, $user);
             }
 

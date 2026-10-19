@@ -189,12 +189,22 @@ class SalesOrderController extends Controller
 
     public function updateStatus(\Illuminate\Http\Request $request, int $id): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'status' => ['required', 'string', 'in:DRAFT,CONFIRMED,PACKING,READY,IN_DELIVERY,DELIVERED,CANCELLED'],
+            'discount_amount' => ['sometimes', 'numeric', 'min:0'],
+            'checked_item_ids' => ['sometimes', 'array'],
+            'checked_item_ids.*' => ['integer', 'distinct'],
         ]);
 
         $status = $request->input('status');
         $user = $request->user();
+        $order = \App\Models\SalesOrder::with('warehouse')->findOrFail($id);
+        $isCashVanDelivery = $status === 'DELIVERED'
+            && $order->status === \App\Models\SalesOrder::STATUS_IN_DELIVERY
+            && $user->role?->name === 'salesman'
+            && $user->isCashVan()
+            && $order->salesman_id === $user->id
+            && $order->warehouse?->isVan();
 
         // Enforce status-based authorization
         if (in_array($status, ['DRAFT', 'CONFIRMED'])) {
@@ -212,7 +222,14 @@ class SalesOrderController extends Controller
                 ], 403);
             }
         } elseif (in_array($status, ['IN_DELIVERY', 'DELIVERED'])) {
-            if (!$user->hasPermission('delivery.update')) {
+            if ($isCashVanDelivery) {
+                if (!$user->hasPermission('orders.create')) {
+                    return response()->json([
+                        'message' => 'تۆ ڕێگەپێدراو نیت بۆ تەواوکردنی پسوڵەی کاشڤان.',
+                        'error' => 'Forbidden. Missing permission: orders.create'
+                    ], 403);
+                }
+            } elseif (!$user->hasPermission('delivery.update')) {
                 return response()->json([
                     'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی پسوڵە بۆ ' . $status,
                     'error' => 'Forbidden. Missing permission: delivery.update'
@@ -232,8 +249,6 @@ class SalesOrderController extends Controller
                 ], 403);
             }
         }
-
-        $order = \App\Models\SalesOrder::findOrFail($id);
 
         // IDOR prevention on updateStatus
         if ($user->role?->name === 'salesman' && $order->salesman_id !== $user->id) {
@@ -265,7 +280,12 @@ class SalesOrderController extends Controller
             }
         }
 
-        $updatedOrder = $this->salesOrderService->transitionTo($order, $status, $user);
+        $updatedOrder = $this->salesOrderService->transitionTo(
+            $order,
+            $status,
+            $user,
+            array_intersect_key($validated, array_flip(['discount_amount', 'checked_item_ids']))
+        );
 
         return response()->json([
             'message' => 'دۆخی پسوڵە بە سەرکەوتوویی نوێکرایەوە',

@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\WarehouseStock;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
+use App\Models\Notification;
 use App\Models\DeliveryTrip;
 use App\Models\DeliveryTripOrder;
 use App\Models\CustomerLedger;
@@ -407,5 +408,86 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
 
         $response = $this->actingAs($this->salesman)->postJson('/api/v1/sales-returns', $invalidReturnData);
         $response->assertStatus(422); // دەبێت فڕێدانی هەڵەی فۆرم و ناڕاستی بڕی داواکراو بدات
+    }
+
+    public function test_cash_van_order_skips_warehouse_packing_and_can_be_delivered_with_discount(): void
+    {
+        $ownerRole = Role::firstOrCreate(['name' => 'owner'], ['display_name' => 'Owner']);
+        $owner = User::factory()->create([
+            'role_id' => $ownerRole->id,
+            'is_active' => true,
+        ]);
+        $van = Warehouse::create([
+            'name' => 'Cash van',
+            'code' => 'VAN01',
+            'type' => Warehouse::TYPE_VAN,
+            'is_active' => true,
+        ]);
+        $this->salesman->update([
+            'warehouse_id' => $van->id,
+            'is_cash_van' => true,
+        ]);
+        WarehouseStock::create([
+            'warehouse_id' => $van->id,
+            'product_id' => $this->product->id,
+            'quantity' => 100,
+            'reserved_quantity' => 0,
+        ]);
+
+        $response = $this->actingAs($this->salesman)->postJson('/api/v1/sales-orders', [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $van->id,
+            'status' => SalesOrder::STATUS_IN_DELIVERY,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 0,
+            'shared_key' => 'cash-van-order-test',
+            'version' => 1,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.status', SalesOrder::STATUS_IN_DELIVERY);
+        $orderId = $response->json('data.id');
+        $orderItemId = $response->json('data.items.0.id');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->admin->id,
+            'type' => Notification::TYPE_ORDER,
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $owner->id,
+            'type' => Notification::TYPE_ORDER,
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $this->warehouseStaff->id,
+            'type' => Notification::TYPE_ORDER,
+        ]);
+
+        $response = $this->actingAs($this->salesman)->postJson(
+            "/api/v1/sales-orders/{$orderId}/status",
+            [
+                'status' => SalesOrder::STATUS_DELIVERED,
+                'discount_amount' => 1000,
+                'checked_item_ids' => [$orderItemId],
+            ],
+        );
+        $response->assertOk();
+
+        $this->assertDatabaseHas('sales_orders', [
+            'id' => $orderId,
+            'status' => SalesOrder::STATUS_DELIVERED,
+            'discount_type' => 'FIXED',
+            'discount_amount' => 1000,
+            'total_amount' => 15000,
+        ]);
+        $this->assertDatabaseHas('sales_order_items', [
+            'id' => $orderItemId,
+            'is_packed' => true,
+        ]);
     }
 }

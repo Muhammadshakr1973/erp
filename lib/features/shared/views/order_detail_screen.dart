@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,10 +17,29 @@ import '../../auth/providers/auth_provider.dart';
 import 'create_sales_return_dialog.dart';
 import 'map_picker_dialog.dart';
 
-class OrderDetailScreen extends ConsumerWidget {
+class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
 
   const OrderDetailScreen({super.key, required this.orderId});
+
+  @override
+  ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+  final Set<int> _checkedItemIds = {};
+  int? _checklistOrderId;
+  bool _isSubmittingCashVanDelivery = false;
+
+  void _syncCheckedItems(OrderModel order) {
+    if (_checklistOrderId == order.id) return;
+    _checklistOrderId = order.id;
+    _checkedItemIds
+      ..clear()
+      ..addAll(
+        order.items.where((item) => item.isPacked).map((item) => item.id),
+      );
+  }
 
   Future<void> _handleCancelOrder(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
@@ -28,9 +48,7 @@ class OrderDetailScreen extends ConsumerWidget {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Expanded(
-              child: Text('هەڵوەشاندنەوەی پسوڵە'),
-            ),
+            const Expanded(child: Text('هەڵوەشاندنەوەی پسوڵە')),
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(context, false),
@@ -56,7 +74,7 @@ class OrderDetailScreen extends ConsumerWidget {
       try {
         await ref
             .read(orderActionsProvider)
-            .updateOrderStatus(orderId, OrderModel.statusCancelled);
+            .updateOrderStatus(widget.orderId, OrderModel.statusCancelled);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -73,9 +91,7 @@ class OrderDetailScreen extends ConsumerWidget {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
-                    child: Text('هەڵە'),
-                  ),
+                  const Expanded(child: Text('هەڵە')),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
@@ -116,15 +132,131 @@ class OrderDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleCashVanArrival(
+    BuildContext context,
+    WidgetRef ref,
+    OrderModel order,
+  ) async {
+    final discountController = TextEditingController(text: '0');
+    final amountBeforeDiscount =
+        (order.subtotal - order.permanentDiscountAmount).clamp(
+          0,
+          double.infinity,
+        );
+    final discountAmount = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        var enteredDiscount = 0;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(child: Text('گەیشتنی پسوڵە')),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('کۆی پسوڵە: ${Formatters.currency(amountBeforeDiscount)}'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: discountController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    labelText: 'بڕی داشکاندن (پارە)',
+                  ),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      enteredDiscount = int.tryParse(value) ?? 0;
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'کۆی دوای داشکان: ${Formatters.currency((amountBeforeDiscount - enteredDiscount).clamp(0, double.infinity))}',
+                  style: AppTextStyles.bodyBold,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                    dialogContext,
+                    enteredDiscount
+                        .clamp(0, amountBeforeDiscount.toInt())
+                        .toInt(),
+                  );
+                },
+                child: const Text('گەیشت'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    discountController.dispose();
+    if (discountAmount == null || !context.mounted) return;
+
+    setState(() {
+      _isSubmittingCashVanDelivery = true;
+    });
+    try {
+      await ref
+          .read(orderActionsProvider)
+          .updateOrderStatus(
+            order.id.toString(),
+            OrderModel.statusDelivered,
+            extraData: {
+              'discount_amount': discountAmount,
+              'checked_item_ids': _checkedItemIds.toList(),
+            },
+          );
+      if (!context.mounted) return;
+      ref.invalidate(singleOrderProvider(order.id.toString()));
+      ref.invalidate(ordersListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('پسوڵەکە بە سەرکەوتوویی گەیشت'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingCashVanDelivery = false;
+        });
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final orderAsync = ref.watch(singleOrderProvider(orderId));
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final orderAsync = ref.watch(singleOrderProvider(widget.orderId));
     final isDesktop =
         MediaQuery.of(context).size.width >= AppBreakpoints.desktopMin;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('پسوڵەی #$orderId', style: AppTextStyles.h2),
+        title: Text('پسوڵەی #${widget.orderId}', style: AppTextStyles.h2),
         actions: [
           IconButton(
             icon: const Icon(Icons.assignment_return_outlined),
@@ -135,8 +267,8 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(singleOrderProvider(orderId));
-          await ref.read(singleOrderProvider(orderId).future);
+          ref.invalidate(singleOrderProvider(widget.orderId));
+          await ref.read(singleOrderProvider(widget.orderId).future);
         },
         child: orderAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -152,7 +284,8 @@ class OrderDetailScreen extends ConsumerWidget {
                       const Text('هەڵەیەک ڕوویدا لە بارکردنی زانیاری پسوڵە'),
                       const SizedBox(height: AppSpacing.md),
                       ElevatedButton(
-                        onPressed: () => ref.invalidate(singleOrderProvider(orderId)),
+                        onPressed: () =>
+                            ref.invalidate(singleOrderProvider(widget.orderId)),
                         child: const Text('دووبارە هەوڵبدەرەوە'),
                       ),
                     ],
@@ -167,13 +300,18 @@ class OrderDetailScreen extends ConsumerWidget {
                 builder: (context, constraints) => SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: const Center(child: Text('هیچ پسوڵەیەک نەدۆزرایەوە')),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: const Center(
+                      child: Text('هیچ پسوڵەیەک نەدۆزرایەوە'),
+                    ),
                   ),
                 ),
               );
             }
 
+            _syncCheckedItems(order);
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
@@ -206,9 +344,19 @@ class OrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMainContent(BuildContext context, WidgetRef ref, OrderModel order) {
+  Widget _buildMainContent(
+    BuildContext context,
+    WidgetRef ref,
+    OrderModel order,
+  ) {
     final currentUser = ref.watch(authProvider).user;
     final isDriver = currentUser?.isDriver ?? false;
+    final isCashVanCheckout =
+        (currentUser?.isCashVanSalesman ?? false) &&
+        order.status == OrderModel.statusInDelivery;
+    final allCashVanItemsChecked =
+        order.items.isNotEmpty &&
+        order.items.every((item) => _checkedItemIds.contains(item.id));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,9 +419,16 @@ class OrderDetailScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.assignment_return_rounded, color: AppColors.danger, size: 20),
+                        const Icon(
+                          Icons.assignment_return_rounded,
+                          color: AppColors.danger,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
-                        const Text('کاڵا گەڕاوەکان (Returned Items)', style: AppTextStyles.h3),
+                        const Text(
+                          'کاڵا گەڕاوەکان (Returned Items)',
+                          style: AppTextStyles.h3,
+                        ),
                       ],
                     ),
                     Text(
@@ -321,7 +476,9 @@ class OrderDetailScreen extends ConsumerWidget {
                       ),
                       trailing: Text(
                         Formatters.currency(item.subtotal),
-                        style: AppTextStyles.price.copyWith(color: AppColors.danger),
+                        style: AppTextStyles.price.copyWith(
+                          color: AppColors.danger,
+                        ),
                       ),
                     );
                   },
@@ -332,10 +489,15 @@ class OrderDetailScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('کۆی بڕی گەڕاوە', style: AppTextStyles.bodyBold),
+                      const Text(
+                        'کۆی بڕی گەڕاوە',
+                        style: AppTextStyles.bodyBold,
+                      ),
                       Text(
                         Formatters.currency(order.totalReturnAmount),
-                        style: AppTextStyles.price.copyWith(color: AppColors.danger),
+                        style: AppTextStyles.price.copyWith(
+                          color: AppColors.danger,
+                        ),
                       ),
                     ],
                   ),
@@ -376,27 +538,43 @@ class OrderDetailScreen extends ConsumerWidget {
                     final item = order.items[index];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: item.isPacked
-                              ? AppColors.success.withValues(alpha: 0.1)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            item.isPacked
-                                ? Icons.check_circle
-                                : Icons.inventory_2_outlined,
-                            size: 20,
-                            color: item.isPacked
-                                ? (theme.brightness == Brightness.dark ? AppColors.successDark : AppColors.success)
-                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
+                      leading: isCashVanCheckout
+                          ? Checkbox(
+                              value: _checkedItemIds.contains(item.id),
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _checkedItemIds.add(item.id);
+                                  } else {
+                                    _checkedItemIds.remove(item.id);
+                                  }
+                                });
+                              },
+                            )
+                          : Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: item.isPacked
+                                    ? AppColors.success.withValues(alpha: 0.1)
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  item.isPacked
+                                      ? Icons.check_circle
+                                      : Icons.inventory_2_outlined,
+                                  size: 20,
+                                  color: item.isPacked
+                                      ? (theme.brightness == Brightness.dark
+                                            ? AppColors.successDark
+                                            : AppColors.success)
+                                      : theme.colorScheme.onSurfaceVariant
+                                            .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ),
                       title: Text(
                         item.productName,
                         style: AppTextStyles.bodyBold,
@@ -511,6 +689,25 @@ class OrderDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (isCashVanCheckout && allCashVanItemsChecked) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isSubmittingCashVanDelivery
+                        ? null
+                        : () => _handleCashVanArrival(context, ref, order),
+                    icon: _isSubmittingCashVanDelivery
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.where_to_vote_outlined),
+                    label: const Text('گەیشت؟'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -588,7 +785,10 @@ class OrderDetailScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                   ),
                   icon: const Icon(Icons.map_outlined, size: 16),
                   label: const Text(
@@ -644,7 +844,9 @@ class OrderDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
-        if (order.status == OrderModel.statusDraft) ...[
+        if (order.status == OrderModel.statusDraft ||
+            ((currentUser?.isCashVanSalesman ?? false) &&
+                order.status == OrderModel.statusInDelivery)) ...[
           const SizedBox(height: AppSpacing.md),
           AppButton(
             text: 'دستکاریی پسوڵە (Edit Order)',
