@@ -79,7 +79,10 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     // Position the cursor at the end of the text to ensure natural appending and deleting
     final text = controller.text;
     if (text == '0') {
-      controller.selection = const TextSelection(baseOffset: 0, extentOffset: 1);
+      controller.selection = const TextSelection(
+        baseOffset: 0,
+        extentOffset: 1,
+      );
     } else {
       controller.selection = TextSelection.collapsed(offset: text.length);
     }
@@ -124,7 +127,8 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = (_lastSelection != null &&
+    final selection =
+        (_lastSelection != null &&
             _lastSelection!.isValid &&
             _lastSelection!.start <= text.length &&
             _lastSelection!.end <= text.length)
@@ -132,7 +136,7 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
         : controller.selection;
 
     String newText;
-    
+
     // Sanitize cursor position
     int cursorPosition = selection.isValid ? selection.baseOffset : text.length;
     if (cursorPosition < 0) cursorPosition = 0;
@@ -152,10 +156,7 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     final newSelection = TextSelection.collapsed(offset: cursorPosition);
     _lastSelection = newSelection;
 
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: newSelection,
-    );
+    controller.value = TextEditingValue(text: newText, selection: newSelection);
 
     state.onChanged?.call(newText);
   }
@@ -165,7 +166,8 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = (_lastSelection != null &&
+    final selection =
+        (_lastSelection != null &&
             _lastSelection!.isValid &&
             _lastSelection!.start <= text.length &&
             _lastSelection!.end <= text.length)
@@ -175,7 +177,7 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     // Sanitize start and end of selection
     int start = selection.isValid ? selection.start : text.length;
     int end = selection.isValid ? selection.end : text.length;
-    
+
     if (start < 0) start = 0;
     if (start > text.length) start = text.length;
     if (end < 0) end = 0;
@@ -201,10 +203,6 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       // Replace selection
       newText = text.replaceRange(start, end, char);
       cursorPosition = start + char.length;
-    } else if (text == '0' && char != '.') {
-      // If text is '0' and typing a digit, replace '0'
-      newText = char;
-      cursorPosition = char.length;
     } else {
       // Insert at cursor or at end
       newText = text.replaceRange(start, start, char);
@@ -217,10 +215,7 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     final newSelection = TextSelection.collapsed(offset: cursorPosition);
     _lastSelection = newSelection;
 
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: newSelection,
-    );
+    controller.value = TextEditingValue(text: newText, selection: newSelection);
 
     state.onChanged?.call(newText);
   }
@@ -230,7 +225,8 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     if (controller == null) return;
 
     final text = controller.text;
-    final selection = (_lastSelection != null &&
+    final selection =
+        (_lastSelection != null &&
             _lastSelection!.isValid &&
             _lastSelection!.start <= text.length &&
             _lastSelection!.end <= text.length)
@@ -273,10 +269,7 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
     final newSelection = TextSelection.collapsed(offset: cursorPosition);
     _lastSelection = newSelection;
 
-    controller.value = TextEditingValue(
-      text: newText,
-      selection: newSelection,
-    );
+    controller.value = TextEditingValue(text: newText, selection: newSelection);
 
     state.onChanged?.call(newText);
   }
@@ -290,5 +283,5 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
 
 final numericKeyboardProvider =
     StateNotifierProvider<NumericKeyboardNotifier, NumericKeyboardState>((ref) {
-  return NumericKeyboardNotifier();
-});
+      return NumericKeyboardNotifier();
+    });

@@ -6,7 +6,6 @@ import '../../../core/router/navigation_tabs_provider.dart';
 
 import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
-import '../../../core/components/gardi_logo.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme_extension.dart';
@@ -118,7 +117,13 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 data: (dashboard) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSalesmanDashboardStats(context, ref, dashboard, user, myVan),
+                    _buildSalesmanDashboardStats(
+                      context,
+                      ref,
+                      dashboard,
+                      user,
+                      myVan,
+                    ),
                     _buildTodayVisitPlan(context, ref, dashboard),
                   ],
                 ),
@@ -133,7 +138,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: Text(
                       'هەڵە لە بارکردنی ئامارەکاندا هەیە: ${Formatters.cleanError(err)}',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.danger,
+                      ),
                     ),
                   ),
                 ),
@@ -186,15 +193,19 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     'وەرگرتنی پارە',
                     AppIcons.customerDebt,
                     () async {
-                      final selectedCustomer = await CustomerSelectionDialog.show(
-                        context,
-                      );
+                      final selectedCustomer =
+                          await CustomerSelectionDialog.show(context);
                       if (selectedCustomer != null && context.mounted) {
                         _showPaymentDialog(context, ref, selectedCustomer);
                       }
                     },
                   ),
-                  _buildActionCard(context, 'داواکاری کاڵا', AppIcons.add, () {}),
+                  _buildActionCard(
+                    context,
+                    'داواکاری کاڵا',
+                    AppIcons.add,
+                    () {},
+                  ),
                   _buildActionCard(
                     context,
                     'کڕیاری نوێ',
@@ -217,7 +228,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   Text('دوایین پسوڵەکان', style: AppTextStyles.h2),
                   TextButton(
                     onPressed: () {
-                      ref.read(salesmanTabIndexProvider.notifier).state = 3; // Swaps to the orders tab
+                      ref.read(salesmanTabIndexProvider.notifier).state =
+                          3; // Swaps to the orders tab
                     },
                     child: const Text('هەمووی'),
                   ),
@@ -236,7 +248,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                     child: Text(
                       'هەڵە لە بارکردنی پسوڵەکاندا هەیە: ${Formatters.cleanError(err)}',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.danger),
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.danger,
+                      ),
                     ),
                   ),
                 ),
@@ -311,8 +325,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
 
                       return AppCard(
                         onTap: () {
-                          if (order.status == 'PACKING' || order.status == 'DRAFT') {
-                            context.push('/salesman/create-order', extra: order);
+                          if (order.status == 'PACKING' ||
+                              order.status == 'DRAFT') {
+                            context.push(
+                              '/salesman/create-order',
+                              extra: order,
+                            );
                           } else {
                             context.push('/order/${order.id}');
                           }
@@ -328,7 +346,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                             );
                             return;
                           }
-                          _showDeleteConfirmationDialog(context, ref, order, customerName);
+                          _showDeleteConfirmationDialog(
+                            context,
+                            ref,
+                            order,
+                            customerName,
+                          );
                         },
                         child: Row(
                           children: [
@@ -373,7 +396,10 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                                   style: AppTextStyles.price,
                                 ),
                                 const SizedBox(height: 4),
-                                StatusBadge(label: statusLabel, type: statusType),
+                                StatusBadge(
+                                  label: statusLabel,
+                                  type: statusType,
+                                ),
                               ],
                             ),
                           ],
@@ -508,7 +534,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'کڕیار: ${customer.name}',
-                    style: AppTextStyles.bodyBold.copyWith(color: AppColors.primary),
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppTextField(
@@ -551,12 +579,16 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   if (formKey.currentState!.validate()) {
                     setStateDialog(() => isPaying = true);
                     try {
-                      await ref.read(customerActionsProvider).createPayment(
-                        customerId: customer.id,
-                        amount: int.parse(amountController.text.trim()),
-                        paymentMethod: 'CASH',
-                        notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
-                      );
+                      await ref
+                          .read(customerActionsProvider)
+                          .createPayment(
+                            customerId: customer.id,
+                            amount: int.parse(amountController.text.trim()),
+                            paymentMethod: 'CASH',
+                            notes: notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                          );
 
                       if (context.mounted) {
                         Navigator.pop(context);
@@ -684,7 +716,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               onPressed: () async {
                 Navigator.pop(context);
                 try {
-                  await ref.read(orderActionsProvider).deleteOrder(order.id.toString());
+                  await ref
+                      .read(orderActionsProvider)
+                      .deleteOrder(order.id.toString());
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -706,7 +740,10 @@ class SalesmanDashboardScreen extends ConsumerWidget {
               },
               child: const Text(
                 'سڕینەوە',
-                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -730,12 +767,15 @@ class SalesmanDashboardScreen extends ConsumerWidget {
 
     final vanWhId = myVan?.id ?? user?.warehouseId;
     final stocksAsync = ref.watch(warehouseStocksProvider);
-    final vanStocks = stocksAsync.asData?.value
+    final vanStocks =
+        stocksAsync.asData?.value
             .where((s) => s.warehouseId == vanWhId)
             .toList() ??
         [];
     final outOfStocks = vanStocks.where((s) => s.quantity <= 0).toList();
-    final lowStocks = vanStocks.where((s) => s.quantity <= s.minStockLevel).toList();
+    final lowStocks = vanStocks
+        .where((s) => s.quantity <= s.minStockLevel)
+        .toList();
 
     final Color vanStockColor;
     final String vanStockSubtitle;
@@ -795,7 +835,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             _buildStatCard(
               context,
               title: 'یەکەکانی مانگ',
-              value: 'ئەم مانگە: ${dashboard.monthUnits} | ڕابردوو: ${dashboard.lastMonthUnits}',
+              value:
+                  'ئەم مانگە: ${dashboard.monthUnits} | ڕابردوو: ${dashboard.lastMonthUnits}',
               icon: Icons.stars_rounded,
               iconColor: warningColor,
             ),
@@ -803,7 +844,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             _buildStatCard(
               context,
               title: 'کڕیارە نوێکان',
-              value: 'هەفتە: ${dashboard.newCustomersWeek} | مانگ: ${dashboard.newCustomersMonth}',
+              value:
+                  'هەفتە: ${dashboard.newCustomersWeek} | مانگ: ${dashboard.newCustomersMonth}',
               icon: AppIcons.customer,
               iconColor: successColor,
             ),
@@ -813,18 +855,22 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTodayVisitPlan(BuildContext context, WidgetRef ref, SalesmanDashboardData dashboard) {
+  Widget _buildTodayVisitPlan(
+    BuildContext context,
+    WidgetRef ref,
+    SalesmanDashboardData dashboard,
+  ) {
     final theme = Theme.of(context);
     final customers = dashboard.todayRouteCustomers;
-    
+
     if (customers.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     final visitedCount = customers.where((c) => c.visited && c.id != 0).length;
     final totalCount = customers.where((c) => c.id != 0).length;
     final progress = totalCount > 0 ? visitedCount / totalCount : 0.0;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -835,12 +881,15 @@ class SalesmanDashboardScreen extends ConsumerWidget {
             Text('پلانی سەردانی ئەمڕۆ', style: AppTextStyles.h2),
             Text(
               '$visitedCount لە $totalCount کڕیار سەردانکراون',
-              style: AppTextStyles.caption.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+              style: AppTextStyles.caption.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
-        
+
         // Progress Bar
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
@@ -852,28 +901,29 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        
+
         // Customer visit list
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: customers.length,
-          separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (context, index) =>
+              const SizedBox(height: AppSpacing.sm),
           itemBuilder: (context, index) {
             final customer = customers[index];
             final isTemp = customer.id == 0;
             final isVisited = !isTemp && customer.visited;
-            
+
             return AppCard(
               onTap: () {
                 _handleCustomerTap(context, ref, customer);
               },
-              onLongPress: isTemp ? null : () {
-                context.push('/customer/${customer.id}');
-              },
-              color: isVisited 
-                ? Colors.green.withValues(alpha: 0.05)
-                : null,
+              onLongPress: isTemp
+                  ? null
+                  : () {
+                      context.push('/customer/${customer.id}');
+                    },
+              color: isVisited ? Colors.green.withValues(alpha: 0.05) : null,
               child: Row(
                 children: [
                   Container(
@@ -881,25 +931,42 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     height: 36,
                     decoration: BoxDecoration(
                       color: isTemp
-                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : (isVisited 
-                            ? AppColors.success.withValues(alpha: 0.1) 
-                            : theme.colorScheme.primaryContainer),
+                          ? theme.colorScheme.primaryContainer.withValues(
+                              alpha: 0.3,
+                            )
+                          : (isVisited
+                                ? AppColors.success.withValues(alpha: 0.1)
+                                : theme.colorScheme.primaryContainer),
                       shape: BoxShape.circle,
-                      border: isTemp ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5) : null,
+                      border: isTemp
+                          ? Border.all(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.4,
+                              ),
+                              width: 1.5,
+                            )
+                          : null,
                     ),
                     child: Center(
                       child: isTemp
-                        ? Icon(Icons.bolt, color: theme.colorScheme.primary, size: 18)
-                        : (isVisited
-                            ? const Icon(Icons.check, color: AppColors.success, size: 18)
-                            : Text(
-                                '${customer.visitOrder > 0 ? customer.visitOrder : index}',
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 12,
-                                ),
-                              )),
+                          ? Icon(
+                              Icons.bolt,
+                              color: theme.colorScheme.primary,
+                              size: 18,
+                            )
+                          : (isVisited
+                                ? const Icon(
+                                    Icons.check,
+                                    color: AppColors.success,
+                                    size: 18,
+                                  )
+                                : Text(
+                                    '${customer.visitOrder > 0 ? customer.visitOrder : index}',
+                                    style: AppTextStyles.bodyBold.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontSize: 12,
+                                    ),
+                                  )),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -907,13 +974,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          customer.name,
-                          style: AppTextStyles.bodyBold,
-                        ),
+                        Text(customer.name, style: AppTextStyles.bodyBold),
                         const SizedBox(height: 2),
                         Text(
-                          isTemp ? 'بۆ دروستکردنی خێرای پسوڵە' : (customer.address ?? 'بێ ناونیشان'),
+                          isTemp
+                              ? 'بۆ دروستکردنی خێرای پسوڵە'
+                              : (customer.address ?? 'بێ ناونیشان'),
                           style: AppTextStyles.caption,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -927,9 +993,14 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     children: [
                       if (isTemp) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -946,7 +1017,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                         Text(
                           Formatters.currency(customer.currentBalance),
                           style: AppTextStyles.caption.copyWith(
-                            color: customer.currentBalance > 0 ? AppColors.danger : Colors.grey,
+                            color: customer.currentBalance > 0
+                                ? AppColors.danger
+                                : Colors.grey,
                             fontFamily: 'KJino',
                           ),
                         ),
@@ -982,7 +1055,10 @@ class SalesmanDashboardScreen extends ConsumerWidget {
   }) {
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -997,9 +1073,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   color: iconColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Icon(icon, color: iconColor, size: 20),
-                ),
+                child: Center(child: Icon(icon, color: iconColor, size: 20)),
               ),
               if (onTap != null)
                 Icon(
@@ -1066,7 +1140,8 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     if (customer.id < 0) {
       AppSnackbar.show(
         context,
-        message: 'ناسنامەی کڕیار نادروستە (Customer ID is invalid: ${customer.id})',
+        message:
+            'ناسنامەی کڕیار نادروستە (Customer ID is invalid: ${customer.id})',
         type: SnackbarType.error,
       );
       return;
@@ -1079,9 +1154,10 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     if (orders != null) {
       try {
         existingOrder = orders.firstWhere(
-          (o) => o.customerId == customer.id && 
-                 o.status.toUpperCase() != 'DELIVERED' && 
-                 o.status.toUpperCase() != 'CANCELLED',
+          (o) =>
+              o.customerId == customer.id &&
+              o.status.toUpperCase() != 'DELIVERED' &&
+              o.status.toUpperCase() != 'CANCELLED',
         );
       } catch (_) {
         existingOrder = null;
@@ -1102,9 +1178,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -1116,13 +1190,21 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         final warehousesAsync = ref.read(warehouseListProvider);
         final warehouses = warehousesAsync.value;
         if (warehouses != null && warehouses.isNotEmpty) {
-          final mainWh = warehouses.firstWhere((w) => w.isMain, orElse: () => warehouses.first);
+          final mainWh = warehouses.firstWhere(
+            (w) => w.isMain,
+            orElse: () => warehouses.first,
+          );
           warehouseId = mainWh.id;
         } else {
           // If not loaded or empty, try to fetch it asynchronously
-          final fetchedWarehouses = await ref.read(warehouseListProvider.future);
+          final fetchedWarehouses = await ref.read(
+            warehouseListProvider.future,
+          );
           if (fetchedWarehouses.isNotEmpty) {
-            final mainWh = fetchedWarehouses.firstWhere((w) => w.isMain, orElse: () => fetchedWarehouses.first);
+            final mainWh = fetchedWarehouses.firstWhere(
+              (w) => w.isMain,
+              orElse: () => fetchedWarehouses.first,
+            );
             warehouseId = mainWh.id;
           }
         }
@@ -1145,7 +1227,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
         'items': [],
       };
 
-      final createdOrder = await ref.read(orderActionsProvider).createOrder(payload);
+      final createdOrder = await ref
+          .read(orderActionsProvider)
+          .createOrder(payload);
 
       if (context.mounted) {
         // Pop the loading dialog
@@ -1178,13 +1262,9 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    CameraBarcodeScanner.show(
-      context,
-      (scannedCode) async {
-        await _processScannedCustomerCode(context, ref, scannedCode);
-      },
-      closeOnScan: true,
-    );
+    CameraBarcodeScanner.show(context, (scannedCode) async {
+      await _processScannedCustomerCode(context, ref, scannedCode);
+    }, closeOnScan: true);
   }
 
   Future<void> _processScannedCustomerCode(
