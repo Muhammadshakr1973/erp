@@ -97,18 +97,23 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     return typeStr.contains('number') || typeStr.contains('phone');
   }
 
+  void _triggerNumericKeyboard() {
+    if (!_isNumeric) return;
+    ref.read(numericKeyboardProvider.notifier).register(
+          controller: _effectiveController,
+          focusNode: _effectiveFocusNode,
+          decimal: true, // Always allow decimals on our custom iOS layout
+          signed: true,  // Always allow negative sign on our custom iOS layout
+          onChanged: widget.onChanged,
+        );
+    _showKeyboardDialog();
+  }
+
   void _onFocusChange() {
     final bool isNumeric = _isNumeric;
     if (_effectiveFocusNode.hasFocus) {
       if (isNumeric) {
-        ref.read(numericKeyboardProvider.notifier).register(
-              controller: _effectiveController,
-              focusNode: _effectiveFocusNode,
-              decimal: true, // Always allow decimals on our custom iOS layout
-              signed: true,  // Always allow negative sign on our custom iOS layout
-              onChanged: widget.onChanged,
-            );
-        _showKeyboardDialog();
+        _triggerNumericKeyboard();
       } else {
         // If a non-numeric field is focused, immediately hide the custom numeric keyboard
         ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
@@ -168,6 +173,11 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         keyboardType: effectiveKeyboardType,
         obscureText: widget.obscureText,
         readOnly: isReadOnly,
+        onTap: () {
+          if (_isNumeric) {
+            _triggerNumericKeyboard();
+          }
+        },
         showCursor: true,
         enableInteractiveSelection: true,
         textDirection: _isNumeric ? TextDirection.ltr : null,

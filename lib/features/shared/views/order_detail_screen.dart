@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_text_field.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -167,13 +168,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               children: [
                 Text('کۆی پسوڵە: ${Formatters.currency(amountBeforeDiscount)}'),
                 const SizedBox(height: AppSpacing.sm),
-                TextField(
+                AppTextField(
                   controller: discountController,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'بڕی داشکاندن (پارە)',
-                  ),
+                  labelText: 'بڕی داشکاندن (پارە)',
+                  hintText: '0',
                   onChanged: (value) {
                     setDialogState(() {
                       enteredDiscount = int.tryParse(value) ?? 0;

@@ -78,7 +78,11 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
 
     // Position the cursor at the end of the text to ensure natural appending and deleting
     final text = controller.text;
-    controller.selection = TextSelection.collapsed(offset: text.length);
+    if (text == '0') {
+      controller.selection = const TextSelection(baseOffset: 0, extentOffset: 1);
+    } else {
+      controller.selection = TextSelection.collapsed(offset: text.length);
+    }
     _lastSelection = controller.selection;
 
     if (state.controller != controller) {
@@ -197,6 +201,10 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       // Replace selection
       newText = text.replaceRange(start, end, char);
       cursorPosition = start + char.length;
+    } else if (text == '0' && char != '.') {
+      // If text is '0' and typing a digit, replace '0'
+      newText = char;
+      cursorPosition = char.length;
     } else {
       // Insert at cursor or at end
       newText = text.replaceRange(start, start, char);

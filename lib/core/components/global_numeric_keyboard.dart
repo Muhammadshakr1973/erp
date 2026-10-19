@@ -268,19 +268,32 @@ class NumericKeyboardDialog extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title/Label
-                  if (labelText != null || hintText != null) ...[
-                    Text(
-                      labelText ?? hintText ?? '',
-                      textAlign: TextAlign.center,
-                      textDirection: TextDirection.rtl, // Keep Kurdish text right-to-left
-                      style: AppTextStyles.bodyBold.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontSize: 16,
+                  // Header with Title/Label and Top-Left Close Button (RTL)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          labelText ?? hintText ?? '',
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          style: AppTextStyles.bodyBold.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   
                   // Input Value Display box (wrapped in Directionality with LTR to ensure left-to-right number and cursor)
                   ValueListenableBuilder<TextEditingValue>(
