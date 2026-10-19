@@ -828,14 +828,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               // 1. TOP BAR (Matching image 8.png in LTR)
               _buildTopBar(context, unpackedOrders),
 
-            // 2. 10-SECOND BATCH COUNTDOWN & PERSISTENT FAILURE BAR
-            _buildSyncCountdownBanner(context),
+              // 2. 10-SECOND BATCH COUNTDOWN & PERSISTENT FAILURE BAR
+              _buildSyncCountdownBanner(context),
 
-            // 3. CATEGORY HEADER & HORIZONTAL SELECTOR (Matching image 8.png)
-            _buildCategoryBar(context, categoriesAsync, productsAsync),
+              // 3. CATEGORY HEADER & HORIZONTAL SELECTOR (Matching image 8.png)
+              _buildCategoryBar(context, categoriesAsync, productsAsync),
 
-            // 4. PRODUCT CARDS GRID
-            Expanded(
+              // 4. PRODUCT CARDS GRID
+              Expanded(
               child: productsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(
