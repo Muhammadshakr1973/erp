@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'gardi_logo.dart';
 import '../theme/app_breakpoints.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -235,6 +236,10 @@ class ResponsiveShell extends StatelessWidget {
                             selectedIndex: currentIndex,
                             onDestinationSelected: onDestinationSelected,
                             labelType: NavigationRailLabelType.all,
+                            leading: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: GardiLogo(height: 38),
+                            ),
                             destinations: destinations.map((d) {
                               return NavigationRailDestination(
                                 icon: d.icon,

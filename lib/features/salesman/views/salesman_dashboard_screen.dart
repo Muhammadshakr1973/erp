@@ -6,6 +6,7 @@ import '../../../core/router/navigation_tabs_provider.dart';
 
 import '../../../core/components/notification_badge_button.dart';
 import '../../../core/components/app_card.dart';
+import '../../../core/components/gardi_logo.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme_extension.dart';

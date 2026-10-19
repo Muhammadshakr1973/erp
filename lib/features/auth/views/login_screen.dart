@@ -6,6 +6,7 @@ import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
+import '../../../core/components/gardi_logo.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -131,10 +132,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.storefront,
-                    size: 80,
-                    color: theme.colorScheme.primary,
+                  const GardiLogo(
+                    height: 85,
                   ),
                   const SizedBox(height: 24),
                   Text(
