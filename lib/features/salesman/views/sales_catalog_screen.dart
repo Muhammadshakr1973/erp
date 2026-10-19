@@ -95,6 +95,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         } else {
           _selectedPriceTier = 'N3';
         }
+        if (!const ['N1', 'N2', 'N3'].contains(_selectedPriceTier)) {
+          _selectedPriceTier = 'N3';
+        }
       } else {
         _selectedPriceTier = 'N3';
       }
@@ -788,11 +791,24 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     // Filter editable/unpacked orders:
     // Only orders belonging to current salesman/cashvan that are in PACKING or DRAFT
     final allOrders = ordersAsync.asData?.value ?? [];
-    final unpackedOrders = allOrders.where((o) {
-      final isOwn = authUser != null ? o.salesmanId == authUser.id : true;
+    final Map<int, OrderModel> orderMap = {};
+
+    for (final o in allOrders) {
+      final isOwn = authUser != null
+          ? (authUser.isAdmin || authUser.isOwner || o.salesmanId == authUser.id)
+          : true;
       final isUnpacked = o.status == OrderModel.statusPacking || o.status == OrderModel.statusDraft;
-      return isOwn && isUnpacked;
-    }).toList();
+      if (isOwn && isUnpacked) {
+        orderMap[o.id] = o;
+      }
+    }
+
+    // Always guarantee that if _selectedOrder is active, it is present in the orders map
+    if (_selectedOrder != null) {
+      orderMap[_selectedOrder!.id] = _selectedOrder!;
+    }
+
+    final unpackedOrders = orderMap.values.toList();
 
     // Make sure active order remains synced if it changed remotely
     if (_selectedOrder != null) {
@@ -947,7 +963,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedPriceTier,
+                value: const ['N1', 'N2', 'N3'].contains(_selectedPriceTier) ? _selectedPriceTier : 'N3',
                 dropdownColor: isDark ? const Color(0xFF2A3442) : Colors.white,
                 icon: const Icon(Icons.arrow_drop_down, size: 18),
                 style: const TextStyle(
@@ -983,7 +999,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int?>(
-                  value: _selectedOrder?.id,
+                  value: (_selectedOrder != null && unpackedOrders.any((o) => o.id == _selectedOrder!.id))
+                      ? _selectedOrder!.id
+                      : null,
                   isExpanded: true,
                   dropdownColor: isDark ? const Color(0xFF2A3442) : Colors.white,
                   hint: Text(
@@ -1005,7 +1023,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     ...unpackedOrders.map((order) {
                       final custName = (order.customer is Map && order.customer['name'] != null)
                           ? order.customer['name'].toString()
-                          : (order.customerId == 0 ? 'کڕیاری کاتی' : 'کڕیار #${order.customerId}');
+                          : (order.customerId == 0 ? 'کڕیاری کاتی (بێ ناو)' : 'کڕیار #${order.customerId}');
                       return DropdownMenuItem<int?>(
                         value: order.id,
                         child: Text(

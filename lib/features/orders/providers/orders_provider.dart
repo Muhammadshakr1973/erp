@@ -42,9 +42,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
         throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
       }
       final List data = resData;
-      final onlineOrders = data
-          .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final Map<int, OrderModel> uniqueMap = {};
+      for (final json in data) {
+        if (json is Map) {
+          final ord = OrderModel.fromJson(Map<String, dynamic>.from(json));
+          uniqueMap[ord.id] = ord;
+        }
+      }
+      final onlineOrders = uniqueMap.values.toList();
 
       onlineOrders.sort((a, b) {
         final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -91,13 +96,20 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
 
   void upsertOrderLocally(OrderModel newOrder) {
     final currentOrders = state.valueOrNull ?? [];
-    final index = currentOrders.indexWhere((o) => o.id == newOrder.id);
-    List<OrderModel> updated;
-    if (index >= 0) {
-      updated = List.from(currentOrders)..[index] = newOrder;
-    } else {
-      updated = [newOrder, ...currentOrders];
+    final Map<int, OrderModel> map = {
+      newOrder.id: newOrder,
+    };
+    for (final o in currentOrders) {
+      if (!map.containsKey(o.id)) {
+        map[o.id] = o;
+      }
     }
+    final updated = map.values.toList();
+    updated.sort((a, b) {
+      final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bDate.compareTo(aDate);
+    });
     state = AsyncData(updated);
   }
 

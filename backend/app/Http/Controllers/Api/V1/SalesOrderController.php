@@ -101,7 +101,7 @@ class SalesOrderController extends Controller
             // ناردنەوەی وەڵامێکی سەرکەوتوو بە کۆدی گونجاو
             return response()->json([
                 'message' => $message,
-                'data' => $order->load(['items.product', 'salesReturns.items.product'])
+                'data' => $order->load(['customer.route', 'salesman', 'warehouse', 'items.product', 'salesReturns.items.product'])
             ], $statusCode);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -143,7 +143,7 @@ class SalesOrderController extends Controller
 
         return response()->json([
             'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
-            'data' => $updatedOrder->load(['items.product', 'salesReturns.items.product'])
+            'data' => $updatedOrder->load(['customer.route', 'salesman', 'warehouse', 'items.product', 'salesReturns.items.product'])
         ]);
     }
 
