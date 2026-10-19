@@ -154,10 +154,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _currentVersion = order.version;
       _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
-      _discountType = (order.discountPercent == 0 && order.discountAmount == 0)
+      final isCashVanSalesman =
+          ref.read(authProvider).user?.isCashVanSalesman ?? false;
+      _discountType = isCashVanSalesman ||
+              (order.discountPercent == 0 && order.discountAmount == 0)
           ? 'FIXED'
           : order.discountType;
-      _discountValue = _discountType == 'PERCENT'
+      _discountValue = isCashVanSalesman
+          ? 0
+          : _discountType == 'PERCENT'
           ? order.discountPercent
           : order.discountAmount;
       if (order.notes != null) {
@@ -1098,6 +1103,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     List<Map<String, dynamic>>? customItems,
   }) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
+    final isCashVanSalesman =
+        ref.read(authProvider).user?.isCashVanSalesman ?? false;
 
     final rawWarehouses = warehousesAsync.asData!.value;
     final warehouses = rawWarehouses.where((w) => w.canSell).toList();
@@ -1141,10 +1148,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final payload = {
       'customer_id': _selectedCustomer!.id,
       'warehouse_id': warehouseId,
-      'status': 'PACKING',
-      'discount_type': _discountType,
-      'discount_percent': _discountType == 'PERCENT' ? _discountValue : null,
-      'discount_amount': _discountType == 'FIXED' ? _discountValue : null,
+      'status': isCashVanSalesman ? 'IN_DELIVERY' : 'PACKING',
+      'discount_type': isCashVanSalesman ? 'FIXED' : _discountType,
+      'discount_percent': isCashVanSalesman
+          ? 0
+          : _discountType == 'PERCENT'
+          ? _discountValue
+          : null,
+      'discount_amount': isCashVanSalesman
+          ? 0
+          : _discountType == 'FIXED'
+          ? _discountValue
+          : null,
       'shared_key': sharedKey,
       'version': version,
       'price_type': _overridePriceType ?? _selectedCustomer?.priceType?.toUpperCase(),
@@ -1294,12 +1309,24 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 final payload = {
                   'customer_id': _selectedCustomer!.id,
                   'warehouse_id': warehouseId,
-                  'status': 'PACKING',
-                  'discount_type': _discountType,
-                  'discount_percent': _discountType == 'PERCENT'
+                  'status':
+                      (ref.read(authProvider).user?.isCashVanSalesman ?? false)
+                      ? 'IN_DELIVERY'
+                      : 'PACKING',
+                  'discount_type':
+                      (ref.read(authProvider).user?.isCashVanSalesman ?? false)
+                      ? 'FIXED'
+                      : _discountType,
+                  'discount_percent':
+                      (ref.read(authProvider).user?.isCashVanSalesman ?? false)
+                      ? 0
+                      : _discountType == 'PERCENT'
                       ? _discountValue
                       : null,
-                  'discount_amount': _discountType == 'FIXED'
+                  'discount_amount':
+                      (ref.read(authProvider).user?.isCashVanSalesman ?? false)
+                      ? 0
+                      : _discountType == 'FIXED'
                       ? _discountValue
                       : null,
                   'shared_key':
@@ -3013,11 +3040,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget _buildCartPanel(List<ProductModel> allProducts) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isCashVanSalesman =
+        ref.read(authProvider).user?.isCashVanSalesman ?? false;
     final subtotal = _calculateSubtotal(allProducts);
     final permDiscountPercent = _selectedCustomer?.permanentDiscount ?? 0.0;
     final permDiscountAmount = (subtotal * permDiscountPercent) / 100;
     final amountAfterPerm = subtotal - permDiscountAmount;
-    final invoiceDiscountAmount = _discountType == 'PERCENT'
+    final invoiceDiscountAmount = isCashVanSalesman
+        ? 0.0
+        : _discountType == 'PERCENT'
         ? (amountAfterPerm * _discountValue) / 100
         : _discountValue;
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
@@ -3505,7 +3536,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
-                    Expanded(
+                    if (!isCashVanSalesman)
+                      Expanded(
                       flex: 3,
                       child: Container(
                         height: 52,

@@ -61,7 +61,7 @@ class StoreSalesOrderRequest extends FormRequest
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.notes' => ['nullable', 'string'],
-            'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED'],
+            'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED,IN_DELIVERY'],
 
             // پشکنینی کاڵا گەڕاوەکان لە هەمان پسوڵەدا
             'returned_items' => ['nullable', 'array'],

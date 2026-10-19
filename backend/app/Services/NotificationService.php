@@ -171,7 +171,10 @@ class NotificationService
      */
     public function notifyNewOrderCreated(SalesOrder $order, $actor = null): void
     {
-        $order->loadMissing(['customer', 'items', 'salesman']);
+        $order->loadMissing(['customer', 'items', 'salesman', 'warehouse']);
+        if ($order->warehouse?->isVan() && !$order->wasRecentlyCreated) {
+            return;
+        }
 
         $customerName = $order->customer?->name;
         if (empty($customerName) || $order->customer_id == 0) {
@@ -203,9 +206,12 @@ class NotificationService
             $order->salesman_id,
         ])));
 
-        // Notify Warehouse staff & Packers only (excluding creator & salesman)
-        // Admin and Owner are excluded from new sales order notifications
-        $this->notifyRole(['warehouse', 'packer'], Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
+        if ($order->warehouse?->isVan()) {
+            $this->notifyAdmins(Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
+        } else {
+            // Notify Warehouse staff & Packers only (excluding creator & salesman)
+            $this->notifyRole(['warehouse', 'packer'], Notification::TYPE_ORDER, $title, $body, $data, $excludeUserIds);
+        }
     }
 
     /**

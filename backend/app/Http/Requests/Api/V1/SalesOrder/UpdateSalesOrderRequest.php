@@ -57,7 +57,7 @@ class UpdateSalesOrderRequest extends FormRequest
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.notes' => ['nullable', 'string'],
-            'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED'],
+            'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED,IN_DELIVERY'],
             'shared_key' => ['nullable', 'string'],
             'version' => ['nullable', 'integer', 'min:1'],
 

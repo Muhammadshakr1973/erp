@@ -21,7 +21,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     final pusher = ref.watch(pusherServiceProvider);
 
     void onOrdersEvent(Map<String, dynamic> eventData) {
-      debugPrint("Realtime update received on private-orders channel: $eventData");
+      debugPrint(
+        "Realtime update received on private-orders channel: $eventData",
+      );
       refreshSilently();
     }
 
@@ -39,7 +41,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     if (response.statusCode == 200) {
       final resData = response.data['data'] ?? response.data;
       if (resData is! List) {
-        throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)',
+        );
       }
       final List data = resData;
       final onlineOrders = data
@@ -47,8 +51,12 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
           .toList();
 
       onlineOrders.sort((a, b) {
-        final aDate = DateTime.tryParse(a.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = DateTime.tryParse(b.createdAt) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final aDate =
+            DateTime.tryParse(a.createdAt) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse(b.createdAt) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
       return onlineOrders;
@@ -71,7 +79,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   void removeOrderLocally(String orderId) {
     final currentOrders = state.valueOrNull;
     if (currentOrders != null) {
-      final updated = currentOrders.where((o) => o.id.toString() != orderId).toList();
+      final updated = currentOrders
+          .where((o) => o.id.toString() != orderId)
+          .toList();
       state = AsyncData(updated);
     }
   }
@@ -108,8 +118,8 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
 
 final ordersListProvider =
     AsyncNotifierProvider<OrdersListNotifier, List<OrderModel>>(
-  OrdersListNotifier.new,
-);
+      OrdersListNotifier.new,
+    );
 
 final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
   ref,
@@ -142,7 +152,9 @@ final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
     if (response.statusCode == 200) {
       final data = response.data['data'] ?? response.data;
       if (data is! Map) {
-        throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)');
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)',
+        );
       }
       return OrderModel.fromJson(Map<String, dynamic>.from(data));
     }
@@ -178,17 +190,14 @@ class OrderActions {
 
   Future<OrderModel> createOrder(Map<String, dynamic> data) async {
     try {
-      final idempotencyKey = data['idempotency_key'] ??
+      final idempotencyKey =
+          data['idempotency_key'] ??
           'create_order_${DateTime.now().microsecondsSinceEpoch}';
 
       final response = await api.client.post(
         '/orders',
         data: data,
-        options: Options(
-          headers: {
-            'X-Idempotency-Key': idempotencyKey,
-          },
-        ),
+        options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
 
       final resData = response.data;
@@ -197,7 +206,9 @@ class OrderActions {
           : resData;
 
       if (orderData is Map) {
-        final newOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        final newOrder = OrderModel.fromJson(
+          Map<String, dynamic>.from(orderData),
+        );
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
         ref.read(ordersListProvider.notifier).refreshSilently();
         ref.invalidate(salesmanDashboardProvider);
@@ -215,17 +226,14 @@ class OrderActions {
 
   Future<OrderModel> updateOrder(int orderId, Map<String, dynamic> data) async {
     try {
-      final idempotencyKey = data['idempotency_key'] ??
+      final idempotencyKey =
+          data['idempotency_key'] ??
           'update_order_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
 
       final response = await api.client.put(
         '/orders/$orderId',
         data: data,
-        options: Options(
-          headers: {
-            'X-Idempotency-Key': idempotencyKey,
-          },
-        ),
+        options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
 
       ref.invalidate(singleOrderProvider(orderId.toString()));
@@ -236,7 +244,9 @@ class OrderActions {
           : resData;
 
       if (orderData is Map) {
-        final updatedOrder = OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+        final updatedOrder = OrderModel.fromJson(
+          Map<String, dynamic>.from(orderData),
+        );
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
         ref.read(ordersListProvider.notifier).refreshSilently();
         ref.invalidate(salesmanDashboardProvider);
@@ -251,8 +261,14 @@ class OrderActions {
     }
   }
 
-  Future<void> updateOrderStatus(String orderId, String newStatus) async {
-    ref.read(ordersListProvider.notifier).updateOrderStatusLocally(orderId, newStatus);
+  Future<void> updateOrderStatus(
+    String orderId,
+    String newStatus, {
+    Map<String, dynamic> extraData = const {},
+  }) async {
+    ref
+        .read(ordersListProvider.notifier)
+        .updateOrderStatusLocally(orderId, newStatus);
     ref.invalidate(singleOrderProvider(orderId));
 
     try {
@@ -261,12 +277,8 @@ class OrderActions {
 
       await api.client.post(
         '/orders/$orderId/status',
-        data: {'status': newStatus},
-        options: Options(
-          headers: {
-            'X-Idempotency-Key': idempotencyKey,
-          },
-        ),
+        data: {'status': newStatus, ...extraData},
+        options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
 
       ref.read(ordersListProvider.notifier).refreshSilently();
@@ -313,7 +325,9 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
   final pusher = ref.watch(pusherServiceProvider);
 
   void onSalesReturnsEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received on private-orders channel for sales returns: $eventData");
+    debugPrint(
+      "Realtime update received on private-orders channel for sales returns: $eventData",
+    );
     ref.invalidateSelf();
   }
 
@@ -353,7 +367,9 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
     final response = await api.client.get('/sales-returns/$id');
     if (response.statusCode == 200) {
       final resData = response.data;
-      final data = (resData is Map && resData.containsKey('data')) ? resData['data'] : resData;
+      final data = (resData is Map && resData.containsKey('data'))
+          ? resData['data']
+          : resData;
       if (data is! Map) {
         throw FormatException(
           'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales return detail payload)',
@@ -387,15 +403,13 @@ class SalesReturnActions {
       await api.client.post(
         '/sales-returns',
         data: payload,
-        options: Options(
-          headers: {
-            'X-Idempotency-Key': returnEntityId,
-          },
-        ),
+        options: Options(headers: {'X-Idempotency-Key': returnEntityId}),
       );
 
       if (payload['sales_order_id'] != null) {
-        ref.invalidate(singleOrderProvider(payload['sales_order_id'].toString()));
+        ref.invalidate(
+          singleOrderProvider(payload['sales_order_id'].toString()),
+        );
       }
       ref.invalidate(ordersListProvider);
       ref.invalidate(salesReturnsListProvider);
@@ -415,13 +429,17 @@ final salesReturnActionsProvider = Provider<SalesReturnActions>((ref) {
 
 /// پسوڵە ئامادەکراوەکان بۆ دابەشکردن و دروستکردنی گەشتی شۆفێر
 /// تەنها ئەو پسوڵانە دەگرێتەوە کە لە دۆخی READY دان
-final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((ref) async {
+final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((
+  ref,
+) async {
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const [];
   final pusher = ref.watch(pusherServiceProvider);
 
   void onOrdersEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received on readyOrdersForDeliveryProvider: $eventData");
+    debugPrint(
+      "Realtime update received on readyOrdersForDeliveryProvider: $eventData",
+    );
     ref.invalidate(ordersListProvider);
     ref.invalidateSelf();
   }
@@ -490,8 +508,9 @@ class AdminOrderFilterState {
   }
 }
 
-final adminOrderFilterProvider =
-    StateProvider<AdminOrderFilterState>((ref) => const AdminOrderFilterState());
+final adminOrderFilterProvider = StateProvider<AdminOrderFilterState>(
+  (ref) => const AdminOrderFilterState(),
+);
 
 List<OrderModel> applyAdminOrderFilters({
   required List<OrderModel> orders,
@@ -511,12 +530,16 @@ List<OrderModel> applyAdminOrderFilters({
 
   // 2. Customer filter
   if (filterState.customerId != null) {
-    result = result.where((o) => o.customerId == filterState.customerId).toList();
+    result = result
+        .where((o) => o.customerId == filterState.customerId)
+        .toList();
   }
 
   // 3. Salesman filter
   if (filterState.salesmanId != null) {
-    result = result.where((o) => o.salesmanId == filterState.salesmanId).toList();
+    result = result
+        .where((o) => o.salesmanId == filterState.salesmanId)
+        .toList();
   }
 
   // 4. Start date filter
@@ -568,5 +591,3 @@ List<OrderModel> applyAdminOrderFilters({
 
   return result;
 }
-
-
