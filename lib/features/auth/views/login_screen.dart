@@ -106,11 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else {
       final error = ref.read(authProvider).error;
       if (error != null) {
-        AppSnackbar.show(
-          context,
-          message: error,
-          type: SnackbarType.error,
-        );
+        AppSnackbar.show(context, message: error, type: SnackbarType.error);
       }
     }
   }
@@ -132,9 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const GardiLogo(
-                    height: 85,
-                  ),
+                  const GardiLogo(height: 85),
                   const SizedBox(height: 24),
                   Text(
                     'بەخێربێیتەوە',
@@ -202,12 +196,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     icon: Icons.qr_code_scanner,
                     type: AppButtonType.outline,
                     size: AppButtonSize.lg,
-                    onPressed: () {
-                      CameraBarcodeScanner.show(
-                        context,
-                        _handleBarcodeLogin,
-                        closeOnScan: true,
-                      );
+                    onPressed: () async {
+                      String? barcode;
+                      await CameraBarcodeScanner.show(context, (scannedCode) {
+                        barcode = scannedCode;
+                        return true;
+                      }, closeOnScan: true);
+                      final scannedBarcode = barcode;
+                      if (scannedBarcode != null && mounted) {
+                        await _handleBarcodeLogin(scannedBarcode);
+                      }
                     },
                   ),
                 ],

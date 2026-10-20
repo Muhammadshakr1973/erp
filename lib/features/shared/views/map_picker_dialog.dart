@@ -27,6 +27,7 @@ class MapPickerDialog extends StatefulWidget {
     if (latitude != null && longitude != null && (latitude != 0 || longitude != 0)) {
       await showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (context) => MapPickerDialog(
           initialLocation: LatLng(latitude, longitude),
           isReadOnly: isReadOnly,

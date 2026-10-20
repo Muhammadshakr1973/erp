@@ -27,6 +27,7 @@ class CustomerSelectionDialog extends ConsumerStatefulWidget {
   }) {
     return showDialog<Customer>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => CustomerSelectionDialog(
         allowTemporaryCustomer: allowTemporaryCustomer,
       ),
@@ -52,6 +53,7 @@ class _CustomerSelectionDialogState
   Future<void> _openNewCustomerDialog() async {
     final result = await showDialog<dynamic>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => const CustomerFormDialog(),
     );
 

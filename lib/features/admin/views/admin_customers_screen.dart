@@ -57,6 +57,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
   void _showAddCustomerDialog(BuildContext context, [Customer? customer]) {
     showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => CustomerFormDialog(customer: customer),
     ).then((success) {
       if (success == true) {
@@ -72,6 +73,7 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
   void _showDeleteCustomerDialog(BuildContext context, Customer customer) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

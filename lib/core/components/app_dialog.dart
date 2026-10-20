@@ -18,6 +18,7 @@ class AppDialog {
   }) {
     return showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
@@ -70,6 +71,7 @@ class AppDialog {
   }) {
     return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;

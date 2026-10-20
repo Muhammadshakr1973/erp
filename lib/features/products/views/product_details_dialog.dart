@@ -19,6 +19,7 @@ class ProductDetailsDialog extends ConsumerWidget {
   void _showDeleteDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -199,6 +200,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                                 onPressed: () {
                                   showDialog(
                                     context: context,
+                                    barrierDismissible: false,
                                     builder: (context) => BarcodeGeneratorDialog(product: product),
                                   );
                                 },
@@ -365,6 +367,7 @@ class ProductDetailsDialog extends ConsumerWidget {
                       Navigator.pop(context);
                       showDialog(
                         context: context,
+                        barrierDismissible: false,
                         builder: (context) =>
                             ProductFormDialog(product: product),
                       );

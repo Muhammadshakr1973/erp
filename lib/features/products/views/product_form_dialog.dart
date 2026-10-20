@@ -256,6 +256,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     String newCategoryName = '';
     final result = await showDialog<String>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: Row(
@@ -313,6 +314,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     String newSupplierName = '';
     final result = await showDialog<String>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: Row(
@@ -523,6 +525,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             onPressed: () {
                                               showDialog(
                                                 context: context,
+                                                barrierDismissible: false,
                                                 builder: (context) => BarcodeGeneratorDialog(
                                                   product: widget.product,
                                                 ),
@@ -594,6 +597,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                           onPressed: () {
                                             showDialog(
                                               context: context,
+                                              barrierDismissible: false,
                                               builder: (context) => BarcodeGeneratorDialog(
                                                 product: widget.product,
                                               ),

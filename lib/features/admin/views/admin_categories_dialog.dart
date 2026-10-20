@@ -35,6 +35,7 @@ class AdminCategoriesDialog extends ConsumerWidget {
                         onPressed: () {
                           showDialog(
                             context: context,
+                            barrierDismissible: false,
                             builder: (context) => const CategoryFormDialog(),
                           );
                         },
@@ -74,6 +75,7 @@ class AdminCategoriesDialog extends ConsumerWidget {
                                     onPressed: () {
                                       showDialog(
                                         context: context,
+                                        barrierDismissible: false,
                                         builder: (context) =>
                                             CategoryFormDialog(category: cat),
                                       );
@@ -120,6 +122,7 @@ class AdminCategoriesDialog extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

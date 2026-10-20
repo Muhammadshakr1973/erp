@@ -52,6 +52,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -184,6 +185,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -256,6 +258,7 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
     final theme = Theme.of(context);
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: Row(

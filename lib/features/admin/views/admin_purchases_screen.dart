@@ -53,6 +53,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   void _showAddSupplierDialog(BuildContext context) {
     showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => const SupplierFormDialog(),
     ).then((success) {
       if (success == true) {
@@ -64,6 +65,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   void _showEditSupplierDialog(BuildContext context, SupplierModel supplier) {
     showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => SupplierFormDialog(supplier: supplier),
     ).then((success) {
       if (success == true) {
@@ -110,6 +112,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     final notesController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: const Text(
@@ -222,6 +225,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   void _receivePO(PurchaseOrderModel order) async {
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => ReceivePODialog(
         order: order,
         actions: ref.read(purchaseActionsProvider),
@@ -936,6 +940,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         onPressed: () {
                           showDialog(
                             context: context,
+                            barrierDismissible: false,
                             builder: (context) =>
                                 SupplierReconciliationDialog(
                                     supplier: supplier),

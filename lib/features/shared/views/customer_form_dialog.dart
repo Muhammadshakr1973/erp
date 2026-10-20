@@ -570,6 +570,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       : null;
                   final result = await showDialog<LatLng>(
                     context: context,
+                    barrierDismissible: false,
                     builder: (context) =>
                         MapPickerDialog(initialLocation: initialLoc),
                   );

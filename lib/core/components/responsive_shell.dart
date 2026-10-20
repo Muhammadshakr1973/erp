@@ -38,6 +38,7 @@ class ResponsiveShell extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       ),
       showDragHandle: true,
+      isDismissible: false,
       builder: (ctx) {
         return ConstrainedBox(
           constraints: BoxConstraints(

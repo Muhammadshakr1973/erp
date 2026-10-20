@@ -43,6 +43,7 @@ class UserQrDialog extends StatefulWidget {
   }) {
     return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => UserQrDialog(
         barcode: barcode,
         userName: userName,

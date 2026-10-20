@@ -85,6 +85,7 @@ class _CreateVanTransferDialogState
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isDismissible: false,
       builder: (ctx) {
         String search = '';
         return StatefulBuilder(
@@ -267,6 +268,7 @@ class _CreateVanTransferDialogState
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {

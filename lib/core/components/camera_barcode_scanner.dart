@@ -57,7 +57,7 @@ class CameraBarcodeScanner extends StatefulWidget {
       return showDialog<void>(
         context: context,
         useRootNavigator: true,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (ctx) {
           const dialogWidth = 540.0;
           const dialogHeight = 680.0;

@@ -129,7 +129,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
       if (!mounted) return;
       showDialog(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (context) {
           return NumericKeyboardDialog(
             controller: _effectiveController,

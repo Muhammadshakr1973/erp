@@ -32,6 +32,7 @@ class _SupplierReconciliationDialogState
   Future<void> _handleFix() async {
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('ڕاستکردنەوەی باڵانس', style: AppTextStyles.h3),
         content: const Text(

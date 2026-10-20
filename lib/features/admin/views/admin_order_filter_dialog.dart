@@ -20,6 +20,7 @@ class AdminOrderFilterDialog extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) {
     return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => const AdminOrderFilterDialog(),
     );
   }

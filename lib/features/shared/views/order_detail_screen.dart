@@ -29,7 +29,10 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   final Set<int> _checkedItemIds = {};
+  final TextEditingController _cashVanDiscountController =
+      TextEditingController();
   int? _checklistOrderId;
+  int? _discountOrderId;
   bool _isSubmittingCashVanDelivery = false;
 
   void _syncCheckedItems(OrderModel order) {
@@ -42,9 +45,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       );
   }
 
+  void _syncCashVanDiscount(OrderModel order) {
+    if (_discountOrderId == order.id) return;
+    _discountOrderId = order.id;
+    _cashVanDiscountController.text = order.discountAmount.toInt().toString();
+  }
+
+  @override
+  void dispose() {
+    _cashVanDiscountController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleCancelOrder(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,6 +104,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         if (context.mounted) {
           showDialog(
             context: context,
+            barrierDismissible: false,
             builder: (context) => AlertDialog(
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -138,73 +155,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     WidgetRef ref,
     OrderModel order,
   ) async {
-    final discountController = TextEditingController(text: '0');
     final amountBeforeDiscount =
         (order.subtotal - order.permanentDiscountAmount).clamp(
           0,
           double.infinity,
         );
-    final discountAmount = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) {
-        var enteredDiscount = 0;
-        return StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(child: Text('گەیشتنی پسوڵە')),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(dialogContext),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('کۆی پسوڵە: ${Formatters.currency(amountBeforeDiscount)}'),
-                const SizedBox(height: AppSpacing.sm),
-                AppTextField(
-                  controller: discountController,
-                  keyboardType: TextInputType.number,
-                  labelText: 'بڕی داشکاندن (پارە)',
-                  hintText: '0',
-                  onChanged: (value) {
-                    setDialogState(() {
-                      enteredDiscount = int.tryParse(value) ?? 0;
-                    });
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'کۆی دوای داشکان: ${Formatters.currency((amountBeforeDiscount - enteredDiscount).clamp(0, double.infinity))}',
-                  style: AppTextStyles.bodyBold,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                    dialogContext,
-                    enteredDiscount
-                        .clamp(0, amountBeforeDiscount.toInt())
-                        .toInt(),
-                  );
-                },
-                child: const Text('گەیشت'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    discountController.dispose();
-    if (discountAmount == null || !context.mounted) return;
+    final discountAmount = (int.tryParse(_cashVanDiscountController.text) ?? 0)
+        .clamp(0, amountBeforeDiscount.toInt())
+        .toInt();
 
     setState(() {
       _isSubmittingCashVanDelivery = true;
@@ -311,6 +269,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             }
 
             _syncCheckedItems(order);
+            _syncCashVanDiscount(order);
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
@@ -356,6 +315,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final allCashVanItemsChecked =
         order.items.isNotEmpty &&
         order.items.every((item) => _checkedItemIds.contains(item.id));
+    final amountBeforeCashVanDiscount =
+        (order.subtotal - order.permanentDiscountAmount).clamp(
+          0,
+          double.infinity,
+        );
+    final cashVanDiscount = (int.tryParse(_cashVanDiscountController.text) ?? 0)
+        .clamp(0, amountBeforeCashVanDiscount.toInt())
+        .toInt();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,7 +613,40 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     ],
                   ),
                 ),
-              if (order.discountAmount > 0)
+              if (isCashVanCheckout)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('داشکان', style: AppTextStyles.bodyMedium),
+                      ),
+                      SizedBox(
+                        width: 150,
+                        child: AppTextField(
+                          controller: _cashVanDiscountController,
+                          keyboardType: TextInputType.number,
+                          labelText: 'بڕی داشکاندن',
+                          hintText: '0',
+                          textAlign: TextAlign.end,
+                          customDecoration: InputDecoration(
+                            hintText: '0',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (order.discountAmount > 0)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   child: Row(
@@ -682,7 +682,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   children: [
                     const Text('کۆی گشتی', style: AppTextStyles.bodyLarge),
                     Text(
-                      Formatters.currency(order.totalAmount),
+                      Formatters.currency(
+                        isCashVanCheckout
+                            ? (amountBeforeCashVanDiscount - cashVanDiscount)
+                                  .clamp(0, double.infinity)
+                            : order.totalAmount,
+                      ),
                       style: AppTextStyles.priceLarge,
                     ),
                   ],

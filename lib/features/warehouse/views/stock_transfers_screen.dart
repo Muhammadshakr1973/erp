@@ -36,6 +36,7 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
   void _showTransferReceiptDialog(StockTransferModel transfer) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) {
         final theme = Theme.of(ctx);
         return Dialog(
@@ -441,6 +442,7 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
 
           final newTransfer = await showDialog<StockTransferModel?>(
             context: context,
+            barrierDismissible: false,
             builder: (ctx) => CreateVanTransferDialog(
               fromWarehouseId: warehouseId,
               fromWarehouseName: warehouseName,

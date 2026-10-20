@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/app_text_field.dart';
@@ -90,8 +92,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         // By default N3, but if order or customer has a specific price tier, adapt to it
         if (order.priceType != null && order.priceType!.isNotEmpty) {
           _selectedPriceTier = order.priceType!.toUpperCase();
-        } else if (order.customer is Map && order.customer['price_type'] != null) {
-          _selectedPriceTier = order.customer['price_type'].toString().toUpperCase();
+        } else if (order.customer is Map &&
+            order.customer['price_type'] != null) {
+          _selectedPriceTier = order.customer['price_type']
+              .toString()
+              .toUpperCase();
         } else {
           _selectedPriceTier = 'N3';
         }
@@ -134,7 +139,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       if (currentQty + 1 > maxStock) {
         AppSnackbar.show(
           context,
-          message: 'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
+          message:
+              'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
           type: SnackbarType.warning,
         );
         return;
@@ -186,9 +192,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     final newQty = await showDialog<int>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
@@ -226,7 +235,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     final parsed = int.tryParse(controller.text.trim());
@@ -236,7 +247,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text('جێبەجێکردن', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'جێبەجێکردن',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -248,14 +265,18 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (newQty != null && mounted) {
       final currentUser = ref.read(authProvider).user;
       final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
-      final targetWarehouseId = _selectedOrder!.warehouseId ?? myVanWarehouse?.id;
+      final targetWarehouseId =
+          _selectedOrder!.warehouseId ?? myVanWarehouse?.id;
 
-      if (currentUser?.isCashVan == true && targetWarehouseId != null && newQty > 0) {
+      if (currentUser?.isCashVan == true &&
+          targetWarehouseId != null &&
+          newQty > 0) {
         final maxStock = product.getStockForWarehouse(targetWarehouseId);
         if (newQty > maxStock) {
           AppSnackbar.show(
             context,
-            message: 'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر بنووسیت',
+            message:
+                'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر بنووسیت',
             type: SnackbarType.warning,
           );
           return;
@@ -272,7 +293,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       });
 
       _startOrRestart10SecondDebounce(
-        actionDesc: 'نوێکردنەوەی بڕی ${product.name} بۆ $_selectedOrderCustomerName',
+        actionDesc:
+            'نوێکردنەوەی بڕی ${product.name} بۆ $_selectedOrderCustomerName',
       );
     }
   }
@@ -371,7 +393,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     });
 
     try {
-      final updatedOrder = await ref.read(orderActionsProvider).updateOrder(orderId, payload);
+      final updatedOrder = await ref
+          .read(orderActionsProvider)
+          .updateOrder(orderId, payload);
       if (mounted) {
         setState(() {
           _selectedOrder = updatedOrder;
@@ -424,7 +448,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             final theme = Theme.of(context);
 
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 480),
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -444,10 +470,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         Expanded(
                           child: Text(
                             'هەڵە لە پاشەکەوتکردنی کاڵا',
-                            style: AppTextStyles.h3.copyWith(color: AppColors.danger),
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.danger,
+                            ),
                           ),
                         ),
-                        const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 28),
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: AppColors.danger,
+                          size: 28,
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -458,14 +490,18 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.danger.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.danger.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'فەشەل لە ئەنجامدانی: $actionDesc',
-                            style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: AppColors.danger,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -475,7 +511,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                           const SizedBox(height: 6),
                           Text(
                             'هۆکاری هەڵە: $errorMsg',
-                            style: AppTextStyles.caption.copyWith(color: Colors.red.shade900),
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.red.shade900,
+                            ),
                           ),
                         ],
                       ),
@@ -483,7 +521,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'ئەم کردارە پارێزراوە و نافەوتێت تاوەکو خۆت چارەسەری نەکەیت یان نەیەسڕیتەوە.',
-                      style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      style: AppTextStyles.caption.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
@@ -496,22 +536,35 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             icon: isRetrying
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
                                 : const Icon(Icons.refresh_rounded, size: 20),
-                            label: const Text('دووبارە هەوڵدانەوە', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
+                            label: const Text(
+                              'دووبارە هەوڵدانەوە',
+                              style: TextStyle(
+                                fontFamily: 'KJino',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             onPressed: isRetrying
                                 ? null
                                 : () async {
                                     setModalState(() => isRetrying = true);
                                     Navigator.pop(dialogCtx);
-                                    await _executeBatchSave(actionDesc: actionDesc);
+                                    await _executeBatchSave(
+                                      actionDesc: actionDesc,
+                                    );
                                   },
                           ),
                         ),
@@ -520,11 +573,19 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.danger,
                             side: const BorderSide(color: AppColors.danger),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           icon: const Icon(Icons.delete_outline, size: 20),
-                          label: const Text('سڕینەوەی کردار', style: TextStyle(fontFamily: 'KJino')),
+                          label: const Text(
+                            'سڕینەوەی کردار',
+                            style: TextStyle(fontFamily: 'KJino'),
+                          ),
                           onPressed: () {
                             setState(() {
                               _lastFailedBatch = null;
@@ -553,10 +614,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   Future<void> _showCreateOrderDialog() async {
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogCtx) {
         final theme = Theme.of(context);
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 600),
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -578,7 +642,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         style: AppTextStyles.h2,
                       ),
                     ),
-                    const Icon(Icons.receipt_long_rounded, color: AppColors.primary),
+                    const Icon(
+                      Icons.receipt_long_rounded,
+                      color: AppColors.primary,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -595,7 +662,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -605,7 +674,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             color: Colors.amber.shade700,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.flash_on_rounded, color: Colors.white, size: 22),
+                          child: const Icon(
+                            Icons.flash_on_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -614,17 +687,25 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             children: [
                               Text(
                                 'کڕیاری کاتی (بێ ناو)',
-                                style: AppTextStyles.bodyBold.copyWith(color: Colors.amber.shade900),
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: Colors.amber.shade900,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'دروستکردنی خێرای پسوڵە؛ دەتوانی دواتر بیگۆڕیت بۆ کڕیاری ڕاستەقینە',
-                                style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                style: AppTextStyles.caption.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.amber),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
                       ],
                     ),
                   ),
@@ -635,13 +716,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: const Icon(Icons.people_alt_outlined),
-                  label: const Text('هەڵبژاردنی کڕیار لە لیستەکەدا', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'هەڵبژاردنی کڕیار لە لیستەکەدا',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   onPressed: () async {
                     Navigator.pop(dialogCtx);
-                    final selectedCust = await CustomerSelectionDialog.show(context);
+                    final selectedCust = await CustomerSelectionDialog.show(
+                      context,
+                    );
                     if (selectedCust != null && mounted) {
                       _createOrderForCustomer(selectedCust);
                     }
@@ -656,11 +747,18 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
-                  label: const Text('تۆمارکردنی کڕیاری نوێ لە سیستەمدا', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'تۆمارکردنی کڕیاری نوێ لە سیستەمدا',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   onPressed: () async {
                     Navigator.pop(dialogCtx);
                     final newCust = await showDialog<dynamic>(
                       context: context,
+                      barrierDismissible: false,
                       builder: (ctx) => const CustomerFormDialog(),
                     );
                     if (newCust != null && newCust is Customer && mounted) {
@@ -683,8 +781,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final warehouses = rawWarehouses.where((w) => w.canSell).toList();
 
     final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
-    final int warehouseId = myVanWarehouse?.id ??
-        (warehouses.any((w) => w.isMain) ? warehouses.firstWhere((w) => w.isMain).id : (warehouses.isNotEmpty ? warehouses.first.id : 1));
+    final int warehouseId =
+        myVanWarehouse?.id ??
+        (warehouses.any((w) => w.isMain)
+            ? warehouses.firstWhere((w) => w.isMain).id
+            : (warehouses.isNotEmpty ? warehouses.first.id : 1));
 
     final String initialPriceTier = customer.priceType?.toUpperCase() ?? 'N3';
 
@@ -699,12 +800,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     };
 
     try {
-      final newOrder = await ref.read(orderActionsProvider).createOrder(payload);
+      final newOrder = await ref
+          .read(orderActionsProvider)
+          .createOrder(payload);
       if (mounted) {
         _setActiveOrder(newOrder);
         AppSnackbar.show(
           context,
-          message: 'پسوڵەی نوێ (${newOrder.orderNumber}) بە سەرکەوتوویی دروستکرا بۆ ${customer.name}',
+          message:
+              'پسوڵەی نوێ (${newOrder.orderNumber}) بە سەرکەوتوویی دروستکرا بۆ ${customer.name}',
           type: SnackbarType.success,
         );
       }
@@ -741,16 +845,21 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       'status': 'PACKING',
       'price_type': selectedCust.priceType?.toUpperCase() ?? _selectedPriceTier,
       'version': _selectedOrder!.version,
-      'items': _orderCart.entries.map((e) => {'product_id': e.key, 'quantity': e.value}).toList(),
+      'items': _orderCart.entries
+          .map((e) => {'product_id': e.key, 'quantity': e.value})
+          .toList(),
     };
 
     try {
-      final updated = await ref.read(orderActionsProvider).updateOrder(_selectedOrder!.id, payload);
+      final updated = await ref
+          .read(orderActionsProvider)
+          .updateOrder(_selectedOrder!.id, payload);
       if (mounted) {
         _setActiveOrder(updated);
         AppSnackbar.show(
           context,
-          message: 'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
+          message:
+              'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
           type: SnackbarType.success,
         );
       }
@@ -768,14 +877,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   String get _selectedOrderCustomerName {
     if (_selectedOrder == null) return '';
     if (_selectedOrder!.customerId == 0) return 'کڕیاری کاتی';
-    if (_selectedOrder!.customer is Map && _selectedOrder!.customer['name'] != null) {
+    if (_selectedOrder!.customer is Map &&
+        _selectedOrder!.customer['name'] != null) {
       return _selectedOrder!.customer['name'].toString();
     }
     return 'کڕیار #${_selectedOrder!.customerId}';
   }
 
   bool get _isSelectedOrderTemporary {
-    return _selectedOrder != null && (_selectedOrder!.customerId == 0 || _selectedOrderCustomerName.contains('کاتی'));
+    return _selectedOrder != null &&
+        (_selectedOrder!.customerId == 0 ||
+            _selectedOrderCustomerName.contains('کاتی'));
   }
 
   @override
@@ -788,32 +900,38 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final authUser = ref.watch(authProvider).user;
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
 
-    // Filter editable/unpacked orders:
-    // Only orders belonging to current salesman/cashvan that are in PACKING or DRAFT
+    // Show this salesman's orders in the selector, except delivered orders.
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
     for (final o in allOrders) {
       final isOwn = authUser != null
-          ? (authUser.isAdmin || authUser.isOwner || o.salesmanId == authUser.id)
+          ? (authUser.isAdmin ||
+                authUser.isOwner ||
+                o.salesmanId == authUser.id)
           : true;
-      final isUnpacked = o.status == OrderModel.statusPacking || o.status == OrderModel.statusDraft;
-      if (isOwn && isUnpacked) {
+      final isDelivered = o.status.toUpperCase() == OrderModel.statusDelivered;
+      if (isOwn && !isDelivered) {
         orderMap[o.id] = o;
       }
     }
 
-    // Always guarantee that if _selectedOrder is active, it is present in the orders map
-    if (_selectedOrder != null) {
+    // Keep the active order available unless it has already been delivered.
+    if (_selectedOrder != null &&
+        _selectedOrder!.status.toUpperCase() != OrderModel.statusDelivered) {
       orderMap[_selectedOrder!.id] = _selectedOrder!;
     }
 
-    final unpackedOrders = orderMap.values.toList();
+    final availableOrders = orderMap.values.toList();
 
     // Make sure active order remains synced if it changed remotely
     if (_selectedOrder != null) {
-      final matching = allOrders.where((o) => o.id == _selectedOrder!.id).firstOrNull;
-      if (matching != null && matching.version != _selectedOrder!.version && !_isSavingBatch) {
+      final matching = allOrders
+          .where((o) => o.id == _selectedOrder!.id)
+          .firstOrNull;
+      if (matching != null &&
+          matching.version != _selectedOrder!.version &&
+          !_isSavingBatch) {
         _selectedOrder = matching;
       }
     }
@@ -821,12 +939,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF13171F) : const Color(0xFFF4F6F9),
+        backgroundColor: isDark
+            ? const Color(0xFF13171F)
+            : const Color(0xFFF4F6F9),
         body: SafeArea(
           child: Column(
             children: [
               // 1. TOP BAR (Matching image 8.png in LTR)
-              _buildTopBar(context, unpackedOrders),
+              _buildTopBar(context, availableOrders),
 
               // 2. 10-SECOND BATCH COUNTDOWN & PERSISTENT FAILURE BAR
               _buildSyncCountdownBanner(context),
@@ -836,90 +956,115 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
               // 4. PRODUCT CARDS GRID
               Expanded(
-              child: productsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(
-                  child: Text('هەڵە لە هێنانی کاڵاکان: $err', style: AppTextStyles.bodyMedium),
-                ),
-                data: (allProducts) {
-                  // Filter products by category & search query
-                  final filteredProducts = allProducts.where((p) {
-                    if (!p.isActive) return false;
-                    if (_selectedCategoryId != null && p.categoryId != _selectedCategoryId) {
-                      return false;
-                    }
-                    if (_searchQuery.isNotEmpty) {
-                      final matchName = p.name.toLowerCase().contains(_searchQuery);
-                      final matchBarcode = p.barcode.toLowerCase().contains(_searchQuery);
-                      final matchSku = (p.sku ?? '').toLowerCase().contains(_searchQuery);
-                      return matchName || matchBarcode || matchSku;
-                    }
-                    return true;
-                  }).toList();
+                child: productsAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Center(
+                    child: Text(
+                      'هەڵە لە هێنانی کاڵاکان: $err',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                  data: (allProducts) {
+                    // Filter products by category & search query
+                    final filteredProducts = allProducts.where((p) {
+                      if (!p.isActive) return false;
+                      if (_selectedCategoryId != null &&
+                          p.categoryId != _selectedCategoryId) {
+                        return false;
+                      }
+                      if (_searchQuery.isNotEmpty) {
+                        final matchName = p.name.toLowerCase().contains(
+                          _searchQuery,
+                        );
+                        final matchBarcode = p.barcode.toLowerCase().contains(
+                          _searchQuery,
+                        );
+                        final matchSku = (p.sku ?? '').toLowerCase().contains(
+                          _searchQuery,
+                        );
+                        return matchName || matchBarcode || matchSku;
+                      }
+                      return true;
+                    }).toList();
 
-                  if (filteredProducts.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.inventory_2_outlined, size: 64, color: theme.colorScheme.outlineVariant),
-                          const SizedBox(height: AppSpacing.md),
-                          const Text('هیچ کاڵایەک نەدۆزرایەوە', style: AppTextStyles.h3),
-                          if (_searchQuery.isNotEmpty)
-                            TextButton(
-                              onPressed: () {
-                                _searchController.clear();
-                              },
-                              child: const Text('سڕینەوەی گەڕان', style: TextStyle(fontFamily: 'KJino')),
+                    if (filteredProducts.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 64,
+                              color: theme.colorScheme.outlineVariant,
                             ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossAxisCount = constraints.maxWidth < 600
-                          ? 2
-                          : constraints.maxWidth < 950
-                              ? 3
-                              : 4;
-
-                      return GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          childAspectRatio: 0.68,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+                            const SizedBox(height: AppSpacing.md),
+                            const Text(
+                              'هیچ کاڵایەک نەدۆزرایەوە',
+                              style: AppTextStyles.h3,
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                                child: const Text(
+                                  'سڕینەوەی گەڕان',
+                                  style: TextStyle(fontFamily: 'KJino'),
+                                ),
+                              ),
+                          ],
                         ),
-                        itemCount: filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = filteredProducts[index];
-                          final qtyInCart = _orderCart[product.id] ?? 0;
-                          return _buildProductCard(
-                            context,
-                            product: product,
-                            quantity: qtyInCart,
-                            user: authUser,
-                            vanWarehouseId: myVanWarehouse?.id,
-                          );
-                        },
                       );
-                    },
-                  );
-                },
+                    }
+
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = constraints.maxWidth < 600
+                            ? 2
+                            : constraints.maxWidth < 950
+                            ? 3
+                            : 4;
+
+                        return GridView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                childAspectRatio: 0.68,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                          itemCount: filteredProducts.length,
+                          itemBuilder: (context, index) {
+                            final product = filteredProducts[index];
+                            final qtyInCart = _orderCart[product.id] ?? 0;
+                            return _buildProductCard(
+                              context,
+                              product: product,
+                              quantity: qtyInCart,
+                              user: authUser,
+                              vanWarehouseId: myVanWarehouse?.id,
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   /// Top Bar matching design in 8.png
-  Widget _buildTopBar(BuildContext context, List<OrderModel> unpackedOrders) {
+  Widget _buildTopBar(BuildContext context, List<OrderModel> availableOrders) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -929,14 +1074,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         color: isDark ? const Color(0xFF1E242E) : Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF2E3846) : theme.dividerColor.withValues(alpha: 0.3),
+            color: isDark
+                ? const Color(0xFF2E3846)
+                : theme.dividerColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
       ),
       child: Row(
         children: [
-          // Filter Button (Funnel)
+          // Open the selected order in its detail view
           Container(
             height: 38,
             width: 38,
@@ -946,9 +1093,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
-              icon: const Icon(Icons.filter_alt_rounded, size: 20),
-              tooltip: 'فلتەری جۆری کاڵاکان',
-              onPressed: () => _showCategoryFilterSheet(context),
+              icon: const Icon(Icons.receipt_long_rounded, size: 20),
+              tooltip: 'کردنەوەی پسوڵە',
+              onPressed: _selectedOrder == null
+                  ? null
+                  : () => context.push('/order/${_selectedOrder!.id}'),
             ),
           ),
           const SizedBox(width: 6),
@@ -963,7 +1112,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: const ['N1', 'N2', 'N3'].contains(_selectedPriceTier) ? _selectedPriceTier : 'N3',
+                value: const ['N1', 'N2', 'N3'].contains(_selectedPriceTier)
+                    ? _selectedPriceTier
+                    : 'N3',
                 dropdownColor: isDark ? const Color(0xFF2A3442) : Colors.white,
                 icon: const Icon(Icons.arrow_drop_down, size: 18),
                 style: const TextStyle(
@@ -999,11 +1150,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int?>(
-                  value: (_selectedOrder != null && unpackedOrders.any((o) => o.id == _selectedOrder!.id))
+                  value:
+                      (_selectedOrder != null &&
+                          availableOrders.any(
+                            (o) => o.id == _selectedOrder!.id,
+                          ))
                       ? _selectedOrder!.id
                       : null,
                   isExpanded: true,
-                  dropdownColor: isDark ? const Color(0xFF2A3442) : Colors.white,
+                  dropdownColor: isDark
+                      ? const Color(0xFF2A3442)
+                      : Colors.white,
                   hint: Text(
                     'پسوڵەیەک هەڵبژێرە',
                     style: AppTextStyles.caption.copyWith(
@@ -1018,17 +1175,28 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   items: [
                     const DropdownMenuItem<int?>(
                       value: null,
-                      child: Text('هیچ پسوڵەیەک هەڵنەبژێردراوە', style: TextStyle(fontFamily: 'KJino', fontSize: 12)),
+                      child: Text(
+                        'هیچ پسوڵەیەک هەڵنەبژێردراوە',
+                        style: TextStyle(fontFamily: 'KJino', fontSize: 12),
+                      ),
                     ),
-                    ...unpackedOrders.map((order) {
-                      final custName = (order.customer is Map && order.customer['name'] != null)
+                    ...availableOrders.map((order) {
+                      final custName =
+                          (order.customer is Map &&
+                              order.customer['name'] != null)
                           ? order.customer['name'].toString()
-                          : (order.customerId == 0 ? 'کڕیاری کاتی (بێ ناو)' : 'کڕیار #${order.customerId}');
+                          : (order.customerId == 0
+                                ? 'کڕیاری کاتی (بێ ناو)'
+                                : 'کڕیار #${order.customerId}');
                       return DropdownMenuItem<int?>(
                         value: order.id,
                         child: Text(
                           '\u202A${order.orderNumber}\u202C • $custName',
-                          style: const TextStyle(fontFamily: 'KJino', fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontFamily: 'KJino',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1039,7 +1207,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     if (orderId == null) {
                       _setActiveOrder(null);
                     } else {
-                      final ord = unpackedOrders.where((o) => o.id == orderId).firstOrNull;
+                      final ord = availableOrders
+                          .where((o) => o.id == orderId)
+                          .firstOrNull;
                       _setActiveOrder(ord);
                     }
                   },
@@ -1069,23 +1239,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           // If current order is temporary, show quick convert icon
           if (_isSelectedOrderTemporary)
             IconButton(
-              icon: const Icon(Icons.person_pin_rounded, color: Colors.amber, size: 22),
+              icon: const Icon(
+                Icons.person_pin_rounded,
+                color: Colors.amber,
+                size: 22,
+              ),
               tooltip: 'گۆڕینی کڕیاری کاتی بۆ کڕیاری ڕاستەقینە',
               onPressed: _changeOrderCustomer,
             ),
 
           // Logo image only (no text)
-          Image.asset(
-            'assets/images/1.png',
-            height: 36,
-            fit: BoxFit.contain,
-          ),
+          Image.asset('assets/images/1.png', height: 36, fit: BoxFit.contain),
         ],
       ),
     );
   }
 
-  /// 10-Second Countdown & Sync Status Banner (Preserves fixed height to prevent layout shift)
+  /// 10-Second Countdown & Sync Status Banner
   Widget _buildSyncCountdownBanner(BuildContext context) {
     const double bannerHeight = 36.0;
 
@@ -1097,12 +1267,21 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         alignment: Alignment.center,
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.danger,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'فەشەل لە پاشەکەوتکردنی کاڵاکان بۆ ${_lastFailedBatch!['customerName']}',
-                style: const TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.danger),
+                style: const TextStyle(
+                  fontFamily: 'KJino',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  color: AppColors.danger,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1115,65 +1294,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: _showFailedActionPersistentDialog,
-              child: const Text('چارەسەرکردن', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11)),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_isSavingBatch) {
-      return Container(
-        height: bannerHeight,
-        color: AppColors.primary.withValues(alpha: 0.15),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-            ),
-            SizedBox(width: 8),
-            Text(
-              'پاشەکەوتکردن بە یەک کۆنێکشن لە داتابەیس...',
-              style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11, color: AppColors.primary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_secondsRemaining > 0) {
-      return Container(
-        height: bannerHeight,
-        color: Colors.blue.withValues(alpha: 0.12),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        alignment: Alignment.center,
-        child: Row(
-          children: [
-            const Icon(Icons.timer_outlined, size: 16, color: Colors.blue),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'پاشەکەوتکردن بە یەک کۆنێکشن دوای: $_secondsRemaining چرکە',
-                style: const TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.w600, fontSize: 11, color: Colors.blue),
-              ),
-            ),
-            InkWell(
-              onTap: _saveImmediately,
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'ئێستا پاشەکەوت بکە',
-                  style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white),
+              child: const Text(
+                'چارەسەرکردن',
+                style: TextStyle(
+                  fontFamily: 'KJino',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             ),
@@ -1182,11 +1308,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       );
     }
 
-    // Keep the exact same height empty/reserved so elements below never shift
-    return const SizedBox(
-      height: bannerHeight,
-      width: double.infinity,
-    );
+    return const SizedBox.shrink();
   }
 
   /// Category Header & Filter Chips
@@ -1204,10 +1326,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     int itemCount = allProducts.length;
 
     if (_selectedCategoryId != null) {
-      final selectedCat = categories.where((c) => c.id == _selectedCategoryId).firstOrNull;
+      final selectedCat = categories
+          .where((c) => c.id == _selectedCategoryId)
+          .firstOrNull;
       if (selectedCat != null) {
         currentCategoryName = selectedCat.name;
-        itemCount = allProducts.where((p) => p.categoryId == _selectedCategoryId).length;
+        itemCount = allProducts
+            .where((p) => p.categoryId == _selectedCategoryId)
+            .length;
       }
     }
 
@@ -1218,33 +1344,105 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       ),
       child: Column(
         children: [
-          // Banner row matching 8.png: "item 23" on left, "ئافرەتان" on right
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'item $itemCount',
-                  style: TextStyle(
-                    fontFamily: 'KJino',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: theme.colorScheme.primary,
+              if (_isSavingBatch)
+                Tooltip(
+                  message: 'پاشەکەوتکردن بە یەک کۆنێکشن لە داتابەیس...',
+                  child: Container(
+                    width: 54,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'item $itemCount',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                currentCategoryName,
-                style: AppTextStyles.h3.copyWith(
-                  fontSize: 16,
-                  color: isDark ? Colors.white : Colors.black87,
+              if (_secondsRemaining > 0 &&
+                  _lastFailedBatch == null &&
+                  !_isSavingBatch)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.timer_outlined,
+                      size: 16,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$_secondsRemaining چرکە',
+                      style: const TextStyle(
+                        fontFamily: 'KJino',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: _saveImmediately,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'ئێستا پاشەکەوت بکە',
+                          style: TextStyle(
+                            fontFamily: 'KJino',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  currentCategoryName,
+                  style: AppTextStyles.h3.copyWith(
+                    fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -1291,7 +1489,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     return Padding(
       padding: const EdgeInsets.only(left: 6),
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(fontFamily: 'KJino', fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'KJino',
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
         selected: isSelected,
         onSelected: (_) => onTap(),
         selectedColor: AppColors.primary,
@@ -1315,7 +1520,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final unitPrice = _getProductPrice(product);
 
     // Stock calculation
-    final int availableStock = (user?.isCashVan == true && vanWarehouseId != null)
+    final int availableStock =
+        (user?.isCashVan == true && vanWarehouseId != null)
         ? product.getStockForWarehouse(vanWarehouseId)
         : product.totalStock;
 
@@ -1343,7 +1549,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           // 1. PRODUCT IMAGE
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(15),
+              ),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -1351,7 +1559,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       ? Image.network(
                           product.imagePath!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildPlaceholderImage(),
                         )
                       : _buildPlaceholderImage(),
 
@@ -1360,7 +1569,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(6),
@@ -1383,7 +1595,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       top: 6,
                       left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(10),
@@ -1438,7 +1653,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1B212B) : Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(15),
+              ),
             ),
             child: Row(
               children: [
@@ -1451,7 +1668,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       backgroundColor: const Color(0xFFE53935),
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () => _decrementProduct(product),
@@ -1471,7 +1690,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         color: isDark ? const Color(0xFF2E3846) : Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF435064) : Colors.grey.shade300,
+                          color: isDark
+                              ? const Color(0xFF435064)
+                              : Colors.grey.shade300,
                         ),
                       ),
                       alignment: Alignment.center,
@@ -1500,7 +1721,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () => _incrementProduct(product),
@@ -1524,73 +1747,4 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     );
   }
 
-  /// Category Filter Sheet / Dialog with Top-Left Close Button
-  void _showCategoryFilterSheet(BuildContext context) {
-    final categoriesAsync = ref.read(categoriesListProvider);
-    final categories = categoriesAsync.asData?.value ?? [];
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 450, maxHeight: 500),
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top-Left Close Button rule
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text('فلتەر بەپێی جۆری کاڵا', style: AppTextStyles.h3),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                ListTile(
-                  title: const Text('هەموو کاڵاکان', style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold)),
-                  trailing: _selectedCategoryId == null ? const Icon(Icons.check, color: AppColors.primary) : null,
-                  onTap: () {
-                    setState(() {
-                      _selectedCategoryId = null;
-                    });
-                    Navigator.pop(ctx);
-                  },
-                ),
-                const Divider(),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: categories.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final cat = categories[index];
-                      final isSelected = _selectedCategoryId == cat.id;
-                      return ListTile(
-                        title: Text(cat.name, style: const TextStyle(fontFamily: 'KJino')),
-                        trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
-                        onTap: () {
-                          setState(() {
-                            _selectedCategoryId = cat.id;
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 }

@@ -23,6 +23,7 @@ class NewOrderCreationDialog extends ConsumerStatefulWidget {
   static Future<OrderModel?> show(BuildContext context) async {
     final createdOrder = await showDialog<OrderModel>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => const NewOrderCreationDialog(),
     );
     if (createdOrder != null && context.mounted) {

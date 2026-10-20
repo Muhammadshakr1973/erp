@@ -184,6 +184,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
@@ -302,6 +303,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       onPressed: () {
                         showDialog(
                           context: context,
+                          barrierDismissible: false,
                           builder: (context) =>
                               CustomerReconciliationDialog(customer: customer),
                         );
@@ -313,6 +315,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     onPressed: () {
                       showDialog<bool>(
                         context: context,
+                        barrierDismissible: false,
                         builder: (context) =>
                             CustomerFormDialog(customer: customer),
                       ).then((success) {
@@ -333,6 +336,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                       onPressed: () {
                         showDialog(
                           context: context,
+                          barrierDismissible: false,
                           builder: (ctx) => AlertDialog(
                             title: const Text(
                               'سڕینەوەی کڕیار',
@@ -652,6 +656,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     onPressed: () {
                       showDialog(
                         context: context,
+                        barrierDismissible: false,
                         builder: (context) =>
                             CustomerReconciliationDialog(customer: customer),
                       );

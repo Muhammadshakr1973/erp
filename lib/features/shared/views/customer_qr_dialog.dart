@@ -22,6 +22,7 @@ class CustomerQrDialog extends StatefulWidget {
   static Future<void> show(BuildContext context, Customer customer) {
     return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => CustomerQrDialog(customer: customer),
     );
   }

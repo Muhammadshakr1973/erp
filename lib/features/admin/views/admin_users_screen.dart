@@ -131,6 +131,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   ]) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => UserFormDialog(user: user, roles: roles),
     );
   }
@@ -146,6 +147,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

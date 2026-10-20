@@ -98,6 +98,7 @@ class _SalesmanCommissionsReportScreenState
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           final notifier = ref.read(commissionActionProvider.notifier);
@@ -517,6 +518,7 @@ class _SalesmanCommissionsReportScreenState
   void _showDetailsDialog(BuildContext context, CommissionModel commission) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -738,6 +740,7 @@ class _SalesmanCommissionsReportScreenState
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('پەسەندکردنی کۆمسیۆن'),
         content: Column(
@@ -807,6 +810,7 @@ class _SalesmanCommissionsReportScreenState
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
           title: const Text('تۆمارکردنی پارەدانی کۆمسیۆن'),
@@ -904,6 +908,7 @@ class _SalesmanCommissionsReportScreenState
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('هەڵوەشاندنەوەی کۆمسیۆن'),
         content: Column(

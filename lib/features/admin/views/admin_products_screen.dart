@@ -42,6 +42,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   ) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,6 +135,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             onPressed: () {
               showDialog(
                 context: context,
+                barrierDismissible: false,
                 builder: (context) => const BarcodeGeneratorDialog(),
               );
             },
@@ -144,6 +146,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             onPressed: () {
               showDialog(
                 context: context,
+                barrierDismissible: false,
                 builder: (context) => const AdminCategoriesDialog(),
               );
             },
@@ -154,6 +157,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             onPressed: () {
               showDialog(
                 context: context,
+                barrierDismissible: false,
                 builder: (context) => const ProductFormDialog(),
               );
             },
@@ -365,6 +369,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                         onTap: () {
                           showDialog(
                             context: context,
+                            barrierDismissible: false,
                             builder: (context) =>
                                 ProductFormDialog(product: product),
                           );

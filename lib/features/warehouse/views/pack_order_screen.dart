@@ -129,6 +129,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
         showDialog(
           context: context,
+          barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -216,6 +217,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     if (hasUnpacked) {
       final confirm = await showDialog<bool>(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: const Text('ئامادەکردنی بەشەکی (Partial Ready)'),
           content: const Text(
@@ -257,6 +259,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       if (mounted) {
         showDialog(
           context: context,
+          barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('شکست هێنا'),
             content: Text(e.toString().replaceAll('Exception: ', '')),
@@ -722,7 +725,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return Dialog.fullscreen(
           backgroundColor: Colors.black.withValues(alpha: 0.95),

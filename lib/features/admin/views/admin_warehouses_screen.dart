@@ -62,6 +62,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
@@ -585,6 +586,7 @@ class _AdminWarehousesScreenState extends ConsumerState<AdminWarehousesScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {

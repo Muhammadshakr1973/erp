@@ -477,6 +477,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Future<void> _confirmDeleteItem(int productId, String productName) async {
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
         content: Text(
@@ -519,6 +520,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final controller = TextEditingController(text: currentQty.toString());
     final newQty = await showDialog<int>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text('دەستکاری بڕی $productName', style: AppTextStyles.h3),
         content: AppTextField(
@@ -581,6 +583,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (modalCtx, setDialogState) {
@@ -901,6 +904,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (modalCtx, setDialogState) {
           return AlertDialog(
@@ -1863,6 +1867,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 onPressed: () async {
                   final result = await showDialog<dynamic>(
                     context: context,
+                    barrierDismissible: false,
                     builder: (context) => const CustomerFormDialog(),
                   );
                   if (result != null && result is Customer && mounted) {
@@ -2798,6 +2803,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       onTap: () async {
         final selected = await showDialog<String>(
           context: context,
+          barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('دیاریکردنی جۆری نرخ', style: AppTextStyles.h3),
             content: Column(
@@ -2867,7 +2873,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   ) {
     showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.transparent,

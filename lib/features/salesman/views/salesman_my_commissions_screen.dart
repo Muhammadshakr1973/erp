@@ -184,6 +184,7 @@ class _SalesmanMyCommissionsScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: false,
       builder: (ctx) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,

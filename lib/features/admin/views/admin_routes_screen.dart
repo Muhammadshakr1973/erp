@@ -451,6 +451,7 @@ class _AdminRoutesScreenState extends ConsumerState<AdminRoutesScreen> {
   void _confirmDelete(RouteModel route) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -783,6 +784,7 @@ class _RouteCustomersDialogState extends ConsumerState<_RouteCustomersDialog> {
   Future<void> _showAssignCustomersDialog() async {
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => _AssignCustomersDialog(
         route: widget.route,
         onAssigned: _loadCustomers,

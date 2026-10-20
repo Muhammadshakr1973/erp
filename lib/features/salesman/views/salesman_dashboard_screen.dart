@@ -213,6 +213,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                     () {
                       showDialog(
                         context: context,
+                        barrierDismissible: false,
                         builder: (context) => const CustomerFormDialog(),
                       );
                     },
@@ -522,6 +523,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
@@ -692,6 +694,7 @@ class SalesmanDashboardScreen extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text(

@@ -610,6 +610,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return Directionality(
           textDirection: TextDirection.rtl,
@@ -724,6 +725,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -844,7 +846,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return Dialog.fullscreen(
           backgroundColor: Colors.black.withValues(alpha: 0.95),

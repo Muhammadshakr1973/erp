@@ -318,6 +318,7 @@ class SalesmanOrdersScreen extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Row(
