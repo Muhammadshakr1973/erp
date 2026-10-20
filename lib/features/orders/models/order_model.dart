@@ -11,6 +11,7 @@ class OrderItemModel {
   final String? productUnit;
   final int? unitsPerCarton;
   final String? productImagePath;
+  final String? priceType;
 
   OrderItemModel({
     required this.id,
@@ -25,6 +26,7 @@ class OrderItemModel {
     this.productUnit,
     this.unitsPerCarton,
     this.productImagePath,
+    this.priceType,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class OrderItemModel {
       productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
       unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
       productImagePath: imgPath?.toString(),
+      priceType: json['price_type']?.toString(),
     );
   }
 }

@@ -48,7 +48,7 @@ class CustomerController extends Controller
         }
 
         return response()->json([
-            'data' => $customer->load('route')
+            'data' => $customer->load(['route', 'specialPrices'])
         ], 200);
     }
 

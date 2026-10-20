@@ -55,6 +55,7 @@ class StoreSalesOrderRequest extends FormRequest
             'shared_key' => ['nullable', 'string', 'max:100'],
             'version' => ['nullable', 'integer', 'min:1'],
             'price_type' => ['nullable', 'string', 'in:N1,N2,N3,n1,n2,n3'],
+            'is_manual_price_type' => ['nullable', 'boolean'],
 
             // پشکنینی ئایتمەکانی پسوڵەکە (ڕێگە بە بەتاڵبوون دەدرێت بۆ دراوتی سەرەتایی)
             'items' => ['nullable', 'array'],

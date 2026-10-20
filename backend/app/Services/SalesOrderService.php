@@ -141,16 +141,10 @@ class SalesOrderService
                     }
                 }
 
-                // دیاریکردنی نرخ بەپێی تایپ و کڕیار (تۆمارکردنی مێژوویی - Snapshot)
-                if (isset($data['price_type'])) {
-                    $requestedType = strtoupper($data['price_type']);
-                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
-                    $unitPrice = (int) $product->getPriceForType($priceType);
-                } else {
-                    $priceDetails = $customer->getPriceDetailsForProduct($product);
-                    $unitPrice = (int) $priceDetails['price'];
-                    $priceType = $priceDetails['price_type'];
-                }
+                // دیاریکردنی نرخ بەپێی یاسای کڕیار (تایبەت پێشینەیە مەگەر بە دەست گۆڕدرابێت)
+                $priceInfo = $this->determineItemPriceAndType($customer, $product, $data);
+                $unitPrice = $priceInfo['price'];
+                $priceType = $priceInfo['price_type'];
                 $costPrice = (int) $product->cost_price; // Snapshot نرخی کڕین
 
                 $lineTotal = $unitPrice * $quantity;
@@ -291,15 +285,9 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
-                if (isset($data['price_type'])) {
-                    $requestedType = strtoupper($data['price_type']);
-                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
-                    $unitPrice = (int) $product->getPriceForType($priceType);
-                } else {
-                    $priceDetails = $customer->getPriceDetailsForProduct($product);
-                    $unitPrice = (int) $priceDetails['price'];
-                    $priceType = $priceDetails['price_type'];
-                }
+                $priceInfo = $this->determineItemPriceAndType($customer, $product, $data);
+                $unitPrice = $priceInfo['price'];
+                $priceType = $priceInfo['price_type'];
                 $costPrice = (int) $product->cost_price;
 
                 $lineTotal = $unitPrice * $quantity;
@@ -1150,15 +1138,9 @@ class SalesOrderService
 
                 $product = Product::findOrFail($item['product_id']);
 
-                if (isset($data['price_type'])) {
-                    $requestedType = strtoupper($data['price_type']);
-                    $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
-                    $unitPrice = (int) $product->getPriceForType($priceType);
-                } else {
-                    $priceDetails = $customer->getPriceDetailsForProduct($product);
-                    $unitPrice = (int) $priceDetails['price'];
-                    $priceType = $priceDetails['price_type'];
-                }
+                $priceInfo = $this->determineItemPriceAndType($customer, $product, $data);
+                $unitPrice = $priceInfo['price'];
+                $priceType = $priceInfo['price_type'];
                 $costPrice = (int) $product->cost_price;
 
                 $lineTotal = $unitPrice * $quantity;
@@ -1350,4 +1332,47 @@ class SalesOrderService
             \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order deletion: " . $e->getMessage());
         }
     }
+
+    /**
+     * دیاریکردنی نرخ و جۆری نرخ بەپێی یاسای کڕیار و دەستکاریکردنی دەستی (Manual Override)
+     * - ئەگەر کاشڤان یان مەندوب بە دەست جۆری نرخ هەڵبژێرێت (is_manual_price_type)، هەموو کاڵاکان بەو نرخە دەبن.
+     * - ئەگەر بە دەست هەڵنەبژێردرابێت (Default/Automatic):
+     *   ١. ئەگەر کڕیارەکە نرخی تایبەتی هەبوو بۆ کاڵاکە، سەرەتا نرخی تایبەتەکەی وەردەگیرێت.
+     *   ٢. ئەگەر نرخی تایبەتی نەبوو، بەپێی جۆری نرخی کڕیار یان هەڵبژێردراو دەبێت.
+     */
+    protected function determineItemPriceAndType(Customer $customer, Product $product, array $data): array
+    {
+        $isManualOverride = filter_var($data['is_manual_price_type'] ?? false, FILTER_VALIDATE_BOOLEAN)
+            || filter_var($data['override_price_type'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if ($isManualOverride && !empty($data['price_type'])) {
+            $requestedType = strtoupper($data['price_type']);
+            $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
+            $unitPrice = (int) $product->getPriceForType($priceType);
+            return [
+                'price' => $unitPrice,
+                'price_type' => $priceType,
+            ];
+        }
+
+        // Automatic / Default: سەرەتا پشکنین بۆ نرخی تایبەتی کڕیار دەکرێت
+        $special = $customer->specialPrices()->where('product_id', $product->id)->first();
+        if ($special) {
+            return [
+                'price' => (int) $special->price,
+                'price_type' => 'SPECIAL',
+            ];
+        }
+
+        // ئەگەر نرخی تایبەت نەبوو، بەپێی جۆری نرخی کڕیار/هەڵبژێردراو
+        $requestedType = !empty($data['price_type']) ? strtoupper($data['price_type']) : strtoupper($customer->price_type ?? 'N3');
+        $priceType = in_array($requestedType, ['N1', 'N2', 'N3']) ? $requestedType : 'N3';
+        $unitPrice = (int) $product->getPriceForType($priceType);
+
+        return [
+            'price' => $unitPrice,
+            'price_type' => $priceType,
+        ];
+    }
 }
+

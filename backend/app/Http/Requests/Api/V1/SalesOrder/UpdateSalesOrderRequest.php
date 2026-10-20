@@ -51,6 +51,7 @@ class UpdateSalesOrderRequest extends FormRequest
             'discount_type' => ['nullable', 'string', 'in:PERCENT,FIXED,percent,fixed'],
             'notes' => ['nullable', 'string'],
             'price_type' => ['nullable', 'string', 'in:N1,N2,N3,n1,n2,n3'],
+            'is_manual_price_type' => ['nullable', 'boolean'],
 
             // پشکنینی ئایتمەکانی پسوڵەکە (ڕێگە بە بەتاڵبوون دەدرێت بۆ دراوتی سەرەتایی)
             'items' => ['nullable', 'array'],

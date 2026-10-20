@@ -1167,6 +1167,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'shared_key': sharedKey,
       'version': version,
       'price_type': _overridePriceType ?? _selectedCustomer?.priceType?.toUpperCase(),
+      'is_manual_price_type': _overridePriceType != null,
       'notes': _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),

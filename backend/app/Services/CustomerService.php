@@ -13,7 +13,7 @@ class CustomerService
      */
     public function getAllCustomers(array $filters, $user): LengthAwarePaginator
     {
-        $query = Customer::with('route');
+        $query = Customer::with(['route', 'specialPrices']);
 
         // ئەگەر بەکارهێنەر مەندوب بوو، تەنها کڕیارەکانی ئەو گەڕەکانە دەبینێت کە بۆی دانراون یان بەڕاستەوخۆ بۆی تەرخانکراون
         if ($user->isSalesman()) {

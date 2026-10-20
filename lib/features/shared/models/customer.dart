@@ -18,6 +18,7 @@ class Customer {
   final double? longitude;
   final int? visitOrder;
   final RouteModel? route;
+  final Map<int, double> specialPrices;
 
   static Customer get temporary => Customer(
         id: 0,
@@ -28,6 +29,7 @@ class Customer {
         creditLimit: 0.0,
         priceType: 'N3',
         isActive: true,
+        specialPrices: const {},
       );
 
   Customer({
@@ -48,9 +50,24 @@ class Customer {
     this.longitude,
     this.visitOrder,
     this.route,
+    this.specialPrices = const {},
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) {
+    final Map<int, double> parsedSpecialPrices = {};
+    final rawSpecial = json['special_prices'] ?? json['specialPrices'];
+    if (rawSpecial is List) {
+      for (final sp in rawSpecial) {
+        if (sp is Map) {
+          final pid = int.tryParse(sp['product_id']?.toString() ?? '');
+          final pr = double.tryParse(sp['price']?.toString() ?? '');
+          if (pid != null && pr != null) {
+            parsedSpecialPrices[pid] = pr;
+          }
+        }
+      }
+    }
+
     return Customer(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
@@ -83,6 +100,7 @@ class Customer {
           ? int.tryParse(json['visit_order'].toString())
           : null,
       route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
+      specialPrices: parsedSpecialPrices,
     );
   }
 }

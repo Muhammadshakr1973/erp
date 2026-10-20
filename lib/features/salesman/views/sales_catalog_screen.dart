@@ -18,6 +18,7 @@ import '../../products/models/product_model.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/providers/products_provider.dart';
 import '../../shared/models/customer.dart';
+import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../../shared/views/customer_form_dialog.dart';
 import '../../shared/views/customer_selection_dialog.dart';
@@ -33,6 +34,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   // Selected Order and Price tier
   OrderModel? _selectedOrder;
   String _selectedPriceTier = 'N3'; // Default 'N3' ('ن٣') as requested
+  bool _isManualPriceTierOverride = false;
+  Map<int, double> _customerSpecialPrices = {};
   int? _selectedCategoryId; // null = all categories
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -69,15 +72,34 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   }
 
   /// Sets or switches the currently active order
-  void _setActiveOrder(OrderModel? order) {
+  void _setActiveOrder(OrderModel? order, {bool isManualOverride = false}) {
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
+
+    final Map<int, double> initialSpecialPrices = {};
+    if (order != null && order.customer is Map) {
+      final custMap = order.customer as Map;
+      final rawSpecial = custMap['special_prices'] ?? custMap['specialPrices'];
+      if (rawSpecial is List) {
+        for (final sp in rawSpecial) {
+          if (sp is Map) {
+            final pid = int.tryParse(sp['product_id']?.toString() ?? '');
+            final pr = double.tryParse(sp['price']?.toString() ?? '');
+            if (pid != null && pr != null) {
+              initialSpecialPrices[pid] = pr;
+            }
+          }
+        }
+      }
+    }
 
     setState(() {
       _selectedOrder = order;
       _secondsRemaining = 0;
       _orderCart.clear();
       _orderCartNotes.clear();
+      _isManualPriceTierOverride = isManualOverride;
+      _customerSpecialPrices = initialSpecialPrices;
 
       if (order != null) {
         // Load items from this order
@@ -90,15 +112,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
         // Set default price tier:
         // By default N3, but if order or customer has a specific price tier, adapt to it
-        if (order.priceType != null && order.priceType!.isNotEmpty) {
-          _selectedPriceTier = order.priceType!.toUpperCase();
-        } else if (order.customer is Map &&
-            order.customer['price_type'] != null) {
-          _selectedPriceTier = order.customer['price_type']
-              .toString()
-              .toUpperCase();
-        } else {
-          _selectedPriceTier = 'N3';
+        if (!isManualOverride) {
+          if (order.customer is Map && order.customer['price_type'] != null) {
+            _selectedPriceTier = order.customer['price_type'].toString().toUpperCase();
+          } else if (order.priceType != null &&
+              order.priceType!.isNotEmpty &&
+              order.priceType != 'SPECIAL') {
+            _selectedPriceTier = order.priceType!.toUpperCase();
+          } else {
+            _selectedPriceTier = 'N3';
+          }
         }
         if (!const ['N1', 'N2', 'N3'].contains(_selectedPriceTier)) {
           _selectedPriceTier = 'N3';
@@ -107,10 +130,57 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         _selectedPriceTier = 'N3';
       }
     });
+
+    // Fresh fetch customer special prices if not loaded
+    if (order != null && order.customerId > 0) {
+      ref
+          .read(customerActionsProvider)
+          .fetchSpecialPrices(order.customerId)
+          .then((prices) {
+        if (mounted && _selectedOrder?.id == order.id) {
+          setState(() {
+            _customerSpecialPrices = prices;
+          });
+        }
+      }).catchError((_) {});
+    }
   }
 
-  /// Calculate unit price for a product according to current price tier
+  /// Localized name of price tier
+  String _tierDisplayName(String tier) {
+    switch (tier) {
+      case 'N1':
+        return 'ن١';
+      case 'N2':
+        return 'ن٢';
+      case 'N3':
+      default:
+        return 'ن٣';
+    }
+  }
+
+  /// Calculate unit price for a product according to current price tier or customer special price
   double _getProductPrice(ProductModel product) {
+    // If the salesman/cash van manually picked a price tier, it overrides ALL products
+    if (_isManualPriceTierOverride) {
+      switch (_selectedPriceTier) {
+        case 'N1':
+          return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
+        case 'N2':
+          return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+        case 'N3':
+        default:
+          return product.priceN3 > 0 ? product.priceN3 : product.costPrice;
+      }
+    }
+
+    // Default / Automatic mode: First check customer special price
+    if (_customerSpecialPrices.containsKey(product.id)) {
+      final sp = _customerSpecialPrices[product.id]!;
+      if (sp > 0) return sp;
+    }
+
+    // Otherwise use selected price tier (which is set to customer's tier)
     switch (_selectedPriceTier) {
       case 'N1':
         return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
@@ -379,6 +449,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       'warehouse_id': _selectedOrder!.warehouseId,
       'status': 'PACKING',
       'price_type': _selectedPriceTier,
+      'is_manual_price_type': _isManualPriceTierOverride,
       'discount_type': _selectedOrder!.discountType,
       'discount_percent': _selectedOrder!.discountPercent,
       'discount_amount': _selectedOrder!.discountAmount,
@@ -794,6 +865,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       'warehouse_id': warehouseId,
       'status': 'PACKING',
       'price_type': initialPriceTier,
+      'is_manual_price_type': false,
       'shared_key': 'order_${DateTime.now().microsecondsSinceEpoch}',
       'version': 1,
       'items': [],
@@ -844,6 +916,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       'warehouse_id': _selectedOrder!.warehouseId,
       'status': 'PACKING',
       'price_type': selectedCust.priceType?.toUpperCase() ?? _selectedPriceTier,
+      'is_manual_price_type': false,
       'version': _selectedOrder!.version,
       'items': _orderCart.entries
           .map((e) => {'product_id': e.key, 'quantity': e.value})
@@ -1131,7 +1204,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   if (newTier != null) {
                     setState(() {
                       _selectedPriceTier = newTier;
+                      _isManualPriceTierOverride = true;
                     });
+
+                    // ئەگەر پسوڵە هەڵبژێردرابێت، دەستبەجێ باکێند نوێ بکەرەوە بۆ ئەم جۆری نرخە تا هەموو کاڵاکانی پسوڵەکە بەو نرخە بن
+                    if (_selectedOrder != null) {
+                      _startOrRestart10SecondDebounce(
+                        actionDesc: 'گۆڕینی جۆری نرخ بۆ ${_tierDisplayName(newTier)} بۆ $_selectedOrderCustomerName',
+                      );
+                    }
                   }
                 },
               ),
@@ -1635,14 +1716,40 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  Formatters.currency(unitPrice),
-                  style: TextStyle(
-                    fontFamily: 'KJino',
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      Formatters.currency(unitPrice),
+                      style: TextStyle(
+                        fontFamily: 'KJino',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                      ),
+                    ),
+                    if (!_isManualPriceTierOverride && _customerSpecialPrices.containsKey(product.id)) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                        ),
+                        child: Text(
+                          'تایبەت',
+                          style: TextStyle(
+                            fontFamily: 'KJino',
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
