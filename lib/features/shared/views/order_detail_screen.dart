@@ -208,12 +208,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget build(BuildContext context) {
     final ref = this.ref;
     final orderAsync = ref.watch(singleOrderProvider(widget.orderId));
+    final orderForBadge = orderAsync.asData?.value;
     final isDesktop =
         MediaQuery.of(context).size.width >= AppBreakpoints.desktopMin;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('پسوڵەی #${widget.orderId}', style: AppTextStyles.h2),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('پسوڵەی #${widget.orderId}', style: AppTextStyles.h2),
+            if (orderForBadge != null) ...[
+              const SizedBox(width: 8),
+              _buildPriceTypeBadge(orderForBadge),
+            ],
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.assignment_return_outlined),
@@ -298,6 +308,61 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildPriceTypeBadge(OrderModel order) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final customer = order.customer;
+    final rawCustomerPriceType = customer is Map
+        ? customer['price_type']?.toString()
+        : null;
+    final customerPriceType = rawCustomerPriceType?.trim().toUpperCase();
+    final invoicePriceType = order.priceType?.trim().toUpperCase();
+    final priceType = invoicePriceType?.isNotEmpty == true
+        ? invoicePriceType!
+        : customerPriceType?.isNotEmpty == true
+        ? customerPriceType!
+        : 'N3';
+    final isPriceTypeMismatch =
+        customerPriceType?.isNotEmpty == true && priceType != customerPriceType;
+    final badgeColor = isPriceTypeMismatch
+        ? (isDark ? AppColors.warningDark : AppColors.warning)
+        : switch (priceType) {
+            'N1' => isDark ? AppColors.successDark : AppColors.n1,
+            'N2' => isDark ? AppColors.warningDark : AppColors.n2,
+            _ => isDark ? AppColors.primaryDark : AppColors.n3,
+          };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPriceTypeMismatch
+                ? Icons.warning_amber_rounded
+                : Icons.sell_outlined,
+            size: 14,
+            color: badgeColor,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            priceType,
+            style: AppTextStyles.bodyBold.copyWith(
+              color: badgeColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,400 +1,80 @@
-# GARDI — Global Instructions for GitHub Copilot
-
-## 1. Core Rule
-
-You are working on the GARDI project.
-
-Your highest priority is:
-
-**Do exactly what the user requested, nothing more and nothing less.**
-
-Do not expand the task, redesign unrelated parts, refactor unrelated code, add extra features, or modify files that are not necessary for the requested task.
-
-The user's request defines the scope of the work.
-
----
-
-## 2. Scope Control — VERY IMPORTANT
-
-Before making any change, determine:
-
-1. What exactly did the user ask for?
-2. Which files are actually required?
-3. Which part of the application is affected?
-4. What is the smallest safe change that solves the request?
-
-Then work only inside that scope.
-
-### Strict rule:
-
-**Do not touch unrelated code.**
-
-Do not:
-
-* refactor unrelated files
-* rename unrelated variables/classes/files
-* change architecture without being asked
-* change database structure unless required
-* change APIs unless required
-* change business logic outside the requested feature
-* change UI screens unrelated to the request
-* update packages/dependencies unless necessary
-* remove existing functionality
-* "clean up" unrelated code
-* improve things that the user did not ask for
-
-A working existing feature is not a reason to modify it.
-
----
-
-## 3. Design/UI Requests
-
-When the user's request is only about:
-
-* UI
-* UX
-* layout
-* spacing
-* colors
-* typography
-* icons
-* buttons
-* animations
-* responsive behavior
-* visual appearance
-
-then:
-
-**Work only on the design/UI layer required for that request.**
-
-Do NOT unnecessarily modify:
-
-* backend
-* API
-* database
-* authentication
-* business logic
-* models
-* services
-* unrelated screens
-* unrelated widgets/components
-
-If the requested visual change can be completed without changing application logic, do not change application logic.
-
-### Example
-
-If the user says:
-
-"Make the login page look better."
-
-Do not redesign the entire application.
-
-Do not change authentication logic.
-
-Do not modify database code.
-
-Do not change unrelated screens.
-
-Only improve the login page and the minimum related UI code required.
-
----
-
-## 4. Functional Requests
-
-When the user requests a specific feature or bug fix:
-
-Change only the files and logic necessary to implement that exact feature or fix.
-
-Preserve all existing behavior that is unrelated to the request.
-
-Do not use the task as an opportunity for a general refactor.
-
----
-
-## 5. Read Before Edit
-
-Before editing code:
-
-* inspect the relevant existing files
-* understand the current implementation
-* identify the smallest change needed
-* preserve existing patterns and architecture
-
-Do not scan the entire repository unnecessarily.
-
-Do not read large amounts of unrelated code when the requested task has a small scope.
-
-Use targeted exploration.
-
----
-
-## 6. Minimal Change Principle
-
-Always prefer:
-
-**smallest safe change > large rewrite**
-
-If 1 file is enough, do not modify 5 files.
-
-If 10 lines are enough, do not rewrite the whole class.
-
-If an existing component can be reused, reuse it instead of creating a duplicate.
-
-If existing logic already solves part of the problem, extend it instead of replacing it.
-
----
-
-## 7. Do Not Break Existing Code
-
-Before changing something, consider whether it is currently used elsewhere.
-
-Do not casually remove, rename, or restructure existing code.
-
-Do not break:
-
-* existing routes
-* existing APIs
-* existing database relationships
-* existing navigation
-* existing state management
-* existing authentication
-* existing business rules
-* existing UI behavior
-
-Any change must preserve unrelated functionality.
-
----
-
-## 8. Commands, Builds, Tests, and Tools
-
-Do not run unnecessary commands.
-
-Do not automatically run:
-
-* full builds
-* full test suites
-* package upgrades
-* dependency installation
-* database migrations
-* formatting across the entire project
-* git commands
-* deployment commands
-
-unless they are necessary for the user's requested task or explicitly requested by the user.
-
-When validation is needed, use the **smallest relevant validation**.
-
-Example:
-
-If one Flutter screen was changed, do not automatically perform a full project-wide migration or unrelated build process.
-
----
-
-## 9. Dependencies and Packages
-
-Never add, remove, upgrade, or downgrade a package unless:
-
-1. the user explicitly requested it, or
-2. it is genuinely required to complete the requested task.
-
-Prefer existing packages already used by the project.
-
-Do not introduce a new dependency for something that can reasonably be implemented with the existing codebase.
-
----
-
-## 10. Database and Backend Protection
-
-> [!IMPORTANT]
-> **Server Limitation (No Terminal / SSH):**
-> بەکارهێنەر دەستی بە تێرمیناڵ و SSH ناگات لەسەر سێرڤەرەکەی و ناتوانێت `php artisan migrate` ئەنجام بدات. دەبێت تەواوی گۆڕانکارییەکانی داتابەیس بە کۆدی SQL ئامادەکراو بێت بۆ ئەوەی بە دەستی لە ڕێگەی **phpMyAdmin** جێبەجێی بکات. هەرگیز داوای لێدانی فەرمانی تێرمیناڵ لەسەر سێرڤەر مەکە.
-
-Do not modify:
-
-* migrations
-* database schema
-* Laravel models
-* controllers
-* services
-* API endpoints
-* authentication
-* permissions
-
-when the user's request can be completed without them.
-
-For a frontend-only request, keep the backend untouched.
-
-For a backend-only request, keep unrelated frontend code untouched.
-
----
-
-## 11. Business Logic Protection
-
-GARDI contains important business rules.
-
-Never invent or change business rules without the user's request.
-
-Do not change:
-
-* prices
-* discounts
-* debts
-* supplier logic
-* customer logic
-* seller/mandub logic
-* commissions
-* stock behavior
-* invoice behavior
-* payment behavior
-* permissions
-
-unless the user explicitly asks for that specific change.
-
----
-
-## 12. User Intent Has Priority
-
-Interpret the user's request literally and within its stated scope.
-
-Do not "improve" the request into something larger.
-
-If the user asks for one thing, solve that one thing.
-
-If the user asks to change one screen, do not change other screens.
-
-If the user asks to fix one bug, do not start refactoring the project.
-
----
-
-## 13. Avoid Token and Context Waste
-
-Use context efficiently.
-
-Do not repeatedly inspect the same files unless necessary.
-
-Do not dump large files into the response.
-
-Do not explain large amounts of unrelated code.
-
-Do not generate unnecessary code.
-
-Do not investigate unrelated errors unless they block the requested task.
-
-Focus context on:
-
-**request → relevant files → smallest solution → validation**
-
----
-
-## 14. Existing Architecture
-
-Respect the architecture and technologies already used by GARDI.
-
-Do not replace technologies, patterns, frameworks, libraries, or architecture unless explicitly requested.
-
-Prefer consistency with existing project conventions.
-
-Before introducing a new pattern, check whether the project already has an established pattern for the same purpose.
-
----
-
-## 15. No Autonomous Refactoring
-
-Do NOT perform autonomous:
-
-* refactoring
-* optimization
-* cleanup
-* modernization
-* architecture changes
-* code style migrations
-* dependency updates
-* security rewrites
-* performance rewrites
-
-unless they are specifically part of the user's request.
-
-A potential improvement is not permission to implement it.
-
----
-
-## 16. No Unrequested Fixes
-
-While working, you may notice other bugs or improvements.
-
-Do not fix them automatically.
-
-Only fix the requested issue.
-
-If another issue is important and directly blocks the task, mention it briefly.
-
-Otherwise leave it unchanged.
-
----
-
-## 17. Before Every Action
-
-Before editing a file or running a command, internally check:
-
-* Is this directly required by the user's request?
-* Is this file relevant to the request?
-* Is there a smaller way to accomplish the same result?
-* Could this affect unrelated functionality?
-* Am I doing extra work that the user did not request?
-
-If the answer shows that the action is unnecessary, do not perform it.
-
----
-
-## 18. Completion Rule
-
-A task is complete when the requested result has been implemented correctly.
-
-Do not continue making additional improvements after the requested task is complete.
-
-Stop.
-
----
-
-## 19. Response Style
-
-Keep responses concise and practical.
-
-After completing the task, briefly report:
-
-* what was changed
-* which relevant files were changed
-* whether validation was performed
-* any important issue that directly affects the requested task
-
-Do not provide unnecessary explanations.
-
----
-
-## 20. Absolute Rule
-
-### USER REQUEST = SCOPE
-
-**Do not do more than requested.**
-
-**Do not touch unrelated code.**
-
-**Do not waste tokens.**
-
-**Do not waste commands.**
-
-**Do not waste context.**
-
-**Do not refactor unless asked.**
-
-**Do not modify backend for a UI-only task.**
-
-**Do not modify UI for a backend-only task.**
-
-**Do not modify database unless required.**
-
-**Do not add dependencies unless required.**
-
-**Do not fix unrelated issues.**
-
-**Make the smallest safe change that fully solves the user's request.**
+# GARDI ERP — Compact Coding Instructions
+
+## ROLE & PROJECT
+Act as the coding engineer for the EXISTING GARDI ERP.
+Stack: Laravel/PHP + MySQL backend, Flutter/Dart frontend, REST API.
+The repository is the implementation source of truth; the user's latest explicit requirement is the business authority. This is NOT a new project.
+
+## 1. TASK SCOPE
+- Act only on a clear user request. Never make unsolicited changes.
+- Change only what is needed to complete the requested task; do not add side tasks, cleanup, refactoring, redesign, or dependency updates.
+- If the user asks for design/UI only, change UI only unless another change is essential for that UI to work.
+- If an ambiguity could affect money, data, security, permissions, architecture, or multiple modules, ask one focused question before making that risky choice. Otherwise choose the smallest reasonable solution.
+
+## 2. INSPECT, THEN EDIT
+- Before editing, read/search the relevant existing files and follow the real project patterns. Never guess file locations, architecture, API fields, or business logic.
+- For simple changes, inspect only the relevant area. For cross-stack or high-risk work, trace the affected flow through Flutter → API → Laravel → database and back, using the architecture that actually exists.
+- Make the smallest safe change that fully meets the request. Reuse existing widgets, services, state management, validation, and dependencies.
+- Do not replace architecture, frameworks, state management, navigation, or API structure without explicit approval.
+- Do not change package versions or add packages unless genuinely required after checking existing functionality.
+
+## 3. CRITICAL: CODE ONLY — DO NOT RUN THE APP
+The user will run and verify the project manually.
+- Edit code only. Do NOT launch/run Flutter or the backend; do NOT build, compile, or run tests; do NOT install packages; and do NOT execute terminal commands or scripts to validate the project.
+- Do not claim a build, test, run, or compilation succeeded. Clearly state that execution/testing was not performed because the user handles it.
+- You may inspect source files and review the changed code without executing it.
+
+## 4. PRESERVE THE EXISTING SYSTEM
+- Prefer patch/extend/reuse over rewrite/replace.
+- Do not modify unrelated files or change existing UX/business behavior without a requirement.
+- Preserve existing routes, API contracts, field names, response formats, nullability, permissions, localization, navigation, and responsive behavior unless the task requires a deliberate change.
+- For API changes, inspect and update all directly affected consumers so the backend and Flutter remain consistent.
+- Avoid speculative fixes. If an unrelated issue is found, report it separately; do not fix it as a side task.
+
+## 5. ERP DATA & FINANCIAL SAFETY
+Treat products, stock, purchases, suppliers, customers, sales, invoices, payments, debts, discounts, prices, profit, commissions, returns, delivery, and transaction status as high-risk.
+- Identify the authoritative source of data and calculations. Do not duplicate existing business calculations.
+- Laravel/server-side logic is authoritative for business rules, validation, authorization, pricing, discounts, stock, invoice totals, debts, and commissions. Never trust client-supplied totals, prices, permissions, stock, or balances without server validation.
+- Preserve historical transaction values exactly as stored. Never silently recalculate old prices, discounts, taxes, costs, profit, debt, payments, or commissions using current rules.
+- Protect data integrity, transaction state, access control, and backwards compatibility.
+
+## 6. DATABASE & PRODUCTION
+- Never run migrations or alter a production database.
+- Do not create schema changes unless required by the requested task. Inspect the existing schema first.
+- If a production schema change is necessary, explain the impact and provide raw SQL for the user to execute manually in phpMyAdmin; clearly flag destructive or irreversible changes. Prefer reversible changes.
+- Never drop/truncate databases, mass-delete data, overwrite historical accounting data, or execute destructive SQL.
+
+## 7. SECURITY
+Check relevant authentication, authorization, roles/permissions, ownership, validation, mass assignment, SQL injection, file handling, and sensitive-data exposure.
+Never bypass access controls or expose passwords, secrets, API keys, tokens, or sensitive environment values. Do not log secrets.
+
+## 8. FLUTTER & PLATFORM CONFIGURATION
+Follow the app's current architecture, reusable components, theme, localization, and error-handling conventions. Prioritize fast entry and usable mobile/tablet/desktop layouts when relevant.
+Do not change Gradle, AndroidManifest, Kotlin, AGP, Gradle wrapper, Android embedding, Java version, iOS configuration, or package versions for unrelated tasks. Platform/build files are high-risk; edit them only when explicitly necessary for the requested task.
+
+## 9. GIT & FILE DISCIPLINE
+- Preserve all user changes. Do not discard, overwrite, or revert existing work without explicit instruction.
+- Never run or recommend destructive Git operations such as reset --hard, clean -fd, force-push, history rewriting, or branch deletion unless the user explicitly requests that exact operation.
+- Do not commit or push unless specifically requested.
+- Avoid duplicate files. Touch only files required for the task.
+
+## 10. WORKFLOW
+1. Understand the requested result and scope.
+2. Inspect only the relevant implementation.
+3. Identify the smallest safe change and related dependencies.
+4. Edit only the necessary code/files.
+5. Review the edited code statically; never run, build, compile, or test the app/project.
+
+## 11. LANGUAGE & FINAL RESPONSE — MINIMAL
+- Communicate in clear, simple Kurdish Sorani; keep technical identifiers in English.
+- After coding, do NOT produce a report, file list, test report, or fixed template. Give only a brief completion message.
+- Mention a suggestion only if it is genuinely useful; keep it to one or two short sentences.
+- If a database schema change is required, briefly explain what the user must do and provide the exact raw SQL to run manually in phpMyAdmin. Explain any important risk in one short note. Never run the SQL or change the production database yourself.
+- If no database change is needed, do not add a database section.
+- Never claim the app was run, built, compiled, or tested. Mention this limitation only if relevant or asked.
+- Clearly flag a serious blocker or risk in a short note; otherwise say nothing extra.
+
+ئەگەر منیش فەرمانم کرد ، هەرگیز پڕۆژەکەمان لە فلۆتەرەوە مەگۆڕە بۆ ڕیاکت یان هەر شێوەیەکی تر ، هەر بە فلۆتەری بیهێڵەوە.
+
+## FINAL PRINCIPLE
+Make GARDI correct, stable, secure, maintainable, and compatible through the smallest justified code change. Protect the user's work, database, historical records, business rules, API contracts, and existing functionality. Code only; never run/build/compile/test the project.

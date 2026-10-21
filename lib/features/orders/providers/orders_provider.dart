@@ -9,6 +9,7 @@ import '../../../core/sync/pusher_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
+import '../../products/providers/products_provider.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../models/order_model.dart';
 
@@ -262,7 +263,8 @@ class OrderActions {
           Map<String, dynamic>.from(orderData),
         );
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
-        ref.read(ordersListProvider.notifier).refreshSilently();
+        await ref.read(ordersListProvider.notifier).refreshSilently();
+        ref.invalidate(productsListProvider);
         ref.invalidate(salesmanDashboardProvider);
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
@@ -289,13 +291,23 @@ class OrderActions {
       final idempotencyKey =
           'status_order_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
 
-      await api.client.post(
+      final response = await api.client.post(
         '/orders/$orderId/status',
         data: {'status': newStatus, ...extraData},
         options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+        );
+      }
 
-      ref.read(ordersListProvider.notifier).refreshSilently();
+      await ref.read(ordersListProvider.notifier).refreshSilently();
+      ref.invalidate(productsListProvider);
       ref.invalidate(salesmanDashboardProvider);
       ref.invalidate(customerListProvider);
       ref.invalidate(filteredCustomerListProvider);

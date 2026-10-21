@@ -113,8 +113,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         // Set default price tier:
         // By default N3, but if order or customer has a specific price tier, adapt to it
         if (!isManualOverride) {
-          if (order.customer is Map && order.customer['price_type'] != null) {
-            _selectedPriceTier = order.customer['price_type'].toString().toUpperCase();
+          if (order.customerId == 0) {
+            final orderPriceType = order.priceType?.toUpperCase();
+            _selectedPriceTier =
+                const ['N1', 'N2', 'N3'].contains(orderPriceType)
+                ? orderPriceType!
+                : 'N3';
+          } else if (order.customer is Map &&
+              order.customer['price_type'] != null) {
+            _selectedPriceTier = order.customer['price_type']
+                .toString()
+                .toUpperCase();
           } else if (order.priceType != null &&
               order.priceType!.isNotEmpty &&
               order.priceType != 'SPECIAL') {
@@ -137,12 +146,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .read(customerActionsProvider)
           .fetchSpecialPrices(order.customerId)
           .then((prices) {
-        if (mounted && _selectedOrder?.id == order.id) {
-          setState(() {
-            _customerSpecialPrices = prices;
-          });
-        }
-      }).catchError((_) {});
+            if (mounted && _selectedOrder?.id == order.id) {
+              setState(() {
+                _customerSpecialPrices = prices;
+              });
+            }
+          })
+          .catchError((_) {});
     }
   }
 
@@ -977,6 +987,21 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
+    // Sync the active order before adding it as a fallback, so a locally
+    // updated delivered order cannot be re-added with its stale status.
+    if (_selectedOrder != null) {
+      final matching = allOrders
+          .where((o) => o.id == _selectedOrder!.id)
+          .firstOrNull;
+      if (matching != null &&
+          (matching.version != _selectedOrder!.version ||
+              matching.status.toUpperCase() !=
+                  _selectedOrder!.status.toUpperCase()) &&
+          !_isSavingBatch) {
+        _selectedOrder = matching;
+      }
+    }
+
     for (final o in allOrders) {
       final isOwn = authUser != null
           ? (authUser.isAdmin ||
@@ -996,18 +1021,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     final availableOrders = orderMap.values.toList();
-
-    // Make sure active order remains synced if it changed remotely
-    if (_selectedOrder != null) {
-      final matching = allOrders
-          .where((o) => o.id == _selectedOrder!.id)
-          .firstOrNull;
-      if (matching != null &&
-          matching.version != _selectedOrder!.version &&
-          !_isSavingBatch) {
-        _selectedOrder = matching;
-      }
-    }
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -1137,6 +1150,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   }
 
   /// Top Bar matching design in 8.png
+  Future<void> _openSelectedOrder() async {
+    final order = _selectedOrder;
+    if (order == null) return;
+
+    await context.push('/order/${order.id}');
+    if (!mounted || _selectedOrder?.id != order.id) return;
+
+    final updatedOrder = ref
+        .read(ordersListProvider)
+        .valueOrNull
+        ?.where((current) => current.id == order.id)
+        .firstOrNull;
+    if (updatedOrder?.status.toUpperCase() == OrderModel.statusDelivered) {
+      _setActiveOrder(null);
+    }
+  }
+
   Widget _buildTopBar(BuildContext context, List<OrderModel> availableOrders) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -1168,9 +1198,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.receipt_long_rounded, size: 20),
               tooltip: 'کردنەوەی پسوڵە',
-              onPressed: _selectedOrder == null
-                  ? null
-                  : () => context.push('/order/${_selectedOrder!.id}'),
+              onPressed: _selectedOrder == null ? null : _openSelectedOrder,
             ),
           ),
           const SizedBox(width: 6),
@@ -1606,241 +1634,233 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         ? product.getStockForWarehouse(vanWarehouseId)
         : product.totalStock;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF242C38) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: quantity > 0
-              ? AppColors.primary
-              : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300),
-          width: quantity > 0 ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return AnimatedOpacity(
+      opacity: quantity > 0 ? 0.25 : 1,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF242C38) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: quantity > 0
+                ? AppColors.primary
+                : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300),
+            width: quantity > 0 ? 1.5 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. PRODUCT IMAGE
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(15),
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  (product.imagePath != null && product.imagePath!.isNotEmpty)
-                      ? Image.network(
-                          product.imagePath!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPlaceholderImage(),
-                        )
-                      : _buildPlaceholderImage(),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. PRODUCT IMAGE
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    (product.imagePath != null && product.imagePath!.isNotEmpty)
+                        ? Image.network(
+                            product.imagePath!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildPlaceholderImage(),
+                          )
+                        : _buildPlaceholderImage(),
 
-                  // Stock badge at top-right
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'ستۆک: $availableStock',
-                        style: const TextStyle(
-                          fontFamily: 'KJino',
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // If in cart, show quantity badge at top-left
-                  if (quantity > 0)
+                    // Stock badge at top-right
                     Positioned(
                       top: 6,
-                      left: 6,
+                      right: 6,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
+                          horizontal: 6,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '$quantity',
+                          'ستۆک: $availableStock',
                           style: const TextStyle(
+                            fontFamily: 'KJino',
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 2. PRODUCT NAME & PRICE
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    product.name,
+                    style: AppTextStyles.bodyBold.copyWith(
+                      fontSize: 13,
+                      fontFamily: 'KJino',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        Formatters.currency(unitPrice),
+                        style: TextStyle(
+                          fontFamily: 'KJino',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? const Color(0xFF60A5FA)
+                              : AppColors.primary,
+                        ),
+                      ),
+                      if (!_isManualPriceTierOverride &&
+                          _customerSpecialPrices.containsKey(product.id)) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.amber.shade700,
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            'تایبەت',
+                            style: TextStyle(
+                              fontFamily: 'KJino',
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
-          ),
 
-          // 2. PRODUCT NAME & PRICE
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  product.name,
-                  style: AppTextStyles.bodyBold.copyWith(
-                    fontSize: 13,
-                    fontFamily: 'KJino',
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+            // 3. QUANTITY COUNTER BAR (Matching 8.png: [-] [ 0 ] [+])
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1B212B) : Colors.grey.shade100,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(15),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      Formatters.currency(unitPrice),
-                      style: TextStyle(
-                        fontFamily: 'KJino',
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
-                      ),
-                    ),
-                    if (!_isManualPriceTierOverride && _customerSpecialPrices.containsKey(product.id)) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+              ),
+              child: Row(
+                children: [
+                  // [-] Red Button
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        elevation: 0,
+                      ),
+                      onPressed: () => _decrementProduct(product),
+                      child: const Icon(Icons.remove, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+
+                  // Center Quantity Box (Tap to type custom number)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _editQuantityDirectly(product),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF2E3846)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF435064)
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        alignment: Alignment.center,
                         child: Text(
-                          'تایبەت',
+                          '$quantity',
                           style: TextStyle(
                             fontFamily: 'KJino',
-                            fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                            fontSize: 15,
+                            color: quantity > 0
+                                ? (isDark ? Colors.white : AppColors.primary)
+                                : (isDark ? Colors.white54 : Colors.grey),
                           ),
                         ),
                       ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
 
-          // 3. QUANTITY COUNTER BAR (Matching 8.png: [-] [ 0 ] [+])
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1B212B) : Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(15),
+                  // [+] Green Button
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () => _incrementProduct(product),
+                      child: const Icon(Icons.add, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                // [-] Red Button
-                SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE53935),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () => _decrementProduct(product),
-                    child: const Icon(Icons.remove, size: 20),
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // Center Quantity Box (Tap to type custom number)
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _editQuantityDirectly(product),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2E3846) : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF435064)
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$quantity',
-                        style: TextStyle(
-                          fontFamily: 'KJino',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: quantity > 0
-                              ? (isDark ? Colors.white : AppColors.primary)
-                              : (isDark ? Colors.white54 : Colors.grey),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-
-                // [+] Green Button
-                SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () => _incrementProduct(product),
-                    child: const Icon(Icons.add, size: 20),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1853,5 +1873,4 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       ),
     );
   }
-
 }
