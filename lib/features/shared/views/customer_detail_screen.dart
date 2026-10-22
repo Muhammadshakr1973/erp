@@ -20,6 +20,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../models/customer.dart';
+import '../models/receipt_data.dart';
+import '../services/receipt_print_service.dart';
 import '../views/customer_form_dialog.dart';
 import '../views/customer_reconciliation_dialog.dart';
 import '../views/customer_qr_dialog.dart';
@@ -883,6 +885,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     subtitle: Text(
                       '${entry.createdAt?.split('T').first ?? ''} • $entryTypeLabel',
                       style: AppTextStyles.caption,
+                    ),
+                    leading: IconButton(
+                      icon: const Icon(Icons.image_outlined),
+                      tooltip: 'دروستکردنی وێنەی پسوڵە',
+                      onPressed: () => ReceiptPrintService.show(
+                        context,
+                        ReceiptData.fromCustomerLedger(
+                          entry,
+                          customer: customer,
+                          employee: ref.read(authProvider).user,
+                        ),
+                      ),
                     ),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

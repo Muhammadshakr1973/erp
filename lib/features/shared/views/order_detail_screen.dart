@@ -15,6 +15,8 @@ import '../../../core/utils/formatters.dart';
 import '../../orders/models/order_model.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../models/receipt_data.dart';
+import '../services/receipt_print_service.dart';
 import 'create_sales_return_dialog.dart';
 import 'map_picker_dialog.dart';
 
@@ -175,7 +177,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             OrderModel.statusDelivered,
             extraData: {
               'discount_amount': discountAmount,
-              'checked_item_ids': _checkedItemIds.toList(),
+              'checked_item_ids': order.items
+                  .map((item) => item.id)
+                  .toList(),
             },
           );
       if (!context.mounted) return;
@@ -225,6 +229,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ],
         ),
         actions: [
+          if (orderForBadge != null)
+            IconButton(
+              icon: const Icon(Icons.image_outlined),
+              tooltip: 'دروستکردنی وێنەی پسوڵە',
+              onPressed: () => ReceiptPrintService.show(
+                context,
+                ReceiptData.fromOrder(
+                  orderForBadge,
+                  employee: ref.read(authProvider).user,
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.assignment_return_outlined),
             tooltip: 'کاڵا ڕاگەڕێندراوەکان',

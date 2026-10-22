@@ -11,6 +11,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../models/receipt_data.dart';
+import '../services/receipt_print_service.dart';
 
 class SalesReturnDetailScreen extends ConsumerWidget {
   final String returnId;
@@ -23,10 +26,26 @@ class SalesReturnDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final returnAsync = ref.watch(singleSalesReturnProvider(returnId));
+    final returnForReceipt = returnAsync.asData?.value;
 
     return Scaffold(
       appBar: AppBar(
         title: Text('گەڕاندنەوەی #$returnId', style: AppTextStyles.h2),
+        actions: [
+          if (returnForReceipt is Map)
+            IconButton(
+              icon: const Icon(Icons.image_outlined),
+              tooltip: 'دروستکردنی وێنەی پسوڵە',
+              onPressed: () => ReceiptPrintService.show(
+                context,
+                ReceiptData.fromSalesReturn(
+                  Map<String, dynamic>.from(returnForReceipt),
+                  fallbackNumber: returnId,
+                  employee: ref.read(authProvider).user,
+                ),
+              ),
+            ),
+        ],
       ),
       body: returnAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

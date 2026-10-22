@@ -264,7 +264,9 @@ class OrderActions {
         );
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
         await ref.read(ordersListProvider.notifier).refreshSilently();
-        ref.invalidate(productsListProvider);
+        unawaited(
+          ref.read(productsListProvider.notifier).refreshProductsSilently(),
+        );
         ref.invalidate(salesmanDashboardProvider);
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
@@ -307,7 +309,9 @@ class OrderActions {
       }
 
       await ref.read(ordersListProvider.notifier).refreshSilently();
-      ref.invalidate(productsListProvider);
+      unawaited(
+        ref.read(productsListProvider.notifier).refreshProductsSilently(),
+      );
       ref.invalidate(salesmanDashboardProvider);
       ref.invalidate(customerListProvider);
       ref.invalidate(filteredCustomerListProvider);

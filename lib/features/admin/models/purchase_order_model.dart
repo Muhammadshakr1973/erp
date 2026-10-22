@@ -42,12 +42,14 @@ class PurchaseOrderModel {
   final String orderNumber;
   final int supplierId;
   final String supplierName;
+  final String? supplierPhone;
   final int warehouseId;
   final String warehouseName;
   final String status;
   final num totalAmount;
   final String? notes;
   final DateTime? receivedAt;
+  final String? createdAt;
   final int itemsCount;
   final List<PurchaseOrderItemModel> items;
 
@@ -56,12 +58,14 @@ class PurchaseOrderModel {
     required this.orderNumber,
     required this.supplierId,
     required this.supplierName,
+    this.supplierPhone,
     required this.warehouseId,
     required this.warehouseName,
     required this.status,
     required this.totalAmount,
     this.notes,
     this.receivedAt,
+    this.createdAt,
     required this.itemsCount,
     required this.items,
   });
@@ -84,6 +88,9 @@ class PurchaseOrderModel {
       supplierName: json['supplier'] != null
           ? json['supplier']['name'] ?? ''
           : '',
+      supplierPhone: json['supplier'] is Map
+          ? json['supplier']['phone']?.toString()
+          : null,
       warehouseId: json['warehouse_id'] ?? 0,
       warehouseName: json['warehouse'] != null
           ? json['warehouse']['name'] ?? ''
@@ -92,9 +99,9 @@ class PurchaseOrderModel {
       totalAmount: json['total_amount'] ?? 0,
       notes: json['notes'],
       receivedAt: parsedReceivedAt,
+      createdAt: json['created_at']?.toString(),
       itemsCount: itemsList != null ? itemsList.length : 0,
       items: parsedItems,
     );
   }
 }
-

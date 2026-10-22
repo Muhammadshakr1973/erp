@@ -9,6 +9,8 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../shared/models/receipt_data.dart';
+import '../../shared/services/receipt_print_service.dart';
 import 'providers/driver_collection_provider.dart';
 import '../models/driver_collection_model.dart';
 
@@ -291,12 +293,32 @@ class _AdminDriverCollectionsScreenState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(col.driverName, style: AppTextStyles.bodyBold),
-                        Text(
-                          Formatters.currency(col.amount),
-                          style: AppTextStyles.price.copyWith(
-                            color: AppColors.getAdaptiveColor(context, AppColors.success),
+                        Expanded(
+                          child: Text(
+                            col.driverName,
+                            style: AppTextStyles.bodyBold,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              Formatters.currency(col.amount),
+                              style: AppTextStyles.price.copyWith(
+                                color: AppColors.getAdaptiveColor(context, AppColors.success),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.image_outlined),
+                              tooltip: 'دروستکردنی وێنەی پسوڵە',
+                              onPressed: () => ReceiptPrintService.show(
+                                context,
+                                ReceiptData.fromDriverCollection(col),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -79,19 +79,45 @@ class _CreateVanTransferDialogState
   }
 
   void _showAddProductDialog(List<ProductModel> allProducts) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final isMobile = screenSize.shortestSide < AppBreakpoints.tabletMin;
+    final categoryNames = <int, String>{};
+    for (final product in allProducts) {
+      final categoryId = product.categoryId;
+      if (categoryId == null) continue;
+      final category = product.category;
+      final name = category is Map ? category['name']?.toString() : null;
+      categoryNames[categoryId] =
+          name == null || name.isEmpty ? 'جۆر $categoryId' : name;
+    }
+    final categories = categoryNames.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxWidth: isMobile ? double.infinity : 640,
+        maxHeight: screenSize.height,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(isMobile ? 0 : 20),
+        ),
       ),
       isDismissible: false,
       builder: (ctx) {
         String search = '';
+        var selectedCategoryId = 0;
         return StatefulBuilder(
           builder: (context, setModalState) {
             final theme = Theme.of(context);
             final filtered = allProducts.where((p) {
+              if (selectedCategoryId != 0 &&
+                  p.categoryId != selectedCategoryId) {
+                return false;
+              }
               if (search.isEmpty) return true;
               final q = search.toLowerCase();
               return p.name.toLowerCase().contains(q) ||
@@ -100,9 +126,9 @@ class _CreateVanTransferDialogState
             }).toList();
 
             return DraggableScrollableSheet(
-              initialChildSize: 0.75,
-              minChildSize: 0.5,
-              maxChildSize: 0.95,
+              initialChildSize: isMobile ? 1 : 0.75,
+              minChildSize: isMobile ? 1 : 0.5,
+              maxChildSize: 1,
               expand: false,
               builder: (context, scrollController) {
                 return Padding(
@@ -111,12 +137,6 @@ class _CreateVanTransferDialogState
                     children: [
                       Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            tooltip: 'داخستن',
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                          const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
                               'دیاریکردنی کاڵا بۆ بارکردن',
@@ -130,15 +150,18 @@ class _CreateVanTransferDialogState
                               CameraBarcodeScanner.show(
                                 context,
                                 (barcode) {
-                                  if (barcode.isNotEmpty) {
-                                    setModalState(() {
-                                      search = barcode;
-                                    });
-                                  }
+                                  search = barcode.trim();
+                                  setModalState(() {});
+                                  return true;
                                 },
                                 closeOnScan: true,
                               );
                             },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'داخستن',
+                            onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
@@ -149,6 +172,32 @@ class _CreateVanTransferDialogState
                         onChanged: (val) {
                           setModalState(() {
                             search = val.trim();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DropdownButtonFormField<int>(
+                        value: selectedCategoryId,
+                        decoration: const InputDecoration(
+                          labelText: 'فلتەر بەپێی جۆر',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 0,
+                            child: Text('هەموو جۆرەکان'),
+                          ),
+                          ...categories.map(
+                            (category) => DropdownMenuItem(
+                              value: category.key,
+                              child: Text(category.value),
+                            ),
+                          ),
+                        ],
+                        onChanged: (categoryId) {
+                          setModalState(() {
+                            selectedCategoryId = categoryId ?? 0;
                           });
                         },
                       ),

@@ -15,11 +15,13 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../shared/models/receipt_data.dart';
+import '../../shared/services/receipt_print_service.dart';
 import '../models/purchase_order_model.dart';
 import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
 import 'supplier_form_dialog.dart';
-import '../../auth/providers/auth_provider.dart';
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
@@ -736,9 +738,32 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     'پسوڵەی کڕین #${order.orderNumber}',
                     style: AppTextStyles.bodyBold,
                   ),
-                  subtitle: Text(
-                    '${order.supplierName} • ${order.itemsCount} کاڵا • ${_formatCurrency(order.totalAmount)}',
-                    style: AppTextStyles.caption,
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${order.supplierName} • ${order.itemsCount} کاڵا • ${_formatCurrency(order.totalAmount)}',
+                        style: AppTextStyles.caption,
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: () => ReceiptPrintService.show(
+                            context,
+                            ReceiptData.fromPurchaseOrder(
+                              order,
+                              employee: ref.read(authProvider).user,
+                            ),
+                          ),
+                          icon: const Icon(Icons.image_outlined, size: 16),
+                          label: const Text('وێنەی پسوڵە'),
+                        ),
+                      ),
+                    ],
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

@@ -258,7 +258,12 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                 data: (orders) {
                   // Fetch the salesman's orders only
                   final salesmanOrders = orders
-                      .where((o) => o.salesmanId == user?.id)
+                      .where(
+                        (o) =>
+                            o.salesmanId == user?.id &&
+                            o.status.toUpperCase() !=
+                                OrderModel.statusDelivered,
+                      )
                       .toList();
 
                   if (salesmanOrders.isEmpty) {
@@ -806,26 +811,26 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           crossAxisSpacing: AppSpacing.md,
           childAspectRatio: 1.15,
           children: [
-            // 1. ستۆکی ناو ئۆتۆمبێل (لە شوێنی فرۆشی هەفتە)
-            _buildStatCard(
-              context,
-              title: 'ستۆکی ناو ئۆتۆمبێل',
-              value: '${vanStocks.length} جۆر',
-              subtitle: vanStockSubtitle,
-              icon: Icons.local_shipping_outlined,
-              iconColor: vanStockColor,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StockListScreen(
-                      customWarehouseId: vanWhId,
-                      customTitle: 'ستۆکی ئۆتۆمبێل (کاشڤان)',
+            if (user?.isCashVan == true)
+              _buildStatCard(
+                context,
+                title: 'ستۆکی ناو ئۆتۆمبێل',
+                value: '${vanStocks.length} جۆر',
+                subtitle: vanStockSubtitle,
+                icon: Icons.local_shipping_outlined,
+                iconColor: vanStockColor,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StockListScreen(
+                        customWarehouseId: vanWhId,
+                        customTitle: 'ستۆکی ئۆتۆمبێل (کاشڤان)',
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
             // 2. یەکەکانی هەفتە
             _buildStatCard(
               context,

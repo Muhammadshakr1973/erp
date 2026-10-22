@@ -2,6 +2,7 @@ class PaymentHistoryModel {
   final int id;
   final String type; // 'customer' or 'supplier'
   final String partyName;
+  final String? partyPhone;
   final int partyId;
   final num amount;
   final String paymentMethod;
@@ -13,6 +14,7 @@ class PaymentHistoryModel {
     required this.id,
     required this.type,
     required this.partyName,
+    this.partyPhone,
     required this.partyId,
     required this.amount,
     required this.paymentMethod,
@@ -26,6 +28,7 @@ class PaymentHistoryModel {
       id: json['id'] ?? 0,
       type: json['type'] ?? '',
       partyName: json['party_name'] ?? 'نەزانراو',
+      partyPhone: json['party_phone']?.toString(),
       partyId: json['party_id'] ?? 0,
       amount: json['amount'] ?? 0,
       paymentMethod: json['payment_method'] ?? '',

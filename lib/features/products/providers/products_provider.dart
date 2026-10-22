@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
@@ -51,8 +52,7 @@ class ProductsListNotifier
         : null;
 
     if (productId == null) {
-      // Fallback only if no product id provided
-      fetchProducts();
+      refreshProductsSilently();
       return;
     }
 
@@ -180,28 +180,113 @@ class ProductsListNotifier
   Future<void> fetchProducts() async {
     state = const AsyncValue.loading();
     try {
-      final response = await _api.client.get('/products');
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        final resData = response.data;
-        if (resData is! Map || resData['data'] is! List) {
-          throw const FormatException(
-            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed products response payload)',
-          );
-        }
-        final List data = resData['data'] as List;
-        final products =
-            data.map((json) => ProductModel.fromJson(json)).toList();
-        state = AsyncValue.data(products);
-        return;
-      }
-      throw Exception(
-        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
-      );
+      final products = await _fetchProductsFromApi();
+      if (mounted) state = AsyncValue.data(products);
     } catch (e, st) {
       if (!mounted) return;
       state = AsyncValue.error(_api.parseError(e), st);
     }
+  }
+
+  Future<void> refreshProductsSilently() async {
+    try {
+      final freshProducts = await _fetchProductsFromApi();
+      if (!mounted) return;
+
+      final currentProducts = state.valueOrNull;
+      if (currentProducts == null) {
+        state = AsyncValue.data(freshProducts);
+        return;
+      }
+
+      final currentById = {
+        for (final product in currentProducts) product.id: product,
+      };
+      final updatedProducts = freshProducts.map((freshProduct) {
+        final currentProduct = currentById[freshProduct.id];
+        return currentProduct != null &&
+                _sameProductData(currentProduct, freshProduct)
+            ? currentProduct
+            : freshProduct;
+      }).toList();
+
+      var hasChanges = currentProducts.length != updatedProducts.length;
+      for (var index = 0;
+          !hasChanges && index < currentProducts.length;
+          index++) {
+        hasChanges = !identical(currentProducts[index], updatedProducts[index]);
+      }
+      if (!hasChanges) {
+        return;
+      }
+
+      state = AsyncValue.data(updatedProducts);
+    } catch (e, st) {
+      if (mounted) {
+        debugPrint('Silent product refresh failed: $e\n$st');
+      }
+    }
+  }
+
+  Future<List<ProductModel>> _fetchProductsFromApi() async {
+    final response = await _api.client.get('/products');
+    if (response.statusCode != 200) {
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
+    }
+
+    final resData = response.data;
+    if (resData is! Map || resData['data'] is! List) {
+      throw const FormatException(
+        'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed products response payload)',
+      );
+    }
+
+    final List data = resData['data'] as List;
+    return data.map((json) => ProductModel.fromJson(json)).toList();
+  }
+
+  bool _sameProductData(ProductModel current, ProductModel fresh) {
+    return current.id == fresh.id &&
+        current.name == fresh.name &&
+        current.sku == fresh.sku &&
+        current.barcode == fresh.barcode &&
+        current.categoryId == fresh.categoryId &&
+        current.supplierId == fresh.supplierId &&
+        _sameNestedData(current.category, fresh.category) &&
+        _sameNestedData(current.supplier, fresh.supplier) &&
+        current.unit == fresh.unit &&
+        current.costPrice == fresh.costPrice &&
+        current.priceN1 == fresh.priceN1 &&
+        current.priceN2 == fresh.priceN2 &&
+        current.priceN3 == fresh.priceN3 &&
+        current.unitsPerCarton == fresh.unitsPerCarton &&
+        current.imagePath == fresh.imagePath &&
+        current.isActive == fresh.isActive &&
+        _sameNestedData(current.stocks, fresh.stocks);
+  }
+
+  bool _sameNestedData(Object? current, Object? fresh) {
+    if (identical(current, fresh)) return true;
+    if (current is List && fresh is List) {
+      if (current.length != fresh.length) return false;
+      for (var index = 0; index < current.length; index++) {
+        if (!_sameNestedData(current[index], fresh[index])) return false;
+      }
+      return true;
+    }
+    if (current is Map && fresh is Map) {
+      if (current.length != fresh.length) return false;
+      for (final entry in current.entries) {
+        if (!fresh.containsKey(entry.key) ||
+            !_sameNestedData(entry.value, fresh[entry.key])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return current == fresh;
   }
 
   void patchProductStock(

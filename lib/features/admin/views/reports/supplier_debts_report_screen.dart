@@ -8,6 +8,9 @@ import '../../../../core/components/error_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../shared/models/receipt_data.dart';
+import '../../../shared/services/receipt_print_service.dart';
 import '../../../products/providers/suppliers_provider.dart';
 import '../../../products/models/supplier_model.dart';
 import '../providers/reports_provider.dart';
@@ -395,6 +398,7 @@ class _SupplierDebtsReportScreenState
                             DataColumn(label: Text('بڕی جوڵە')),
                             DataColumn(label: Text('قەرزی ماوە')),
                             DataColumn(label: Text('تێبینی')),
+                            DataColumn(label: Text('وێنە')),
                           ],
                           rows: ledgers.map((entry) {
                             final isCredit = entry.type == 'credit';
@@ -442,6 +446,20 @@ class _SupplierDebtsReportScreenState
                                   ),
                                 ),
                                 DataCell(Text(entry.description ?? '')),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(Icons.image_outlined),
+                                    tooltip: 'دروستکردنی وێنەی پسوڵە',
+                                    onPressed: () => ReceiptPrintService.show(
+                                      context,
+                                      ReceiptData.fromSupplierLedger(
+                                        entry,
+                                        supplierName: entry.supplierName ?? 'نەزانراو',
+                                        employee: ref.read(authProvider).user,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             );
                           }).toList(),

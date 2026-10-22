@@ -8,6 +8,9 @@ import '../../../../core/components/error_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../shared/models/receipt_data.dart';
+import '../../../shared/services/receipt_print_service.dart';
 import '../../../shared/providers/customer_provider.dart';
 import '../../../shared/models/customer.dart';
 import '../../../products/providers/suppliers_provider.dart';
@@ -559,6 +562,7 @@ class _PaymentsHistoryReportScreenState
                                     label: Text('سەرچاوە/ڕوونکردنەوە'),
                                   ),
                                   const DataColumn(label: Text('تێبینی')),
+                                  const DataColumn(label: Text('وێنە')),
                                 ],
                                 rows: payments.map((payment) {
                                   final isCustomer = payment.type == 'customer';
@@ -594,6 +598,19 @@ class _PaymentsHistoryReportScreenState
                                       ),
                                       DataCell(Text(payment.reference)),
                                       DataCell(Text(payment.notes ?? '')),
+                                      DataCell(
+                                        IconButton(
+                                          icon: const Icon(Icons.image_outlined),
+                                          tooltip: 'دروستکردنی وێنەی پسوڵە',
+                                          onPressed: () => ReceiptPrintService.show(
+                                            context,
+                                            ReceiptData.fromPayment(
+                                              payment,
+                                              employee: ref.read(authProvider).user,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   );
                                 }).toList(),

@@ -11,6 +11,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/suppliers_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../shared/models/receipt_data.dart';
+import '../../shared/services/receipt_print_service.dart';
 import 'providers/reports_provider.dart';
 
 class SupplierFormDialog extends ConsumerStatefulWidget {
@@ -594,6 +597,19 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                       : AppColors.danger;
 
                   return ListTile(
+                    leading: IconButton(
+                      icon: const Icon(Icons.image_outlined),
+                      tooltip: 'دروستکردنی وێنەی پسوڵە',
+                      onPressed: () => ReceiptPrintService.show(
+                        context,
+                        ReceiptData.fromSupplierLedger(
+                          entry,
+                          supplierName: widget.supplier!.name,
+                          supplierPhone: widget.supplier!.phone,
+                          employee: ref.read(authProvider).user,
+                        ),
+                      ),
+                    ),
                     title: Text(
                       entry.description ?? 'بێ تێبینی',
                       style: AppTextStyles.bodyBold,

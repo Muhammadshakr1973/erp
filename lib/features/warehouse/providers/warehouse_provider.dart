@@ -148,8 +148,11 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
 
 final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
     FutureProvider<List<WarehouseStockModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final user = ref.watch(authProvider.select((state) => state.user));
   final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
+  final requestedWarehouseId = user?.isSalesman == true
+      ? user?.warehouseId
+      : activeWarehouseId;
   final api = ref.watch(apiClientProvider);
   final pusher = ref.watch(pusherServiceProvider);
 
@@ -167,7 +170,9 @@ final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
   try {
     final response = await api.client.get(
       '/warehouse/stock',
-      queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
+      queryParameters: requestedWarehouseId != null
+          ? {'warehouse_id': requestedWarehouseId}
+          : null,
     );
     if (response.statusCode == 200) {
       final resData = response.data;
@@ -456,5 +461,4 @@ class VanTransferDraft {
 
 final vanTransferDraftStateProvider =
     StateProvider<VanTransferDraft>((ref) => const VanTransferDraft());
-
 

@@ -85,7 +85,9 @@ class SalesmanOrdersScreen extends ConsumerWidget {
           final currentUser = ref.watch(authProvider).user;
           final salesmanOrders = orders
               .where(
-                (o) => currentUser == null || o.salesmanId == currentUser.id,
+                (o) =>
+                    (currentUser == null || o.salesmanId == currentUser.id) &&
+                    o.status.toUpperCase() != OrderModel.statusCancelled,
               )
               .toList();
           final nowString = DateTime.now().toIso8601String().substring(0, 10);

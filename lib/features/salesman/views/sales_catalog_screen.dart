@@ -982,8 +982,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final ordersAsync = ref.watch(ordersListProvider);
     final authUser = ref.watch(authProvider).user;
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
+    final salesWarehouseId =
+        authUser?.warehouseId ?? myVanWarehouse?.id;
 
-    // Show this salesman's orders in the selector, except delivered orders.
+    // Show this salesman's orders in the selector, except delivered or cancelled orders.
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
@@ -1008,15 +1010,19 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 authUser.isOwner ||
                 o.salesmanId == authUser.id)
           : true;
-      final isDelivered = o.status.toUpperCase() == OrderModel.statusDelivered;
-      if (isOwn && !isDelivered) {
+      final status = o.status.toUpperCase();
+      final isUnavailable =
+          status == OrderModel.statusDelivered ||
+          status == OrderModel.statusCancelled;
+      if (isOwn && !isUnavailable) {
         orderMap[o.id] = o;
       }
     }
 
-    // Keep the active order available unless it has already been delivered.
+    // Keep the active order available unless it has already been delivered or cancelled.
     if (_selectedOrder != null &&
-        _selectedOrder!.status.toUpperCase() != OrderModel.statusDelivered) {
+        _selectedOrder!.status.toUpperCase() != OrderModel.statusDelivered &&
+        _selectedOrder!.status.toUpperCase() != OrderModel.statusCancelled) {
       orderMap[_selectedOrder!.id] = _selectedOrder!;
     }
 
@@ -1055,6 +1061,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     // Filter products by category & search query
                     final filteredProducts = allProducts.where((p) {
                       if (!p.isActive) return false;
+                      if (authUser?.isSalesman == true &&
+                          (salesWarehouseId == null ||
+                              p.getStockForWarehouse(salesWarehouseId) <= 0)) {
+                        return false;
+                      }
                       if (_selectedCategoryId != null &&
                           p.categoryId != _selectedCategoryId) {
                         return false;
@@ -1130,10 +1141,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             final qtyInCart = _orderCart[product.id] ?? 0;
                             return _buildProductCard(
                               context,
+                              key: ValueKey(product.id),
                               product: product,
                               quantity: qtyInCart,
                               user: authUser,
-                              vanWarehouseId: myVanWarehouse?.id,
+                              warehouseId: salesWarehouseId,
                             );
                           },
                         );
@@ -1619,22 +1631,25 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   /// Product Card matching image 8.png
   Widget _buildProductCard(
     BuildContext context, {
+    required Key key,
     required ProductModel product,
     required int quantity,
     required dynamic user,
-    required int? vanWarehouseId,
+    required int? warehouseId,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final unitPrice = _getProductPrice(product);
 
     // Stock calculation
-    final int availableStock =
-        (user?.isCashVan == true && vanWarehouseId != null)
-        ? product.getStockForWarehouse(vanWarehouseId)
+    final int availableStock = user?.isSalesman == true
+        ? (warehouseId == null ? 0 : product.getStockForWarehouse(warehouseId))
+        : (user?.isCashVan == true && warehouseId != null)
+        ? product.getStockForWarehouse(warehouseId)
         : product.totalStock;
 
     return AnimatedOpacity(
+      key: key,
       opacity: quantity > 0 ? 0.25 : 1,
       duration: const Duration(milliseconds: 200),
       child: Container(

@@ -45,7 +45,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   String? _overridePriceType;
   final Map<int, int> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
-  final List<Map<String, dynamic>> _returnedItems = []; // returned items in this order
+  final List<Map<String, dynamic>> _returnedItems =
+      []; // returned items in this order
   Timer? _debounceTimer;
   Map<int, double> _customerSpecialPrices =
       {}; // product_id -> special unit price
@@ -156,7 +157,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _selectedWarehouseId = order.warehouseId;
       final isCashVanSalesman =
           ref.read(authProvider).user?.isCashVanSalesman ?? false;
-      _discountType = isCashVanSalesman ||
+      _discountType =
+          isCashVanSalesman ||
               (order.discountPercent == 0 && order.discountAmount == 0)
           ? 'FIXED'
           : order.discountType;
@@ -408,10 +410,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   double _getProductUnitPrice(ProductModel product) {
-    final String tier = _overridePriceType ?? (_selectedCustomer?.priceType?.toUpperCase() ?? 'N3');
+    final String tier =
+        _overridePriceType ??
+        (_selectedCustomer?.priceType?.toUpperCase() ?? 'N3');
 
     // special prices should only apply if there is NO explicit override, and we have special prices
-    if (_overridePriceType == null && _selectedCustomer != null && _customerSpecialPrices.containsKey(product.id)) {
+    if (_overridePriceType == null &&
+        _selectedCustomer != null &&
+        _customerSpecialPrices.containsKey(product.id)) {
       return _customerSpecialPrices[product.id]!;
     }
     switch (tier) {
@@ -446,7 +452,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (currentQty + 1 > maxStock) {
         AppSnackbar.show(
           context,
-          message: 'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر بفرۆشیت',
+          message:
+              'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر بفرۆشیت',
           type: SnackbarType.warning,
         );
         return;
@@ -539,14 +546,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               final parsed = int.tryParse(controller.text.trim());
               if (parsed != null && parsed > 0) {
                 final currentUser = ref.read(authProvider).user;
-                if (currentUser?.isCashVan == true && _selectedWarehouseId != null) {
-                  final products = ref.read(productsListProvider).asData?.value ?? [];
-                  final product = products.where((p) => p.id == productId).firstOrNull;
-                  final maxStock = product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
+                if (currentUser?.isCashVan == true &&
+                    _selectedWarehouseId != null) {
+                  final products =
+                      ref.read(productsListProvider).asData?.value ?? [];
+                  final product = products
+                      .where((p) => p.id == productId)
+                      .firstOrNull;
+                  final maxStock =
+                      product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
                   if (parsed > maxStock) {
                     AppSnackbar.show(
                       context,
-                      message: 'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
+                      message:
+                          'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
                       type: SnackbarType.warning,
                     );
                     return;
@@ -572,7 +585,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
   }
 
-  Future<void> _showAddReturnedItemDialog(List<ProductModel> allProducts) async {
+  Future<void> _showAddReturnedItemDialog(
+    List<ProductModel> allProducts,
+  ) async {
     ProductModel? selectedProduct;
     final qtyController = TextEditingController(text: '1');
     final priceController = TextEditingController();
@@ -590,20 +605,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             final theme = Theme.of(context);
             final filteredProducts = searchProductController.text.trim().isEmpty
                 ? allProducts.take(20).toList()
-                : allProducts.where((p) {
-                    final q = searchProductController.text.trim().toLowerCase();
-                    return p.name.toLowerCase().contains(q) ||
-                        p.barcode.toLowerCase().contains(q) ||
-                        (p.sku != null && p.sku!.toLowerCase().contains(q));
-                  }).take(20).toList();
+                : allProducts
+                      .where((p) {
+                        final q = searchProductController.text
+                            .trim()
+                            .toLowerCase();
+                        return p.name.toLowerCase().contains(q) ||
+                            p.barcode.toLowerCase().contains(q) ||
+                            (p.sku != null && p.sku!.toLowerCase().contains(q));
+                      })
+                      .take(20)
+                      .toList();
 
             return AlertDialog(
               title: Row(
                 children: [
-                  const Icon(Icons.assignment_return_rounded, color: AppColors.danger),
+                  const Icon(
+                    Icons.assignment_return_rounded,
+                    color: AppColors.danger,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
-                    child: Text('تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا', style: AppTextStyles.h3),
+                    child: Text(
+                      'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
+                      style: AppTextStyles.h3,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'داخستن',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(dialogCtx),
                   ),
                 ],
               ),
@@ -614,61 +645,113 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('کاڵا دیاریبکە:', style: AppTextStyles.bodyBold),
+                      const Text(
+                        'کاڵا دیاریبکە:',
+                        style: AppTextStyles.bodyBold,
+                      ),
                       const SizedBox(height: 6),
                       AppTextField(
                         controller: searchProductController,
                         labelText: 'گەڕان بەپێی ناو یان بارکۆدی کاڵا...',
                         prefixIcon: Icons.search,
+                        suffixIcon: IconButton(
+                          tooltip: 'سکانی بارکۆد',
+                          icon: const Icon(Icons.qr_code_scanner_rounded),
+                          onPressed: () {
+                            CameraBarcodeScanner.show(modalCtx, (barcode) {
+                              searchProductController.text = barcode.trim();
+                              setDialogState(() {});
+                              return true;
+                            }, closeOnScan: true);
+                          },
+                        ),
                         onChanged: (_) => setDialogState(() {}),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         height: 140,
                         decoration: BoxDecoration(
-                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.3),
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: filteredProducts.isEmpty
-                            ? const Center(child: Text('هیچ کاڵایەک نەدۆزرایەوە', style: AppTextStyles.caption))
+                            ? const Center(
+                                child: Text(
+                                  'هیچ کاڵایەک نەدۆزرایەوە',
+                                  style: AppTextStyles.caption,
+                                ),
+                              )
                             : ListView.separated(
                                 itemCount: filteredProducts.length,
-                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                separatorBuilder: (context, index) =>
+                                    const Divider(height: 1),
                                 itemBuilder: (context, idx) {
                                   final p = filteredProducts[idx];
                                   final isSel = selectedProduct?.id == p.id;
                                   return ListTile(
                                     dense: true,
                                     selected: isSel,
-                                    selectedTileColor: AppColors.danger.withValues(alpha: 0.1),
-                                    title: Text(p.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-                                    subtitle: Text('${p.unit} • ${Formatters.currency(_getProductUnitPrice(p))}', style: AppTextStyles.caption),
+                                    selectedTileColor: AppColors.danger
+                                        .withValues(alpha: 0.1),
+                                    title: Text(
+                                      p.name,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        fontWeight: isSel
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${p.unit} • ${Formatters.currency(_getProductUnitPrice(p))}',
+                                      style: AppTextStyles.caption,
+                                    ),
                                     onTap: () async {
                                       final fallbackP = _getProductUnitPrice(p);
                                       setDialogState(() {
                                         selectedProduct = p;
-                                        priceController.text = fallbackP.toInt().toString();
+                                        priceController.text = fallbackP
+                                            .toInt()
+                                            .toString();
                                         lastPriceInfo = 'چاوەڕوانبە... دەرهێنانی نرخی کۆتا پسوڵە';
                                         isLoadingLastPrice = true;
                                       });
 
-                                      if (_selectedCustomer != null && _selectedCustomer!.id > 0) {
-                                        final lastPriceData = await ref.read(customerActionsProvider).fetchLastProductPrice(
-                                          _selectedCustomer!.id,
-                                          p.id,
-                                          excludeOrderId: widget.existingOrder?.id ?? _serverOrderId,
-                                        );
-                                        if (modalCtx.mounted && selectedProduct?.id == p.id) {
+                                      if (_selectedCustomer != null &&
+                                          _selectedCustomer!.id > 0) {
+                                        final lastPriceData = await ref
+                                            .read(customerActionsProvider)
+                                            .fetchLastProductPrice(
+                                              _selectedCustomer!.id,
+                                              p.id,
+                                              excludeOrderId:
+                                                  widget.existingOrder?.id ??
+                                                  _serverOrderId,
+                                            );
+                                        if (modalCtx.mounted &&
+                                            selectedProduct?.id == p.id) {
                                           setDialogState(() {
                                             isLoadingLastPrice = false;
-                                            if (lastPriceData != null && lastPriceData['found'] == true) {
-                                              final lp = lastPriceData['unit_price'];
-                                              final ordNum = lastPriceData['order_number'] ?? '';
-                                              final ordDate = lastPriceData['order_date'] ?? '';
+                                            if (lastPriceData != null &&
+                                                lastPriceData['found'] ==
+                                                    true) {
+                                              final lp =
+                                                  lastPriceData['unit_price'];
+                                              final ordNum =
+                                                  lastPriceData['order_number'] ??
+                                                  '';
+                                              final ordDate =
+                                                  lastPriceData['order_date'] ??
+                                                  '';
                                               if (lp != null) {
-                                                priceController.text = (lp as num).toInt().toString();
+                                                priceController.text =
+                                                    (lp as num)
+                                                        .toInt()
+                                                        .toString();
                                               }
-                                              lastPriceInfo = 'نرخ لە کۆتا پسوڵە ($ordNum${ordDate.toString().isNotEmpty ? ' - $ordDate' : ''}): ${Formatters.currency((lp as num).toDouble())}';
+                                              lastPriceInfo =
+                                                  'نرخ لە کۆتا پسوڵە ($ordNum${ordDate.toString().isNotEmpty ? ' - $ordDate' : ''}): ${Formatters.currency((lp as num).toDouble())}';
                                             } else {
                                               lastPriceInfo = 'هیچ پسوڵەیەکی پێشوو نەدۆزرایەوە (نرخی فەرمی دانرا)';
                                             }
@@ -695,26 +778,39 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           ),
                           child: Text(
                             'کاڵای دیاریکراو: ${selectedProduct!.name}',
-                            style: AppTextStyles.bodyBold.copyWith(color: AppColors.danger),
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: AppColors.danger,
+                            ),
                           ),
                         ),
                         if (lastPriceInfo != null) ...[
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: isLoadingLastPrice
                                   ? Colors.amber.withValues(alpha: 0.1)
                                   : (lastPriceInfo!.contains('کۆتا پسوڵە')
-                                      ? AppColors.success.withValues(alpha: 0.1)
-                                      : AppColors.info.withValues(alpha: 0.1)),
+                                        ? AppColors.success.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : AppColors.info.withValues(
+                                            alpha: 0.1,
+                                          )),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: isLoadingLastPrice
                                     ? Colors.amber.withValues(alpha: 0.4)
                                     : (lastPriceInfo!.contains('کۆتا پسوڵە')
-                                        ? AppColors.success.withValues(alpha: 0.4)
-                                        : AppColors.info.withValues(alpha: 0.3)),
+                                          ? AppColors.success.withValues(
+                                              alpha: 0.4,
+                                            )
+                                          : AppColors.info.withValues(
+                                              alpha: 0.3,
+                                            )),
                               ),
                             ),
                             child: Row(
@@ -723,14 +819,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   isLoadingLastPrice
                                       ? Icons.hourglass_top_rounded
                                       : (lastPriceInfo!.contains('کۆتا پسوڵە')
-                                          ? Icons.verified_rounded
-                                          : Icons.info_outline),
+                                            ? Icons.verified_rounded
+                                            : Icons.info_outline),
                                   size: 16,
                                   color: isLoadingLastPrice
                                       ? Colors.amber.shade800
                                       : (lastPriceInfo!.contains('کۆتا پسوڵە')
-                                          ? AppColors.success
-                                          : AppColors.info),
+                                            ? AppColors.success
+                                            : AppColors.info),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
@@ -739,9 +835,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                     style: AppTextStyles.caption.copyWith(
                                       color: isLoadingLastPrice
                                           ? Colors.amber.shade900
-                                          : (lastPriceInfo!.contains('کۆتا پسوڵە')
-                                              ? AppColors.success
-                                              : AppColors.textSecondary),
+                                          : (lastPriceInfo!.contains(
+                                                  'کۆتا پسوڵە',
+                                                )
+                                                ? AppColors.success
+                                                : AppColors.textSecondary),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -773,19 +871,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text('هۆکاری گەڕانەوە:', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'هۆکاری گەڕانەوە:',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Wrap(
                           spacing: 6,
-                          children: ['بەسەرچوو', 'تێکچوو / شکاوە', 'داواکاری کڕیار', 'هەڵەی مەندوب'].map((r) {
-                            return ChoiceChip(
-                              label: Text(r, style: const TextStyle(fontSize: 11)),
-                              selected: reasonController.text == r,
-                              onSelected: (sel) {
-                                if (sel) setDialogState(() => reasonController.text = r);
-                              },
-                            );
-                          }).toList(),
+                          children:
+                              [
+                                'بەسەرچوو',
+                                'تێکچوو / شکاوە',
+                                'داواکاری کڕیار',
+                                'هەڵەی مەندوب',
+                              ].map((r) {
+                                return ChoiceChip(
+                                  label: Text(
+                                    r,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  selected: reasonController.text == r,
+                                  onSelected: (sel) {
+                                    if (sel)
+                                      setDialogState(
+                                        () => reasonController.text = r,
+                                      );
+                                  },
+                                );
+                              }).toList(),
                         ),
                         const SizedBox(height: 6),
                         AppTextField(
@@ -798,10 +913,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('پاشگەزبوونەوە'),
-                ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
@@ -810,16 +921,27 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   onPressed: selectedProduct == null
                       ? null
                       : () {
-                          final qty = int.tryParse(qtyController.text.trim()) ?? 1;
-                          final price = double.tryParse(priceController.text.trim()) ?? _getProductUnitPrice(selectedProduct!);
+                          final qty =
+                              int.tryParse(qtyController.text.trim()) ?? 1;
+                          final price =
+                              double.tryParse(priceController.text.trim()) ??
+                              _getProductUnitPrice(selectedProduct!);
                           if (qty <= 0) {
-                            AppSnackbar.show(context, message: 'تکایە بڕێکی دروست بنووسە', type: SnackbarType.warning);
+                            AppSnackbar.show(
+                              context,
+                              message: 'تکایە بڕێکی دروست بنووسە',
+                              type: SnackbarType.warning,
+                            );
                             return;
                           }
-                          final reason = reasonController.text.trim().isEmpty ? null : reasonController.text.trim();
+                          final reason = reasonController.text.trim().isEmpty
+                              ? null
+                              : reasonController.text.trim();
 
                           setState(() {
-                            final existingIndex = _returnedItems.indexWhere((r) => r['product_id'] == selectedProduct!.id);
+                            final existingIndex = _returnedItems.indexWhere(
+                              (r) => r['product_id'] == selectedProduct!.id,
+                            );
                             if (existingIndex >= 0) {
                               _returnedItems[existingIndex] = {
                                 'product_id': selectedProduct!.id,
@@ -847,7 +969,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           _triggerDebouncedAutoSave();
                           AppSnackbar.show(
                             context,
-                            message: 'کاڵای گەڕاوە (${selectedProduct!.name}) تۆمارکرا لەم پسوڵەیەدا',
+                            message:
+                                'کاڵای گەڕاوە (${selectedProduct!.name}) تۆمارکرا لەم پسوڵەیەدا',
                             type: SnackbarType.success,
                           );
                         },
@@ -1075,31 +1198,27 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _scanBarcode(List<ProductModel> products) {
-    CameraBarcodeScanner.show(
-      context,
-      (scannedBarcode) {
-        final matched = products
-            .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
-            .firstOrNull;
-        if (matched != null) {
-          _addToCart(matched.id);
-          AppSnackbar.show(
-            context,
-            message: '${matched.name} زیادکرا بۆ سەبەتە',
-            type: SnackbarType.success,
-          );
-          return true;
-        } else {
-          AppSnackbar.show(
-            context,
-            message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
-            type: SnackbarType.error,
-          );
-          return false;
-        }
-      },
-      closeOnScan: false,
-    );
+    CameraBarcodeScanner.show(context, (scannedBarcode) {
+      final matched = products
+          .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
+          .firstOrNull;
+      if (matched != null) {
+        _addToCart(matched.id);
+        AppSnackbar.show(
+          context,
+          message: '${matched.name} زیادکرا بۆ سەبەتە',
+          type: SnackbarType.success,
+        );
+        return true;
+      } else {
+        AppSnackbar.show(
+          context,
+          message: 'هیچ کاڵایەک نەدۆزرایەوە بە کۆدی: $scannedBarcode',
+          type: SnackbarType.error,
+        );
+        return false;
+      }
+    }, closeOnScan: false);
   }
 
   Future<void> _autoSaveOrder(
@@ -1114,7 +1233,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final warehouses = rawWarehouses.where((w) => w.canSell).toList();
     if (warehouses.isEmpty) return;
     if (_selectedCustomer == null) return;
-    if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty) return;
+    if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty)
+      return;
 
     final warehouseId =
         _selectedWarehouseId ??
@@ -1166,7 +1286,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           : null,
       'shared_key': sharedKey,
       'version': version,
-      'price_type': _overridePriceType ?? _selectedCustomer?.priceType?.toUpperCase(),
+      'price_type':
+          _overridePriceType ?? _selectedCustomer?.priceType?.toUpperCase(),
       'is_manual_price_type': _overridePriceType != null,
       'notes': _notesController.text.trim().isEmpty
           ? null
@@ -1833,18 +1954,24 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final currentUser = ref.watch(authProvider).user;
     final isSalesman = currentUser?.isSalesman ?? false;
-    final isCashVan = currentUser?.isCashVan == true;
-    final userWarehouseId = currentUser?.warehouseId;
-    if (isSalesman && _selectedWarehouseId == null && userWarehouseId != null) {
-      _selectedWarehouseId = userWarehouseId;
-    }
-    if (isCashVan && userWarehouseId != null && _selectedWarehouseId != userWarehouseId) {
-      _selectedWarehouseId = userWarehouseId;
+    final assignedWarehouseId =
+        currentUser?.warehouseId ??
+        ref.watch(myAssignedVanWarehouseProvider)?.id;
+    if (isSalesman &&
+        assignedWarehouseId != null &&
+        _selectedWarehouseId != assignedWarehouseId) {
+      _selectedWarehouseId = assignedWarehouseId;
     }
 
     final rawProducts = productsAsync.asData?.value ?? [];
-    final allProducts = (isCashVan && _selectedWarehouseId != null)
-        ? rawProducts.where((p) => p.getStockForWarehouse(_selectedWarehouseId) > 0).toList()
+    final allProducts = isSalesman
+        ? assignedWarehouseId == null
+              ? <ProductModel>[]
+              : rawProducts
+                    .where(
+                      (p) => p.getStockForWarehouse(assignedWarehouseId) > 0,
+                    )
+                    .toList()
         : rawProducts;
 
     return Scaffold(
@@ -2041,7 +2168,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.local_shipping_outlined, size: 16, color: Colors.orange),
+                  const Icon(
+                    Icons.local_shipping_outlined,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'کاشڤان: ${currentUser?.warehouseName ?? "ئۆتۆمبێل"}',
@@ -2787,9 +2918,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget _buildPriceTypeBadge() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final String priceType = _overridePriceType ?? (_selectedCustomer != null
-        ? (_selectedCustomer!.priceType ?? 'N3')
-        : 'N3');
+    final String priceType =
+        _overridePriceType ??
+        (_selectedCustomer != null
+            ? (_selectedCustomer!.priceType ?? 'N3')
+            : 'N3');
 
     Color badgeColor;
     if (priceType == 'N1') {
@@ -2812,17 +2945,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               children: [
                 ListTile(
                   title: const Text('N1 - تاک'),
-                  trailing: priceType == 'N1' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  trailing: priceType == 'N1'
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
                   onTap: () => Navigator.pop(context, 'N1'),
                 ),
                 ListTile(
                   title: const Text('N2 - کۆ'),
-                  trailing: priceType == 'N2' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  trailing: priceType == 'N2'
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
                   onTap: () => Navigator.pop(context, 'N2'),
                 ),
                 ListTile(
                   title: const Text('N3 - تایبەت / کاتی'),
-                  trailing: priceType == 'N3' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  trailing: priceType == 'N3'
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
                   onTap: () => Navigator.pop(context, 'N3'),
                 ),
               ],
@@ -2831,7 +2970,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         );
 
         if (selected != null && mounted) {
-          _lastChangedField = 'customer'; // triggers auto-save and updates UI prices
+          _lastChangedField =
+              'customer'; // triggers auto-save and updates UI prices
           setState(() {
             _overridePriceType = selected;
           });
@@ -3061,7 +3201,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final totalAmount = amountAfterPerm - invoiceDiscountAmount;
     final totalReturnAmount = _returnedItems.fold<double>(
       0.0,
-      (sum, item) => sum + (double.tryParse(item['subtotal']?.toString() ?? '0') ?? ((double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0) * (int.tryParse(item['quantity']?.toString() ?? '0') ?? 0))),
+      (sum, item) =>
+          sum +
+          (double.tryParse(item['subtotal']?.toString() ?? '0') ??
+              ((double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0) *
+                  (int.tryParse(item['quantity']?.toString() ?? '0') ?? 0))),
     );
 
     return Container(
@@ -3083,7 +3227,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   message: 'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
                   child: OutlinedButton.icon(
                     onPressed: () => _showAddReturnedItemDialog(allProducts),
-                    icon: const Icon(Icons.assignment_return_rounded, size: 16, color: AppColors.danger),
+                    icon: const Icon(
+                      Icons.assignment_return_rounded,
+                      size: 16,
+                      color: AppColors.danger,
+                    ),
                     label: const Text(
                       'کاڵای گەڕاوە',
                       style: TextStyle(
@@ -3094,7 +3242,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       side: const BorderSide(color: AppColors.danger),
                     ),
                   ),
@@ -3104,7 +3255,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ),
           if (_returnedItems.isNotEmpty)
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+              margin: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 4,
+              ),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.amber.withValues(alpha: 0.12),
@@ -3119,13 +3273,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.assignment_return_rounded, size: 16, color: Colors.amber.shade900),
+                          Icon(
+                            Icons.assignment_return_rounded,
+                            size: 16,
+                            color: Colors.amber.shade900,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'کاڵا گەڕاوەکان (${_returnedItems.length})',
                             style: AppTextStyles.caption.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                              color: isDark
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade900,
                             ),
                           ),
                         ],
@@ -3137,7 +3297,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                            color: isDark
+                                ? Colors.amber.shade300
+                                : Colors.amber.shade900,
                             fontFamily: 'KJino',
                           ),
                         ),
@@ -3155,7 +3317,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           Expanded(
                             child: Text(
                               '↩ ${ret['product_name']} (${ret['quantity']} ${ret['product_unit'] ?? 'دانە'}) • ${Formatters.currency(ret['subtotal'] ?? (ret['unit_price'] * ret['quantity']))}${ret['reason'] != null && ret['reason'].toString().isNotEmpty ? ' (${ret['reason']})' : ''}',
-                              style: AppTextStyles.caption.copyWith(fontSize: 11),
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 11,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -3164,7 +3328,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             onTap: () => _removeReturnedItem(index),
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 4),
-                              child: Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
                             ),
                           ),
                         ],
@@ -3188,9 +3356,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              _returnedItems.isEmpty
-                                  ? 'سەبەتە بەتاڵە'
-                                  : 'کاڵای فرۆشتن لە سەبەتە نییە (تەنها کاڵای گەڕاوە هەیە)',
+                              _returnedItems.isEmpty ? 'سەبەتە بەتاڵە' : 'کاڵای فرۆشتن لە سەبەتە نییە (تەنها کاڵای گەڕاوە هەیە)',
                               style: AppTextStyles.bodyMedium,
                             ),
                           ),
@@ -3545,155 +3711,158 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   children: [
                     if (!isCashVanSalesman)
                       Expanded(
-                      flex: 3,
-                      child: Container(
-                        height: 52,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          border: Border(
-                            top: BorderSide(
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.6,
+                        flex: 3,
+                        child: Container(
+                          height: 52,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            border: Border(
+                              top: BorderSide(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.6,
+                                ),
+                                width: 1,
                               ),
-                              width: 1,
+                              bottom: BorderSide(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.6,
+                                ),
+                                width: 1,
+                              ),
+                              right: BorderSide(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.6,
+                                ),
+                                width: 1,
+                              ),
                             ),
-                            bottom: BorderSide(
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.6,
-                              ),
-                              width: 1,
-                            ),
-                            right: BorderSide(
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.6,
-                              ),
-                              width: 1,
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(24),
+                              bottomRight: Radius.circular(24),
                             ),
                           ),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(24),
-                            bottomRight: Radius.circular(24),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              'داشکان: ',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _discountType,
-                                dropdownColor: theme.colorScheme.surface,
-                                style: theme.textTheme.bodyMedium?.copyWith(
+                          child: Row(
+                            children: [
+                              Text(
+                                'داشکان: ',
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                                isDense: true,
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'FIXED',
-                                    child: Text(
-                                      'بڕ (پارە)',
-                                      style: TextStyle(fontSize: 13),
+                              ),
+                              const SizedBox(width: 4),
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _discountType,
+                                  dropdownColor: theme.colorScheme.surface,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  isDense: true,
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'FIXED',
+                                      child: Text(
+                                        'بڕ (پارە)',
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'PERCENT',
+                                      child: Text(
+                                        '% (ڕێژە)',
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      _lastChangedField = 'discount';
+                                      setState(() {
+                                        _discountType = val;
+                                        if (_discountType == 'PERCENT' &&
+                                            _discountValue > 100) {
+                                          _discountValue = 100;
+                                        }
+                                      });
+                                      _triggerDebouncedAutoSave();
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: AppTextField(
+                                  key: ValueKey(
+                                    'discount_field_${_discountValue}_$_discountType',
+                                  ),
+                                  controller:
+                                      TextEditingController(
+                                          text: _discountValue == 0
+                                              ? ''
+                                              : (_discountValue ==
+                                                        _discountValue
+                                                            .roundToDouble()
+                                                    ? _discountValue
+                                                          .toInt()
+                                                          .toString()
+                                                    : _discountValue
+                                                          .toString()),
+                                        )
+                                        ..selection = TextSelection.fromPosition(
+                                          TextPosition(
+                                            offset:
+                                                (_discountValue == 0
+                                                        ? ''
+                                                        : (_discountValue ==
+                                                                  _discountValue
+                                                                      .roundToDouble()
+                                                              ? _discountValue
+                                                                    .toInt()
+                                                                    .toString()
+                                                              : _discountValue
+                                                                    .toString()))
+                                                    .length,
+                                          ),
+                                        ),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  borderRadius: BorderRadius.zero,
+                                  customDecoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    border: InputBorder.none,
+                                    hintText: '0',
+                                    suffixIcon: _buildFieldStatusIcon(
+                                      'discount',
                                     ),
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'PERCENT',
-                                    child: Text(
-                                      '% (ڕێژە)',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) {
+                                  onChanged: (val) {
+                                    final parsed = double.tryParse(val) ?? 0.0;
                                     _lastChangedField = 'discount';
                                     setState(() {
-                                      _discountType = val;
+                                      _discountValue = parsed;
                                       if (_discountType == 'PERCENT' &&
                                           _discountValue > 100) {
                                         _discountValue = 100;
                                       }
                                     });
                                     _triggerDebouncedAutoSave();
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: AppTextField(
-                                key: ValueKey(
-                                  'discount_field_${_discountValue}_$_discountType',
+                                  },
                                 ),
-                                controller:
-                                    TextEditingController(
-                                        text: _discountValue == 0
-                                            ? ''
-                                            : (_discountValue ==
-                                                      _discountValue
-                                                          .roundToDouble()
-                                                  ? _discountValue
-                                                        .toInt()
-                                                        .toString()
-                                                  : _discountValue.toString()),
-                                      )
-                                      ..selection = TextSelection.fromPosition(
-                                        TextPosition(
-                                          offset:
-                                              (_discountValue == 0
-                                                      ? ''
-                                                      : (_discountValue ==
-                                                                _discountValue
-                                                                    .roundToDouble()
-                                                            ? _discountValue
-                                                                  .toInt()
-                                                                  .toString()
-                                                            : _discountValue
-                                                                  .toString()))
-                                                  .length,
-                                        ),
-                                      ),
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                borderRadius: BorderRadius.zero,
-                                customDecoration: InputDecoration(
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  border: InputBorder.none,
-                                  hintText: '0',
-                                  suffixIcon: _buildFieldStatusIcon('discount'),
-                                ),
-                                onChanged: (val) {
-                                  final parsed = double.tryParse(val) ?? 0.0;
-                                  _lastChangedField = 'discount';
-                                  setState(() {
-                                    _discountValue = parsed;
-                                    if (_discountType == 'PERCENT' &&
-                                        _discountValue > 100) {
-                                      _discountValue = 100;
-                                    }
-                                  });
-                                  _triggerDebouncedAutoSave();
-                                },
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                     Expanded(
                       flex: 2,
                       child: Container(

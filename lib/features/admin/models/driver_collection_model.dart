@@ -25,6 +25,7 @@ class DriverCollection {
   final int id;
   final int driverId;
   final String driverName;
+  final String? driverPhone;
   final int amount;
   final String collectedAt;
   final String collectorName;
@@ -34,6 +35,7 @@ class DriverCollection {
     required this.id,
     required this.driverId,
     required this.driverName,
+    this.driverPhone,
     required this.amount,
     required this.collectedAt,
     required this.collectorName,
@@ -45,6 +47,9 @@ class DriverCollection {
       id: (json['id'] as num).toInt(),
       driverId: (json['driver_id'] as num).toInt(),
       driverName: json['driver'] != null ? (json['driver']['name'] as String? ?? 'شۆفێر') : 'شۆفێر',
+      driverPhone: json['driver'] is Map
+          ? json['driver']['phone']?.toString()
+          : null,
       amount: (json['amount'] as num? ?? 0).toInt(),
       collectedAt: json['collected_at'] as String,
       collectorName: json['collector'] != null ? (json['collector']['name'] as String? ?? 'خاوەن') : 'خاوەن',

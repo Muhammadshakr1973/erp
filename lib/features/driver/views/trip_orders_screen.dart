@@ -11,6 +11,9 @@ import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../shared/models/receipt_data.dart';
+import '../../shared/services/receipt_print_service.dart';
 import '../../shared/views/map_picker_dialog.dart';
 import '../models/delivery_trip_model.dart';
 import '../providers/driver_providers.dart';
@@ -445,9 +448,27 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                   ],
                                 )
                               else if (!isPending)
-                                StatusBadge(
-                                  label: _getOrderStatusLabel(tripOrder.status),
-                                  type: _getOrderStatusBadgeType(tripOrder.status),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (tripOrder.status == 'DELIVERED' &&
+                                        order != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.image_outlined),
+                                        tooltip: 'دروستکردنی وێنەی پسوڵە',
+                                        onPressed: () => ReceiptPrintService.show(
+                                          context,
+                                          ReceiptData.fromDeliveryOrder(
+                                            tripOrder,
+                                            employee: ref.read(authProvider).user,
+                                          ),
+                                        ),
+                                      ),
+                                    StatusBadge(
+                                      label: _getOrderStatusLabel(tripOrder.status),
+                                      type: _getOrderStatusBadgeType(tripOrder.status),
+                                    ),
+                                  ],
                                 ),
                             ],
                           ),
