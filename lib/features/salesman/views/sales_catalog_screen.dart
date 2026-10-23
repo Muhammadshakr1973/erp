@@ -73,6 +73,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
   /// Sets or switches the currently active order
   void _setActiveOrder(OrderModel? order, {bool isManualOverride = false}) {
+    final previousOrderId = _selectedOrder?.id;
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
 
@@ -98,6 +99,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       _secondsRemaining = 0;
       _orderCart.clear();
       _orderCartNotes.clear();
+      if (order == null &&
+          _lastFailedBatch?['orderId'] == previousOrderId) {
+        _lastFailedBatch = null;
+      }
       _isManualPriceTierOverride = isManualOverride;
       _customerSpecialPrices = initialSpecialPrices;
 
@@ -478,35 +483,45 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .read(orderActionsProvider)
           .updateOrder(orderId, payload);
       if (mounted) {
+        final isStillSelected = _selectedOrder?.id == orderId;
         setState(() {
-          _selectedOrder = updatedOrder;
+          if (isStillSelected) {
+            _selectedOrder = updatedOrder;
+            _lastFailedBatch = null;
+          }
           _isSavingBatch = false;
-          _lastFailedBatch = null;
         });
+
+        if (isStillSelected) {
+          AppSnackbar.show(
+            context,
+            message:
+                'گۆڕانکارییەکانی پسوڵە بە سەرکەوتوویی بە یەک کۆنێکشن پاشەکەوتکران',
+            type: SnackbarType.success,
+          );
+        }
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (mounted) {
+        final isStillSelected = _selectedOrder?.id == orderId;
         setState(() {
           _isSavingBatch = false;
-          _lastFailedBatch = {
-            'orderId': orderId,
-            'customerName': _selectedOrderCustomerName,
-            'actionDesc': actionDesc,
-            'error': errorMsg,
-            'payload': payload,
-            'cart': Map<int, int>.from(_orderCart),
-          };
+          if (isStillSelected) {
+            _lastFailedBatch = {
+              'orderId': orderId,
+              'customerName': _selectedOrderCustomerName,
+              'actionDesc': actionDesc,
+              'error': errorMsg,
+              'payload': payload,
+              'cart': Map<int, int>.from(_orderCart),
+            };
+          }
         });
 
-        AppSnackbar.show(
-          context,
-          message: 'هەڵە لە پاشەکەوتکردنی کاڵاکان: $errorMsg',
-          type: SnackbarType.error,
-          autoDismiss: false,
-        );
-
-        _showFailedActionPersistentDialog();
+        if (isStillSelected) {
+          _showFailedActionPersistentDialog();
+        }
       }
     }
   }
@@ -888,6 +903,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .createOrder(payload);
       if (mounted) {
         _setActiveOrder(newOrder);
+        AppSnackbar.show(
+          context,
+          message:
+              'پسوڵەی نوێ (${newOrder.orderNumber}) بە سەرکەوتوویی دروستکرا بۆ ${customer.name}',
+          type: SnackbarType.success,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -895,7 +916,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           context,
           message: 'هەڵە لە دروستکردنی پسوڵە: $e',
           type: SnackbarType.error,
-          autoDismiss: false,
         );
       }
     }
@@ -935,6 +955,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .updateOrder(_selectedOrder!.id, payload);
       if (mounted) {
         _setActiveOrder(updated);
+        AppSnackbar.show(
+          context,
+          message:
+              'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
+          type: SnackbarType.success,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -942,7 +968,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           context,
           message: 'هەڵە لە گۆڕینی کڕیار: $e',
           type: SnackbarType.error,
-          autoDismiss: false,
         );
       }
     }
@@ -972,6 +997,28 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final categoriesAsync = ref.watch(categoriesListProvider);
     final ordersAsync = ref.watch(ordersListProvider);
     final authUser = ref.watch(authProvider).user;
+    ref.listen<AsyncValue<List<OrderModel>>>(ordersListProvider, (_, next) {
+      final selectedOrder = _selectedOrder;
+      final refreshedOrders = next.asData?.value;
+      if (selectedOrder == null || refreshedOrders == null) return;
+
+      final isStillAvailable = refreshedOrders.any((order) {
+        final status = order.status.toUpperCase();
+        final isOwn = authUser != null
+            ? (authUser.isAdmin ||
+                  authUser.isOwner ||
+                  order.salesmanId == authUser.id)
+            : true;
+        return order.id == selectedOrder.id &&
+            isOwn &&
+            status != OrderModel.statusDelivered &&
+            status != OrderModel.statusCancelled;
+      });
+
+      if (!isStillAvailable) {
+        _setActiveOrder(null);
+      }
+    });
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
     final salesWarehouseId =
         authUser?.warehouseId ?? myVanWarehouse?.id;
@@ -980,8 +1027,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
-    // Sync the active order before adding it as a fallback, so a locally
-    // updated delivered order cannot be re-added with its stale status.
+    // Keep the active order in sync with the latest list snapshot.
     if (_selectedOrder != null) {
       final matching = allOrders
           .where((o) => o.id == _selectedOrder!.id)
@@ -1008,13 +1054,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       if (isOwn && !isUnavailable) {
         orderMap[o.id] = o;
       }
-    }
-
-    // Keep the active order available unless it has already been delivered or cancelled.
-    if (_selectedOrder != null &&
-        _selectedOrder!.status.toUpperCase() != OrderModel.statusDelivered &&
-        _selectedOrder!.status.toUpperCase() != OrderModel.statusCancelled) {
-      orderMap[_selectedOrder!.id] = _selectedOrder!;
     }
 
     final availableOrders = orderMap.values.toList();
