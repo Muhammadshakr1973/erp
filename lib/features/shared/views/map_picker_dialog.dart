@@ -788,74 +788,39 @@ class _MapPickerDialogState extends State<MapPickerDialog> {
             ),
             const Divider(height: 1),
             
-            // Bottom Action buttons (different layout based on ReadOnly mode)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: widget.isReadOnly
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isDark ? const Color(0xFF334155) : Colors.grey[200],
-                              foregroundColor: isDark ? Colors.white : Colors.black87,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text(
-                              'داخستن',
-                              style: TextStyle(
-                                fontFamily: 'KJino',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
+            // Bottom Action buttons (only in picker mode: primary action)
+            if (!widget.isReadOnly)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text(
-                            'پاشگەزبوونەوە',
-                            style: TextStyle(fontFamily: 'KJino'),
-                          ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context, _selectedLocation);
-                          },
-                          child: const Text(
-                            'دیاریکردنی جێگا',
-                            style: TextStyle(
-                              fontFamily: 'KJino',
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context, _selectedLocation);
+                      },
+                      child: const Text(
+                        'دیاریکردنی جێگا',
+                        style: TextStyle(
+                          fontFamily: 'KJino',
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
+                      ),
                     ),
-            ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

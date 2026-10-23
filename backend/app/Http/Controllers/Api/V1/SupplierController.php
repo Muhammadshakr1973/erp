@@ -138,7 +138,7 @@ class SupplierController extends Controller
             }
         }
 
-        return DB::transaction(function () use ($id, $validated) {
+        $result = DB::transaction(function () use ($id, $validated) {
             $supplier = Supplier::lockForUpdate()->findOrFail($id);
             $user = auth()->user() ?? User::first();
             $userId = $user ? $user->id : 1;
@@ -222,11 +222,35 @@ class SupplierController extends Controller
                 'user'        => $user,
             ]);
 
-            return response()->json([
-                'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا',
-                'data' => $supplier->append('debt')
-            ], 200);
+            return [
+                'supplier'         => $supplier,
+                'payment'          => $payment,
+                'payment_amount'   => $paymentAmount,
+                'previous_balance' => $previousBalance,
+                'new_balance'      => $newBalance,
+                'user'             => $user,
+            ];
         });
+
+        // WhatsApp notification AFTER commit per BR-F07
+        try {
+            app(\App\Services\WhatsAppService::class)->sendSupplierPaymentNotification(
+                $result['supplier'],
+                $result['payment_amount'],
+                $result['previous_balance'],
+                $result['new_balance'],
+                $result['user'],
+                'supplier_payment',
+                $result['payment']->id
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("WhatsApp supplier payment notification failed: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا',
+            'data' => $result['supplier']->append('debt')
+        ], 200);
     }
 
     public function ledger($id): JsonResponse

@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\DeliveryTrip;
 use App\Models\DriverCollection;
+use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use App\Models\Setting;
 use App\Models\Supplier;
@@ -337,6 +338,68 @@ class WhatsAppService
             notificationType: 'SUPPLIER_PAYMENT',
             referenceType: $referenceType,
             referenceId: $referenceId,
+            message: $message,
+            customerId: null,
+            supplierId: $supplier->id,
+            payload: $payload,
+            actor: $actor
+        );
+    }
+
+    /**
+     * BR-F07: Supplier Purchase Order Received WhatsApp Notification
+     * Triggered AFTER purchase goods are received and supplier ledger is credited
+     */
+    public function sendSupplierPurchaseNotification(
+        Supplier $supplier,
+        PurchaseOrder $order,
+        int $receivedAmount,
+        int $previousBalance,
+        int $newBalance,
+        ?User $actor = null
+    ): WhatsAppNotificationLog {
+        $phone = $this->formatPhoneNumber($supplier->phone);
+        $recipientName = $supplier->name;
+
+        // Idempotency check with reference
+        $existing = $this->checkIdempotency('purchase_order', $order->id, 'SUPPLIER_PURCHASE');
+        if ($existing) {
+            return $existing;
+        }
+
+        $company = $this->getCompanyName();
+        $dateStr = now()->format('Y-m-d H:i');
+        $receivedStr = $this->formatMoney($receivedAmount);
+        $oldDebtStr = $this->formatMoney($previousBalance);
+        $newDebtStr = $this->formatMoney($newBalance);
+
+        $message = "🏢 *{$company}*\n"
+            . "--------------------------------\n"
+            . "📦 *وەرگرتنی کاڵای پسوڵەی کڕین*\n"
+            . "👤 دابینکەری بەڕێز: {$recipientName}\n"
+            . "🔢 ژمارەی پسوڵە: {$order->order_number}\n"
+            . "💰 بڕی کاڵای وەرگیراو: *{$receivedStr}*\n"
+            . "📊 قەرزی پێشوومان: {$oldDebtStr}\n"
+            . "📈 کۆی گشتی باڵانسی قەرز: *{$newDebtStr}*\n"
+            . "🕒 کات و بەروار: {$dateStr}\n"
+            . "--------------------------------\n"
+            . "سوپاس بۆ هاوکاریتان لەگەڵمان.";
+
+        $payload = [
+            'supplier_id' => $supplier->id,
+            'purchase_order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'received_amount' => $receivedAmount,
+            'previous_balance' => $previousBalance,
+            'new_balance' => $newBalance,
+        ];
+
+        return $this->dispatchMessage(
+            recipientPhone: $phone ?? $supplier->phone ?? 'UNKNOWN',
+            recipientName: $recipientName,
+            notificationType: 'SUPPLIER_PURCHASE',
+            referenceType: 'purchase_order',
+            referenceId: $order->id,
             message: $message,
             customerId: null,
             supplierId: $supplier->id,

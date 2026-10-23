@@ -34,15 +34,22 @@ class _SupplierReconciliationDialogState
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('ڕاستکردنەوەی باڵانس', style: AppTextStyles.h3),
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('ڕاستکردنەوەی باڵانس', style: AppTextStyles.h3),
+            ),
+          ],
+        ),
         content: const Text(
           'ئایا دڵنیایت لە ڕاستکردنەوەی باڵانسی ئەم کۆمپانیایە؟ ئەم کردارە باڵانسی ئێستا دەگۆڕێت بۆ ئەو بڕەی کە لە مێژووی جوڵەکانەوە (Ledger) هەژمارکراوە.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
@@ -87,13 +94,25 @@ class _SupplierReconciliationDialogState
         ref.watch(supplierReconciliationProvider(widget.supplier.id));
 
     return AlertDialog(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      title: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('لێکترازانی دارایی کۆمپانیا', style: AppTextStyles.h2),
-          Text(
-            widget.supplier.name,
-            style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('لێکترازانی دارایی کۆمپانیا', style: AppTextStyles.h2),
+                Text(
+                  widget.supplier.name,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -117,9 +117,20 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'دروستکردنی پسوڵەی کڕین',
-            style: AppTextStyles.bodyBold,
+          title: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'دروستکردنی پسوڵەی کڕین',
+                  style: AppTextStyles.bodyBold,
+                ),
+              ),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -140,10 +151,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('پاشگەزبوونەوە'),
-            ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('تۆمارکردن'),

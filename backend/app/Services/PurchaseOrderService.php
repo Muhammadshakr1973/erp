@@ -73,7 +73,8 @@ class PurchaseOrderService
      */
     public function receiveOrder(PurchaseOrder $order, $user, ?array $receivingItems = null): PurchaseOrder
     {
-        return DB::transaction(function () use ($order, $user, $receivingItems) {
+        $notificationData = null;
+        $receivedOrder = DB::transaction(function () use ($order, $user, $receivingItems, &$notificationData) {
             // Lock the purchase order to prevent concurrent receiving race conditions
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
@@ -267,8 +268,34 @@ class PurchaseOrderService
                 'user'        => $user,
             ]);
 
+            $notificationData = [
+                'supplier'           => $supplier,
+                'order'              => $lockedOrder,
+                'batch_total_amount' => $batchTotalAmount,
+                'previous_balance'   => $previousBalance,
+                'new_balance'        => $newBalance,
+            ];
+
             return $lockedOrder;
         });
+
+        // WhatsApp notification AFTER commit per BR-F07
+        if ($notificationData && $notificationData['batch_total_amount'] > 0) {
+            try {
+                app(\App\Services\WhatsAppService::class)->sendSupplierPurchaseNotification(
+                    $notificationData['supplier'],
+                    $notificationData['order'],
+                    $notificationData['batch_total_amount'],
+                    $notificationData['previous_balance'],
+                    $notificationData['new_balance'],
+                    $user
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("WhatsApp supplier purchase notification failed: " . $e->getMessage());
+            }
+        }
+
+        return $receivedOrder;
     }
 
     /**

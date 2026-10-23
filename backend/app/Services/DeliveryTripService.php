@@ -148,12 +148,10 @@ class DeliveryTripService
             $tripOrder->trip->increment('total_amount_collected', $receivedAmount);
 
             // ٣. هەژمارکردنی قەرز (تۆمارکردنی پارەدان ئەگەر پارەی دابوو)
-            // ئەگەر شۆفێرەکە پارەی وەرگرت، پێویستە قەرزی کڕیار کەم بکەینەوە
-            if ($receivedAmount > 0) {
-                // Lock the customer row to prevent race conditions
-                $lockedCustomer = Customer::lockForUpdate()->find($customer->id);
-                $previousBalance = $lockedCustomer->current_balance;
+            $lockedCustomer = Customer::lockForUpdate()->find($customer->id);
+            $balanceAfterDelivery = (int) $lockedCustomer->current_balance;
 
+            if ($receivedAmount > 0) {
                 $paymentRecord = CustomerPayment::create([
                     'payment_number' => 'PAY-' . strtoupper(Str::random(8)),
                     'customer_id'    => $lockedCustomer->id,
@@ -165,7 +163,7 @@ class DeliveryTripService
                     'received_by'    => $user->id,
                 ]);
 
-                $newBalance = $previousBalance - $receivedAmount;
+                $newBalance = $balanceAfterDelivery - $receivedAmount;
 
                 CustomerLedger::create([
                     'customer_id'    => $lockedCustomer->id,
@@ -174,7 +172,7 @@ class DeliveryTripService
                     'debit'          => 0,
                     'credit'         => $receivedAmount,
                     'amount'         => $receivedAmount,
-                    'balance_before' => $previousBalance,
+                    'balance_before' => $balanceAfterDelivery,
                     'balance_after'  => $newBalance,
                     'reference_type' => 'delivery_payment',
                     'reference_id'   => $paymentRecord->id,
@@ -183,6 +181,8 @@ class DeliveryTripService
                 ]);
 
                 $lockedCustomer->update(['current_balance' => $newBalance]);
+            } else {
+                $newBalance = $balanceAfterDelivery;
             }
 
             app(\App\Services\AuditService::class)->log([
