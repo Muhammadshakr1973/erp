@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\SalesOrderController;
@@ -22,6 +23,21 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\SalesReturnController;
 
 Route::prefix('v1')->group(function () {
+    Route::options('/{any?}', function (Request $request) {
+        return response('', 204, [
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => $request->header(
+                'Access-Control-Request-Method',
+                'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD',
+            ),
+            'Access-Control-Allow-Headers' => $request->header(
+                'Access-Control-Request-Headers',
+                'Authorization, Content-Type, Accept, X-Requested-With',
+            ),
+            'Access-Control-Max-Age' => '86400',
+            'Vary' => 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers',
+        ]);
+    })->where('any', '.*');
 
     // ئەوانەی پێویستیان بە تۆکن نییە (Public)
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');

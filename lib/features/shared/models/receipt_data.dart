@@ -48,6 +48,8 @@ class ReceiptData {
   factory ReceiptData.fromOrder(
     OrderModel order, {
     UserModel? employee,
+    double? discountAmountOverride,
+    double? totalAmountOverride,
   }) {
     final customer = _asMap(order.customer);
     final salesman = _asMap(order.salesman);
@@ -56,6 +58,14 @@ class ReceiptData {
     final customerName = _optionalText(
       customer['customer_name'] ?? customer['phone2'],
     );
+    final recordedDiscount =
+        order.permanentDiscountAmount + order.discountAmount;
+    final discountAmount =
+        discountAmountOverride ??
+        (recordedDiscount > 0
+            ? recordedDiscount
+            : order.subtotal - order.totalAmount);
+    final totalAmount = totalAmountOverride ?? order.totalAmount;
 
     return ReceiptData(
       title: '',
@@ -83,16 +93,18 @@ class ReceiptData {
               unit: item.productUnit,
               unitPrice: item.unitPrice,
               total: item.subtotal,
+              note: _optionalText(item.notes),
+              isPacked: item.isPacked,
+              unitsPerCarton: item.unitsPerCarton ?? 1,
             ),
           )
           .toList(growable: false),
       amounts: [
-        ReceiptAmount('کۆی کاڵاکان', order.subtotal),
-        if (order.permanentDiscountAmount > 0)
-          ReceiptAmount('داشکاندنی هەمیشەیی', -order.permanentDiscountAmount),
-        if (order.discountAmount > 0)
-          ReceiptAmount('داشکاندنی پسوڵە', -order.discountAmount),
-        ReceiptAmount('کۆی گشتی', order.totalAmount, emphasized: true),
+        if (discountAmount > 0) ...[
+          ReceiptAmount('کۆی کاڵاکان', order.subtotal),
+          ReceiptAmount('داشکان', discountAmount),
+        ],
+        ReceiptAmount('کۆی گشتی', totalAmount, emphasized: true),
       ],
       note: _optionalText(order.notes),
     );
@@ -184,6 +196,7 @@ class ReceiptData {
                         item['total_price'] ??
                         item['line_total'],
                   ),
+                  note: _optionalText(item['notes']),
                 );
               })
               .toList(growable: false)
@@ -322,6 +335,9 @@ class ReceiptItem {
   final String? unit;
   final num unitPrice;
   final num total;
+  final String? note;
+  final bool isPacked;
+  final int unitsPerCarton;
 
   const ReceiptItem({
     required this.name,
@@ -329,6 +345,9 @@ class ReceiptItem {
     this.unit,
     required this.unitPrice,
     required this.total,
+    this.note,
+    this.isPacked = false,
+    this.unitsPerCarton = 1,
   });
 }
 

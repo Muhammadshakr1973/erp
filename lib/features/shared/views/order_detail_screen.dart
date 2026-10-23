@@ -233,13 +233,37 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             IconButton(
               icon: const Icon(Icons.image_outlined),
               tooltip: 'دروستکردنی وێنەی پسوڵە',
-              onPressed: () => ReceiptPrintService.show(
-                context,
-                ReceiptData.fromOrder(
-                  orderForBadge,
-                  employee: ref.read(authProvider).user,
-                ),
-              ),
+              onPressed: () {
+                final currentUser = ref.read(authProvider).user;
+                final isCashVanCheckout =
+                    (currentUser?.isCashVanSalesman ?? false) &&
+                    orderForBadge.status == OrderModel.statusInDelivery;
+                final amountBeforeCashVanDiscount =
+                    (orderForBadge.subtotal -
+                            orderForBadge.permanentDiscountAmount)
+                        .clamp(0, double.infinity);
+                final cashVanDiscount =
+                    (int.tryParse(_cashVanDiscountController.text) ?? 0)
+                        .clamp(0, amountBeforeCashVanDiscount.toInt())
+                        .toInt();
+
+                ReceiptPrintService.show(
+                  context,
+                  ReceiptData.fromOrder(
+                    orderForBadge,
+                    employee: currentUser,
+                    discountAmountOverride: isCashVanCheckout
+                        ? (orderForBadge.permanentDiscountAmount +
+                                  cashVanDiscount)
+                              .toDouble()
+                        : null,
+                    totalAmountOverride: isCashVanCheckout
+                        ? (amountBeforeCashVanDiscount - cashVanDiscount)
+                              .toDouble()
+                        : null,
+                  ),
+                );
+              },
             ),
           IconButton(
             icon: const Icon(Icons.assignment_return_outlined),
@@ -622,9 +646,27 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                                 ),
                               ),
                             ),
-                      title: Text(
-                        item.productName,
-                        style: AppTextStyles.bodyBold,
+                      title: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: item.productName,
+                              style: AppTextStyles.bodyBold,
+                            ),
+                            if (item.notes != null &&
+                                item.notes!.trim().isNotEmpty)
+                              TextSpan(
+                                text: ' (تێبینی: ${item.notes!.trim()})',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
                         '${item.productUnit ?? 'دانە'} = ${item.unitsPerCarton ?? 1} دانە   •   ${Formatters.currency(item.unitPrice)}',

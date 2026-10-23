@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' show ImageByteFormat;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -171,9 +172,24 @@ class _ReceiptImageDialogState extends State<_ReceiptImageDialog> {
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() {
-        _error = error.toString().replaceFirst('Exception: ', '');
-      });
+      if (kIsWeb && error is UnsupportedError) {
+        try {
+          await widget.actions.download(bytes, _fileName);
+          if (!mounted) return;
+          setState(() {
+            _success = 'هاوبەشکردن لەم وێبگەڕەدا بەردەست نییە؛ وێنەکە دابەزێنرا.';
+          });
+        } catch (downloadError) {
+          if (!mounted) return;
+          setState(() {
+            _error = downloadError.toString().replaceFirst('Exception: ', '');
+          });
+        }
+      } else {
+        setState(() {
+          _error = error.toString().replaceFirst('Exception: ', '');
+        });
+      }
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
@@ -190,49 +206,51 @@ class _ReceiptImageDialogState extends State<_ReceiptImageDialog> {
         width: screenSize.width < 620 ? screenSize.width - 32 : 588,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 12),
-              if (_format == null)
-                _buildFormatChoices()
-              else if (_pngBytes == null)
-                _buildGeneratingReceipt(canvasWidth)
-              else
-                _buildImagePreview(screenSize, canvasWidth),
-              if (_error != null) _buildMessage(_error!, isError: true),
-              if (_success != null) _buildMessage(_success!),
-              if (_pngBytes != null) ...[
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildHeader(),
                 const SizedBox(height: 12),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _isExporting ? null : _download,
-                          icon: const Icon(Icons.download_outlined),
-                          label: const Text('Download'),
+                if (_format == null)
+                  _buildFormatChoices()
+                else if (_pngBytes == null)
+                  _buildGeneratingReceipt(canvasWidth)
+                else
+                  _buildImagePreview(screenSize, canvasWidth),
+                if (_error != null) _buildMessage(_error!, isError: true),
+                if (_success != null) _buildMessage(_success!),
+                if (_pngBytes != null) ...[
+                  const SizedBox(height: 12),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isExporting ? null : _download,
+                            icon: const Icon(Icons.download_outlined),
+                            label: const Text('Download'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _isExporting ? null : _share,
-                          icon: const Icon(Icons.share_outlined),
-                          label: const Text('Share'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _isExporting ? null : _share,
+                            icon: const Icon(Icons.share_outlined),
+                            label: const Text('Share'),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
+                if (_isExporting) ...[
+                  const SizedBox(height: 8),
+                  const LinearProgressIndicator(),
+                ],
               ],
-              if (_isExporting) ...[
-                const SizedBox(height: 8),
-                const LinearProgressIndicator(),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -428,6 +446,7 @@ class ReceiptCanvas extends StatelessWidget {
               'مۆبایلی لایەن',
               data.partyPhone!,
               valueDirection: TextDirection.ltr,
+              boldValue: true,
             ),
           if (data.title.isNotEmpty && data.marketName != null)
             _infoRow('مارکێت', data.marketName!),
@@ -444,6 +463,7 @@ class ReceiptCanvas extends StatelessWidget {
               'مۆبایلی ${data.salesmanLabel}',
               data.salesmanPhone!,
               valueDirection: TextDirection.ltr,
+              boldValue: true,
             ),
           if (data.employeeName != null)
             _personInfoRow(
@@ -456,6 +476,7 @@ class ReceiptCanvas extends StatelessWidget {
               'مۆبایلی کارمەند',
               data.employeePhone!,
               valueDirection: TextDirection.ltr,
+              boldValue: true,
             ),
           const SizedBox(height: 8),
           const Divider(color: Color(0xFF777777)),
@@ -473,11 +494,13 @@ class ReceiptCanvas extends StatelessWidget {
               ),
             )
           else
-            ...data.items.map(
-              (item) => _isA4
-                  ? _a4Item(item, fontSize)
-                  : _receiptItem(item, fontSize),
-            ),
+            ...data.items.asMap().entries.map((entry) {
+              final index = entry.key + 1;
+              final item = entry.value;
+              return _isA4
+                  ? _a4Item(item, fontSize, index)
+                  : _receiptItem(item, fontSize, index);
+            }),
           if (data.amounts.isNotEmpty) ...[
             const Divider(color: Color(0xFF777777)),
             ...data.amounts.map((amount) => _amountRow(amount, fontSize)),
@@ -524,7 +547,7 @@ class ReceiptCanvas extends StatelessWidget {
                 width: 302,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 15,
                     vertical: 8,
                   ),
                   child: receiptContent,
@@ -535,36 +558,42 @@ class ReceiptCanvas extends StatelessWidget {
   }
 
   Widget _marketCustomerHeader(ReceiptData data, double fontSize) {
-    Widget item(String label, String? value, {String? phone}) {
-      return Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          data.marketName == null ? 'مارکێت' : 'مارکێت: ${data.marketName}',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: fontSize + 2,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Row(
           children: [
-            Text(
-              '$label:',
-              style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700),
-            ),
-            if (value != null)
-              Text(
-                value,
-                style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700),
+            Expanded(
+              child: Text(
+                '${data.partyLabel ?? 'بەڕێز'}${data.partyName == null ? '' : ': ${data.partyName}'}',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            if (phone != null)
+            ),
+            if (data.partyPhone != null)
               Directionality(
                 textDirection: TextDirection.ltr,
-                child: Text(phone, style: TextStyle(fontSize: fontSize - 2)),
+                child: Text(
+                  data.partyPhone!,
+                  style: TextStyle(
+                    fontSize: fontSize - 2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
           ],
         ),
-      );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        item('مارکێت', data.marketName),
-        const SizedBox(width: 8),
-        item('بەڕێز', data.partyName, phone: data.partyPhone),
       ],
     );
   }
@@ -573,6 +602,7 @@ class ReceiptCanvas extends StatelessWidget {
     String label,
     String value, {
     TextDirection? valueDirection,
+    bool boldValue = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
@@ -583,7 +613,12 @@ class ReceiptCanvas extends StatelessWidget {
           Expanded(
             child: Directionality(
               textDirection: valueDirection ?? TextDirection.rtl,
-              child: Text(value),
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontWeight: boldValue ? FontWeight.w700 : FontWeight.w400,
+                ),
+              ),
             ),
           ),
         ],
@@ -598,15 +633,26 @@ class ReceiptCanvas extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              'ژمارەی پسوڵە: $receiptNumber',
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'ژمارەی پسوڵە: '),
+                  TextSpan(
+                    text: receiptNumber,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
               textDirection: TextDirection.rtl,
             ),
           ),
           if (date != null)
             Directionality(
               textDirection: TextDirection.ltr,
-              child: Text(date),
+              child: Text(
+                date,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
         ],
       ),
@@ -630,7 +676,10 @@ class ReceiptCanvas extends StatelessWidget {
             const SizedBox(width: 4),
             Directionality(
               textDirection: TextDirection.ltr,
-              child: Text(phone),
+              child: Text(
+                phone,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ],
@@ -641,9 +690,8 @@ class ReceiptCanvas extends StatelessWidget {
   Widget _a4ItemsHeader(double fontSize) {
     return Row(
       children: [
-        Expanded(flex: 5, child: Text('کاڵا', style: _headerStyle(fontSize))),
-        Expanded(flex: 2, child: Text('بڕ', style: _headerStyle(fontSize))),
-        Expanded(flex: 3, child: Text('نرخ', style: _headerStyle(fontSize))),
+        Expanded(flex: 6, child: Text('کاڵا', style: _headerStyle(fontSize))),
+        Expanded(flex: 3, child: Text('بڕ', style: _headerStyle(fontSize))),
         Expanded(flex: 3, child: Text('کۆ', style: _headerStyle(fontSize))),
       ],
     );
@@ -653,47 +701,103 @@ class ReceiptCanvas extends StatelessWidget {
     return Text('کاڵاکان', style: _headerStyle(fontSize + 1));
   }
 
-  Widget _a4Item(ReceiptItem item, double fontSize) {
+  Widget _a4Item(ReceiptItem item, double fontSize, int index) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 5, child: Text(item.name, style: TextStyle(fontSize: fontSize))),
           Expanded(
-            flex: 2,
-            child: _ltr('${Formatters.number(item.quantity)} ${item.unit ?? ''}'),
+            flex: 6,
+            child: _itemName(item, fontSize, index),
           ),
-          Expanded(flex: 3, child: _ltr(Formatters.currency(item.unitPrice))),
+          Expanded(
+            flex: 3,
+            child: _ltr(_receiptQuantity(item), bold: true),
+          ),
           Expanded(flex: 3, child: _ltr(Formatters.currency(item.total))),
         ],
       ),
     );
   }
 
-  Widget _receiptItem(ReceiptItem item, double fontSize) {
+  Widget _receiptItem(ReceiptItem item, double fontSize, int index) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            item.name,
-            style: TextStyle(fontSize: fontSize + 1, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 2),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
+                flex: 7,
+                child: _itemName(item, fontSize, index, bold: true),
+              ),
+              Expanded(
+                flex: 2,
                 child: _ltr(
-                  '${Formatters.number(item.quantity)} ${item.unit ?? ''} × ${Formatters.currency(item.unitPrice)}',
+                  _receiptQuantity(item),
+                  bold: true,
+                  style: TextStyle(fontSize: fontSize - 1),
                 ),
               ),
-              _ltr(Formatters.currency(item.total), bold: true),
+              Expanded(
+                flex: 3,
+                child: _ltr(
+                  Formatters.currency(item.total),
+                  bold: true,
+                  style: TextStyle(fontSize: fontSize - 1),
+                  textAlign: TextAlign.left,
+                ),
+              ),
             ],
           ),
           const Divider(height: 8, color: Color(0xFFDDDDDD)),
         ],
+      ),
+    );
+  }
+
+  String _receiptQuantity(ReceiptItem item) {
+    final quantity = Formatters.number(item.quantity);
+    return '${item.unitsPerCarton}*$quantity';
+  }
+
+  Widget _itemName(
+    ReceiptItem item,
+    double fontSize,
+    int index, {
+    bool bold = false,
+  }) {
+    final note = item.note;
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$index. ${item.name}',
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+            if (note != null && note.trim().isNotEmpty)
+              TextSpan(
+                text: ' (تێبینی: ${note.trim()})',
+                style: TextStyle(
+                  fontSize: fontSize - 2,
+                  color: const Color(0xFF666666),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+          ],
+        ),
+        maxLines: 1,
+        softWrap: false,
+        textAlign: TextAlign.right,
       ),
     );
   }
@@ -708,18 +812,23 @@ class ReceiptCanvas extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(amount.label, style: style)),
-          _ltr(Formatters.currency(amount.amount), bold: amount.emphasized, style: style),
+          _ltr(Formatters.currency(amount.amount), bold: true, style: style),
         ],
       ),
     );
   }
 
-  Widget _ltr(String value, {bool bold = false, TextStyle? style}) {
+  Widget _ltr(
+    String value, {
+    bool bold = false,
+    TextStyle? style,
+    TextAlign textAlign = TextAlign.right,
+  }) {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Text(
         value,
-        textAlign: TextAlign.right,
+        textAlign: textAlign,
         style: style?.copyWith(
           fontWeight: bold ? FontWeight.w700 : style.fontWeight,
         ) ??

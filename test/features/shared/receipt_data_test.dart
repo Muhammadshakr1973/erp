@@ -16,7 +16,44 @@ void main() {
       expect(receipt.salesmanName, 'مەندوب');
       expect(receipt.salesmanPhone, '07507654321');
       expect(receipt.items.single.name, 'کاڵای تایبەت');
-      expect(receipt.amounts.last.amount, 280);
+      expect(
+        receipt.amounts.map((amount) => amount.label),
+        ['کۆی کاڵاکان', 'داشکان', 'کۆی گشتی'],
+      );
+      expect(receipt.amounts.map((amount) => amount.amount), [300, 20, 280]);
+    });
+
+    test('shows only the total when an order has no discount', () {
+      final receipt = ReceiptData.fromOrder(
+        _order(
+          items: [_item(1, 'کاڵای تایبەت')],
+          permanentDiscountAmount: 0,
+          discountAmount: 0,
+          totalAmount: 300,
+        ),
+      );
+
+      expect(receipt.amounts, hasLength(1));
+      expect(receipt.amounts.single.label, 'کۆی گشتی');
+      expect(receipt.amounts.single.amount, 300);
+    });
+
+    test('derives discount from order totals when discount fields are absent', () {
+      final receipt = ReceiptData.fromOrder(
+        _order(
+          items: [_item(1, 'کاڵای تایبەت')],
+          permanentDiscountAmount: 0,
+          discountAmount: 0,
+          totalAmount: 280,
+        ),
+      );
+
+      expect(receipt.amounts.map((amount) => amount.label), [
+        'کۆی کاڵاکان',
+        'داشکان',
+        'کۆی گشتی',
+      ]);
+      expect(receipt.amounts.map((amount) => amount.amount), [300, 20, 280]);
     });
 
     test('preserves long product names and a large item list', () {
@@ -61,17 +98,22 @@ void main() {
   });
 }
 
-OrderModel _order({List<OrderItemModel> items = const []}) {
+OrderModel _order({
+  List<OrderItemModel> items = const [],
+  double permanentDiscountAmount = 10,
+  double discountAmount = 10,
+  double totalAmount = 280,
+}) {
   return OrderModel(
     id: 101,
     orderNumber: 'S-101',
     customerId: 3,
     salesmanId: 4,
     subtotal: 300,
-    permanentDiscountAmount: 10,
-    discountAmount: 10,
+    permanentDiscountAmount: permanentDiscountAmount,
+    discountAmount: discountAmount,
     discountPercent: 0,
-    totalAmount: 280,
+    totalAmount: totalAmount,
     totalProfit: 0,
     status: OrderModel.statusDelivered,
     createdAt: '2026-10-22T08:30:00Z',
