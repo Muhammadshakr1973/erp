@@ -260,7 +260,7 @@ class SalesOrderService
             && $order->salesman_id === $user->id
             && $order->warehouse?->isVan();
 
-        if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])
+        if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])
             && !($isCashVanOrder && $order->status === SalesOrder::STATUS_IN_DELIVERY)) {
             throw ValidationException::withMessages([
                 'status' => 'تەنها پسوڵەی PACKING دەتوانرێت دەستکاری بکرێت.'
@@ -1219,15 +1219,16 @@ class SalesOrderService
             // Lock order for update to prevent concurrent race conditions
             $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
-            // Status consistency check: Shared order can only be edited while it is in PACKING or DRAFT status
-            if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT])
+            // Status consistency check: Shared order can only be edited while it is in PACKING, DRAFT, or CONFIRMED status
+            if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])
                 && !($isCashVanOrder && $order->status === SalesOrder::STATUS_IN_DELIVERY)) {
                 throw new \RuntimeException('ناتوانرێت دەستکاری پسوڵەی هاوبەش بکرێت چونکە پێشتر ئامادەکراوە یان لە پرۆسەدایە.');
             }
 
             // Concurrent edit validation (optimistic locking / stale client check)
             $clientVersion = isset($data['version']) ? (int) $data['version'] : null;
-            if ($clientVersion !== null && $order->version !== $clientVersion) {
+            $currentVersion = (int) ($order->version ?? 1);
+            if ($clientVersion !== null && $clientVersion > 0 && $currentVersion > 0 && $currentVersion > $clientVersion) {
                 throw new \App\Exceptions\ConcurrencyConflictException($order);
             }
 

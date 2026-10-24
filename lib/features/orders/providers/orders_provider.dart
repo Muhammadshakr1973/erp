@@ -215,12 +215,24 @@ class OrderActions {
         options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
 
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        final errorMsg = api.extractErrorMessage(
+          response.data,
+          defaultMsg: 'هەڵە لە دروستکردنی پسوڵە',
+        );
+        throw Exception(errorMsg);
+      }
+
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
           ? resData['data']
           : resData;
 
-      if (orderData is Map) {
+      if (orderData is Map &&
+          orderData['id'] != null &&
+          (int.tryParse(orderData['id'].toString()) ?? 0) > 0) {
         final newOrder = OrderModel.fromJson(
           Map<String, dynamic>.from(orderData),
         );
@@ -251,6 +263,16 @@ class OrderActions {
         options: Options(headers: {'X-Idempotency-Key': idempotencyKey}),
       );
 
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        final errorMsg = api.extractErrorMessage(
+          response.data,
+          defaultMsg: 'هەڵە لە پاشەکەوتکردنی پسوڵە',
+        );
+        throw Exception(errorMsg);
+      }
+
       ref.invalidate(singleOrderProvider(orderId.toString()));
 
       final resData = response.data;
@@ -258,7 +280,9 @@ class OrderActions {
           ? resData['data']
           : resData;
 
-      if (orderData is Map) {
+      if (orderData is Map &&
+          orderData['id'] != null &&
+          (int.tryParse(orderData['id'].toString()) ?? 0) > 0) {
         final updatedOrder = OrderModel.fromJson(
           Map<String, dynamic>.from(orderData),
         );

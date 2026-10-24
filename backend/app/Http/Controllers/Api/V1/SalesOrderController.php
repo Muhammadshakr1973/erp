@@ -139,12 +139,31 @@ class SalesOrderController extends Controller
             ], 403);
         }
 
-        $updatedOrder = $this->salesOrderService->updateOrder($order, $request->validated(), $user);
+        try {
+            $updatedOrder = $this->salesOrderService->updateOrder($order, $request->validated(), $user);
 
-        return response()->json([
-            'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
-            'data' => $updatedOrder->load(['customer.route', 'customer.specialPrices', 'salesman', 'warehouse', 'items.product', 'salesReturns.items.product'])
-        ]);
+            return response()->json([
+                'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
+                'data' => $updatedOrder->load(['customer.route', 'customer.specialPrices', 'salesman', 'warehouse', 'items.product', 'salesReturns.items.product'])
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\App\Exceptions\ConcurrencyConflictException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error' => 'Concurrency conflict'
+            ], 409);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("SalesOrderController update error: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'هەڵەیەک ڕوویدا لە نوێکردنەوەی پسوڵە: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 422);
+        }
     }
 
     public function show(\Illuminate\Http\Request $request, int $id): JsonResponse

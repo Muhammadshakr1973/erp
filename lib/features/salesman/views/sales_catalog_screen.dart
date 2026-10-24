@@ -459,10 +459,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
     });
 
+    final currentUser = ref.read(authProvider).user;
+    final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
+    final targetWarehouseId =
+        _selectedOrder!.warehouseId ?? myVanWarehouse?.id ?? currentUser?.warehouseId ?? 1;
+
     final payload = {
       'customer_id': _selectedOrder!.customerId,
-      'warehouse_id': _selectedOrder!.warehouseId,
-      'status': 'PACKING',
+      'warehouse_id': targetWarehouseId,
+      'status': _selectedOrder!.status,
       'price_type': _selectedPriceTier,
       'is_manual_price_type': _isManualPriceTierOverride,
       'discount_type': _selectedOrder!.discountType,
@@ -485,7 +490,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       if (mounted) {
         final isStillSelected = _selectedOrder?.id == orderId;
         setState(() {
-          if (isStillSelected) {
+          if (isStillSelected && updatedOrder.id > 0) {
             _selectedOrder = updatedOrder;
             _lastFailedBatch = null;
           }
@@ -1013,21 +1018,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
-    // Keep the active order in sync with the latest list snapshot.
-    if (_selectedOrder != null) {
-      final matching = allOrders
-          .where((o) => o.id == _selectedOrder!.id)
-          .firstOrNull;
-      if (matching != null &&
-          (matching.version != _selectedOrder!.version ||
-              matching.status.toUpperCase() !=
-                  _selectedOrder!.status.toUpperCase()) &&
-          !_isSavingBatch) {
-        _selectedOrder = matching;
-      }
-    }
-
     for (final o in allOrders) {
+      if (o.id <= 0 || o.orderNumber.isEmpty) continue;
       final status = o.status.toUpperCase();
       final isUnavailable =
           status == OrderModel.statusDelivered ||
@@ -1037,12 +1029,22 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
     }
 
-    // Always ensure the currently active order is retained in available orders
-    if (_selectedOrder != null) {
-      final status = _selectedOrder!.status.toUpperCase();
-      if (status != OrderModel.statusDelivered &&
-          status != OrderModel.statusCancelled) {
-        orderMap[_selectedOrder!.id] = _selectedOrder!;
+    // Keep the active order in sync with the latest list snapshot without inserting phantom orders
+    if (_selectedOrder != null && _selectedOrder!.id > 0 && _selectedOrder!.orderNumber.isNotEmpty) {
+      if (orderMap.containsKey(_selectedOrder!.id)) {
+        final matching = orderMap[_selectedOrder!.id]!;
+        if ((matching.version != _selectedOrder!.version ||
+                matching.status.toUpperCase() !=
+                    _selectedOrder!.status.toUpperCase()) &&
+            !_isSavingBatch) {
+          _selectedOrder = matching;
+        }
+      } else {
+        final status = _selectedOrder!.status.toUpperCase();
+        if (status != OrderModel.statusDelivered &&
+            status != OrderModel.statusCancelled) {
+          orderMap[_selectedOrder!.id] = _selectedOrder!;
+        }
       }
     }
 
@@ -1293,6 +1295,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 child: DropdownButton<int?>(
                   value:
                       (_selectedOrder != null &&
+                          _selectedOrder!.id > 0 &&
                           availableOrders.any(
                             (o) => o.id == _selectedOrder!.id,
                           ))
@@ -1321,7 +1324,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         style: TextStyle(fontFamily: 'KJino', fontSize: 12),
                       ),
                     ),
-                    ...availableOrders.map((order) {
+                    ...availableOrders
+                        .where((o) => o.id > 0 && o.orderNumber.isNotEmpty)
+                        .map((order) {
                       final custName =
                           (order.customer is Map &&
                               order.customer['name'] != null)
