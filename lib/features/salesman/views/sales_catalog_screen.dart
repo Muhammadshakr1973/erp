@@ -491,15 +491,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           }
           _isSavingBatch = false;
         });
-
-        if (isStillSelected) {
-          AppSnackbar.show(
-            context,
-            message:
-                'گۆڕانکارییەکانی پسوڵە بە سەرکەوتوویی بە یەک کۆنێکشن پاشەکەوتکران',
-            type: SnackbarType.success,
-          );
-        }
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
