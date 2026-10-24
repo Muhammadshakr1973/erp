@@ -24,6 +24,7 @@ class AppSnackbar {
     SnackbarType type = SnackbarType.info,
     String? title,
     Duration? duration,
+    bool? autoDismiss,
   }) {
     // Dismiss any currently showing banner immediately
     _dismissCurrent();
@@ -44,6 +45,7 @@ class AppSnackbar {
     if (overlayState == null) return;
 
     final displayDuration = duration ?? AppDurations.snackbar;
+    final bool shouldAutoDismiss = autoDismiss ?? (type != SnackbarType.error);
 
     late OverlayEntry entry;
     entry = OverlayEntry(
@@ -52,6 +54,7 @@ class AppSnackbar {
         title: title,
         type: type,
         duration: displayDuration,
+        autoDismiss: shouldAutoDismiss,
         onDismiss: () {
           if (_activeEntry == entry) {
             _dismissCurrent();
@@ -70,6 +73,7 @@ class AppSnackbar {
     String message, {
     String? title,
     Duration? duration,
+    bool? autoDismiss,
   }) {
     show(
       context,
@@ -77,6 +81,7 @@ class AppSnackbar {
       title: title,
       type: SnackbarType.success,
       duration: duration,
+      autoDismiss: autoDismiss,
     );
   }
 
@@ -86,6 +91,7 @@ class AppSnackbar {
     String message, {
     String? title,
     Duration? duration,
+    bool? autoDismiss,
   }) {
     show(
       context,
@@ -93,6 +99,7 @@ class AppSnackbar {
       title: title,
       type: SnackbarType.error,
       duration: duration,
+      autoDismiss: autoDismiss,
     );
   }
 
@@ -102,6 +109,7 @@ class AppSnackbar {
     String message, {
     String? title,
     Duration? duration,
+    bool? autoDismiss,
   }) {
     show(
       context,
@@ -109,6 +117,7 @@ class AppSnackbar {
       title: title,
       type: SnackbarType.warning,
       duration: duration,
+      autoDismiss: autoDismiss,
     );
   }
 
@@ -118,6 +127,7 @@ class AppSnackbar {
     String message, {
     String? title,
     Duration? duration,
+    bool? autoDismiss,
   }) {
     show(
       context,
@@ -125,6 +135,7 @@ class AppSnackbar {
       title: title,
       type: SnackbarType.info,
       duration: duration,
+      autoDismiss: autoDismiss,
     );
   }
 
@@ -150,6 +161,7 @@ class _TopNotificationWidget extends StatefulWidget {
   final String? title;
   final SnackbarType type;
   final Duration duration;
+  final bool autoDismiss;
   final VoidCallback onDismiss;
 
   const _TopNotificationWidget({
@@ -157,6 +169,7 @@ class _TopNotificationWidget extends StatefulWidget {
     this.title,
     required this.type,
     required this.duration,
+    this.autoDismiss = true,
     required this.onDismiss,
   });
 
@@ -205,10 +218,12 @@ class _TopNotificationWidgetState extends State<_TopNotificationWidget>
 
     _controller.forward();
 
-    // Auto-dismiss timer
-    _dismissTimer = Timer(widget.duration, () {
-      _dismissWithAnimation();
-    });
+    // Auto-dismiss timer (only if autoDismiss is true)
+    if (widget.autoDismiss) {
+      _dismissTimer = Timer(widget.duration, () {
+        _dismissWithAnimation();
+      });
+    }
   }
 
   void _dismissWithAnimation() {

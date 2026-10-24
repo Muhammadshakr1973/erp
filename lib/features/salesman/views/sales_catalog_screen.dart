@@ -483,12 +483,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           _isSavingBatch = false;
           _lastFailedBatch = null;
         });
-
-        AppSnackbar.show(
-          context,
-          message: 'گۆڕانکارییەکانی پسوڵە بە سەرکەوتوویی بە یەک کۆنێکشن پاشەکەوتکران',
-          type: SnackbarType.success,
-        );
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
@@ -504,6 +498,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             'cart': Map<int, int>.from(_orderCart),
           };
         });
+
+        AppSnackbar.show(
+          context,
+          message: 'هەڵە لە پاشەکەوتکردنی کاڵاکان: $errorMsg',
+          type: SnackbarType.error,
+          autoDismiss: false,
+        );
 
         _showFailedActionPersistentDialog();
       }
@@ -887,12 +888,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .createOrder(payload);
       if (mounted) {
         _setActiveOrder(newOrder);
-        AppSnackbar.show(
-          context,
-          message:
-              'پسوڵەی نوێ (${newOrder.orderNumber}) بە سەرکەوتوویی دروستکرا بۆ ${customer.name}',
-          type: SnackbarType.success,
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -900,6 +895,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           context,
           message: 'هەڵە لە دروستکردنی پسوڵە: $e',
           type: SnackbarType.error,
+          autoDismiss: false,
         );
       }
     }
@@ -939,12 +935,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .updateOrder(_selectedOrder!.id, payload);
       if (mounted) {
         _setActiveOrder(updated);
-        AppSnackbar.show(
-          context,
-          message:
-              'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
-          type: SnackbarType.success,
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -952,6 +942,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           context,
           message: 'هەڵە لە گۆڕینی کڕیار: $e',
           type: SnackbarType.error,
+          autoDismiss: false,
         );
       }
     }
