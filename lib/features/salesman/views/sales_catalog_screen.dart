@@ -993,28 +993,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       final refreshedOrders = next.asData?.value;
       if (selectedOrder == null || refreshedOrders == null) return;
 
-      final isStillAvailable = refreshedOrders.any((order) {
-        final status = order.status.toUpperCase();
-        final isOwn = authUser != null
-            ? (authUser.isAdmin ||
-                  authUser.isOwner ||
-                  order.salesmanId == authUser.id)
-            : true;
-        return order.id == selectedOrder.id &&
-            isOwn &&
-            status != OrderModel.statusDelivered &&
-            status != OrderModel.statusCancelled;
-      });
-
-      if (!isStillAvailable) {
-        _setActiveOrder(null);
+      // Only deselect if this order explicitly exists in refreshed list and has been DELIVERED or CANCELLED
+      final matchingOrder = refreshedOrders
+          .where((order) => order.id == selectedOrder.id)
+          .firstOrNull;
+      if (matchingOrder != null) {
+        final status = matchingOrder.status.toUpperCase();
+        if (status == OrderModel.statusDelivered ||
+            status == OrderModel.statusCancelled) {
+          _setActiveOrder(null);
+        }
       }
     });
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
     final salesWarehouseId =
         authUser?.warehouseId ?? myVanWarehouse?.id;
 
-    // Show this salesman's orders in the selector, except delivered or cancelled orders.
+    // Show available orders in the selector, excluding delivered or cancelled orders.
     final allOrders = ordersAsync.asData?.value ?? [];
     final Map<int, OrderModel> orderMap = {};
 
@@ -1033,17 +1028,21 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     for (final o in allOrders) {
-      final isOwn = authUser != null
-          ? (authUser.isAdmin ||
-                authUser.isOwner ||
-                o.salesmanId == authUser.id)
-          : true;
       final status = o.status.toUpperCase();
       final isUnavailable =
           status == OrderModel.statusDelivered ||
           status == OrderModel.statusCancelled;
-      if (isOwn && !isUnavailable) {
+      if (!isUnavailable) {
         orderMap[o.id] = o;
+      }
+    }
+
+    // Always ensure the currently active order is retained in available orders
+    if (_selectedOrder != null) {
+      final status = _selectedOrder!.status.toUpperCase();
+      if (status != OrderModel.statusDelivered &&
+          status != OrderModel.statusCancelled) {
+        orderMap[_selectedOrder!.id] = _selectedOrder!;
       }
     }
 
