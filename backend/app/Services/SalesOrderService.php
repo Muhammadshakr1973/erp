@@ -18,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class SalesOrderService
 {
+    private const STOCK_TYPE_UNPACKED = 'UNPACKED';
+
     protected array $validTransitions = [
         SalesOrder::STATUS_PACKING => [SalesOrder::STATUS_READY, SalesOrder::STATUS_CANCELLED],
         SalesOrder::STATUS_READY => [SalesOrder::STATUS_IN_DELIVERY, SalesOrder::STATUS_CANCELLED],
@@ -81,6 +83,10 @@ class SalesOrderService
                     'warehouse' => 'ناتوانرێت لە کۆگای یەدەگەوە فرۆش ئەنجام بدرێت. ئەم کۆگایە تەنها بۆ پڕکردنەوەی کۆگاکانی ترە.'
                 ]);
             }
+            $isCashVanDirectOrder = $user
+                && method_exists($user, 'isCashVan')
+                && $user->isCashVan()
+                && $targetWarehouse->isVan();
 
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە بە پێی ساڵ و زنجیرە (YY-N وەک 26-1, 26-2)
             $orderNumber = SalesOrder::generateOrderNumber($data['order_date'] ?? now()->toDateString());
@@ -94,7 +100,7 @@ class SalesOrderService
                 'salesman_id' => $user->id,
                 'warehouse_id' => $data['warehouse_id'],
                 'order_date' => now()->toDateString(),
-                'status' => $user && method_exists($user, 'isCashVan') && $user->isCashVan() && $targetWarehouse->isVan()
+                'status' => $isCashVanDirectOrder
                     ? SalesOrder::STATUS_IN_DELIVERY
                     : SalesOrder::STATUS_PACKING,
                 'confirmed_at' => now(),
@@ -207,6 +213,15 @@ class SalesOrderService
 
             // حجزکردنی ستۆک لە کۆگا ڕاستەوخۆ بەهۆی دۆخی PACKING
             $this->reserveStock($order, $user);
+            if ($isCashVanDirectOrder) {
+                foreach ($order->items()->get() as $item) {
+                    $item->is_packed = true;
+                    $item->packed_at = now();
+                    $item->packed_by = $user->id;
+                    $item->save();
+                    $this->ensurePackedStock($order, $item, $user);
+                }
+            }
             $this->logActivity($order, null, SalesOrder::STATUS_PACKING, $user);
 
             // تۆمارکردنی کاڵای گەڕاوە لە هەمان پسوڵە ئەگەر هەبێت
@@ -351,6 +366,15 @@ class SalesOrderService
             // ئەگەر لە دۆخی PACKING بوو، ستۆک بۆ ئایتمە نوێیەکان حجز دەکەینەوە
             if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->reserveStock($order, $user);
+            }
+            if ($isCashVanOrder) {
+                foreach ($order->items()->get() as $item) {
+                    $item->is_packed = true;
+                    $item->packed_at = now();
+                    $item->packed_by = $user->id;
+                    $item->save();
+                    $this->ensurePackedStock($order, $item, $user);
+                }
             }
 
             $requestedStatus = $data['status'] ?? $order->status;
@@ -519,6 +543,10 @@ class SalesOrderService
                         if (!$hasPacked) {
                             $lockedOrder->items()->update(['is_packed' => true]);
                         }
+                    }
+
+                    foreach ($lockedOrder->items()->where('is_packed', true)->orderBy('product_id')->get() as $item) {
+                        $this->ensurePackedStock($lockedOrder, $item, $user);
                     }
 
                     // Count packed items
@@ -708,52 +736,125 @@ class SalesOrderService
     }
 
     /**
-     * کەمکردنەوەی فیزیکی کاڵا لە کاتی DELIVERED (کۆتاییهاتنی فرۆشتن)
+     * Ensure legacy orders are deducted without consuming stock twice.
      */
     private function finalizeStockSale(SalesOrder $order, $user): void
     {
-        // Sort items deterministically by product_id ASC to eliminate deadlock risks
-        $sortedItems = $order->items->sortBy('product_id');
-        foreach ($sortedItems as $item) {
-            // ١. قفڵکردنی ڕیزی ستۆکی پەیوەندیدار (Step 1: Lock the stock row)
+        foreach ($order->items()->orderBy('product_id')->get() as $item) {
+            $this->ensurePackedStock($order, $item, $user);
+        }
+    }
+
+    public function setItemPacked(SalesOrder $order, \App\Models\SalesOrderItem $item, bool $packed, $user): void
+    {
+        if ($item->is_packed === $packed) {
+            return;
+        }
+
+        if ($packed) {
+            $this->ensurePackedStock($order, $item, $user);
+            $item->is_packed = true;
+            $item->packed_at = now();
+            $item->packed_by = $user->id;
+        } else {
             $warehouseStock = WarehouseStock::lockForUpdate()->where([
                 'warehouse_id' => $order->warehouse_id,
-                'product_id' => $item->product_id
+                'product_id' => $item->product_id,
             ])->first();
+            $packedQuantity = $this->packedStockQuantity($order, $item);
+            if ($packedQuantity > 0) {
+                if (!$warehouseStock) {
+                    throw ValidationException::withMessages([
+                        'stock' => "کاڵای ژمارە {$item->product_id} لەم کۆگایەدا بوونی نییە."
+                    ]);
+                }
 
-            if (!$warehouseStock) {
-                // ٦. ئەگەر کاڵاکە لەم کۆگایەدا نەبوو (Step 6: Throw validation exception if record doesn't exist)
-                throw ValidationException::withMessages([
-                    'stock' => "کاڵای ژمارە {$item->product_id} لەم کۆگایەدا بوونی نییە."
-                ]);
+                $warehouseStock->adjustStock(
+                    $packedQuantity,
+                    self::STOCK_TYPE_UNPACKED,
+                    $user->id,
+                    'sales_order_item',
+                    $item->id,
+                    'Item unpacked'
+                );
             }
 
-            // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
-            $currentQty = $warehouseStock->quantity;
-
-            // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراو (Step 3: Re-read authoritative reserved quantity)
-            $reservedQty = $warehouseStock->reserved_quantity;
-
-            // ٤. هەژمارکردنی بڕی فیزیکی نوێ دوای کەمکردنەوە (Step 4: Calculate new quantity)
-            $newQty = $currentQty - $item->quantity;
-
-            // ٥. پشکنینی دروستیی گۆڕانکاری داواکراو (Step 5: Validate requested deduction)
-            if ($newQty < 0) {
-                // ٦. هەڵدانی هەڵەی بازرگانی لە کاتی نەبوونی ستۆک (Step 6: Throw business validation exception)
-                throw ValidationException::withMessages([
-                    'stock' => "بڕی پێویست لە ستۆکی فیزیکی کۆگا بەردەست نییە بۆ جێبەجێکردنی فرۆشتن. کاڵا: {$item->product_id}، بەردەست: {$currentQty}، داواکراو: {$item->quantity}"
-                ]);
-            }
-
-            // ٧. ئەنجامدانی کردارەکە پاش سەرکەوتنی پشکنینەکان (Step 7: Only then modify stock)
-            $warehouseStock->adjustStock(
-                -$item->quantity,
-                'DELIVERY',
-                $user->id,
-                'sales_order',
-                $order->id
-            );
+            $item->is_packed = false;
+            $item->packed_at = null;
+            $item->packed_by = null;
         }
+
+        $item->save();
+    }
+
+    private function ensurePackedStock(SalesOrder $order, \App\Models\SalesOrderItem $item, $user): void
+    {
+        $warehouseStock = WarehouseStock::lockForUpdate()->where([
+            'warehouse_id' => $order->warehouse_id,
+            'product_id' => $item->product_id,
+        ])->first();
+
+        if (!$warehouseStock) {
+            throw ValidationException::withMessages([
+                'stock' => "کاڵای ژمارە {$item->product_id} لەم کۆگایەدا بوونی نییە."
+            ]);
+        }
+
+        $missingQuantity = (int) $item->quantity - $this->packedStockQuantity($order, $item);
+        if ($missingQuantity <= 0) {
+            return;
+        }
+
+        $available = $warehouseStock->quantity - $warehouseStock->reserved_quantity;
+        $ownReserved = $this->reservedQuantityForOrderProduct($order, $item);
+        if ($warehouseStock->quantity < $missingQuantity || $available + $ownReserved < $missingQuantity) {
+            throw ValidationException::withMessages([
+                'order_item_id' => "بڕی پێویست لە کۆگادا بەردەست نییە بۆ پاکەتکردن. بڕی داواکراو: {$missingQuantity}، بڕی بەردەست: " . max(0, $available + $ownReserved)
+            ]);
+        }
+
+        $warehouseStock->adjustStock(
+            -$missingQuantity,
+            StockTransaction::TYPE_PACKED,
+            $user->id,
+            'sales_order_item',
+            $item->id,
+            'Stock deducted when item was packed'
+        );
+    }
+
+    private function packedStockQuantity(SalesOrder $order, \App\Models\SalesOrderItem $item): int
+    {
+        $netQuantity = StockTransaction::where('warehouse_id', $order->warehouse_id)
+            ->where('product_id', $item->product_id)
+            ->where('reference_type', 'sales_order_item')
+            ->where('reference_id', $item->id)
+            ->whereIn('type', [StockTransaction::TYPE_PACKED, self::STOCK_TYPE_UNPACKED])
+            ->sum('quantity_change');
+
+        return max(0, min((int) $item->quantity, -(int) $netQuantity));
+    }
+
+    private function reservedQuantityForOrderProduct(SalesOrder $order, \App\Models\SalesOrderItem $item): int
+    {
+        $orderReservation = StockTransaction::where('warehouse_id', $order->warehouse_id)
+            ->where('product_id', $item->product_id)
+            ->where('reference_type', 'sales_order')
+            ->where('reference_id', $order->id)
+            ->whereIn('type', [StockTransaction::TYPE_RESERVE, StockTransaction::TYPE_RELEASE])
+            ->sum('quantity_change');
+
+        $itemIds = $order->items()
+            ->where('product_id', $item->product_id)
+            ->pluck('id');
+        $packedReservationChange = StockTransaction::where('warehouse_id', $order->warehouse_id)
+            ->where('product_id', $item->product_id)
+            ->where('reference_type', 'sales_order_item')
+            ->whereIn('reference_id', $itemIds)
+            ->whereIn('type', [StockTransaction::TYPE_PACKED, self::STOCK_TYPE_UNPACKED])
+            ->sum('quantity_change');
+
+        return max(0, (int) $orderReservation + (int) $packedReservationChange);
     }
 
     /**
@@ -770,7 +871,24 @@ class SalesOrderService
             ])->first();
 
             if ($warehouseStock) {
-                $warehouseStock->releaseStock($item->quantity, $user->id, 'sales_order', $order->id);
+                $packedQuantity = $this->packedStockQuantity($order, $item);
+                if ($packedQuantity > 0) {
+                    $warehouseStock->adjustStock(
+                        $packedQuantity,
+                        self::STOCK_TYPE_UNPACKED,
+                        $user->id,
+                        'sales_order_item',
+                        $item->id,
+                        'Packed item returned before delivery'
+                    );
+                }
+
+                $warehouseStock->releaseStock(
+                    (int) $item->quantity,
+                    $user->id,
+                    'sales_order',
+                    $order->id
+                );
             }
         }
     }
@@ -1208,6 +1326,15 @@ class SalesOrderService
             if ($order->status === SalesOrder::STATUS_PACKING || $isCashVanOrder) {
                 $this->reserveStock($order, $user);
             }
+            if ($isCashVanOrder) {
+                foreach ($order->items()->get() as $item) {
+                    $item->is_packed = true;
+                    $item->packed_at = now();
+                    $item->packed_by = $user->id;
+                    $item->save();
+                    $this->ensurePackedStock($order, $item, $user);
+                }
+            }
 
             $requestedStatus = $data['status'] ?? $order->status;
             if ($requestedStatus !== $order->status && !in_array($requestedStatus, [SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_PACKING])) {
@@ -1375,4 +1502,3 @@ class SalesOrderService
         ];
     }
 }
-

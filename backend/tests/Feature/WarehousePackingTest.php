@@ -180,10 +180,91 @@ class WarehousePackingTest extends TestCase
         $item->refresh();
         $this->assertTrue($item->is_packed);
         $this->assertEquals($this->packer->id, $item->packed_by);
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 8,
+            'reserved_quantity' => 0,
+        ]);
+
+        $this->actingAs($this->packer)
+            ->postJson('/api/v1/warehouse/pack-item', [
+                'order_item_id' => $item->id,
+                'packed' => false,
+            ])
+            ->assertStatus(200);
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 10,
+            'reserved_quantity' => 2,
+        ]);
+
+        $this->actingAs($this->packer)
+            ->postJson('/api/v1/warehouse/pack-item', [
+                'order_item_id' => $item->id,
+                'packed' => true,
+            ])
+            ->assertStatus(200);
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 8,
+            'reserved_quantity' => 0,
+        ]);
 
         // Assert order auto transitioned to PACKING
         $order->refresh();
         $this->assertEquals(SalesOrder::STATUS_PACKING, $order->status);
+    }
+
+    /** @test */
+    public function it_restores_packed_stock_when_order_is_cancelled_before_delivery()
+    {
+        $order = SalesOrder::create([
+            'order_number' => 'ORD-PACK-CANCEL',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->packer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'order_date' => now()->toDateString(),
+            'status' => SalesOrder::STATUS_CONFIRMED,
+            'subtotal' => 7500,
+            'total_amount' => 7500,
+            'total_profit' => 2500,
+            'created_by' => $this->packer->id,
+        ]);
+        $item = SalesOrderItem::create([
+            'sales_order_id' => $order->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 1,
+            'unit_price' => 7500,
+            'cost_price' => 5000,
+            'price_type' => 'N2',
+            'line_total' => 7500,
+            'profit' => 2500,
+            'is_packed' => false,
+        ]);
+        WarehouseStock::where('product_id', $this->product1->id)->update(['reserved_quantity' => 1]);
+
+        $this->actingAs($this->packer)
+            ->postJson('/api/v1/warehouse/pack-item', [
+                'order_item_id' => $item->id,
+                'packed' => true,
+            ])
+            ->assertStatus(200);
+
+        $this->actingAs($this->packer)
+            ->postJson("/api/v1/sales-orders/{$order->id}/status", [
+                'status' => SalesOrder::STATUS_CANCELLED,
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product1->id,
+            'quantity' => 10,
+            'reserved_quantity' => 0,
+        ]);
     }
 
     /** @test */
@@ -394,4 +475,3 @@ class WarehousePackingTest extends TestCase
             ->assertJsonPath('data.low_stock_count', 1);
     }
 }
-

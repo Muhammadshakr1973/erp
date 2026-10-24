@@ -20,13 +20,14 @@ class StockTransaction extends Model
     const TYPE_RELEASE = 'RELEASE';
     const TYPE_TRANSFER_OUT = 'TRANSFER_OUT';
     const TYPE_TRANSFER_IN = 'TRANSFER_IN';
+    const TYPE_PACKED = 'PACKED';
+    const TYPE_UNPACKED = 'UNPACKED';
 
     // Legacy lowercase aliases
     const TYPE_IN = 'in';
     const TYPE_OUT = 'out';
     const TYPE_RESERVED = 'reserved';
     const TYPE_UNRESERVED = 'unreserved';
-    const TYPE_PACKED = 'packed';
     const TYPE_TRANSFER_IN_LOWER = 'transfer_in';
     const TYPE_TRANSFER_OUT_LOWER = 'transfer_out';
     const TYPE_ADJUSTMENT_LOWER = 'adjustment';

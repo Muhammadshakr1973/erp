@@ -42,6 +42,8 @@ Treat products, stock, purchases, suppliers, customers, sales, invoices, payment
 - Never run migrations or alter a production database.
 - Do not create schema changes unless required by the requested task. Inspect the existing schema first.
 - If a production schema change is necessary, explain the impact and provide raw SQL for the user to execute manually in phpMyAdmin; clearly flag destructive or irreversible changes. Prefer reversible changes.
+- The user cannot run Laravel migrations on the hosting server. Do not rely on, or ask the user to run, `php artisan migrate`; provide the exact SQL needed to apply every required database/schema change manually in phpMyAdmin. Do not create a Laravel migration file as the way to deploy a production schema change.
+- Before executing any terminal command, script, or other command-line operation for this workspace, read this instruction file first and follow its rules. If it has not been read in the current task, read it before running the command.
 - Never drop/truncate databases, mass-delete data, overwrite historical accounting data, or execute destructive SQL.
 
 ## 7. SECURITY

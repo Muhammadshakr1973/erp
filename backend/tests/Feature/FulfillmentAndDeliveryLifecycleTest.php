@@ -174,6 +174,12 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
             'status' => SalesOrder::STATUS_READY,
         ]);
         $response->assertStatus(200);
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 90,
+            'reserved_quantity' => 0,
+        ]);
 
         // ==========================================
         // قۆناغی چوارەم: دروستکردنی گەشتی گەیاندن و سپاردن بە شۆفێر (Phase 4: Create Delivery Trip)
@@ -237,12 +243,12 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
             'status' => SalesOrder::STATUS_READY,
         ]);
 
-        // ستۆکی حجزکراو دەبێت هێشتا وەک خۆی پارێزراو مابێتەوە بۆ پسوڵەکە
+        // Stock remains deducted after a failed delivery because the order is still packed.
         $this->assertDatabaseHas('warehouse_stock', [
             'warehouse_id'      => $this->warehouse->id,
             'product_id'        => $this->product->id,
-            'quantity'          => 100,
-            'reserved_quantity' => 10,
+            'quantity'          => 90,
+            'reserved_quantity' => 0,
         ]);
 
         // ==========================================
@@ -279,7 +285,7 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
             'status' => SalesOrder::STATUS_DELIVERED,
         ]);
 
-        // پشکنینی لێدەرچوونی کۆتایی ستۆک و نەمانی حجزەکە (Stock Deduction)
+        // Delivery completes without deducting stock a second time.
         $this->assertDatabaseHas('warehouse_stock', [
             'warehouse_id'      => $this->warehouse->id,
             'product_id'        => $this->product->id,
@@ -454,6 +460,12 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
             ->assertJsonPath('data.status', SalesOrder::STATUS_IN_DELIVERY);
         $orderId = $response->json('data.id');
         $orderItemId = $response->json('data.items.0.id');
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $van->id,
+            'product_id' => $this->product->id,
+            'quantity' => 98,
+            'reserved_quantity' => 0,
+        ]);
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $this->admin->id,
@@ -488,6 +500,12 @@ class FulfillmentAndDeliveryLifecycleTest extends TestCase
         $this->assertDatabaseHas('sales_order_items', [
             'id' => $orderItemId,
             'is_packed' => true,
+        ]);
+        $this->assertDatabaseHas('warehouse_stock', [
+            'warehouse_id' => $van->id,
+            'product_id' => $this->product->id,
+            'quantity' => 98,
+            'reserved_quantity' => 0,
         ]);
     }
 }

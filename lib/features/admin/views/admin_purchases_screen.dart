@@ -19,9 +19,11 @@ import '../../auth/providers/auth_provider.dart';
 import '../../shared/models/receipt_data.dart';
 import '../../shared/services/receipt_print_service.dart';
 import '../models/purchase_order_model.dart';
+import '../models/purchase_requirement_model.dart';
 import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
 import 'supplier_form_dialog.dart';
+import 'purchase_order_builder_dialog.dart';
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
@@ -109,93 +111,28 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _convertSelectedToPO() async {
-    if (_selectedRequirementIds.isEmpty) return;
+    if (_isConverting) return;
+    final requirements =
+        ref.read(purchaseRequirementsProvider).valueOrNull ??
+        <PurchaseRequirementModel>[];
+    final selectedRequirements = requirements
+        .where((requirement) => _selectedRequirementIds.contains(requirement.id))
+        .toList();
 
-    final notesController = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'دروستکردنی پسوڵەی کڕین',
-                  style: AppTextStyles.bodyBold,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'ئایا دڵنیایت لە گۆڕینی ${_selectedRequirementIds.length} داواکاری بۆ پسوڵەی کڕین؟',
-                style: AppTextStyles.caption,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'تێبینییەکان (ئارەزوومەندانە)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('تۆمارکردن'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed == true && mounted) {
-      setState(() {
-        _isConverting = true;
-      });
-      try {
-        await ref
-            .read(purchaseActionsProvider)
-            .convertRequirementsToPO(
-              requirementIds: _selectedRequirementIds.toList(),
-              notes: notesController.text,
-            );
-        setState(() {
-          _selectedRequirementIds.clear();
-        });
-        if (mounted) {
-          AppSnackbar.show(
-            context,
-            message: 'داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین',
-            type: SnackbarType.success,
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          AppSnackbar.show(
-            context,
-            message: e.toString().replaceAll('Exception: ', ''),
-            type: SnackbarType.error,
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isConverting = false;
-          });
-        }
+    setState(() => _isConverting = true);
+    try {
+      final created = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PurchaseOrderBuilderDialog(
+          requirements: selectedRequirements,
+        ),
+      );
+      if (created == true && mounted) {
+        setState(() => _selectedRequirementIds.clear());
       }
+    } finally {
+      if (mounted) setState(() => _isConverting = false);
     }
   }
 
@@ -296,6 +233,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       appBar: AppBar(
         title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),
         actions: [
+          if (_tabController.index == 0)
+            IconButton(
+              tooltip: 'دروستکردنی پسوڵەی کڕین',
+              icon: const Icon(Icons.add_shopping_cart),
+              onPressed: _isConverting ? null : _convertSelectedToPO,
+            ),
           if (_tabController.index == 2)
             IconButton(
               icon: const Icon(AppIcons.add),
@@ -396,6 +339,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       'کاتێک ستۆک تەواو دەبێت لە کاتی پسوڵەی فرۆشتن، داواکاری لێرە دەردەکەوێت',
                       style: AppTextStyles.caption,
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ElevatedButton.icon(
+                      onPressed: _convertSelectedToPO,
+                      icon: const Icon(Icons.add_shopping_cart),
+                      label: const Text('کڕینی کاڵای تر'),
                     ),
                   ],
                 ),

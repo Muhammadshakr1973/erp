@@ -121,8 +121,10 @@ class WarehouseStock extends Model
             // ٧. گۆڕینی ستۆک و پاشەکەوتکردن (Step 7: Only then modify stock)
             $upperType = strtoupper($type);
             $newReserved = $reservedQty;
-            if ($quantityChange < 0 && in_array($upperType, ['DELIVERY', 'SALE'])) {
+            if ($quantityChange < 0 && in_array($upperType, ['DELIVERY', 'SALE', 'PACKED'])) {
                 $newReserved = max(0, $reservedQty - abs($quantityChange));
+            } elseif ($quantityChange > 0 && $upperType === 'UNPACKED') {
+                $newReserved = $reservedQty + $quantityChange;
             } elseif ($quantityChange < 0 && $upperType === 'ADJUSTMENT') {
                 if ($newQty < $reservedQty) {
                     throw ValidationException::withMessages([
@@ -300,8 +302,10 @@ class WarehouseStock extends Model
             } else {
                 $calculatedQty += $tx->quantity_change;
 
-                if (in_array($type, ['DELIVERY', 'SALE'])) {
+                if (in_array($type, ['DELIVERY', 'SALE', 'PACKED'])) {
                     $calculatedReserved = max(0, $calculatedReserved - abs($tx->quantity_change));
+                } elseif ($type === 'UNPACKED') {
+                    $calculatedReserved += $tx->quantity_change;
                 }
             }
 

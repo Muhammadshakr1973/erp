@@ -608,7 +608,8 @@ class InventoryStockEngineTest extends TestCase
 
         // 2. Unpacked item reservation was released
         $this->assertEquals(0, WarehouseStock::where('product_id', $productUnpacked->id)->first()->reserved_quantity);
-        $this->assertEquals(3, WarehouseStock::where('product_id', $productPacked->id)->first()->reserved_quantity);
+        $this->assertEquals(47, WarehouseStock::where('product_id', $productPacked->id)->first()->quantity);
+        $this->assertEquals(0, WarehouseStock::where('product_id', $productPacked->id)->first()->reserved_quantity);
 
         // 3. Active order items only count the packed item
         $this->assertEquals(1, $order->items()->count());
@@ -638,6 +639,8 @@ class InventoryStockEngineTest extends TestCase
             'PURCHASE',
             'DELIVERY',
             'SALE',
+            'PACKED',
+            'UNPACKED',
             'TRANSFER_IN',
             'TRANSFER_OUT',
             'RESERVE',

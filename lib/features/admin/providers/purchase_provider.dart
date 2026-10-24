@@ -73,18 +73,29 @@ class PurchaseActions {
 
   Future<void> convertRequirementsToPO({
     required List<int> requirementIds,
+    List<Map<String, dynamic>>? requirementItems,
+    List<Map<String, dynamic>>? additionalItems,
     String? notes,
     String? idempotencyKey,
   }) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
       final sortedIds = List<int>.from(requirementIds)..sort();
+      final payload = <String, dynamic>{'notes': notes};
+      if (requirementItems != null) {
+        payload['requirement_items'] = requirementItems;
+      } else {
+        payload['requirement_ids'] = sortedIds;
+      }
+      if (additionalItems != null && additionalItems.isNotEmpty) {
+        payload['additional_items'] = additionalItems;
+      }
       final key = idempotencyKey ??
-          'convert_${sortedIds.join('_')}_${_deterministicHash(notes ?? 'none')}';
+          'convert_${_deterministicHash(jsonEncode(payload))}';
 
       await apiClient.client.post(
         '/purchase-requirements/convert',
-        data: {'requirement_ids': sortedIds, 'notes': notes},
+        data: payload,
         options: Options(
           headers: {
             'X-Idempotency-Key': key,
@@ -93,6 +104,7 @@ class PurchaseActions {
       );
       // Invalidate the lists to trigger a refresh
       _ref.invalidate(purchaseRequirementsProvider);
+      _ref.invalidate(purchaseRequirementsGroupProvider);
       _ref.invalidate(purchaseOrdersProvider);
     } catch (e) {
       throw Exception(apiClient.parseError(e));

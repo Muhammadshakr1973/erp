@@ -610,29 +610,7 @@ class WarehouseController extends Controller
                     $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
                 }
 
-                if ($packed) {
-                    $warehouseStock = WarehouseStock::lockForUpdate()->where([
-                        'warehouse_id' => $order->warehouse_id,
-                        'product_id' => $item->product_id
-                    ])->first();
-
-                    if (!$warehouseStock || $warehouseStock->quantity < $item->quantity) {
-                        $available = $warehouseStock ? $warehouseStock->quantity : 0;
-                        throw ValidationException::withMessages([
-                            'order_item_id' => "بڕی پێویست لە کۆگادا بەردەست نییە بۆ پاکەتکردن. بڕی داواکراو: {$item->quantity}، بڕی بەردەست لە کۆگا: {$available}"
-                        ]);
-                    }
-
-                    $item->is_packed = true;
-                    $item->packed_at = now();
-                    $item->packed_by = $user->id;
-                } else {
-                    $item->is_packed = false;
-                    $item->packed_at = null;
-                    $item->packed_by = null;
-                }
-
-                $item->save();
+                $this->salesOrderService->setItemPacked($order, $item, $packed, $user);
 
                 app(\App\Services\AuditService::class)->log([
                     'action'      => 'PACK_ITEM',
@@ -715,27 +693,7 @@ class WarehouseController extends Controller
                         $this->salesOrderService->transitionTo($order, SalesOrder::STATUS_PACKING, $user);
                     }
 
-                    if ($packed) {
-                        $warehouseStock = WarehouseStock::lockForUpdate()->where([
-                            'warehouse_id' => $order->warehouse_id,
-                            'product_id' => $item->product_id
-                        ])->first();
-
-                        if (!$warehouseStock || $warehouseStock->quantity < $item->quantity) {
-                            $available = $warehouseStock ? $warehouseStock->quantity : 0;
-                            throw new \Exception("بڕی پێویست لە کۆگادا بەردەست نییە بۆ پاکەتکردن بۆ بەرهەمی '{$item->product->name}'. بڕی داواکراو: {$item->quantity}، بڕی بەردەست: {$available}");
-                        }
-
-                        $item->is_packed = true;
-                        $item->packed_at = now();
-                        $item->packed_by = $user->id;
-                    } else {
-                        $item->is_packed = false;
-                        $item->packed_at = null;
-                        $item->packed_by = null;
-                    }
-
-                    $item->save();
+                    $this->salesOrderService->setItemPacked($order, $item, $packed, $user);
 
                     app(\App\Services\AuditService::class)->log([
                         'action'      => 'PACK_ITEM',
