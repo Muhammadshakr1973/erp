@@ -144,7 +144,7 @@ class SalesOrderController extends Controller
 
             return response()->json([
                 'message' => 'پسوڵە بەسەرکەوتوویی نوێکرایەوە',
-                'data' => $updatedOrder->load(['customer.route', 'customer.specialPrices', 'salesman', 'warehouse', 'items.product', 'salesReturns.items.product'])
+                'data' => $updatedOrder->load(['customer.route', 'customer.specialPrices', 'salesman', 'warehouse', 'items.product.stocks', 'salesReturns.items.product'])
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;

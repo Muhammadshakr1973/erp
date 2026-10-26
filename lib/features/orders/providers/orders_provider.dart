@@ -286,14 +286,14 @@ class OrderActions {
         final updatedOrder = OrderModel.fromJson(
           Map<String, dynamic>.from(orderData),
         );
+        // Only update this single order locally without downloading the entire orders list
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
-        await ref.read(ordersListProvider.notifier).refreshSilently();
-        unawaited(
-          ref.read(productsListProvider.notifier).refreshProductsSilently(),
-        );
-        ref.invalidate(salesmanDashboardProvider);
-        ref.invalidate(customerListProvider);
-        ref.invalidate(filteredCustomerListProvider);
+
+        // Only update the products whose stock changed in this order
+        ref
+            .read(productsListProvider.notifier)
+            .patchProductsFromOrderData(Map<String, dynamic>.from(orderData));
+
         return updatedOrder;
       }
 

@@ -177,6 +177,48 @@ class ProductsListNotifier
     }
   }
 
+  Future<void> refreshSingleProduct(int productId) async {
+    final currentList = state.valueOrNull;
+    if (currentList != null) {
+      await _fetchSingleProduct(productId, currentList);
+    }
+  }
+
+  void patchProductsFromOrderData(Map<String, dynamic> orderData) {
+    state.whenData((currentList) {
+      final items = orderData['items'];
+      if (items is! List || items.isEmpty) return;
+
+      bool anyUpdated = false;
+      final updatedList = List<ProductModel>.from(currentList);
+
+      for (final item in items) {
+        if (item is Map) {
+          final prodMap = item['product'];
+          final pid = int.tryParse(
+            (item['product_id'] ?? prodMap?['id'])?.toString() ?? '',
+          );
+          if (pid != null && prodMap is Map && prodMap['stocks'] is List) {
+            final index = updatedList.indexWhere((p) => p.id == pid);
+            if (index != -1) {
+              final existing = updatedList[index];
+              updatedList[index] = existing.copyWith(
+                stocks: prodMap['stocks'] as List,
+              );
+              anyUpdated = true;
+            }
+          } else if (pid != null) {
+            _fetchSingleProduct(pid, currentList);
+          }
+        }
+      }
+
+      if (anyUpdated) {
+        state = AsyncValue.data(updatedList);
+      }
+    });
+  }
+
   Future<void> fetchProducts() async {
     state = const AsyncValue.loading();
     try {
