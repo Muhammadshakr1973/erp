@@ -133,14 +133,15 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(37500, $item->line_total);
         $this->assertEquals(37500, $item->total_price);
 
-        // Assert stock was reserved
+        // Assert stock was directly deducted
         $stock = WarehouseStock::first();
-        $this->assertEquals(5, $stock->reserved_quantity);
+        $this->assertEquals(5, $stock->quantity); // 10 - 5 = 5
+        $this->assertEquals(0, $stock->reserved_quantity);
 
-        // Assert stock transaction was recorded
-        $transaction = StockTransaction::where('type', 'RESERVE')->first();
+        // Assert stock transaction was recorded as SALE
+        $transaction = StockTransaction::where('type', 'SALE')->first();
         $this->assertNotNull($transaction);
-        $this->assertEquals(5, $transaction->quantity_change);
+        $this->assertEquals(-5, $transaction->quantity_change);
     }
 
     /** @test */
@@ -238,17 +239,8 @@ class SalesOrderTest extends TestCase
         $response = $this->actingAs($this->salesman)
             ->postJson('/api/v1/orders', $payload);
 
-        $response->assertStatus(200);
-
-        // Assert stock reserved was limited to available (2)
-        $stock = WarehouseStock::first();
-        $this->assertEquals(2, $stock->reserved_quantity);
-
-        // Assert purchase requirement was created for the shortage (3)
-        $requirement = PurchaseRequirement::first();
-        $this->assertNotNull($requirement);
-        $this->assertEquals(3, $requirement->required_quantity);
-        $this->assertEquals('OPEN', $requirement->status);
+        // Assert validation fails when ordering more than available physical stock
+        $response->assertStatus(422);
     }
 
     /** @test */
@@ -274,7 +266,8 @@ class SalesOrderTest extends TestCase
 
         $order = SalesOrder::first();
         $stock = WarehouseStock::first();
-        $this->assertEquals(4, $stock->reserved_quantity);
+        $this->assertEquals(6, $stock->quantity); // 10 - 4 = 6
+        $this->assertEquals(0, $stock->reserved_quantity);
 
         // Cancel order
         $response = $this->actingAs($this->salesman)
@@ -284,14 +277,15 @@ class SalesOrderTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Assert stock reserved was decremented to 0
+        // Assert stock was restored back to 10
         $stock->refresh();
+        $this->assertEquals(10, $stock->quantity);
         $this->assertEquals(0, $stock->reserved_quantity);
 
-        // Assert RELEASE transaction was recorded
-        $transaction = StockTransaction::where('type', 'RELEASE')->first();
+        // Assert RETURN transaction was recorded
+        $transaction = StockTransaction::where('type', 'RETURN')->first();
         $this->assertNotNull($transaction);
-        $this->assertEquals(-4, $transaction->quantity_change);
+        $this->assertEquals(4, $transaction->quantity_change);
     }
 
     /** @test */
@@ -491,8 +485,8 @@ class SalesOrderTest extends TestCase
         $this->actingAs($this->salesman)->postJson('/api/v1/orders', $payload);
         $orderConfirmed = SalesOrder::orderBy('id', 'desc')->first();
 
-        $stockReserved = WarehouseStock::first()->reserved_quantity;
-        $this->assertEquals(3, $stockReserved);
+        $stockRemaining = WarehouseStock::first()->quantity;
+        $this->assertEquals(7, $stockRemaining); // 10 - 3 = 7
 
         // Cancel the CONFIRMED order
         $response = $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$orderConfirmed->id}/status", [
@@ -500,9 +494,9 @@ class SalesOrderTest extends TestCase
         ]);
         $response->assertStatus(200);
 
-        // Verify reserved stock decremented back to 0
-        $stockReleased = WarehouseStock::first()->reserved_quantity;
-        $this->assertEquals(0, $stockReleased);
+        // Verify stock restored back to 10
+        $stockRestored = WarehouseStock::first()->quantity;
+        $this->assertEquals(10, $stockRestored);
     }
 
     /** @test */
@@ -580,9 +574,9 @@ class SalesOrderTest extends TestCase
         // 4. Transition to IN_DELIVERY
         $this->actingAs($this->salesman)->postJson("/api/v1/orders/{$order->id}/status", ['status' => SalesOrder::STATUS_IN_DELIVERY]);
 
-        // Verify stock is still reserved
+        // Verify stock was directly deducted
         $stock = WarehouseStock::first();
-        $this->assertEquals(2, $stock->reserved_quantity);
+        $this->assertEquals(8, $stock->quantity); // 10 - 2 = 8
 
         // Associate with a delivery trip order manually for testing sync
         $trip = \App\Models\DeliveryTrip::create([
@@ -605,9 +599,9 @@ class SalesOrderTest extends TestCase
         ]);
         $response->assertStatus(200);
 
-        // Assert stock was successfully released!
+        // Assert stock was successfully restored!
         $stock->refresh();
-        $this->assertEquals(0, $stock->reserved_quantity);
+        $this->assertEquals(10, $stock->quantity);
 
         // Assert delivery trip order was updated to FAILED with reason
         $tripOrder->refresh();
