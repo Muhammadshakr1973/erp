@@ -207,6 +207,49 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
   }
 
+  /// Resolves the warehouse ID for sales operations
+  int _getTargetWarehouseId() {
+    final currentUser = ref.read(authProvider).user;
+    final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
+    final warehouses = ref.read(warehouseListProvider).asData?.value ?? [];
+    final defaultWarehouseId = warehouses.where((w) => w.canSell && w.isMain).firstOrNull?.id ??
+        warehouses.where((w) => w.canSell).firstOrNull?.id ??
+        1;
+
+    return _selectedOrder?.warehouseId ??
+        myVanWarehouse?.id ??
+        currentUser?.warehouseId ??
+        defaultWarehouseId;
+  }
+
+  /// Calculates total available stock of product for current active order
+  int _getProductAvailableStock(ProductModel product) {
+    final targetWarehouseId = _getTargetWarehouseId();
+    final int warehouseStock = product.getStockForWarehouse(targetWarehouseId);
+
+    // If active order was already saved with some quantity of this product on the server,
+    // that quantity was deducted on the server, so it is part of this order's available pool:
+    int savedInThisOrder = 0;
+    if (_selectedOrder != null) {
+      final savedItem = _selectedOrder!.items
+          .where((it) => it.productId == product.id)
+          .firstOrNull;
+      if (savedItem != null) {
+        savedInThisOrder = savedItem.quantity.toInt();
+      }
+    }
+
+    return warehouseStock + savedInThisOrder;
+  }
+
+  /// Calculates remaining stock after deducting currently selected quantity in this order
+  int _getProductRemainingStock(ProductModel product) {
+    final totalAvailable = _getProductAvailableStock(product);
+    final currentQty = _orderCart[product.id] ?? 0;
+    final remaining = totalAvailable - currentQty;
+    return remaining < 0 ? 0 : remaining;
+  }
+
   /// Increment product quantity in active order
   void _incrementProduct(ProductModel product) {
     if (_selectedOrder == null) {
@@ -214,26 +257,30 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
-    final currentUser = ref.read(authProvider).user;
-    final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
-    final targetWarehouseId = _selectedOrder!.warehouseId ?? myVanWarehouse?.id;
+    final totalAvailable = _getProductAvailableStock(product);
+    final currentQty = _orderCart[product.id] ?? 0;
 
-    if (currentUser?.isCashVan == true && targetWarehouseId != null) {
-      final maxStock = product.getStockForWarehouse(targetWarehouseId);
-      final currentQty = _orderCart[product.id] ?? 0;
-      if (currentQty + 1 > maxStock) {
-        AppSnackbar.show(
-          context,
-          message:
-              'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
-          type: SnackbarType.warning,
-        );
-        return;
-      }
+    if (totalAvailable <= 0) {
+      AppSnackbar.show(
+        context,
+        message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    if (currentQty + 1 > totalAvailable) {
+      AppSnackbar.show(
+        context,
+        message:
+            'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر دیاری بکەیت',
+        type: SnackbarType.warning,
+      );
+      return;
     }
 
     setState(() {
-      _orderCart[product.id] = (_orderCart[product.id] ?? 0) + 1;
+      _orderCart[product.id] = currentQty + 1;
     });
 
     _startOrRestart10SecondDebounce(
@@ -272,6 +319,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
+    final totalAvailable = _getProductAvailableStock(product);
+    if (totalAvailable <= 0) {
+      AppSnackbar.show(
+        context,
+        message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
     final currentQty = _orderCart[product.id] ?? 0;
     final controller = TextEditingController(text: currentQty.toString());
 
@@ -307,6 +364,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     const SizedBox(width: 48), // balance header
                   ],
                 ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'ستۆکی بەردەست: $totalAvailable دانە',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 AppTextField(
                   controller: controller,
@@ -327,6 +393,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   onPressed: () {
                     final parsed = int.tryParse(controller.text.trim());
                     if (parsed != null && parsed >= 0) {
+                      if (parsed > totalAvailable) {
+                        AppSnackbar.show(
+                          ctx,
+                          message:
+                              'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر بنووسیت',
+                          type: SnackbarType.warning,
+                        );
+                        return;
+                      }
                       Navigator.pop(ctx, parsed);
                     } else {
                       Navigator.pop(ctx);
@@ -348,24 +423,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     );
 
     if (newQty != null && mounted) {
-      final currentUser = ref.read(authProvider).user;
-      final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
-      final targetWarehouseId =
-          _selectedOrder!.warehouseId ?? myVanWarehouse?.id;
-
-      if (currentUser?.isCashVan == true &&
-          targetWarehouseId != null &&
-          newQty > 0) {
-        final maxStock = product.getStockForWarehouse(targetWarehouseId);
-        if (newQty > maxStock) {
-          AppSnackbar.show(
-            context,
-            message:
-                'ناتوانی لە ستۆکی بەردەستی ناو ڤانەکەت ($maxStock دانە) زیاتر بنووسیت',
-            type: SnackbarType.warning,
-          );
-          return;
-        }
+      if (newQty > totalAvailable) {
+        AppSnackbar.show(
+          context,
+          message:
+              'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر دیاری بکەیت',
+          type: SnackbarType.warning,
+        );
+        return;
       }
 
       setState(() {
@@ -1080,14 +1145,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     ),
                   ),
                   data: (allProducts) {
-                    // Filter products by category & search query
+                    // Filter products by category & search query (do not filter out 0 stock)
                     final filteredProducts = allProducts.where((p) {
                       if (!p.isActive) return false;
-                      if (authUser?.isSalesman == true &&
-                          (salesWarehouseId == null ||
-                              p.getStockForWarehouse(salesWarehouseId) <= 0)) {
-                        return false;
-                      }
                       if (_selectedCategoryId != null &&
                           p.categoryId != _selectedCategoryId) {
                         return false;
@@ -1667,15 +1727,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final unitPrice = _getProductPrice(product);
 
     // Stock calculation
-    final int availableStock = user?.isSalesman == true
-        ? (warehouseId == null ? 0 : product.getStockForWarehouse(warehouseId))
-        : (user?.isCashVan == true && warehouseId != null)
-        ? product.getStockForWarehouse(warehouseId)
-        : product.totalStock;
+    final totalAvailable = _getProductAvailableStock(product);
+    final remainingStock = _getProductRemainingStock(product);
+    final bool isOutOfStock = totalAvailable <= 0;
+    final bool isLimitReached = remainingStock <= 0;
+    final bool canIncrement = remainingStock > 0;
+    final bool canDecrement = quantity > 0;
 
     return AnimatedOpacity(
       key: key,
-      opacity: quantity > 0 ? 0.25 : 1,
+      opacity: isOutOfStock ? 0.55 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: Container(
         decoration: BoxDecoration(
@@ -1726,11 +1787,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
+                          color: (isOutOfStock || isLimitReached)
+                              ? const Color(0xFFB71C1C).withValues(alpha: 0.85)
+                              : Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(6),
+                          border: (isOutOfStock || isLimitReached)
+                              ? Border.all(color: Colors.red.shade400, width: 0.8)
+                              : null,
                         ),
                         child: Text(
-                          'ستۆک: $availableStock',
+                          'ستۆک: $remainingStock',
                           style: const TextStyle(
                             fontFamily: 'KJino',
                             color: Colors.white,
@@ -1829,15 +1895,19 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     height: 36,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE53935),
-                        foregroundColor: Colors.white,
+                        backgroundColor: canDecrement
+                            ? const Color(0xFFE53935)
+                            : (isDark ? const Color(0xFF2E3846) : Colors.grey.shade300),
+                        foregroundColor: canDecrement
+                            ? Colors.white
+                            : (isDark ? Colors.white38 : Colors.grey.shade500),
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () => _decrementProduct(product),
+                      onPressed: canDecrement ? () => _decrementProduct(product) : null,
                       child: const Icon(Icons.remove, size: 20),
                     ),
                   ),
@@ -1846,7 +1916,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   // Center Quantity Box (Tap to type custom number)
                   Expanded(
                     child: InkWell(
-                      onTap: () => _editQuantityDirectly(product),
+                      onTap: isOutOfStock
+                          ? () {
+                              AppSnackbar.show(
+                                context,
+                                message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+                                type: SnackbarType.warning,
+                              );
+                            }
+                          : () => _editQuantityDirectly(product),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         height: 36,
@@ -1884,15 +1962,19 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     height: 36,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
+                        backgroundColor: canIncrement
+                            ? const Color(0xFF10B981)
+                            : (isDark ? const Color(0xFF2E3846) : Colors.grey.shade300),
+                        foregroundColor: canIncrement
+                            ? Colors.white
+                            : (isDark ? Colors.white38 : Colors.grey.shade500),
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () => _incrementProduct(product),
+                      onPressed: canIncrement ? () => _incrementProduct(product) : null,
                       child: const Icon(Icons.add, size: 20),
                     ),
                   ),

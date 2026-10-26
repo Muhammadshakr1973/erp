@@ -20,16 +20,20 @@ class ProductController extends Controller
             $vanWarehouseId = $user->warehouse_id;
             if ($vanWarehouseId) {
                 $query->whereHas('stocks', function ($q) use ($vanWarehouseId) {
-                    $q->where('warehouse_id', $vanWarehouseId)->where('quantity', '>', 0);
+                    $q->where('warehouse_id', $vanWarehouseId);
                 });
             } else {
                 $query->whereRaw('1 = 0');
             }
         } elseif ($request->has('warehouse_id')) {
             $warehouseId = (int) $request->query('warehouse_id');
-            if ($request->boolean('in_stock_only') || $request->boolean('van_only')) {
+            if ($request->boolean('in_stock_only')) {
                 $query->whereHas('stocks', function ($q) use ($warehouseId) {
                     $q->where('warehouse_id', $warehouseId)->where('quantity', '>', 0);
+                });
+            } elseif ($request->boolean('van_only')) {
+                $query->whereHas('stocks', function ($q) use ($warehouseId) {
+                    $q->where('warehouse_id', $warehouseId);
                 });
             }
         }
@@ -46,10 +50,10 @@ class ProductController extends Controller
         $user = $request->user();
         if ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
             $vanWarehouseId = $user->warehouse_id;
-            $hasStock = $vanWarehouseId && $product->stocks()->where('warehouse_id', $vanWarehouseId)->where('quantity', '>', 0)->exists();
+            $hasStock = $vanWarehouseId && $product->stocks()->where('warehouse_id', $vanWarehouseId)->exists();
             if (!$hasStock) {
                 return response()->json([
-                    'message' => 'ئەم کاڵایە لە کۆگای ئۆتۆمبێلەکەتدا بوونی نییە یان ستۆکەکەی سفرە.',
+                    'message' => 'ئەم کاڵایە لە کۆگای ئۆتۆمبێلەکەتدا بوونی نییە.',
                     'error' => 'Not Found'
                 ], 404);
             }
