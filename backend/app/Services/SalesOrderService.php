@@ -174,7 +174,7 @@ class SalesOrderService
                 // کەمکردنەوەی ڕاستەوخۆ لە ستۆک لە کاتی زیادکردنی کاڵا بۆ پسوڵە
                 $warehouseStock->adjustStock(
                     -$quantity,
-                    StockTransaction::TYPE_SALE,
+                    StockTransaction::TYPE_DELIVERY,
                     $user->id,
                     'sales_order_item',
                     $orderItem->id,
@@ -343,7 +343,7 @@ class SalesOrderService
                 // کەمکردنەوەی ستۆکی کاڵای نوێکراوە لە کۆگا ڕاستەوخۆ بەبێ حجزکردن
                 $warehouseStock->adjustStock(
                     -$quantity,
-                    StockTransaction::TYPE_SALE,
+                    StockTransaction::TYPE_DELIVERY,
                     $user->id,
                     'sales_order_item',
                     $orderItem->id,
@@ -694,7 +694,7 @@ class SalesOrderService
                            ->where('reference_id', $order->id);
                     });
                 })
-                ->whereIn('type', [StockTransaction::TYPE_SALE, StockTransaction::TYPE_PACKED])
+                ->whereIn('type', [StockTransaction::TYPE_DELIVERY, StockTransaction::TYPE_SALE, StockTransaction::TYPE_PACKED, 'out'])
                 ->sum('quantity_change');
 
             $alreadyReturned = (int) StockTransaction::where('warehouse_id', $order->warehouse_id)
@@ -1169,7 +1169,7 @@ class SalesOrderService
                 // کەمکردنەوەی ستۆکی کاڵای نوێکراوە لە کۆگا ڕاستەوخۆ بەبێ حجزکردن
                 $warehouseStock->adjustStock(
                     -$quantity,
-                    StockTransaction::TYPE_SALE,
+                    StockTransaction::TYPE_DELIVERY,
                     $user->id,
                     'sales_order_item',
                     $orderItem->id,

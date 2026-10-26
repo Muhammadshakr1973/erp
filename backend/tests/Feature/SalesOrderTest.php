@@ -138,8 +138,8 @@ class SalesOrderTest extends TestCase
         $this->assertEquals(5, $stock->quantity); // 10 - 5 = 5
         $this->assertEquals(0, $stock->reserved_quantity);
 
-        // Assert stock transaction was recorded as SALE
-        $transaction = StockTransaction::where('type', 'SALE')->first();
+        // Assert stock transaction was recorded as DELIVERY
+        $transaction = StockTransaction::where('type', 'DELIVERY')->first();
         $this->assertNotNull($transaction);
         $this->assertEquals(-5, $transaction->quantity_change);
     }
