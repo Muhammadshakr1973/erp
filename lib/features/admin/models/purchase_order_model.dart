@@ -47,6 +47,7 @@ class PurchaseOrderModel {
   final String warehouseName;
   final String status;
   final num totalAmount;
+  final num paidAmount;
   final String? notes;
   final DateTime? receivedAt;
   final String? createdAt;
@@ -63,12 +64,18 @@ class PurchaseOrderModel {
     required this.warehouseName,
     required this.status,
     required this.totalAmount,
+    this.paidAmount = 0,
     this.notes,
     this.receivedAt,
     this.createdAt,
     required this.itemsCount,
     required this.items,
   });
+
+  num get remainingDebt {
+    final debt = totalAmount - paidAmount;
+    return debt > 0 ? debt : 0;
+  }
 
   factory PurchaseOrderModel.fromJson(Map<String, dynamic> json) {
     final itemsList = json['items'] as List?;
@@ -97,6 +104,7 @@ class PurchaseOrderModel {
           : '',
       status: json['status'] ?? 'DRAFT',
       totalAmount: json['total_amount'] ?? 0,
+      paidAmount: json['paid_amount'] ?? 0,
       notes: json['notes'],
       receivedAt: parsedReceivedAt,
       createdAt: json['created_at']?.toString(),

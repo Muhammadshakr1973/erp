@@ -21,7 +21,7 @@ class PurchaseOrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->orderBy('id', 'desc');
+        $query = PurchaseOrder::with(['supplier', 'warehouse', 'items.product', 'payments'])->orderBy('id', 'desc');
 
         if ($user && $user->warehouse_id) {
             $query->where('warehouse_id', $user->warehouse_id);
@@ -36,7 +36,7 @@ class PurchaseOrderController extends Controller
 
     public function show(Request $request, $id): JsonResponse
     {
-        $order = PurchaseOrder::with(['supplier', 'warehouse', 'items.product'])->findOrFail($id);
+        $order = PurchaseOrder::with(['supplier', 'warehouse', 'items.product', 'payments'])->findOrFail($id);
         $user = $request->user();
 
         if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {

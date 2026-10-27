@@ -16,6 +16,7 @@ class PurchaseOrder extends Model
         'warehouse_id',
         'status',
         'total_amount',
+        'paid_amount',
         'notes',
         'created_by',
         'received_at',
@@ -24,9 +25,15 @@ class PurchaseOrder extends Model
     protected $casts = [
         'received_at' => 'datetime',
         'total_amount' => 'integer',
+        'paid_amount' => 'integer',
         'supplier_id' => 'integer',
         'warehouse_id' => 'integer',
         'created_by' => 'integer',
+    ];
+
+    protected $appends = [
+        'paid_amount',
+        'remaining_amount',
     ];
 
     const STATUS_DRAFT = 'DRAFT';
@@ -38,6 +45,22 @@ class PurchaseOrder extends Model
     const STATUS_DRAFT_LOWER = 'draft';
     const STATUS_ORDERED_LOWER = 'ordered';
     const STATUS_RECEIVED_LOWER = 'received';
+
+    public function getPaidAmountAttribute($value)
+    {
+        if (!is_null($value)) {
+            return (int) $value;
+        }
+        if ($this->relationLoaded('payments')) {
+            return (int) $this->payments->sum('amount');
+        }
+        return (int) $this->payments()->sum('amount');
+    }
+
+    public function getRemainingAmountAttribute()
+    {
+        return max(0, (int) $this->total_amount - (int) $this->paid_amount);
+    }
 
     public function supplier()
     {
@@ -52,6 +75,11 @@ class PurchaseOrder extends Model
     public function items()
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(SupplierPayment::class, 'purchase_order_id');
     }
 
     public function requirements()

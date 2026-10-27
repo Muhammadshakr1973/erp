@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
+import '../../products/providers/products_provider.dart';
+import '../../products/providers/suppliers_provider.dart';
 import '../models/purchase_requirement_model.dart';
 import '../models/purchase_order_model.dart';
 
@@ -70,6 +72,45 @@ class PurchaseActions {
   final Ref _ref;
 
   PurchaseActions(this._ref);
+
+  Future<PurchaseOrderModel> createPurchaseOrder({
+    required int? supplierId,
+    required int warehouseId,
+    required List<Map<String, dynamic>> items,
+    num? paidAmount,
+    bool autoReceive = true,
+    String? notes,
+  }) async {
+    final apiClient = _ref.read(apiClientProvider);
+    try {
+      final payload = <String, dynamic>{
+        'supplier_id': supplierId,
+        'warehouse_id': warehouseId,
+        'items': items,
+        'paid_amount': paidAmount ?? 0,
+        'auto_receive': autoReceive,
+        'notes': notes,
+      };
+
+      final response = await apiClient.client.post(
+        '/purchase-orders',
+        data: payload,
+      );
+
+      final resData = response.data;
+      final poData = resData['data'];
+
+      _ref.invalidate(purchaseOrdersProvider);
+      _ref.invalidate(purchaseRequirementsProvider);
+      _ref.invalidate(purchaseRequirementsGroupProvider);
+      _ref.invalidate(productsListProvider);
+      _ref.invalidate(suppliersListProvider);
+
+      return PurchaseOrderModel.fromJson(poData);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
 
   Future<void> convertRequirementsToPO({
     required List<int> requirementIds,

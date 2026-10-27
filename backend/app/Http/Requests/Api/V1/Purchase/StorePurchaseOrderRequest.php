@@ -14,9 +14,11 @@ class StorePurchaseOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id'  => ['required', 'integer', 'exists:suppliers,id'],
+            'supplier_id'  => ['nullable', 'integer'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
             'notes'        => ['nullable', 'string'],
+            'paid_amount'  => ['nullable', 'numeric', 'min:0'],
+            'auto_receive' => ['nullable', 'boolean'],
 
             // ئایتمەکانی ناو پسوڵەی کڕین
             'items'              => ['required', 'array', 'min:1'],

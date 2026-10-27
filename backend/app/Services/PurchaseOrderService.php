@@ -7,45 +7,166 @@ use App\Models\Supplier;
 use App\Models\WarehouseStock;
 use App\Models\StockTransaction;
 use App\Models\SupplierLedger;
+use App\Models\SupplierPayment;
+use App\Models\PurchaseRequirement;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 
 class PurchaseOrderService
 {
     /**
-     * دروستکردنی پسوڵەی کڕین (تەنها داواکاری - ستۆک زیاد ناکات)
+     * دروستکردنی پسوڵەی کڕین (دەتوانێت بەخۆکاری کاڵاکان وەربگرێت و قەرز و بڕی دراو تۆمار بکات)
      */
     public function createOrder(array $data, $user): PurchaseOrder
     {
         return DB::transaction(function () use ($data, $user) {
+            // ئەگەر دابینکەر دیاری نەکرابوو، دابینکەری گشتی/بێناو بەکاردەهێنرێت
+            $supplierId = !empty($data['supplier_id']) ? (int) $data['supplier_id'] : null;
+            if (!$supplierId) {
+                $defaultSupplier = Supplier::firstOrCreate(
+                    ['name' => 'دابینکەری گشتی (بێناو)'],
+                    [
+                        'phone' => null,
+                        'current_balance' => 0,
+                        'created_by' => $user->id,
+                    ]
+                );
+                $supplierId = $defaultSupplier->id;
+            }
+
+            $supplier = Supplier::lockForUpdate()->findOrFail($supplierId);
 
             $orderNumber = 'PO-' . strtoupper(Str::random(8));
             $totalAmount = 0;
+            $autoReceive = isset($data['auto_receive']) ? (bool) $data['auto_receive'] : true;
+            $paidAmount = isset($data['paid_amount']) ? max(0, (int) $data['paid_amount']) : 0;
 
-            $order = PurchaseOrder::create([
+            $initialStatus = $autoReceive ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_DRAFT;
+
+            $orderData = [
                 'order_number' => $orderNumber,
-                'supplier_id'  => $data['supplier_id'],
+                'supplier_id'  => $supplierId,
                 'warehouse_id' => $data['warehouse_id'],
-                'status'       => 'DRAFT',
+                'status'       => $initialStatus,
                 'notes'        => $data['notes'] ?? null,
                 'created_by'   => $user->id,
-                'total_amount' => 0, // دواتر ئەپدەیت دەکرێت
-            ]);
+                'total_amount' => 0,
+                'received_at'  => $autoReceive ? now() : null,
+            ];
 
-            foreach ($data['items'] as $item) {
-                $totalCost = $item['quantity'] * $item['unit_cost'];
-                $totalAmount += $totalCost;
-
-                $order->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity'   => $item['quantity'],
-                    'unit_cost'  => $item['unit_cost'],
-                    'total_cost' => $totalCost,
-                ]);
+            if (Schema::hasColumn('purchase_orders', 'paid_amount')) {
+                $orderData['paid_amount'] = $paidAmount;
             }
 
-            $order->update(['total_amount' => $totalAmount]);
+            $order = PurchaseOrder::create($orderData);
+
+            // ئایتمەکانی پسوڵەی کڕین
+            foreach ($data['items'] as $item) {
+                $qty = (int) $item['quantity'];
+                $unitCost = (int) $item['unit_cost'];
+                $lineTotal = $qty * $unitCost;
+                $totalAmount += $lineTotal;
+
+                $order->items()->create([
+                    'product_id'        => $item['product_id'],
+                    'quantity'          => $qty,
+                    'unit_cost'         => $unitCost,
+                    'total_cost'        => $lineTotal,
+                    'received_quantity' => $autoReceive ? $qty : 0,
+                ]);
+
+                // ئەگەر auto_receive چالاک بێت، ڕاستەوخۆ دەچێتە ستۆکی کۆگا
+                if ($autoReceive) {
+                    $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
+                        ['warehouse_id' => $data['warehouse_id'], 'product_id' => $item['product_id']],
+                        ['quantity' => 0, 'reserved_quantity' => 0]
+                    );
+
+                    $warehouseStock->adjustStock(
+                        $qty,
+                        'PURCHASE',
+                        $user->id,
+                        'purchase_order',
+                        $order->id
+                    );
+                }
+            }
+
+            // ئەپدەیتکردنی کۆی گشتی و بڕی دراو
+            $updatePayload = ['total_amount' => $totalAmount];
+            if (Schema::hasColumn('purchase_orders', 'paid_amount')) {
+                $updatePayload['paid_amount'] = min($paidAmount, $totalAmount);
+            }
+            $order->update($updatePayload);
+
+            // ئەگەر autoReceive بێت، مامەڵەی حیساباتی قەرز و بڕی پارەی دراو ئەنجام دەدرێت
+            if ($autoReceive) {
+                $previousBalance = (int) $supplier->current_balance;
+                $balanceAfterPurchase = $previousBalance + $totalAmount;
+
+                // ١. تۆمارکردنی کڕین لە دەفتەری حیساباتی دابینکەر (زیادبوونی قەرز)
+                SupplierLedger::create([
+                    'supplier_id'    => $supplier->id,
+                    'entry_type'     => 'PURCHASE',
+                    'type'           => 'credit',
+                    'debit'          => 0,
+                    'credit'         => $totalAmount,
+                    'amount'         => $totalAmount,
+                    'balance_before' => $previousBalance,
+                    'balance_after'  => $balanceAfterPurchase,
+                    'reference_type' => 'purchase_order',
+                    'reference_id'   => $order->id,
+                    'description'    => "کڕینی کاڵا بە پسوڵەی {$order->order_number}",
+                    'created_by'     => $user->id,
+                ]);
+
+                $finalBalance = $balanceAfterPurchase;
+
+                // ٢. ئەگەر پارەی نەقد درابێت، وەک پارەدان تۆمار دەکرێت و لە قەرز کەم دەبێتەوە
+                if ($paidAmount > 0) {
+                    $effectivePaid = min($paidAmount, $totalAmount);
+                    $finalBalance = $balanceAfterPurchase - $effectivePaid;
+
+                    SupplierPayment::create([
+                        'supplier_id'       => $supplier->id,
+                        'purchase_order_id' => $order->id,
+                        'amount'            => $effectivePaid,
+                        'payment_method'    => 'cash',
+                        'paid_at'           => now()->toDateString(),
+                        'notes'             => "پارەدانی نەقد بۆ پسوڵەی {$order->order_number}",
+                        'created_by'        => $user->id,
+                    ]);
+
+                    SupplierLedger::create([
+                        'supplier_id'    => $supplier->id,
+                        'entry_type'     => 'PAYMENT',
+                        'type'           => 'debit',
+                        'debit'          => $effectivePaid,
+                        'credit'         => 0,
+                        'amount'         => $effectivePaid,
+                        'balance_before' => $balanceAfterPurchase,
+                        'balance_after'  => $finalBalance,
+                        'reference_type' => 'supplier_payment',
+                        'reference_id'   => $order->id,
+                        'description'    => "پارەدانی پسوڵەی کڕین {$order->order_number}",
+                        'created_by'     => $user->id,
+                    ]);
+                }
+
+                $supplier->update(['current_balance' => $finalBalance]);
+
+                // ٣. داخستنی داواکارییە کراوەکانی کڕین (Purchase Requirements) بۆ ئەم کاڵایانە ئەگەر هەبن
+                $productIds = collect($data['items'])->pluck('product_id')->toArray();
+                PurchaseRequirement::whereIn('product_id', $productIds)
+                    ->where('warehouse_id', $order->warehouse_id)
+                    ->where('status', 'OPEN')
+                    ->update([
+                        'status'            => 'CLOSED',
+                        'purchase_order_id' => $order->id,
+                    ]);
+            }
 
             app(\App\Services\AuditService::class)->log([
                 'action'      => 'CREATE',
@@ -58,9 +179,10 @@ class PurchaseOrderService
                     'supplier_id'  => $order->supplier_id,
                     'warehouse_id' => $order->warehouse_id,
                     'total_amount' => $totalAmount,
+                    'paid_amount'  => $paidAmount,
                     'items_count'  => count($data['items']),
                 ],
-                'description' => "پسوڵەی کڕین دروستکرا: {$order->order_number} بە بڕی {$totalAmount}",
+                'description' => "پسوڵەی کڕین دروستکرا: {$order->order_number} بە بڕی {$totalAmount} (دراو: {$paidAmount})",
                 'user'        => $user,
             ]);
 

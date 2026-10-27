@@ -1,20 +1,26 @@
+import 'dart:math';
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_card.dart';
+import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/status_badge.dart';
 import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/permission_guard.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/supplier_model.dart';
+import '../../products/models/product_model.dart';
 import '../../products/providers/suppliers_provider.dart';
+import '../../products/providers/products_provider.dart';
+import '../../shared/providers/warehouse_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/models/receipt_data.dart';
 import '../../shared/services/receipt_print_service.dart';
@@ -24,6 +30,71 @@ import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
 import 'supplier_form_dialog.dart';
 import 'purchase_order_builder_dialog.dart';
+
+enum PurchaseUnitType { baseUnit, carton }
+enum CartonContentMode { byUnit, byPieces }
+
+class PurchaseCartItem {
+  final ProductModel product;
+  PurchaseUnitType unitType;
+  int quantity; // Base unit count OR carton count
+  CartonContentMode cartonContentMode;
+  int cartonContentValue; // If byUnit: units per carton. If byPieces: pieces per carton.
+  double unitCost;
+  double? cartonCost;
+  String? notes;
+
+  PurchaseCartItem({
+    required this.product,
+    this.unitType = PurchaseUnitType.baseUnit,
+    this.quantity = 1,
+    this.cartonContentMode = CartonContentMode.byUnit,
+    int? cartonContentValue,
+    double? unitCost,
+    this.cartonCost,
+    this.notes,
+  })  : cartonContentValue = cartonContentValue ?? (product.unitsPerCarton > 0 ? 10 : 1),
+        unitCost = unitCost ?? product.costPrice;
+
+  String get baseUnitName {
+    final u = product.unit?.trim();
+    return (u != null && u.isNotEmpty) ? u : 'دانە';
+  }
+
+  int get piecesPerUnit {
+    return product.unitsPerCarton > 0 ? product.unitsPerCarton : 1;
+  }
+
+  int get unitsPerOneCarton {
+    if (cartonContentMode == CartonContentMode.byUnit) {
+      return cartonContentValue > 0 ? cartonContentValue : 1;
+    } else {
+      final p = piecesPerUnit;
+      final val = (cartonContentValue / p).round();
+      return val > 0 ? val : 1;
+    }
+  }
+
+  int get totalStockUnits {
+    if (unitType == PurchaseUnitType.baseUnit) {
+      return quantity > 0 ? quantity : 1;
+    } else {
+      return (quantity > 0 ? quantity : 1) * unitsPerOneCarton;
+    }
+  }
+
+  double get totalLineCost {
+    if (unitType == PurchaseUnitType.carton && cartonCost != null && cartonCost! > 0) {
+      return (quantity > 0 ? quantity : 1) * cartonCost!;
+    }
+    return totalStockUnits * unitCost;
+  }
+
+  int get effectiveUnitCostForServer {
+    if (totalStockUnits <= 0) return unitCost.round();
+    return (totalLineCost / totalStockUnits).round();
+  }
+}
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
   const AdminPurchasesScreen({super.key});
@@ -39,6 +110,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   final Set<int> _selectedRequirementIds = {};
   bool _isConverting = false;
 
+  final List<PurchaseCartItem> _purchaseCart = [];
+  int? _selectedSupplierId; // null = دابینکەری نوێ (بێناو)
+  int? _selectedWarehouseId;
+  final TextEditingController _poNotesController = TextEditingController();
+  final TextEditingController _poPaidAmountController = TextEditingController();
+  final TextEditingController _productSearchController = TextEditingController();
+  final FocusNode _productSearchFocusNode = FocusNode();
+
+  final Set<int> _checkedProductIds = {};
+  String _lowStockFilter = 'all'; // 'all', 'checked', 'unchecked'
+  bool _isLowStockExpanded = true;
+  bool _isSubmittingPO = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +135,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _poNotesController.dispose();
+    _poPaidAmountController.dispose();
+    _productSearchController.dispose();
+    _productSearchFocusNode.dispose();
     super.dispose();
   }
 
@@ -248,7 +336,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'پێویست بۆ کڕین'),
+            Tab(text: 'کڕین'),
             Tab(text: 'پسوڵەکانی کڕین'),
             Tab(text: 'کۆمپانیاکان'),
           ],
@@ -258,7 +346,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRequirementsTab(context),
+          _buildPurchasesTab(context),
           _buildPurchaseOrdersTab(context),
           _buildSuppliersTab(context),
         ],
@@ -266,312 +354,1146 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
-  Widget _buildRequirementsTab(BuildContext context) {
-    final reqsAsync = ref.watch(purchaseRequirementsProvider);
-    final groupedAsync = ref.watch(purchaseRequirementsGroupProvider);
-    final theme = Theme.of(context);
+  double _calculateCartTotal() {
+    return _purchaseCart.fold(0.0, (sum, item) => sum + item.totalLineCost);
+  }
 
-    return reqsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const Text('کێشەیەک لە بارکردنی داواکارییەکان دروستبوو'),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                err.toString().replaceAll('Exception: ', ''),
-                style: AppTextStyles.caption,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.invalidate(purchaseRequirementsProvider);
-                  ref.invalidate(purchaseRequirementsGroupProvider);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('دووبارە هەوڵبدەرەوە'),
-              ),
-            ],
-          ),
-        ),
+  void _updatePaidAmountToTotal() {
+    final total = _calculateCartTotal();
+    _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
+    if (mounted) setState(() {});
+  }
+
+  void _addProductToCart(ProductModel product) {
+    final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
+    if (existingIndex >= 0) {
+      _purchaseCart[existingIndex].quantity += 1;
+    } else {
+      _purchaseCart.add(PurchaseCartItem(
+        product: product,
+        quantity: 1,
+      ));
+    }
+    _productSearchController.clear();
+    _updatePaidAmountToTotal();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.name} زیادکرا بۆ سەبەتەی کڕین'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(milliseconds: 900),
       ),
-      data: (requirements) {
-        if (requirements.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(purchaseRequirementsProvider);
-              ref.invalidate(purchaseRequirementsGroupProvider);
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.6,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(AppSpacing.lg),
+    );
+  }
+
+  void _removeFromCart(PurchaseCartItem item) {
+    setState(() {
+      if (item.quantity > 1) {
+        item.quantity -= 1;
+      } else {
+        _purchaseCart.remove(item);
+      }
+      _updatePaidAmountToTotal();
+    });
+  }
+
+  void _deleteCartItem(PurchaseCartItem item) {
+    setState(() {
+      _purchaseCart.remove(item);
+      _updatePaidAmountToTotal();
+    });
+  }
+
+  void _showItemConfigDialog(PurchaseCartItem item) {
+    final qtyController = TextEditingController(text: item.quantity.toString());
+    final cartonQtyController = TextEditingController(text: item.quantity.toString());
+    final contentValController = TextEditingController(text: item.cartonContentValue.toString());
+    final costController = TextEditingController(text: item.unitCost.toInt().toString());
+
+    PurchaseUnitType selectedUnitType = item.unitType;
+    CartonContentMode selectedCartonMode = item.cartonContentMode;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final theme = Theme.of(context);
+            final currentCartonQty = int.tryParse(cartonQtyController.text) ?? 1;
+            final currentContentVal = int.tryParse(contentValController.text) ?? 1;
+
+            int computedUnitsPerCarton;
+            if (selectedCartonMode == CartonContentMode.byUnit) {
+              computedUnitsPerCarton = currentContentVal > 0 ? currentContentVal : 1;
+            } else {
+              final p = item.piecesPerUnit;
+              computedUnitsPerCarton = (currentContentVal / p).round();
+              if (computedUnitsPerCarton <= 0) computedUnitsPerCarton = 1;
+            }
+            final computedTotalStock = currentCartonQty * computedUnitsPerCarton;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header with close button at TOP-LEFT (Rules compliant)
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'داخستن',
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              'دەستکاری کڕینی ${item.product.name}',
+                              style: AppTextStyles.h3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.sm),
+
+                      // Unit Type toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setDialogState(() {
+                                  selectedUnitType = PurchaseUnitType.baseUnit;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: selectedUnitType == PurchaseUnitType.baseUnit
+                                      ? theme.colorScheme.primaryContainer
+                                      : theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: selectedUnitType == PurchaseUnitType.baseUnit
+                                        ? theme.colorScheme.primary
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'یەکە (${item.baseUnitName})',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: selectedUnitType == PurchaseUnitType.baseUnit
+                                        ? theme.colorScheme.primary
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setDialogState(() {
+                                  selectedUnitType = PurchaseUnitType.carton;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: selectedUnitType == PurchaseUnitType.carton
+                                      ? theme.colorScheme.primaryContainer
+                                      : theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: selectedUnitType == PurchaseUnitType.carton
+                                        ? theme.colorScheme.primary
+                                        : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'کارتۆن',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: selectedUnitType == PurchaseUnitType.carton
+                                        ? theme.colorScheme.primary
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                      if (selectedUnitType == PurchaseUnitType.baseUnit) ...[
+                        AppTextField(
+                          controller: qtyController,
+                          labelText: 'بڕی یەکە (${item.baseUnitName})',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ] else ...[
+                        // Carton Mode inputs
+                        AppTextField(
+                          controller: cartonQtyController,
+                          labelText: 'بڕی کارتۆن (چەند کارتۆن کڕاوە)',
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setDialogState(() {}),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        Text(
+                          'ناوەڕۆکی کارتۆن بە چی هەژمار دەکرێت؟',
+                          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<CartonContentMode>(
+                                value: CartonContentMode.byUnit,
+                                groupValue: selectedCartonMode,
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  'یەکە (${item.baseUnitName})',
+                                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setDialogState(() {
+                                      selectedCartonMode = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<CartonContentMode>(
+                                value: CartonContentMode.byPieces,
+                                groupValue: selectedCartonMode,
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  'دانە',
+                                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setDialogState(() {
+                                      selectedCartonMode = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        AppTextField(
+                          controller: contentValController,
+                          labelText: selectedCartonMode == CartonContentMode.byUnit
+                              ? 'ژمارەی یەکە (${item.baseUnitName}) لە هەر کارتۆنێک'
+                              : 'ژمارەی دانە لە هەر کارتۆنێک (بۆ نمونە: ١٢٠ دانە)',
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setDialogState(() {}),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calculate_outlined, size: 20, color: AppColors.info),
+                              const SizedBox(width: AppSpacing.xs),
+                              Expanded(
+                                child: Text(
+                                  selectedCartonMode == CartonContentMode.byPieces
+                                      ? 'هەر کارتۆنێک = $computedUnitsPerCarton ${item.baseUnitName} ($currentContentVal دانە ÷ ${item.piecesPerUnit})\nکۆی ستۆکی زیادکراو = $computedTotalStock ${item.baseUnitName}'
+                                      : 'هەر کارتۆنێک = $currentContentVal ${item.baseUnitName}\nکۆی ستۆکی زیادکراو = $computedTotalStock ${item.baseUnitName}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        controller: costController,
+                        labelText: 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
+                        keyboardType: TextInputType.number,
+                      ),
+
+                      const SizedBox(height: AppSpacing.lg),
+                      // Primary action button only
+                      AppButton(
+                        text: 'پاشەکەوتکردن',
+                        onPressed: () {
+                          final parsedQty = selectedUnitType == PurchaseUnitType.baseUnit
+                              ? (int.tryParse(qtyController.text) ?? 1)
+                              : (int.tryParse(cartonQtyController.text) ?? 1);
+                          final parsedContent = int.tryParse(contentValController.text) ?? 1;
+                          final parsedCost = double.tryParse(costController.text) ?? item.unitCost;
+
+                          setState(() {
+                            item.unitType = selectedUnitType;
+                            item.cartonContentMode = selectedCartonMode;
+                            item.quantity = parsedQty > 0 ? parsedQty : 1;
+                            item.cartonContentValue = parsedContent > 0 ? parsedContent : 1;
+                            item.unitCost = parsedCost >= 0 ? parsedCost : item.unitCost;
+                            _updatePaidAmountToTotal();
+                          });
+
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _scanBarcode(List<ProductModel> allProducts) {
+    CameraBarcodeScanner.show(
+      context,
+      (barcode) {
+        final found = allProducts.where((p) => p.barcode == barcode.trim()).firstOrNull;
+        if (found != null) {
+          _addProductToCart(found);
+        } else {
+          AppSnackbar.show(
+            context,
+            message: 'هیچ کاڵایەک بەم باڕکۆدە ($barcode) نەدۆزرایەوە',
+            type: SnackbarType.warning,
+          );
+        }
+      },
+      closeOnScan: true,
+    );
+  }
+
+  void _addCheckedProductsToCart(List<ProductModel> products) {
+    int addedCount = 0;
+    for (final prod in products) {
+      if (_checkedProductIds.contains(prod.id)) {
+        final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == prod.id);
+        final suggestedQty = prod.minStockLevel > prod.totalStock
+            ? (prod.minStockLevel - prod.totalStock)
+            : 10;
+        final qtyToAdd = suggestedQty > 0 ? suggestedQty : 1;
+
+        if (existingIndex >= 0) {
+          _purchaseCart[existingIndex].quantity += qtyToAdd;
+        } else {
+          _purchaseCart.add(PurchaseCartItem(
+            product: prod,
+            quantity: qtyToAdd,
+          ));
+        }
+        addedCount++;
+      }
+    }
+    if (addedCount > 0) {
+      _checkedProductIds.clear();
+      _updatePaidAmountToTotal();
+      AppSnackbar.show(
+        context,
+        message: '$addedCount کاڵا زیادکران بۆ سەبەتەی کڕین',
+        type: SnackbarType.success,
+      );
+    }
+  }
+
+  Future<void> _submitPurchaseInvoice() async {
+    if (_isSubmittingPO) return;
+    if (_purchaseCart.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'سەبەتەی کڕین بەتاڵە! لانیکەم یەک کاڵا زیاد بکە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    final warehousesAsync = ref.read(warehouseListProvider);
+    final warehouses = warehousesAsync.asData?.value ?? [];
+    final warehouseId = _selectedWarehouseId ??
+        (warehouses.any((w) => w.isMain)
+            ? warehouses.firstWhere((w) => w.isMain).id
+            : (warehouses.isNotEmpty ? warehouses.first.id : 1));
+
+    final totalAmount = _calculateCartTotal();
+    final paidAmount = double.tryParse(_poPaidAmountController.text.trim()) ?? totalAmount;
+
+    final itemsPayload = _purchaseCart.map((item) {
+      return {
+        'product_id': item.product.id,
+        'quantity': item.totalStockUnits,
+        'unit_cost': item.effectiveUnitCostForServer,
+      };
+    }).toList();
+
+    setState(() => _isSubmittingPO = true);
+    try {
+      final order = await ref.read(purchaseActionsProvider).createPurchaseOrder(
+            supplierId: _selectedSupplierId,
+            warehouseId: warehouseId,
+            items: itemsPayload,
+            paidAmount: paidAmount,
+            autoReceive: true,
+            notes: _poNotesController.text.trim().isEmpty ? null : _poNotesController.text.trim(),
+          );
+
+      if (mounted) {
+        setState(() {
+          _purchaseCart.clear();
+          _poNotesController.clear();
+          _poPaidAmountController.clear();
+          _checkedProductIds.clear();
+        });
+
+        final remainingDebt = order.remainingDebt;
+        final debtMsg = remainingDebt > 0
+            ? ' (قەرزی ماوە بۆ دابینکەر: ${Formatters.currency(remainingDebt)} د.ع)'
+            : ' (تەواوی پسوڵەکە بە نەقد درا)';
+
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەی کڕین #${order.orderNumber} بەسەرکەوتوویی دروستکرا و کاڵاکان خرانە ناو ستۆک$debtMsg',
+          type: SnackbarType.success,
+        );
+
+        _tabController.animateTo(1);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: e.toString().replaceAll('Exception: ', ''),
+          type: SnackbarType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmittingPO = false);
+    }
+  }
+
+  Widget _buildPurchasesTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final productsAsync = ref.watch(productsListProvider);
+    final suppliersAsync = ref.watch(suppliersListProvider);
+    final warehousesAsync = ref.watch(warehouseListProvider);
+
+    return productsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('هەڵە لە بارکردنی کاڵاکان: $err', style: AppTextStyles.bodyMedium),
+      ),
+      data: (allProducts) {
+        // Find products that need purchasing (totalStock <= minStockLevel or stock <= 0)
+        final lowStockProducts = allProducts.where((p) {
+          if (p.minStockLevel > 0) {
+            return p.totalStock <= p.minStockLevel;
+          }
+          return p.totalStock <= 0;
+        }).toList();
+
+        List<ProductModel> filteredLowStock;
+        if (_lowStockFilter == 'checked') {
+          filteredLowStock = lowStockProducts.where((p) => _checkedProductIds.contains(p.id)).toList();
+        } else if (_lowStockFilter == 'unchecked') {
+          filteredLowStock = lowStockProducts.where((p) => !_checkedProductIds.contains(p.id)).toList();
+        } else {
+          filteredLowStock = lowStockProducts;
+        }
+
+        final suppliers = suppliersAsync.asData?.value ?? [];
+        final warehouses = warehousesAsync.asData?.value ?? [];
+
+        final totalAmount = _calculateCartTotal();
+        final paidAmount = double.tryParse(_poPaidAmountController.text.trim()) ?? totalAmount;
+        final remainingDebt = max(0.0, totalAmount - paidAmount);
+
+        return Column(
+          children: [
+            // Section 1: Note/Notice of Low Stock / Needed Products (کەمی ستۆک / پێویست بۆ کڕین)
+            if (lowStockProducts.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3),
+                  ),
+                ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      size: 80,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'هیچ داواکاری کڕینێکی کراوە بەردەست نییە',
-                      style: AppTextStyles.bodyBold.copyWith(
-                        color: Colors.grey.shade600,
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isLowStockExpanded = !_isLowStockExpanded;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Text(
+                                'تێبینی: ${lowStockProducts.length} کاڵا گەیشتوونەتە کەمترین بڕی ستۆک و پێویستن بۆ کڕین',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              _isLowStockExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                              size: 20,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'کاتێک ستۆک تەواو دەبێت لە کاتی پسوڵەی فرۆشتن، داواکاری لێرە دەردەکەوێت',
-                      style: AppTextStyles.caption,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ElevatedButton.icon(
-                      onPressed: _convertSelectedToPO,
-                      icon: const Icon(Icons.add_shopping_cart),
-                      label: const Text('کڕینی کاڵای تر'),
-                    ),
+                    if (_isLowStockExpanded) ...[
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                        child: Row(
+                          children: [
+                            // Filter Chips
+                            ChoiceChip(
+                              label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
+                              selected: _lowStockFilter == 'all',
+                              onSelected: (_) => setState(() => _lowStockFilter = 'all'),
+                            ),
+                            const SizedBox(width: 4),
+                            ChoiceChip(
+                              label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                              selected: _lowStockFilter == 'checked',
+                              onSelected: (_) => setState(() => _lowStockFilter = 'checked'),
+                            ),
+                            const SizedBox(width: 4),
+                            ChoiceChip(
+                              label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                              selected: _lowStockFilter == 'unchecked',
+                              onSelected: (_) => setState(() => _lowStockFilter = 'unchecked'),
+                            ),
+                            const Spacer(),
+                            if (_checkedProductIds.isNotEmpty)
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                ),
+                                icon: const Icon(Icons.add_shopping_cart, size: 16),
+                                label: Text(
+                                  'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                              ),
+                          ],
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 140),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                          itemCount: filteredLowStock.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final prod = filteredLowStock[index];
+                            final isChecked = _checkedProductIds.contains(prod.id);
+                            final unitStr = prod.unit?.trim().isNotEmpty == true ? prod.unit! : 'دانە';
+
+                            return Row(
+                              children: [
+                                Checkbox(
+                                  value: isChecked,
+                                  visualDensity: VisualDensity.compact,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _checkedProductIds.add(prod.id);
+                                      } else {
+                                        _checkedProductIds.remove(prod.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        prod.name,
+                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        'کەمترین بڕی ستۆک: ${prod.minStockLevel} • بارکۆد: ${prod.barcode}',
+                                        style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                StatusBadge(
+                                  label: 'مەوجود: ${prod.totalStock} $unitStr',
+                                  type: prod.totalStock <= 0 ? StatusBadgeType.danger : StatusBadgeType.warning,
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle_outline, size: 20),
+                                  tooltip: 'زیادکردن بۆ سەبەتە',
+                                  onPressed: () => _addProductToCart(prod),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
-          );
-        }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(purchaseRequirementsProvider);
-            ref.invalidate(purchaseRequirementsGroupProvider);
-          },
-          child: Column(
-            children: [
-              groupedAsync.maybeWhen(
-                data: (groups) {
-                  if (groups.isEmpty) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenHorizontal,
-                      vertical: AppSpacing.xs,
-                    ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          Text('گرووپی کۆمپانیاکان: ', style: AppTextStyles.caption),
-                          const SizedBox(width: AppSpacing.xs),
-                          ...groups.map((group) {
-                            final String name = group['supplier_name'] ?? 'بێ دابینکەر';
-                            final int count = group['items_count'] ?? 0;
-                            final List reqList = group['requirements'] ?? [];
+            // Section 2: Top Control Bar (Supplier selection + Add Supplier + Warehouse + Notes)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              color: theme.colorScheme.surfaceContainerLow,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      // Supplier selection dropdown
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          height: 42,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int?>(
+                              value: _selectedSupplierId,
+                              isExpanded: true,
+                              hint: const Text('دابینکەری نوێ (بێناو)'),
+                              items: [
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.person_outline, size: 18, color: Colors.grey),
+                                      SizedBox(width: 8),
+                                      Text('دابینکەری نوێ (بێناو)'),
+                                    ],
+                                  ),
+                                ),
+                                ...suppliers.map((s) => DropdownMenuItem<int?>(
+                                      value: s.id,
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.business_outlined, size: 18),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              '${s.name}${s.currentBalance > 0 ? " (قەرز: ${Formatters.currency(s.currentBalance)})" : ""}',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                              ],
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedSupplierId = val;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
 
-                            return Padding(
-                              padding: const EdgeInsets.only(right: AppSpacing.xs),
-                              child: ActionChip(
-                                label: Text('$name ($count)', style: AppTextStyles.caption),
-                                onPressed: () {
+                      // (+) Add Supplier icon button
+                      IconButton(
+                        icon: const Icon(Icons.person_add_alt_1_outlined, size: 22),
+                        tooltip: 'زیادکردنی دابینکەری نوێ',
+                        onPressed: () {
+                          _showAddSupplierDialog(context);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Warehouse selector dropdown
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 42,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              value: _selectedWarehouseId ??
+                                  (warehouses.any((w) => w.isMain)
+                                      ? warehouses.firstWhere((w) => w.isMain).id
+                                      : (warehouses.isNotEmpty ? warehouses.first.id : 1)),
+                              isExpanded: true,
+                              items: warehouses.map((w) {
+                                return DropdownMenuItem<int>(
+                                  value: w.id,
+                                  child: Text(w.name, overflow: TextOverflow.ellipsis),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
                                   setState(() {
-                                    for (var item in reqList) {
-                                      final id = item['id'];
-                                      if (id is int) {
-                                        _selectedRequirementIds.add(id);
-                                      }
-                                    }
+                                    _selectedWarehouseId = val;
                                   });
-                                },
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Notes text field
+                  AppTextField(
+                    controller: _poNotesController,
+                    hintText: 'تێبینی پسوڵەی کڕین...',
+                    prefixIcon: Icons.note_alt_outlined,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ],
+              ),
+            ),
+
+            // Section 3: Product Search Bar & Barcode Scanner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+              color: theme.colorScheme.surfaceContainerLow,
+              child: RawAutocomplete<ProductModel>(
+                textEditingController: _productSearchController,
+                focusNode: _productSearchFocusNode,
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<ProductModel>.empty();
+                  }
+                  final query = textEditingValue.text.toLowerCase().trim();
+                  return allProducts.where((p) =>
+                      p.name.toLowerCase().contains(query) ||
+                      p.barcode.toLowerCase().contains(query) ||
+                      (p.sku != null && p.sku!.toLowerCase().contains(query)));
+                },
+                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  return AppTextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    hintText: 'گەڕان بەپێی ناوی کاڵا یان بارکۆد...',
+                    prefixIcon: Icons.search,
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (controller.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              controller.clear();
+                              setState(() {});
+                            },
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.qr_code_scanner),
+                          tooltip: 'سکانی باڕکۆد',
+                          onPressed: () => _scanBarcode(allProducts),
+                        ),
+                      ],
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  );
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: AlignmentDirectional.topStart,
+                    child: Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(8),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 250, maxWidth: 400),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: options.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final prod = options.elementAt(index);
+                            return ListTile(
+                              dense: true,
+                              title: Text(prod.name, style: AppTextStyles.bodyBold),
+                              subtitle: Text(
+                                'تێچوو: ${Formatters.currency(prod.costPrice)} • ستۆک: ${prod.totalStock} ${prod.unit ?? "دانە"}',
+                                style: AppTextStyles.caption,
                               ),
+                              trailing: const Icon(Icons.add_shopping_cart, size: 20),
+                              onTap: () {
+                                _addProductToCart(prod);
+                                focusNode.unfocus();
+                              },
                             );
-                          }),
-                        ],
+                          },
+                        ),
                       ),
                     ),
                   );
                 },
-                orElse: () => const SizedBox.shrink(),
               ),
-              if (_selectedRequirementIds.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: 0.3,
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bool useVerticalLayout = constraints.maxWidth < 420;
-                      if (useVerticalLayout) {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
-                              style: AppTextStyles.bodyBold.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            _isConverting
-                                ? const Center(
-                                    child: SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  )
-                                : ElevatedButton.icon(
-                                    onPressed: _convertSelectedToPO,
-                                    icon: const Icon(Icons.shopping_cart_checkout),
-                                    label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
-                                  ),
-                          ],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          Text(
-                            'هەڵبژێردراو: ${_selectedRequirementIds.length} دانە',
-                            style: AppTextStyles.bodyBold.copyWith(
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                          const Spacer(),
-                          _isConverting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : ElevatedButton.icon(
-                                  onPressed: _convertSelectedToPO,
-                                  icon: const Icon(Icons.shopping_cart_checkout),
-                                  label: const Text('دروستکردنی پسوڵەی کڕین (PO)'),
-                                ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: requirements.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final req = requirements[index];
-                    final isSelected = _selectedRequirementIds.contains(req.id);
+            ),
 
-                    return AppCard(
-                      child: Row(
+            // Section 4: Cart Items List
+            Expanded(
+              child: _purchaseCart.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Checkbox(
-                            value: isSelected,
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) {
-                                  _selectedRequirementIds.add(req.id);
-                                } else {
-                                  _selectedRequirementIds.remove(req.id);
-                                }
-                              });
-                            },
+                          Icon(Icons.remove_shopping_cart_outlined, size: 72, color: Colors.grey.shade400),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'سەبەتەی کڕین بەتاڵە',
+                            style: AppTextStyles.h3.copyWith(color: Colors.grey.shade600),
                           ),
-                          Container(
-                            width: 44,
-                            height: 44,
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'کاڵاکان لە بەشی گەڕان یان لە بەشی کەمی ستۆکی سەرەوە زیاد بکە',
+                            style: AppTextStyles.caption,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      itemCount: _purchaseCart.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.xs),
+                      itemBuilder: (context, index) {
+                        final item = _purchaseCart[index];
+                        final isCarton = item.unitType == PurchaseUnitType.carton;
+
+                        return InkWell(
+                          onLongPress: () => _showItemConfigDialog(item),
+                          borderRadius: BorderRadius.circular(10),
+                          child: AppCard(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: Row(
+                              children: [
+                                // Thumbnail / Icon
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+
+                                // Product info & Unit details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.product.name,
+                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      // Unit display & carton conversion info
+                                      Row(
+                                        children: [
+                                          InkWell(
+                                            onTap: () => _showItemConfigDialog(item),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isCarton
+                                                    ? AppColors.purple.withValues(alpha: 0.15)
+                                                    : theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(
+                                                  color: isCarton ? AppColors.purple : theme.colorScheme.outlineVariant,
+                                                  width: 0.8,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                isCarton
+                                                    ? 'کارتۆن (${item.quantity} کارتۆن = ${item.totalStockUnits} ${item.baseUnitName})'
+                                                    : 'یەکە: ${item.baseUnitName}',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isCarton ? AppColors.purple : null,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'تێچوو: ${Formatters.currency(item.unitCost)}',
+                                            style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'کۆی گشتی دێڕ: ${Formatters.currency(item.totalLineCost)} د.ع',
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Stepper: [-] [qty] [+]
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle_outline, size: 22),
+                                      onPressed: () => _removeFromCart(item),
+                                    ),
+                                    Text(
+                                      '${item.quantity}',
+                                      style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_circle_outline, size: 22),
+                                      onPressed: () {
+                                        setState(() {
+                                          item.quantity += 1;
+                                          _updatePaidAmountToTotal();
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                // Delete item
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
+                                  onPressed: () => _deleteCartItem(item),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+
+            // Section 5: Bottom Summary Bar (Total Amount + Paid Amount + Debt + Confirm Button)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    offset: const Offset(0, -2),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Financial Summary: Total, Paid Amount, Remaining Debt
+                    Row(
+                      children: [
+                        // Total
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             decoration: BoxDecoration(
-                              color: req.isUrgent
-                                  ? AppColors.danger.withValues(alpha: 0.1)
-                                  : theme.colorScheme.primaryContainer
-                                        .withValues(alpha: 0.2),
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(
-                              req.isUrgent
-                                  ? Icons.warning_amber_rounded
-                                  : Icons.inventory_2_outlined,
-                              color: req.isUrgent
-                                  ? AppColors.danger
-                                  : theme.colorScheme.primary,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('کۆی پسوڵە:', style: AppTextStyles.caption),
+                                Text(
+                                  Formatters.currency(totalAmount),
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+
+                        // Paid Amount field + quick buttons
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Expanded(
+                                    Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
+                                    const Spacer(),
+                                    InkWell(
+                                      onTap: () {
+                                        _poPaidAmountController.text = totalAmount.toInt().toString();
+                                        setState(() {});
+                                      },
                                       child: Text(
-                                        req.productName,
-                                        style: AppTextStyles.bodyBold,
-                                        overflow: TextOverflow.ellipsis,
+                                        'نەقد',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                    if (req.isUrgent)
-                                      const StatusBadge(
-                                        label: 'بەپەلە',
-                                        type: StatusBadgeType.danger,
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () {
+                                        _poPaidAmountController.text = '0';
+                                        setState(() {});
+                                      },
+                                      child: Text(
+                                        'قەرز',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.warning,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'کۆمپانیا: ${req.supplierName ?? 'بێ کۆمپانیا'} • کۆگا: ${req.warehouseName}',
-                                  style: AppTextStyles.caption,
-                                ),
-                                if (req.salesOrderId != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2.0),
-                                    child: Text(
-                                      'لەلایەن پسوڵەی فرۆشتنی: #${req.salesOrderId}',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
+                                TextField(
+                                  controller: _poPaidAmountController,
+                                  keyboardType: TextInputType.number,
+                                  style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                    hintText: '0',
                                   ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              StatusBadge(
-                                label: 'بڕی پێویست: ${req.requiredQuantity}',
-                                type: StatusBadgeType.warning,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'مەوجود: ${req.currentStock}',
-                                style: AppTextStyles.caption,
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+
+                        // Remaining Debt
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: remainingDebt > 0
+                                  ? AppColors.warning.withValues(alpha: 0.15)
+                                  : AppColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('قەرزی ماوە:', style: AppTextStyles.caption),
+                                Text(
+                                  remainingDebt > 0 ? Formatters.currency(remainingDebt) : 'نەقد',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: remainingDebt > 0 ? AppColors.warning : AppColors.success,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    // Confirm Purchase Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: AppButton(
+                        text: 'تەئکیدکردنەوە و تۆمارکردنی پسوڵە',
+                        isLoading: _isSubmittingPO,
+                        onPressed: _purchaseCart.isEmpty ? null : _submitPurchaseInvoice,
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -698,7 +1620,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${order.supplierName} • ${order.itemsCount} کاڵا • ${_formatCurrency(order.totalAmount)}',
+                        '${order.supplierName} • ${order.itemsCount} کاڵا • کۆ: ${_formatCurrency(order.totalAmount)}'
+                        '${order.paidAmount > 0 ? " • دراوە: ${_formatCurrency(order.paidAmount)}" : ""}'
+                        '${order.remainingDebt > 0 ? " • ماوە (قەرز): ${_formatCurrency(order.remainingDebt)}" : ""}',
                         style: AppTextStyles.caption,
                       ),
                       Align(
