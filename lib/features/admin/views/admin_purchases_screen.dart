@@ -364,24 +364,32 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (mounted) setState(() {});
   }
 
-  void _addProductToCart(ProductModel product) {
-    final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
-    if (existingIndex >= 0) {
-      _purchaseCart[existingIndex].quantity += 1;
-    } else {
-      _purchaseCart.add(PurchaseCartItem(
-        product: product,
-        quantity: 1,
-      ));
-    }
-    _productSearchController.clear();
-    _updatePaidAmountToTotal();
+  void _addProductToCart(ProductModel product, {bool clearSearch = true}) {
+    int currentQty = 1;
+    setState(() {
+      final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
+      if (existingIndex >= 0) {
+        _purchaseCart[existingIndex].quantity += 1;
+        currentQty = _purchaseCart[existingIndex].quantity;
+      } else {
+        _purchaseCart.add(PurchaseCartItem(
+          product: product,
+          quantity: 1,
+        ));
+        currentQty = 1;
+      }
+      if (clearSearch) {
+        _productSearchController.clear();
+      }
+      _updatePaidAmountToTotal();
+    });
+
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product.name} زیادکرا بۆ سەبەتەی کڕین'),
+        content: Text('${product.name} زیادکرا بۆ پسوڵە (بڕ: $currentQty)'),
         backgroundColor: AppColors.success,
-        duration: const Duration(milliseconds: 900),
+        duration: const Duration(milliseconds: 700),
       ),
     );
   }
@@ -1233,7 +1241,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       elevation: 8,
                       borderRadius: BorderRadius.circular(8),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 250, maxWidth: 400),
+                        constraints: BoxConstraints(
+                          maxHeight: 280,
+                          maxWidth: MediaQuery.of(context).size.width - (AppSpacing.sm * 2),
+                        ),
                         child: ListView.separated(
                           shrinkWrap: true,
                           padding: EdgeInsets.zero,
@@ -1248,10 +1259,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 'تێچوو: ${Formatters.currency(prod.costPrice)} • ستۆک: ${prod.totalStock} ${prod.unit ?? "دانە"}',
                                 style: AppTextStyles.caption,
                               ),
-                              trailing: const Icon(Icons.add_shopping_cart, size: 20),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.add_shopping_cart, size: 20),
+                                tooltip: 'زیادکردن (بێ لانەچوونی لیستەکە)',
+                                onPressed: () {
+                                  _addProductToCart(prod, clearSearch: false);
+                                },
+                              ),
                               onTap: () {
-                                _addProductToCart(prod);
+                                _addProductToCart(prod, clearSearch: true);
                                 _productSearchFocusNode.unfocus();
+                              },
+                              onLongPress: () {
+                                _addProductToCart(prod, clearSearch: false);
                               },
                             );
                           },
