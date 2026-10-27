@@ -563,41 +563,107 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         Row(
                           children: [
                             Expanded(
-                              child: RadioListTile<CartonContentMode>(
-                                value: CartonContentMode.byUnit,
-                                groupValue: selectedCartonMode,
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  'یەکە (${item.baseUnitName})',
-                                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedCartonMode = val;
-                                    });
-                                  }
+                              child: InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedCartonMode = CartonContentMode.byUnit;
+                                  });
                                 },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: selectedCartonMode == CartonContentMode.byUnit
+                                        ? theme.colorScheme.primaryContainer
+                                        : theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: selectedCartonMode == CartonContentMode.byUnit
+                                          ? theme.colorScheme.primary
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        selectedCartonMode == CartonContentMode.byUnit
+                                            ? Icons.radio_button_checked
+                                            : Icons.radio_button_unchecked,
+                                        size: 18,
+                                        color: selectedCartonMode == CartonContentMode.byUnit
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.outline,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'یەکە (${item.baseUnitName})',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: selectedCartonMode == CartonContentMode.byUnit
+                                                ? theme.colorScheme.primary
+                                                : null,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
-                              child: RadioListTile<CartonContentMode>(
-                                value: CartonContentMode.byPieces,
-                                groupValue: selectedCartonMode,
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  'دانە',
-                                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedCartonMode = val;
-                                    });
-                                  }
+                              child: InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedCartonMode = CartonContentMode.byPieces;
+                                  });
                                 },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: selectedCartonMode == CartonContentMode.byPieces
+                                        ? theme.colorScheme.primaryContainer
+                                        : theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: selectedCartonMode == CartonContentMode.byPieces
+                                          ? theme.colorScheme.primary
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        selectedCartonMode == CartonContentMode.byPieces
+                                            ? Icons.radio_button_checked
+                                            : Icons.radio_button_unchecked,
+                                        size: 18,
+                                        color: selectedCartonMode == CartonContentMode.byPieces
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.outline,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'دانە',
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: selectedCartonMode == CartonContentMode.byPieces
+                                             ? theme.colorScheme.primary
+                                             : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -1037,7 +1103,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              '${s.name}${s.currentBalance > 0 ? " (قەرز: ${Formatters.currency(s.currentBalance)})" : ""}',
+                                              '${s.name}${s.debt > 0 ? " (قەرز: ${Formatters.currency(s.debt)})" : ""}',
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1185,7 +1251,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               trailing: const Icon(Icons.add_shopping_cart, size: 20),
                               onTap: () {
                                 _addProductToCart(prod);
-                                focusNode.unfocus();
+                                _productSearchFocusNode.unfocus();
                               },
                             );
                           },
