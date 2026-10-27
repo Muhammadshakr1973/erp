@@ -1197,6 +1197,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               child: RawAutocomplete<ProductModel>(
                 textEditingController: _productSearchController,
                 focusNode: _productSearchFocusNode,
+                displayStringForOption: (ProductModel option) => option.name,
+                onSelected: (ProductModel selection) {
+                  _addProductToCart(selection, clearSearch: true);
+                  _productSearchFocusNode.unfocus();
+                },
                 optionsBuilder: (TextEditingValue textEditingValue) {
                   if (textEditingValue.text.isEmpty) {
                     return const Iterable<ProductModel>.empty();
@@ -1235,46 +1240,79 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   );
                 },
                 optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: AlignmentDirectional.topStart,
-                    child: Material(
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(8),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: 280,
-                          maxWidth: MediaQuery.of(context).size.width - (AppSpacing.sm * 2),
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: options.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final prod = options.elementAt(index);
-                            return ListTile(
-                              dense: true,
-                              title: Text(prod.name, style: AppTextStyles.bodyBold),
-                              subtitle: Text(
-                                'تێچوو: ${Formatters.currency(prod.costPrice)} • ستۆک: ${prod.totalStock} ${prod.unit ?? "دانە"}',
-                                style: AppTextStyles.caption,
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.add_shopping_cart, size: 20),
-                                tooltip: 'زیادکردن (بێ لانەچوونی لیستەکە)',
-                                onPressed: () {
-                                  _addProductToCart(prod, clearSearch: false);
+                  return TapRegion(
+                    groupId: _productSearchFocusNode,
+                    child: Align(
+                      alignment: AlignmentDirectional.topStart,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Material(
+                          elevation: 8,
+                          shadowColor: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          clipBehavior: Clip.antiAlias,
+                          color: theme.colorScheme.surface,
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width - (AppSpacing.sm * 2),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 300),
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.zero,
+                                itemCount: options.length,
+                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final prod = options.elementAt(index);
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        _addProductToCart(prod, clearSearch: true);
+                                        _productSearchFocusNode.unfocus();
+                                      },
+                                      onLongPress: () {
+                                        _addProductToCart(prod, clearSearch: false);
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        child: Row(
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.add_shopping_cart, size: 20),
+                                              tooltip: 'زیادکردن (بێ لانەچوونی لیستەکە)',
+                                              onPressed: () {
+                                                _addProductToCart(prod, clearSearch: false);
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    prod.name,
+                                                    style: AppTextStyles.bodyBold,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    'تێچوو: ${Formatters.currency(prod.costPrice)} • ستۆک: ${prod.totalStock} ${prod.unit ?? "دانە"}',
+                                                    style: AppTextStyles.caption,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
-                              onTap: () {
-                                _addProductToCart(prod, clearSearch: true);
-                                _productSearchFocusNode.unfocus();
-                              },
-                              onLongPress: () {
-                                _addProductToCart(prod, clearSearch: false);
-                              },
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       ),
                     ),
