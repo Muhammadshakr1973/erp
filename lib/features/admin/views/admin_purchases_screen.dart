@@ -966,41 +966,45 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       const Divider(height: 1),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
-                        child: Row(
-                          children: [
-                            // Filter Chips
-                            ChoiceChip(
-                              label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
-                              selected: _lowStockFilter == 'all',
-                              onSelected: (_) => setState(() => _lowStockFilter = 'all'),
-                            ),
-                            const SizedBox(width: 4),
-                            ChoiceChip(
-                              label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
-                              selected: _lowStockFilter == 'checked',
-                              onSelected: (_) => setState(() => _lowStockFilter = 'checked'),
-                            ),
-                            const SizedBox(width: 4),
-                            ChoiceChip(
-                              label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
-                              selected: _lowStockFilter == 'unchecked',
-                              onSelected: (_) => setState(() => _lowStockFilter = 'unchecked'),
-                            ),
-                            const Spacer(),
-                            if (_checkedProductIds.isNotEmpty)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                ),
-                                icon: const Icon(Icons.add_shopping_cart, size: 16),
-                                label: Text(
-                                  'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              // Filter Chips
+                              ChoiceChip(
+                                label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
+                                selected: _lowStockFilter == 'all',
+                                onSelected: (_) => setState(() => _lowStockFilter = 'all'),
                               ),
-                          ],
+                              const SizedBox(width: 4),
+                              ChoiceChip(
+                                label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                selected: _lowStockFilter == 'checked',
+                                onSelected: (_) => setState(() => _lowStockFilter = 'checked'),
+                              ),
+                              const SizedBox(width: 4),
+                              ChoiceChip(
+                                label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                selected: _lowStockFilter == 'unchecked',
+                                onSelected: (_) => setState(() => _lowStockFilter = 'unchecked'),
+                              ),
+                              if (_checkedProductIds.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  ),
+                                  icon: const Icon(Icons.add_shopping_cart, size: 16),
+                                  label: Text(
+                                    'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                       ConstrainedBox(
@@ -1355,108 +1359,170 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           onLongPress: () => _showItemConfigDialog(item),
                           borderRadius: BorderRadius.circular(10),
                           child: AppCard(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            child: Row(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Thumbnail / Icon
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-
-                                // Product info & Unit details
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
+                                // Top row: Thumbnail + Product Name + Delete button
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(Icons.inventory_2_outlined, size: 20, color: theme.colorScheme.primary),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Text(
                                         item.product.name,
                                         style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                                        maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 2),
-                                      // Unit display & carton conversion info
-                                      Row(
-                                        children: [
-                                          InkWell(
-                                            onTap: () => _showItemConfigDialog(item),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: isCarton
-                                                    ? AppColors.purple.withValues(alpha: 0.15)
-                                                    : theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(
-                                                  color: isCarton ? AppColors.purple : theme.colorScheme.outlineVariant,
-                                                  width: 0.8,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                isCarton
-                                                    ? 'کارتۆن (${item.quantity} کارتۆن = ${item.totalStockUnits} ${item.baseUnitName})'
-                                                    : 'یەکە: ${item.baseUnitName}',
-                                                style: AppTextStyles.caption.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isCarton ? AppColors.purple : null,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'تێچوو: ${Formatters.currency(item.unitCost)}',
-                                            style: AppTextStyles.caption.copyWith(fontSize: 11),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'کۆی گشتی دێڕ: ${Formatters.currency(item.totalLineCost)} د.ع',
-                                        style: AppTextStyles.caption.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Stepper: [-] [qty] [+]
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 22),
-                                      onPressed: () => _removeFromCart(item),
-                                    ),
-                                    Text(
-                                      '${item.quantity}',
-                                      style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.add_circle_outline, size: 22),
-                                      onPressed: () {
-                                        setState(() {
-                                          item.quantity += 1;
-                                          _updatePaidAmountToTotal();
-                                        });
-                                      },
+                                      icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      tooltip: 'سڕینەوە',
+                                      onPressed: () => _deleteCartItem(item),
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 6),
 
-                                // Delete item
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-                                  onPressed: () => _deleteCartItem(item),
+                                // Middle section: Unit Badge (with edit icon) + Unit Cost using Wrap
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    InkWell(
+                                      onTap: () => _showItemConfigDialog(item),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isCarton
+                                              ? AppColors.purple.withValues(alpha: 0.15)
+                                              : theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: isCarton ? AppColors.purple : theme.colorScheme.outlineVariant,
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isCarton ? Icons.all_inbox_outlined : Icons.straighten,
+                                              size: 13,
+                                              color: isCarton ? AppColors.purple : theme.colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              isCarton
+                                                  ? 'کارتۆن (${item.quantity} کارتۆن = ${item.totalStockUnits} ${item.baseUnitName})'
+                                                  : 'یەکە: ${item.baseUnitName}',
+                                              style: AppTextStyles.caption.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: isCarton ? AppColors.purple : null,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              Icons.edit_outlined,
+                                              size: 11,
+                                              color: isCarton ? AppColors.purple : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      'تێچوو: ${Formatters.currency(item.unitCost)} د.ع',
+                                      style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Bottom row: Total line cost on one side, Stepper on the other side
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'کۆی گشتی دێڕ: ',
+                                            style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                          ),
+                                          Flexible(
+                                            child: Text(
+                                              '${Formatters.currency(item.totalLineCost)} د.ع',
+                                              style: AppTextStyles.bodyBold.copyWith(
+                                                color: theme.colorScheme.primary,
+                                                fontSize: 13,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Stepper: [-] [qty] [+]
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.remove, size: 18),
+                                            visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            constraints: const BoxConstraints(minWidth: 30, minHeight: 28),
+                                            tooltip: 'کەمکردنەوە',
+                                            onPressed: () => _removeFromCart(item),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                                            child: Text(
+                                              '${item.quantity}',
+                                              style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add, size: 18),
+                                            visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            constraints: const BoxConstraints(minWidth: 30, minHeight: 28),
+                                            tooltip: 'زیادکردن',
+                                            onPressed: () {
+                                              setState(() {
+                                                item.quantity += 1;
+                                                _updatePaidAmountToTotal();
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
