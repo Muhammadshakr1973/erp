@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/components/app_card.dart';
 import '../../../core/components/app_button.dart';
@@ -94,6 +97,65 @@ class PurchaseCartItem {
     if (totalStockUnits <= 0) return unitCost.round();
     return (totalLineCost / totalStockUnits).round();
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'product_id': product.id,
+      'product_name': product.name,
+      'product_barcode': product.barcode,
+      'product_unit': product.unit,
+      'product_cost_price': product.costPrice,
+      'product_price_n1': product.priceN1,
+      'product_price_n2': product.priceN2,
+      'product_price_n3': product.priceN3,
+      'product_units_per_carton': product.unitsPerCarton,
+      'product_sku': product.sku,
+      'unit_type': unitType == PurchaseUnitType.carton ? 'carton' : 'baseUnit',
+      'quantity': quantity,
+      'carton_content_mode':
+          cartonContentMode == CartonContentMode.byPieces ? 'byPieces' : 'byUnit',
+      'carton_content_value': cartonContentValue,
+      'unit_cost': unitCost,
+      'carton_cost': cartonCost,
+      'notes': notes,
+    };
+  }
+
+  factory PurchaseCartItem.fromJson(Map<String, dynamic> json,
+      {ProductModel? matchedProduct}) {
+    final prod = matchedProduct ??
+        ProductModel(
+          id: json['product_id'] ?? 0,
+          name: json['product_name'] ?? '',
+          barcode: json['product_barcode'] ?? '',
+          sku: json['product_sku'],
+          unit: json['product_unit'],
+          costPrice: (json['product_cost_price'] as num?)?.toDouble() ?? 0.0,
+          priceN1: (json['product_price_n1'] as num?)?.toDouble() ?? 0.0,
+          priceN2: (json['product_price_n2'] as num?)?.toDouble() ?? 0.0,
+          priceN3: (json['product_price_n3'] as num?)?.toDouble() ?? 0.0,
+          unitsPerCarton:
+              (json['product_units_per_carton'] as num?)?.toInt() ?? 1,
+        );
+
+    final uType = (json['unit_type'] == 'carton')
+        ? PurchaseUnitType.carton
+        : PurchaseUnitType.baseUnit;
+    final cMode = (json['carton_content_mode'] == 'byPieces')
+        ? CartonContentMode.byPieces
+        : CartonContentMode.byUnit;
+
+    return PurchaseCartItem(
+      product: prod,
+      unitType: uType,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      cartonContentMode: cMode,
+      cartonContentValue: (json['carton_content_value'] as num?)?.toInt(),
+      unitCost: (json['unit_cost'] as num?)?.toDouble(),
+      cartonCost: (json['carton_cost'] as num?)?.toDouble(),
+      notes: json['notes'] as String?,
+    );
+  }
 }
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
@@ -106,6 +168,8 @@ class AdminPurchasesScreen extends ConsumerStatefulWidget {
 
 class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     with SingleTickerProviderStateMixin {
+  static const String _kPurchaseCartDraftKey = 'admin_purchase_cart_draft';
+
   late TabController _tabController;
   final Set<int> _selectedRequirementIds = {};
   bool _isConverting = false;
@@ -123,6 +187,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   bool _isLowStockExpanded = true;
   bool _isSubmittingPO = false;
 
+  bool _hasRestoredDraft = false;
+  Timer? _draftDebounceTimer;
+
   @override
   void initState() {
     super.initState();
@@ -130,10 +197,130 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     _tabController.addListener(() {
       setState(() {});
     });
+    _poNotesController.addListener(_onCartDataChanged);
+    _poPaidAmountController.addListener(_onCartDataChanged);
+  }
+
+  void _onCartDataChanged() {
+    _draftDebounceTimer?.cancel();
+    _draftDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _saveCartDraft();
+    });
+  }
+
+  Future<void> _saveCartDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_purchaseCart.isEmpty) {
+        await prefs.remove(_kPurchaseCartDraftKey);
+        return;
+      }
+      final draftData = {
+        'items': _purchaseCart.map((item) => item.toJson()).toList(),
+        'supplier_id': _selectedSupplierId,
+        'warehouse_id': _selectedWarehouseId,
+        'notes': _poNotesController.text,
+        'paid_amount': _poPaidAmountController.text,
+      };
+      await prefs.setString(_kPurchaseCartDraftKey, jsonEncode(draftData));
+    } catch (e) {
+      debugPrint('Error saving purchase cart draft: $e');
+    }
+  }
+
+  Future<void> _clearCartDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kPurchaseCartDraftKey);
+    } catch (e) {
+      debugPrint('Error clearing purchase cart draft: $e');
+    }
+  }
+
+  Future<void> _restoreCartDraft(List<ProductModel> allProducts) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draftStr = prefs.getString(_kPurchaseCartDraftKey);
+      if (draftStr == null || draftStr.isEmpty) return;
+
+      final dynamic decoded = jsonDecode(draftStr);
+      if (decoded is! Map<String, dynamic>) return;
+
+      final List<dynamic>? rawItems = decoded['items'];
+      if (rawItems == null || rawItems.isEmpty) return;
+
+      final List<PurchaseCartItem> restoredItems = [];
+      for (final raw in rawItems) {
+        if (raw is Map<String, dynamic>) {
+          final prodId = raw['product_id'];
+          ProductModel? matched;
+          if (prodId != null) {
+            matched = allProducts.where((p) => p.id == prodId).firstOrNull;
+          }
+          restoredItems.add(
+              PurchaseCartItem.fromJson(raw, matchedProduct: matched));
+        }
+      }
+
+      if (restoredItems.isNotEmpty && mounted) {
+        setState(() {
+          _purchaseCart.clear();
+          _purchaseCart.addAll(restoredItems);
+          if (decoded['supplier_id'] != null) {
+            _selectedSupplierId = decoded['supplier_id'] as int?;
+          }
+          if (decoded['warehouse_id'] != null) {
+            _selectedWarehouseId = decoded['warehouse_id'] as int?;
+          }
+          final savedNotes = decoded['notes'] as String?;
+          if (savedNotes != null && savedNotes.isNotEmpty) {
+            _poNotesController.text = savedNotes;
+          }
+          final savedPaid = decoded['paid_amount'] as String?;
+          if (savedPaid != null && savedPaid.isNotEmpty) {
+            _poPaidAmountController.text = savedPaid;
+          } else {
+            _updatePaidAmountToTotal();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error restoring purchase cart draft: $e');
+    }
+  }
+
+  void _clearEntireCart() async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'سڕینەوەی سەبەتەی کڕین',
+      message: 'ئایا دڵنیایت لە سڕینەوەی تەواوی کاڵاکانی ئەم پسوڵەیە؟',
+      confirmText: 'بەڵێ، بسڕەوە',
+      cancelText: 'پەشیمانبوونەوە',
+      isDanger: true,
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        _purchaseCart.clear();
+        _poNotesController.clear();
+        _poPaidAmountController.clear();
+      });
+      _clearCartDraft();
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'کاڵاکانی پسوڵە بەسەرکەوتوویی سڕانەوە',
+          type: SnackbarType.info,
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    _draftDebounceTimer?.cancel();
+    _poNotesController.removeListener(_onCartDataChanged);
+    _poPaidAmountController.removeListener(_onCartDataChanged);
     _tabController.dispose();
     _poNotesController.dispose();
     _poPaidAmountController.dispose();
@@ -362,6 +549,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     final total = _calculateCartTotal();
     _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
     if (mounted) setState(() {});
+    _saveCartDraft();
   }
 
   void _addProductToCart(ProductModel product, {bool clearSearch = true}) {
@@ -383,6 +571,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       }
       _updatePaidAmountToTotal();
     });
+    _saveCartDraft();
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -403,6 +592,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       }
       _updatePaidAmountToTotal();
     });
+    _saveCartDraft();
   }
 
   void _deleteCartItem(PurchaseCartItem item) {
@@ -410,6 +600,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       _purchaseCart.remove(item);
       _updatePaidAmountToTotal();
     });
+    _saveCartDraft();
   }
 
   void _showItemConfigDialog(PurchaseCartItem item) {
@@ -740,6 +931,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             item.unitCost = parsedCost >= 0 ? parsedCost : item.unitCost;
                             _updatePaidAmountToTotal();
                           });
+                          _saveCartDraft();
 
                           Navigator.pop(ctx);
                         },
@@ -798,6 +990,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (addedCount > 0) {
       _checkedProductIds.clear();
       _updatePaidAmountToTotal();
+      _saveCartDraft();
       AppSnackbar.show(
         context,
         message: '$addedCount کاڵا زیادکران بۆ سەبەتەی کڕین',
@@ -853,6 +1046,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           _poPaidAmountController.clear();
           _checkedProductIds.clear();
         });
+        _clearCartDraft();
 
         final remainingDebt = order.remainingDebt;
         final debtMsg = remainingDebt > 0
@@ -892,6 +1086,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         child: Text('هەڵە لە بارکردنی کاڵاکان: $err', style: AppTextStyles.bodyMedium),
       ),
       data: (allProducts) {
+        if (!_hasRestoredDraft) {
+          _hasRestoredDraft = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _restoreCartDraft(allProducts);
+            }
+          });
+        }
         // Find products that need purchasing (totalStock <= minStockLevel or stock <= 0)
         final lowStockProducts = allProducts.where((p) {
           if (p.minStockLevel > 0) {
@@ -1127,6 +1329,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 setState(() {
                                   _selectedSupplierId = val;
                                 });
+                                _saveCartDraft();
                               },
                             ),
                           ),
@@ -1173,6 +1376,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   setState(() {
                                     _selectedWarehouseId = val;
                                   });
+                                  _saveCartDraft();
                                 }
                               },
                             ),
@@ -1326,6 +1530,31 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             ),
 
             // Section 4: Cart Items List
+            if (_purchaseCart.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.shopping_bag_outlined, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'کاڵاکانی پسوڵە (${_purchaseCart.length})',
+                      style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.danger,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                      label: const Text('سڕینەوەی هەمووی', style: TextStyle(fontSize: 12)),
+                      onPressed: _clearEntireCart,
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: _purchaseCart.isEmpty
                   ? Center(
