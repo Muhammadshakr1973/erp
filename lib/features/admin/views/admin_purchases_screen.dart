@@ -176,7 +176,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   final List<PurchaseCartItem> _purchaseCart = [];
   int? _activeDraftOrderId;
-  int? _lastLoadedDraftOrderId;
   int? _selectedSupplierId; // null = دابینکەری نوێ (بێناو)
   int? _selectedWarehouseId;
   final TextEditingController _poNotesController = TextEditingController();
@@ -1359,12 +1358,25 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       ),
                       const SizedBox(height: AppSpacing.md),
                       if (otherDrafts.isNotEmpty) ...[
-                        RadioListTile<bool>(
-                          title: const Text('گواستنەوە بۆ پسوڵەیەکی کراوەی تر:'),
-                          value: false,
-                          groupValue: isCreateNew,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (val) => setDlgState(() => isCreateNew = false),
+                        InkWell(
+                          onTap: () => setDlgState(() => isCreateNew = false),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  !isCreateNew ? Icons.radio_button_checked : Icons.radio_button_off,
+                                  color: !isCreateNew ? AppColors.primary : theme.colorScheme.outline,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text('گواستنەوە بۆ پسوڵەیەکی کراوەی تر:'),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         if (!isCreateNew)
                           Container(
@@ -1394,12 +1406,25 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             ),
                           ),
                       ],
-                      RadioListTile<bool>(
-                        title: const Text('دروستکردنی پسوڵەی نوێ بۆ ئەم کاڵایە'),
-                        value: true,
-                        groupValue: isCreateNew,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (val) => setDlgState(() => isCreateNew = true),
+                      InkWell(
+                        onTap: () => setDlgState(() => isCreateNew = true),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isCreateNew ? Icons.radio_button_checked : Icons.radio_button_off,
+                                color: isCreateNew ? AppColors.primary : theme.colorScheme.outline,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text('دروستکردنی پسوڵەی نوێ بۆ ئەم کاڵایە'),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1987,7 +2012,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           if (_activeDraftOrderId == null && draftOrders.isNotEmpty) {
             final firstDraft = draftOrders.first;
             _activeDraftOrderId = firstDraft.id;
-            _lastLoadedDraftOrderId = firstDraft.id;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 _loadDraftOrderData(firstDraft, allProducts);
