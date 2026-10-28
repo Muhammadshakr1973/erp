@@ -583,16 +583,29 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
+  Future<void> _confirmDeleteCartItem(PurchaseCartItem item) async {
+    final confirmed = await AppDialog.showConfirm(
+      context,
+      title: 'سڕینەوەی کاڵا',
+      message: 'ئایا دڵنیایت لە سڕینەوەی «${item.product.name}» لە پسوڵەی کڕین؟',
+      confirmText: 'بەڵێ، بسڕەوە',
+      isDanger: true,
+    );
+    if (confirmed == true && mounted) {
+      _deleteCartItem(item);
+    }
+  }
+
   void _removeFromCart(PurchaseCartItem item) {
-    setState(() {
-      if (item.quantity > 1) {
+    if (item.quantity > 1) {
+      setState(() {
         item.quantity -= 1;
-      } else {
-        _purchaseCart.remove(item);
-      }
-      _updatePaidAmountToTotal();
-    });
-    _saveCartDraft();
+        _updatePaidAmountToTotal();
+      });
+      _saveCartDraft();
+    } else {
+      _confirmDeleteCartItem(item);
+    }
   }
 
   void _deleteCartItem(PurchaseCartItem item) {
@@ -1585,14 +1598,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         final isCarton = item.unitType == PurchaseUnitType.carton;
 
                         return InkWell(
-                          onLongPress: () => _showItemConfigDialog(item),
+                          onTap: () => _showItemConfigDialog(item),
+                          onLongPress: () => _confirmDeleteCartItem(item),
                           borderRadius: BorderRadius.circular(10),
                           child: AppCard(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Top row: Thumbnail + Product Name + Delete button
+                                // Top row: Thumbnail + Product Name
                                 Row(
                                   children: [
                                     Container(
@@ -1612,14 +1626,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                      tooltip: 'سڕینەوە',
-                                      onPressed: () => _deleteCartItem(item),
                                     ),
                                   ],
                                 ),
@@ -1708,7 +1714,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         ],
                                       ),
                                     ),
-                                    // Stepper: [-] [qty] [+]
+                                    // Stepper: [+] [qty] [-]
                                     Container(
                                       decoration: BoxDecoration(
                                         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -1721,21 +1727,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
-                                            icon: const Icon(Icons.remove, size: 18),
-                                            visualDensity: VisualDensity.compact,
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            constraints: const BoxConstraints(minWidth: 30, minHeight: 28),
-                                            tooltip: 'کەمکردنەوە',
-                                            onPressed: () => _removeFromCart(item),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                                            child: Text(
-                                              '${item.quantity}',
-                                              style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
-                                            ),
-                                          ),
-                                          IconButton(
                                             icon: const Icon(Icons.add, size: 18),
                                             visualDensity: VisualDensity.compact,
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1747,6 +1738,21 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                 _updatePaidAmountToTotal();
                                               });
                                             },
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                                            child: Text(
+                                              '${item.quantity}',
+                                              style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.remove, size: 18),
+                                            visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            constraints: const BoxConstraints(minWidth: 30, minHeight: 28),
+                                            tooltip: 'کەمکردنەوە',
+                                            onPressed: () => _removeFromCart(item),
                                           ),
                                         ],
                                       ),
