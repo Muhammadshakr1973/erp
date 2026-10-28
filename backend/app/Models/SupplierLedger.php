@@ -22,6 +22,12 @@ class SupplierLedger extends Model
             if (empty($ledger->created_by)) {
                 $ledger->created_by = auth()->id() ?? 1;
             }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('supplier_ledger', 'balance_before')) {
+                unset($ledger->balance_before);
+            }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('supplier_ledger', 'balance_after')) {
+                unset($ledger->balance_after);
+            }
         });
         static::updating(fn() => false);
         static::deleting(fn() => false);
