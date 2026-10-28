@@ -186,6 +186,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   String _lowStockFilter = 'all'; // 'all', 'checked', 'unchecked'
   bool _isLowStockExpanded = true;
   bool _isSubmittingPO = false;
+  bool _userModifiedPaidAmount = false;
 
   bool _hasRestoredDraft = false;
   Timer? _draftDebounceTimer;
@@ -193,6 +194,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   @override
   void initState() {
     super.initState();
+    _poPaidAmountController.text = '0';
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -279,8 +281,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           final savedPaid = decoded['paid_amount'] as String?;
           if (savedPaid != null && savedPaid.isNotEmpty) {
             _poPaidAmountController.text = savedPaid;
+            _userModifiedPaidAmount = true;
           } else {
-            _updatePaidAmountToTotal();
+            _updatePaidAmountToTotal(force: true);
           }
         });
       }
@@ -303,7 +306,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       setState(() {
         _purchaseCart.clear();
         _poNotesController.clear();
-        _poPaidAmountController.clear();
+        _poPaidAmountController.text = '0';
+        _userModifiedPaidAmount = false;
       });
       _clearCartDraft();
       if (mounted) {
@@ -545,9 +549,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     return _purchaseCart.fold(0.0, (sum, item) => sum + item.totalLineCost);
   }
 
-  void _updatePaidAmountToTotal() {
+  void _updatePaidAmountToTotal({bool force = false}) {
     final total = _calculateCartTotal();
-    _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
+    if (force || !_userModifiedPaidAmount) {
+      _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
+    }
     if (mounted) setState(() {});
     _saveCartDraft();
   }
@@ -1031,7 +1037,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             : (warehouses.isNotEmpty ? warehouses.first.id : 1));
 
     final totalAmount = _calculateCartTotal();
-    final paidAmount = double.tryParse(_poPaidAmountController.text.trim()) ?? totalAmount;
+    final textVal = _poPaidAmountController.text.trim();
+    final parsedPaid = double.tryParse(textVal);
+    final paidAmount = parsedPaid ?? (_userModifiedPaidAmount ? 0.0 : totalAmount);
 
     final itemsPayload = _purchaseCart.map((item) {
       return {
@@ -1056,15 +1064,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         setState(() {
           _purchaseCart.clear();
           _poNotesController.clear();
-          _poPaidAmountController.clear();
+          _poPaidAmountController.text = '0';
           _checkedProductIds.clear();
+          _userModifiedPaidAmount = false;
         });
         _clearCartDraft();
 
         final remainingDebt = order.remainingDebt;
         final debtMsg = remainingDebt > 0
             ? ' (قەرزی ماوە بۆ دابینکەر: ${Formatters.currency(remainingDebt)} د.ع)'
-            : ' (تەواوی پسوڵەکە بە نەقد درا)';
+            : ' (تەواوی بڕی پسوڵە درا)';
 
         AppSnackbar.show(
           context,
@@ -1128,7 +1137,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         final warehouses = warehousesAsync.asData?.value ?? [];
 
         final totalAmount = _calculateCartTotal();
-        final paidAmount = double.tryParse(_poPaidAmountController.text.trim()) ?? totalAmount;
+        final textVal = _poPaidAmountController.text.trim();
+        final parsedPaid = double.tryParse(textVal);
+        final paidAmount = parsedPaid ?? (_userModifiedPaidAmount ? 0.0 : totalAmount);
         final remainingDebt = max(0.0, totalAmount - paidAmount);
 
         return Column(
@@ -1810,11 +1821,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         ),
                         const SizedBox(width: AppSpacing.xs),
 
-                        // Paid Amount field + quick buttons
+                        // Paid Amount field
                         Expanded(
-                          flex: 2,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
@@ -1822,50 +1832,24 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
-                                    const Spacer(),
-                                    InkWell(
-                                      onTap: () {
-                                        _poPaidAmountController.text = totalAmount.toInt().toString();
-                                        setState(() {});
-                                      },
-                                      child: Text(
-                                        'نەقد',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.success,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    InkWell(
-                                      onTap: () {
-                                        _poPaidAmountController.text = '0';
-                                        setState(() {});
-                                      },
-                                      child: Text(
-                                        'قەرز',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.warning,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
                                 TextField(
                                   controller: _poPaidAmountController,
                                   keyboardType: TextInputType.number,
-                                  style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    fontSize: 15,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                   decoration: const InputDecoration(
                                     isDense: true,
                                     border: InputBorder.none,
                                     contentPadding: EdgeInsets.zero,
                                     hintText: '0',
                                   ),
-                                  onChanged: (_) => setState(() {}),
+                                  onChanged: (_) {
+                                    _userModifiedPaidAmount = true;
+                                    setState(() {});
+                                  },
                                 ),
                               ],
                             ),
@@ -1880,17 +1864,20 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             decoration: BoxDecoration(
                               color: remainingDebt > 0
                                   ? AppColors.warning.withValues(alpha: 0.15)
-                                  : AppColors.success.withValues(alpha: 0.15),
+                                  : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
+                              border: remainingDebt > 0
+                                  ? Border.all(color: AppColors.warning.withValues(alpha: 0.35))
+                                  : null,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('قەرزی ماوە:', style: AppTextStyles.caption),
                                 Text(
-                                  remainingDebt > 0 ? Formatters.currency(remainingDebt) : 'نەقد',
+                                  Formatters.currency(remainingDebt),
                                   style: AppTextStyles.bodyBold.copyWith(
-                                    color: remainingDebt > 0 ? AppColors.warning : AppColors.success,
+                                    color: remainingDebt > 0 ? AppColors.warning : theme.colorScheme.onSurface,
                                     fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
