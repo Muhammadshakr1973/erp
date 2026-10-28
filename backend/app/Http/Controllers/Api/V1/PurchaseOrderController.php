@@ -142,4 +142,55 @@ class PurchaseOrderController extends Controller
             'data'    => $cancelledOrder
         ], 200);
     }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $order = PurchaseOrder::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەی کڕینە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $request->validate([
+            'supplier_id'  => 'nullable|integer',
+            'warehouse_id' => 'nullable|integer|exists:warehouses,id',
+            'notes'        => 'nullable|string',
+            'paid_amount'  => 'nullable|numeric|min:0',
+            'auto_receive' => 'nullable|boolean',
+            'items'        => 'nullable|array',
+            'items.*.product_id' => 'required_with:items|integer|exists:products,id',
+            'items.*.quantity'   => 'required_with:items|integer|min:1',
+            'items.*.unit_cost'  => 'required_with:items|integer|min:0',
+        ]);
+
+        $updatedOrder = $this->purchaseService->updateOrder($order, $request->all(), $user);
+
+        return response()->json([
+            'message' => 'پسوڵەی کڕین بەسەرکەوتوویی نوێکرایەوە',
+            'data'    => $updatedOrder->load(['supplier', 'warehouse', 'items.product', 'payments'])
+        ], 200);
+    }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $order = PurchaseOrder::findOrFail($id);
+        $user = $request->user();
+
+        if ($user && $user->warehouse_id && (int)$order->warehouse_id !== (int)$user->warehouse_id) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەی کڕینە.',
+                'error'   => 'Forbidden.'
+            ], 403);
+        }
+
+        $this->purchaseService->deleteOrder($order, $user);
+
+        return response()->json([
+            'message' => 'پسوڵەی کڕین بەسەرکەوتوویی سڕایەوە'
+        ], 200);
+    }
 }

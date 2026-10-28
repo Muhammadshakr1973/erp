@@ -13,6 +13,7 @@ class StorePurchaseOrderRequest extends FormRequest
 
     public function rules(): array
     {
+        $isAutoReceive = $this->boolean('auto_receive', false);
         return [
             'supplier_id'  => ['nullable', 'integer'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
@@ -21,7 +22,7 @@ class StorePurchaseOrderRequest extends FormRequest
             'auto_receive' => ['nullable', 'boolean'],
 
             // ئایتمەکانی ناو پسوڵەی کڕین
-            'items'              => ['required', 'array', 'min:1'],
+            'items'              => [$isAutoReceive ? 'required' : 'nullable', 'array'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity'   => ['required', 'integer', 'min:1'],
             'items.*.unit_cost'  => ['required', 'integer', 'min:0'], // نرخی کڕینی یەک دانە

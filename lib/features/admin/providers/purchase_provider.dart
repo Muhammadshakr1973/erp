@@ -112,6 +112,57 @@ class PurchaseActions {
     }
   }
 
+  Future<PurchaseOrderModel> updatePurchaseOrder({
+    required int orderId,
+    int? supplierId,
+    int? warehouseId,
+    List<Map<String, dynamic>>? items,
+    num? paidAmount,
+    bool? autoReceive,
+    String? notes,
+  }) async {
+    final apiClient = _ref.read(apiClientProvider);
+    try {
+      final payload = <String, dynamic>{
+        if (supplierId != null) 'supplier_id': supplierId,
+        if (warehouseId != null) 'warehouse_id': warehouseId,
+        if (items != null) 'items': items,
+        if (paidAmount != null) 'paid_amount': paidAmount,
+        if (autoReceive != null) 'auto_receive': autoReceive,
+        if (notes != null) 'notes': notes,
+      };
+
+      final response = await apiClient.client.put(
+        '/purchase-orders/$orderId',
+        data: payload,
+      );
+
+      final resData = response.data;
+      final poData = resData['data'];
+
+      _ref.invalidate(purchaseOrdersProvider);
+      _ref.invalidate(purchaseRequirementsProvider);
+      _ref.invalidate(purchaseRequirementsGroupProvider);
+      _ref.invalidate(productsListProvider);
+      _ref.invalidate(suppliersListProvider);
+
+      return PurchaseOrderModel.fromJson(poData);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
+
+  Future<void> deletePurchaseOrder(int orderId) async {
+    final apiClient = _ref.read(apiClientProvider);
+    try {
+      await apiClient.client.delete('/purchase-orders/$orderId');
+      _ref.invalidate(purchaseOrdersProvider);
+      _ref.invalidate(purchaseRequirementsProvider);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
+
   Future<void> convertRequirementsToPO({
     required List<int> requirementIds,
     List<Map<String, dynamic>>? requirementItems,

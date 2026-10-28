@@ -63,7 +63,8 @@ class PurchaseOrderService
             $order = PurchaseOrder::create($orderData);
 
             // ئایتمەکانی پسوڵەی کڕین
-            foreach ($data['items'] as $item) {
+            $itemsList = $data['items'] ?? [];
+            foreach ($itemsList as $item) {
                 $qty = (int) $item['quantity'];
                 $unitCost = (int) $item['unit_cost'];
                 $lineTotal = $qty * $unitCost;
@@ -91,6 +92,16 @@ class PurchaseOrderService
                         'purchase_order',
                         $order->id
                     );
+
+                    // نوێکردنەوەی نرخی تێچووی کاڵا و دابینکەر لە خشتەی کاڵاکان
+                    $product = \App\Models\Product::find($item['product_id']);
+                    if ($product) {
+                        $prodUpdate = ['cost_price' => $unitCost];
+                        if ($supplierId) {
+                            $prodUpdate['supplier_id'] = $supplierId;
+                        }
+                        $product->update($prodUpdate);
+                    }
                 }
             }
 
@@ -102,7 +113,7 @@ class PurchaseOrderService
             $order->update($updatePayload);
 
             // ئەگەر autoReceive بێت، مامەڵەی حیساباتی قەرز و بڕی پارەی دراو ئەنجام دەدرێت
-            if ($autoReceive) {
+            if ($autoReceive && $totalAmount > 0) {
                 $previousBalance = (int) $supplier->current_balance;
                 $balanceAfterPurchase = $previousBalance + $totalAmount;
 
@@ -158,14 +169,16 @@ class PurchaseOrderService
                 $supplier->update(['current_balance' => $finalBalance]);
 
                 // ٣. داخستنی داواکارییە کراوەکانی کڕین (Purchase Requirements) بۆ ئەم کاڵایانە ئەگەر هەبن
-                $productIds = collect($data['items'])->pluck('product_id')->toArray();
-                PurchaseRequirement::whereIn('product_id', $productIds)
-                    ->where('warehouse_id', $order->warehouse_id)
-                    ->where('status', 'OPEN')
-                    ->update([
-                        'status'            => 'CLOSED',
-                        'purchase_order_id' => $order->id,
-                    ]);
+                $productIds = collect($itemsList)->pluck('product_id')->filter()->toArray();
+                if (!empty($productIds)) {
+                    PurchaseRequirement::whereIn('product_id', $productIds)
+                        ->where('warehouse_id', $order->warehouse_id)
+                        ->where('status', 'OPEN')
+                        ->update([
+                            'status'            => 'CLOSED',
+                            'purchase_order_id' => $order->id,
+                        ]);
+                }
             }
 
             app(\App\Services\AuditService::class)->log([
@@ -331,6 +344,16 @@ class PurchaseOrderService
                 // 2. Update received_quantity on item
                 $newReceived = $item->received_quantity + $qtyToReceive;
                 $item->update(['received_quantity' => $newReceived]);
+
+                // نوێکردنەوەی نرخی تێچووی کاڵا و دابینکەر لە خشتەی کاڵاکان (products)
+                $product = \App\Models\Product::find($item->product_id);
+                if ($product) {
+                    $prodUpdate = ['cost_price' => (int) $item->unit_cost];
+                    if ($lockedOrder->supplier_id) {
+                        $prodUpdate['supplier_id'] = $lockedOrder->supplier_id;
+                    }
+                    $product->update($prodUpdate);
+                }
             }
 
             // 3. Post to SupplierLedger for the received amount
@@ -520,6 +543,215 @@ class PurchaseOrderService
             ]);
 
             return $lockedOrder;
+        });
+    }
+
+    /**
+     * نوێکردنەوەی پسوڵەی کڕین (بۆ نمونە گۆڕینی کاڵاکان، دابینکەر، یان تەئکیدکردنەوە)
+     */
+    public function updateOrder(PurchaseOrder $order, array $data, $user): PurchaseOrder
+    {
+        return DB::transaction(function () use ($order, $data, $user) {
+            $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status !== PurchaseOrder::STATUS_DRAFT && $lockedOrder->status !== PurchaseOrder::STATUS_DRAFT_LOWER) {
+                throw ValidationException::withMessages(['status' => 'تەنها دەتوانرێت پسوڵەی ڕەشنووس دەستکاری بکرێت.']);
+            }
+
+            $supplierId = array_key_exists('supplier_id', $data) ? $data['supplier_id'] : $lockedOrder->supplier_id;
+            $warehouseId = array_key_exists('warehouse_id', $data) ? (int)$data['warehouse_id'] : $lockedOrder->warehouse_id;
+            $notes = array_key_exists('notes', $data) ? $data['notes'] : $lockedOrder->notes;
+            $paidAmount = array_key_exists('paid_amount', $data) ? max(0, (int)$data['paid_amount']) : (int)$lockedOrder->paid_amount;
+            $autoReceive = !empty($data['auto_receive']);
+
+            $totalAmount = 0;
+            if (isset($data['items'])) {
+                $lockedOrder->items()->delete();
+
+                foreach ($data['items'] as $item) {
+                    $qty = (int) $item['quantity'];
+                    $unitCost = (int) $item['unit_cost'];
+                    $lineTotal = $qty * $unitCost;
+                    $totalAmount += $lineTotal;
+
+                    $lockedOrder->items()->create([
+                        'product_id'        => $item['product_id'],
+                        'quantity'          => $qty,
+                        'unit_cost'         => $unitCost,
+                        'total_cost'        => $lineTotal,
+                        'received_quantity' => $autoReceive ? $qty : 0,
+                    ]);
+
+                    if ($autoReceive) {
+                        $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
+                            ['warehouse_id' => $warehouseId, 'product_id' => $item['product_id']],
+                            ['quantity' => 0, 'reserved_quantity' => 0]
+                        );
+
+                        $warehouseStock->adjustStock(
+                            $qty,
+                            'PURCHASE',
+                            $user->id,
+                            'purchase_order',
+                            $lockedOrder->id
+                        );
+
+                        // نوێکردنەوەی نرخی تێچووی کاڵا و دابینکەر لە خشتەی کاڵاکان
+                        $product = \App\Models\Product::find($item['product_id']);
+                        if ($product) {
+                            $prodUpdate = ['cost_price' => $unitCost];
+                            if ($supplierId) {
+                                $prodUpdate['supplier_id'] = $supplierId;
+                            }
+                            $product->update($prodUpdate);
+                        }
+                    }
+                }
+                $lockedOrder->total_amount = $totalAmount;
+            } else {
+                $totalAmount = (int) $lockedOrder->total_amount;
+            }
+
+            $lockedOrder->supplier_id = $supplierId;
+            $lockedOrder->warehouse_id = $warehouseId;
+            $lockedOrder->notes = $notes;
+            if (Schema::hasColumn('purchase_orders', 'paid_amount')) {
+                $lockedOrder->paid_amount = min($paidAmount, $totalAmount);
+            }
+
+            if ($autoReceive) {
+                $lockedOrder->status = PurchaseOrder::STATUS_RECEIVED;
+                $lockedOrder->received_at = now();
+                $lockedOrder->save();
+
+                // قەرز و حیساباتی دابینکەر
+                if ($supplierId && $totalAmount > 0) {
+                    $supplier = Supplier::lockForUpdate()->find($supplierId);
+                    if ($supplier) {
+                        $previousBalance = (int) $supplier->current_balance;
+                        $balanceAfterPurchase = $previousBalance + $totalAmount;
+
+                        SupplierLedger::create([
+                            'supplier_id'    => $supplier->id,
+                            'entry_type'     => 'PURCHASE',
+                            'type'           => 'credit',
+                            'debit'          => 0,
+                            'credit'         => $totalAmount,
+                            'amount'         => $totalAmount,
+                            'balance_before' => $previousBalance,
+                            'balance_after'  => $balanceAfterPurchase,
+                            'reference_type' => 'purchase_order',
+                            'reference_id'   => $lockedOrder->id,
+                            'description'    => "کڕینی کاڵا بە پسوڵەی {$lockedOrder->order_number}",
+                            'created_by'     => $user->id,
+                        ]);
+
+                        $finalBalance = $balanceAfterPurchase;
+                        if ($paidAmount > 0) {
+                            $effectivePaid = min($paidAmount, $totalAmount);
+                            $finalBalance = $balanceAfterPurchase - $effectivePaid;
+
+                            SupplierPayment::create([
+                                'supplier_id'       => $supplier->id,
+                                'purchase_order_id' => $lockedOrder->id,
+                                'amount'            => $effectivePaid,
+                                'payment_method'    => 'cash',
+                                'paid_at'           => now()->toDateString(),
+                                'notes'             => "پارەدانی نەقد بۆ پسوڵەی {$lockedOrder->order_number}",
+                                'created_by'        => $user->id,
+                            ]);
+
+                            SupplierLedger::create([
+                                'supplier_id'    => $supplier->id,
+                                'entry_type'     => 'PAYMENT',
+                                'type'           => 'debit',
+                                'debit'          => $effectivePaid,
+                                'credit'         => 0,
+                                'amount'         => $effectivePaid,
+                                'balance_before' => $balanceAfterPurchase,
+                                'balance_after'  => $finalBalance,
+                                'reference_type' => 'supplier_payment',
+                                'reference_id'   => $lockedOrder->id,
+                                'description'    => "پارەدانی پسوڵەی کڕین {$lockedOrder->order_number}",
+                                'created_by'     => $user->id,
+                            ]);
+                        }
+
+                        $supplier->update(['current_balance' => $finalBalance]);
+                    }
+                }
+
+                // داخستنی داواکارییە پەیوەندیدارەکان
+                if (isset($data['items'])) {
+                    $productIds = collect($data['items'])->pluck('product_id')->filter()->toArray();
+                    if (!empty($productIds)) {
+                        PurchaseRequirement::whereIn('product_id', $productIds)
+                            ->where('warehouse_id', $lockedOrder->warehouse_id)
+                            ->where('status', 'OPEN')
+                            ->update([
+                                'status'            => 'CLOSED',
+                                'purchase_order_id' => $lockedOrder->id,
+                            ]);
+                    }
+                }
+            } else {
+                $lockedOrder->save();
+            }
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => $autoReceive ? 'RECEIVE' : 'UPDATE',
+                'entity_type' => 'PurchaseOrder',
+                'entity_id'   => $lockedOrder->id,
+                'table_name'  => 'purchase_orders',
+                'old_values'  => null,
+                'new_values'  => [
+                    'order_number' => $lockedOrder->order_number,
+                    'supplier_id'  => $lockedOrder->supplier_id,
+                    'warehouse_id' => $lockedOrder->warehouse_id,
+                    'status'       => $lockedOrder->status,
+                    'total_amount' => $lockedOrder->total_amount,
+                    'paid_amount'  => $lockedOrder->paid_amount,
+                ],
+                'description' => $autoReceive 
+                    ? "پسوڵەی کڕین #{$lockedOrder->order_number} تەئکید کرایەوە و کاڵاکان خرانە ناو ستۆک"
+                    : "پسوڵەی کڕینی ڕەشنووس #{$lockedOrder->order_number} نوێکرایەوە",
+                'user'        => $user,
+            ]);
+
+            return $lockedOrder->fresh(['supplier', 'warehouse', 'items.product', 'payments']);
+        });
+    }
+
+    /**
+     * سڕینەوەی پسوڵەی کڕینی ڕەشنووس
+     */
+    public function deleteOrder(PurchaseOrder $order, $user): void
+    {
+        DB::transaction(function () use ($order, $user) {
+            $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت پسوڵەی وەرگیراو بسڕدرێتەوە.']);
+            }
+
+            if ($lockedOrder->items()->where('received_quantity', '>', 0)->exists()) {
+                throw ValidationException::withMessages(['status' => 'ناتوانرێت ئەم پسوڵەیە بسڕدرێتەوە چونكە بەشێک لە کاڵاکانی وەرگیراون.']);
+            }
+
+            $lockedOrder->requirements()->update(['status' => 'OPEN', 'purchase_order_id' => null]);
+            $lockedOrder->items()->delete();
+            $lockedOrder->delete();
+
+            app(\App\Services\AuditService::class)->log([
+                'action'      => 'DELETE',
+                'entity_type' => 'PurchaseOrder',
+                'entity_id'   => $lockedOrder->id,
+                'table_name'  => 'purchase_orders',
+                'old_values'  => ['order_number' => $lockedOrder->order_number],
+                'new_values'  => null,
+                'description' => "پسوڵەی کڕینی ڕەشنووس {$lockedOrder->order_number} سڕایەوە",
+                'user'        => $user,
+            ]);
         });
     }
 }
