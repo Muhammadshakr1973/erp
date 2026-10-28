@@ -1676,7 +1676,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                       ),
                                     ),
                                     Text(
-                                      'تێچوو: ${Formatters.currency(item.unitCost)} د.ع',
+                                      'تێچوو: ${Formatters.currency(item.unitCost)}',
                                       style: AppTextStyles.caption.copyWith(fontSize: 11),
                                     ),
                                   ],
@@ -1697,7 +1697,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                           ),
                                           Flexible(
                                             child: Text(
-                                              '${Formatters.currency(item.totalLineCost)} د.ع',
+                                              Formatters.currency(item.totalLineCost),
                                               style: AppTextStyles.bodyBold.copyWith(
                                                 color: theme.colorScheme.primary,
                                                 fontSize: 13,
