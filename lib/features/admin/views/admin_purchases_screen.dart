@@ -260,7 +260,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
       setState(() {
         _activeDraftOrderId = newOrder.id;
-        _lastLoadedDraftOrderId = newOrder.id;
         _purchaseCart.clear();
         _poNotesController.clear();
         _poPaidAmountController.text = '0';
@@ -304,7 +303,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         await ref.read(purchaseActionsProvider).deletePurchaseOrder(idToDelete);
         setState(() {
           _activeDraftOrderId = null;
-          _lastLoadedDraftOrderId = null;
           _purchaseCart.clear();
           _poNotesController.clear();
           _poPaidAmountController.text = '0';
@@ -344,7 +342,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     final draft = draftOrders.firstWhere((d) => d.id == draftId);
     setState(() {
       _activeDraftOrderId = draftId;
-      _lastLoadedDraftOrderId = draftId;
       _loadDraftOrderData(draft, allProducts);
     });
   }
@@ -408,7 +405,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         if (mounted) {
           setState(() {
             _activeDraftOrderId = newOrder.id;
-            _lastLoadedDraftOrderId = newOrder.id;
           });
         }
       }
@@ -1263,7 +1259,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       if (mounted) {
         setState(() {
           _activeDraftOrderId = null;
-          _lastLoadedDraftOrderId = null;
           _purchaseCart.clear();
           _poNotesController.clear();
           _poPaidAmountController.text = '0';
