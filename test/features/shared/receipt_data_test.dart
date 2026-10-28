@@ -95,6 +95,39 @@ void main() {
       expect(receipt.amounts.single.label, 'بڕی پارە');
       expect(receipt.amounts.single.amount, 25000);
     });
+
+    test('fromPurchaseOrder has empty title, uses بەکارهێنەر, and formats carton quantity', () {
+      final po = PurchaseOrderModel(
+        id: 1,
+        orderNumber: 'PO-TEST1',
+        supplierId: 10,
+        supplierName: 'دابینکەری گشتی',
+        warehouseId: 1,
+        warehouseName: 'کۆگای سەرەکی',
+        status: 'CONFIRMED',
+        totalAmount: 140000,
+        itemsCount: 1,
+        items: [
+          PurchaseOrderItemModel(
+            id: 1,
+            purchaseOrderId: 1,
+            productId: 5,
+            productName: 'معجون پڕۆ ئەسڵی',
+            productUnit: 'ج',
+            unitsPerCarton: 10,
+            quantity: 10,
+            receivedQuantity: 0,
+            unitCost: 14000,
+            totalCost: 140000,
+          ),
+        ],
+      );
+
+      final receipt = ReceiptData.fromPurchaseOrder(po);
+      expect(receipt.title, isEmpty);
+      expect(receipt.employeeLabel, 'بەکارهێنەر');
+      expect(receipt.items.single.quantityDisplay, 'کارتۆن ( 1 کارتۆن = 10 ج )');
+    });
   });
 }
 

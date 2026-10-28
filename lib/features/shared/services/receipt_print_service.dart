@@ -417,9 +417,7 @@ class ReceiptCanvas extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          if (data.title.isEmpty)
-            _marketCustomerHeader(data, fontSize + (_isA4 ? 6 : 3))
-          else
+          if (data.title.isNotEmpty)
             Center(
               child: Text(
                 data.title,
@@ -429,21 +427,25 @@ class ReceiptCanvas extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
+            )
+          else if (data.marketName != null)
+            _marketCustomerHeader(data, fontSize + (_isA4 ? 6 : 3)),
           const SizedBox(height: 8),
           _receiptNumberDateRow(
             data.receiptNumber,
             date == null ? null : Formatters.date(date),
           ),
-          if (data.title.isNotEmpty && data.partyName != null)
+          if (data.partyName != null &&
+              (data.title.isNotEmpty || data.marketName == null))
             _personInfoRow(
               data.partyLabel ?? 'لایەن',
               data.partyName!,
               data.partyPhone,
             )
-          else if (data.title.isNotEmpty && data.partyPhone != null)
+          else if (data.partyPhone != null &&
+              (data.title.isNotEmpty || data.marketName == null))
             _infoRow(
-              'مۆبایلی لایەن',
+              'مۆبایلی ${data.partyLabel ?? "لایەن"}',
               data.partyPhone!,
               valueDirection: TextDirection.ltr,
               boldValue: true,
@@ -467,13 +469,13 @@ class ReceiptCanvas extends StatelessWidget {
             ),
           if (data.employeeName != null)
             _personInfoRow(
-              'کاشڤان / کارمەند',
+              data.employeeLabel,
               data.employeeName!,
               data.employeePhone,
             )
           else if (data.employeePhone != null)
             _infoRow(
-              'مۆبایلی کارمەند',
+              'مۆبایلی ${data.employeeLabel}',
               data.employeePhone!,
               valueDirection: TextDirection.ltr,
               boldValue: true,
@@ -713,7 +715,16 @@ class ReceiptCanvas extends StatelessWidget {
           ),
           Expanded(
             flex: 3,
-            child: _ltr(_receiptQuantity(item), bold: true),
+            child: item.quantityDisplay != null
+                ? Text(
+                    item.quantityDisplay!,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textDirection: TextDirection.rtl,
+                  )
+                : _ltr(_receiptQuantity(item), bold: true),
           ),
           Expanded(flex: 3, child: _ltr(Formatters.currency(item.total))),
         ],
@@ -722,6 +733,7 @@ class ReceiptCanvas extends StatelessWidget {
   }
 
   Widget _receiptItem(ReceiptItem item, double fontSize, int index) {
+    final hasDisplay = item.quantityDisplay != null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Column(
@@ -734,14 +746,15 @@ class ReceiptCanvas extends StatelessWidget {
                 flex: 7,
                 child: _itemName(item, fontSize, index, bold: true),
               ),
-              Expanded(
-                flex: 2,
-                child: _ltr(
-                  _receiptQuantity(item),
-                  bold: true,
-                  style: TextStyle(fontSize: fontSize - 1),
+              if (!hasDisplay)
+                Expanded(
+                  flex: 2,
+                  child: _ltr(
+                    _receiptQuantity(item),
+                    bold: true,
+                    style: TextStyle(fontSize: fontSize - 1),
+                  ),
                 ),
-              ),
               Expanded(
                 flex: 3,
                 child: _ltr(
@@ -753,6 +766,21 @@ class ReceiptCanvas extends StatelessWidget {
               ),
             ],
           ),
+          if (hasDisplay) ...[
+            const SizedBox(height: 3),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 12),
+              child: Text(
+                item.quantityDisplay!,
+                style: TextStyle(
+                  fontSize: fontSize - 1.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF171717),
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+          ],
           const Divider(height: 8, color: Color(0xFFDDDDDD)),
         ],
       ),
@@ -760,6 +788,9 @@ class ReceiptCanvas extends StatelessWidget {
   }
 
   String _receiptQuantity(ReceiptItem item) {
+    if (item.quantityDisplay != null) {
+      return item.quantityDisplay!;
+    }
     final quantity = Formatters.number(item.quantity);
     return '${item.unitsPerCarton}*$quantity';
   }

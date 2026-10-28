@@ -3,6 +3,8 @@ class PurchaseOrderItemModel {
   final int purchaseOrderId;
   final int productId;
   final String productName;
+  final String? productUnit;
+  final int unitsPerCarton;
   final int quantity;
   final int receivedQuantity;
   final num unitCost;
@@ -13,6 +15,8 @@ class PurchaseOrderItemModel {
     required this.purchaseOrderId,
     required this.productId,
     required this.productName,
+    this.productUnit,
+    this.unitsPerCarton = 1,
     required this.quantity,
     required this.receivedQuantity,
     required this.unitCost,
@@ -20,13 +24,23 @@ class PurchaseOrderItemModel {
   });
 
   factory PurchaseOrderItemModel.fromJson(Map<String, dynamic> json) {
+    final productMap = json['product'] is Map ? json['product'] as Map : null;
+    final int upc = productMap != null
+        ? ((productMap['units_per_carton'] as num?)?.toInt() ?? 1)
+        : ((json['units_per_carton'] as num?)?.toInt() ?? 1);
+    final String? unit = productMap != null
+        ? productMap['unit']?.toString()
+        : json['product_unit']?.toString();
+
     return PurchaseOrderItemModel(
       id: json['id'] ?? 0,
       purchaseOrderId: json['purchase_order_id'] ?? 0,
       productId: json['product_id'] ?? 0,
-      productName: json['product'] != null
-          ? json['product']['name'] ?? ''
-          : '',
+      productName: productMap != null
+          ? productMap['name']?.toString() ?? ''
+          : (json['product_name']?.toString() ?? ''),
+      productUnit: unit,
+      unitsPerCarton: upc > 0 ? upc : 1,
       quantity: json['quantity'] ?? 0,
       receivedQuantity: json['received_quantity'] ?? 0,
       unitCost: json['unit_cost'] ?? 0,

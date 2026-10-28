@@ -20,6 +20,7 @@ class ReceiptData {
   final String salesmanLabel;
   final String? salesmanName;
   final String? salesmanPhone;
+  final String employeeLabel;
   final String? employeeName;
   final String? employeePhone;
   final List<ReceiptItem> items;
@@ -38,6 +39,7 @@ class ReceiptData {
     this.salesmanLabel = 'فرۆشیار',
     this.salesmanName,
     this.salesmanPhone,
+    this.employeeLabel = 'بەکارهێنەر',
     this.employeeName,
     this.employeePhone,
     this.items = const [],
@@ -115,7 +117,7 @@ class ReceiptData {
     UserModel? employee,
   }) {
     return ReceiptData(
-      title: 'پسوڵەی کڕین',
+      title: '',
       receiptNumber: order.orderNumber.isNotEmpty
           ? order.orderNumber
           : order.id.toString(),
@@ -123,16 +125,45 @@ class ReceiptData {
       partyLabel: 'دابینکەر',
       partyName: order.supplierName,
       partyPhone: order.supplierPhone,
+      employeeLabel: 'بەکارهێنەر',
       employeeName: employee?.name,
       employeePhone: employee?.phone,
       items: order.items
           .map(
-            (item) => ReceiptItem(
-              name: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitCost,
-              total: item.totalCost,
-            ),
+            (item) {
+              final rawUnit = item.productUnit?.trim();
+              final unitName = (rawUnit != null && rawUnit.isNotEmpty)
+                  ? rawUnit
+                  : 'دانە';
+              final upc = item.unitsPerCarton;
+              final qty = item.quantity;
+
+              String qtyDisplay;
+              if (upc > 1) {
+                if (qty >= upc && qty % upc == 0) {
+                  final cartons = qty ~/ upc;
+                  qtyDisplay = 'کارتۆن ( $cartons کارتۆن = $qty $unitName )';
+                } else if (qty >= upc) {
+                  final cartons = qty ~/ upc;
+                  final rem = qty % upc;
+                  qtyDisplay = 'کارتۆن ( $cartons کارتۆن و $rem $unitName = $qty $unitName )';
+                } else {
+                  qtyDisplay = '$qty $unitName ( ١ کارتۆن = $upc $unitName )';
+                }
+              } else {
+                qtyDisplay = '$qty $unitName';
+              }
+
+              return ReceiptItem(
+                name: item.productName,
+                quantity: item.quantity,
+                unit: item.productUnit,
+                unitsPerCarton: item.unitsPerCarton,
+                quantityDisplay: qtyDisplay,
+                unitPrice: item.unitCost,
+                total: item.totalCost,
+              );
+            },
           )
           .toList(growable: false),
       amounts: [
@@ -338,6 +369,7 @@ class ReceiptItem {
   final String? note;
   final bool isPacked;
   final int unitsPerCarton;
+  final String? quantityDisplay;
 
   const ReceiptItem({
     required this.name,
@@ -348,6 +380,7 @@ class ReceiptItem {
     this.note,
     this.isPacked = false,
     this.unitsPerCarton = 1,
+    this.quantityDisplay,
   });
 }
 

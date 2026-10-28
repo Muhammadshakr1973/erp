@@ -69,7 +69,7 @@ class PurchaseOrderController extends Controller
 
         return response()->json([
             'message' => 'پسوڵەی کڕین بەسەرکەوتوویی دروستکرا',
-            'data'    => $order->load('items')
+            'data'    => $order->load(['supplier', 'warehouse', 'items.product', 'payments'])
         ], 201);
     }
 
@@ -119,7 +119,7 @@ class PurchaseOrderController extends Controller
 
         return response()->json([
             'message' => 'پسوڵەی کڕین بەسەرکەوتوویی پەسەند کرا',
-            'data'    => $confirmedOrder
+            'data'    => $confirmedOrder->load(['supplier', 'warehouse', 'items.product', 'payments'])
         ], 200);
     }
 
