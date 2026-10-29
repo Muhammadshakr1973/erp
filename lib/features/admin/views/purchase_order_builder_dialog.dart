@@ -9,6 +9,7 @@ import '../../products/models/product_model.dart';
 import '../../products/models/supplier_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/providers/suppliers_provider.dart';
+import '../../products/views/product_form_dialog.dart';
 import '../../shared/providers/warehouse_provider.dart';
 import '../models/purchase_requirement_model.dart';
 import '../providers/purchase_provider.dart';
@@ -149,6 +150,38 @@ class _PurchaseOrderBuilderDialogState
       _productSearchController.clear();
       _newWarehouseId = null;
     });
+  }
+
+  Future<void> _showAddNewProductDialog(List<WarehouseModel> warehouses) async {
+    final result = await showDialog<Object?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const ProductFormDialog(),
+    );
+
+    if (!mounted || result == null) return;
+
+    ProductModel? createdProduct;
+    if (result is ProductModel) {
+      createdProduct = result;
+    } else {
+      final list = ref.read(productsListProvider).valueOrNull;
+      if (list != null && list.isNotEmpty) {
+        createdProduct = list.first;
+      }
+    }
+
+    if (createdProduct != null && mounted) {
+      setState(() {
+        _productToAdd = createdProduct;
+      });
+      _addProduct(warehouses);
+      AppSnackbar.show(
+        context,
+        message: '«${createdProduct.name}» زیادکرا بۆ پسوڵەی کڕین',
+        type: SnackbarType.success,
+      );
+    }
   }
 
   int? _defaultWarehouseId(List<WarehouseModel> warehouses) {
@@ -321,10 +354,15 @@ class _PurchaseOrderBuilderDialogState
               const SizedBox(height: AppSpacing.xs),
               TextFormField(
                 controller: _productSearchController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'گەڕان بۆ کاڵا',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'زیادکردنی کاڵای نوێ',
+                    onPressed: () => _showAddNewProductDialog(warehouses),
+                  ),
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => setState(() => _productToAdd = null),
               ),

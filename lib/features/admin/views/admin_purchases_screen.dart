@@ -30,6 +30,7 @@ import '../../shared/services/receipt_print_service.dart';
 import '../models/purchase_order_model.dart';
 import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
+import '../../products/views/product_form_dialog.dart';
 import 'supplier_form_dialog.dart';
 
 enum PurchaseUnitType { baseUnit, carton }
@@ -1975,6 +1976,37 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
+  Future<void> _showAddNewProductDialog(BuildContext context) async {
+    final result = await showDialog<Object?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ProductFormDialog(
+        initialSupplierId: _selectedSupplierId,
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    ProductModel? createdProduct;
+    if (result is ProductModel) {
+      createdProduct = result;
+    } else {
+      final products = ref.read(productsListProvider).valueOrNull;
+      if (products != null && products.isNotEmpty) {
+        createdProduct = products.first;
+      }
+    }
+
+    if (createdProduct != null && mounted) {
+      if (_selectedSupplierId == null && createdProduct.supplierId != null) {
+        setState(() {
+          _selectedSupplierId = createdProduct!.supplierId;
+        });
+      }
+      _addProductToCart(createdProduct);
+    }
+  }
+
   void _showAddLowStockProductToCartDialog(ProductModel product) {
     PurchaseUnitType selectedUnitType = PurchaseUnitType.baseUnit;
     CartonContentMode selectedCartonMode = CartonContentMode.byUnit;
@@ -2799,6 +2831,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            tooltip: 'زیادکردنی کاڵای نوێ',
+                            onPressed: () => _showAddNewProductDialog(context),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.inventory_2_outlined, size: 20),
                             tooltip: 'کاڵاکانی دابینکەر بەپێی کەمیی ستۆک (لۆنگ پرێس)',

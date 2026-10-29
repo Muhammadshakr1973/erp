@@ -15,8 +15,13 @@ import 'barcode_generator_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductModel? product;
+  final int? initialSupplierId;
 
-  const ProductFormDialog({super.key, this.product});
+  const ProductFormDialog({
+    super.key,
+    this.product,
+    this.initialSupplierId,
+  });
 
   @override
   ConsumerState<ProductFormDialog> createState() => _ProductFormDialogState();
@@ -92,7 +97,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     );
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;
-    _selectedSupplierId = p?.supplierId;
+    _selectedSupplierId = p?.supplierId ?? widget.initialSupplierId;
     _isActive = p?.isActive ?? true;
   }
 
@@ -233,14 +238,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
 
     try {
       if (widget.product == null) {
-        await ref.read(productActionsProvider).addProduct(data);
+        final newProduct =
+            await ref.read(productActionsProvider).addProduct(data);
+        if (mounted) {
+          Navigator.pop(context, newProduct);
+        }
       } else {
         await ref
             .read(productActionsProvider)
             .updateProduct(widget.product!.id, data);
-      }
-      if (mounted) {
-        Navigator.pop(context, true);
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {

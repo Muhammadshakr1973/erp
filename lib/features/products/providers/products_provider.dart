@@ -361,6 +361,22 @@ class ProductsListNotifier
     });
   }
 
+  void addProductLocally(ProductModel newProduct) {
+    final currentList = state.valueOrNull;
+    if (currentList != null) {
+      if (!currentList.any((p) => p.id == newProduct.id)) {
+        state = AsyncValue.data([newProduct, ...currentList]);
+      } else {
+        final index = currentList.indexWhere((p) => p.id == newProduct.id);
+        final updatedList = List<ProductModel>.from(currentList);
+        updatedList[index] = newProduct;
+        state = AsyncValue.data(updatedList);
+      }
+    } else {
+      state = AsyncValue.data([newProduct]);
+    }
+  }
+
   @override
   void dispose() {
     _pusher.unsubscribeFromChannel('private-products');
@@ -423,10 +439,15 @@ class ProductActions {
 
   ProductActions(this.api, this.ref);
 
-  Future<void> addProduct(Map<String, dynamic> data) async {
+  Future<ProductModel> addProduct(Map<String, dynamic> data) async {
     try {
-      await api.client.post('/products', data: data);
-      ref.invalidate(productsListProvider);
+      final response = await api.client.post('/products', data: data);
+      final rawData = response.data['data'] ?? response.data;
+      final newProduct = ProductModel.fromJson(
+        Map<String, dynamic>.from(rawData as Map),
+      );
+      ref.read(productsListProvider.notifier).addProductLocally(newProduct);
+      return newProduct;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
