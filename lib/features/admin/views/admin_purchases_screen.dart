@@ -201,6 +201,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     _draftDialogSetState?.call(() {});
   }
 
+  void _updatePurchaseViewState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    } else {
+      fn();
+    }
+    _draftDialogSetState?.call(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -390,6 +399,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   ),
                   body: _buildPurchasesTab(
                     dialogContext,
+                    isInsideDialog: true,
                     onSupplierSelectionChanged: () => setDialogState(() {}),
                   ),
                 ),
@@ -920,7 +930,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildPurchasesTab(context),
+          _buildPurchasesTab(context, isInsideDialog: false),
           _buildPurchaseOrdersTab(context),
           _buildSuppliersTab(context),
         ],
@@ -2466,6 +2476,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   Widget _buildPurchasesTab(
     BuildContext context, {
+    bool isInsideDialog = false,
     VoidCallback? onSupplierSelectionChanged,
   }) {
     final theme = Theme.of(context);
@@ -2509,7 +2520,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             });
           }
         }
-        if (!_isEditingPurchaseDraft) {
+        if (!_isEditingPurchaseDraft || (_isPurchaseDraftDialogOpen && !isInsideDialog)) {
           return _buildDraftPurchasesView(
             allProducts: allProducts,
             ordersAsync: posAsync,
@@ -2548,179 +2559,194 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         final paidAmount = parsedPaid ?? (_userModifiedPaidAmount ? 0.0 : totalAmount);
         final remainingDebt = max(0.0, totalAmount - paidAmount);
 
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          resizeToAvoidBottomInset: false,
-          body: Column(
-            children: [
-            // Section 1: Note/Notice of Low Stock / Needed Products (کەمی ستۆک / پێویست بۆ کڕین)
-            if (lowStockProducts.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.warning.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _isLowStockExpanded = !_isLowStockExpanded;
-                        });
-                      },
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final availableHeight = constraints.maxHeight;
+            final lowStockMaxHeight = max(65.0, min(120.0, availableHeight * 0.22));
+
+            return Scaffold(
+              backgroundColor: Colors.transparent,
+              resizeToAvoidBottomInset: false,
+              body: Column(
+                children: [
+                // Section 1: Note/Notice of Low Stock / Needed Products (کەمی ستۆک / پێویست بۆ کڕین)
+                if (lowStockProducts.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
-                            const SizedBox(width: AppSpacing.xs),
-                            Expanded(
-                              child: Text(
-                                'تێبینی: ${lowStockProducts.length} کاڵا گەیشتوونەتە کەمترین بڕی ستۆک و پێویستن بۆ کڕین',
-                                style: AppTextStyles.caption.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              _isLowStockExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                              size: 20,
-                            ),
-                          ],
-                        ),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3),
                       ),
                     ),
-                    if (_isLowStockExpanded) ...[
-                      const Divider(height: 1),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              // Filter Chips
-                              ChoiceChip(
-                                label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
-                                selected: _lowStockFilter == 'all',
-                                onSelected: (_) => setState(() => _lowStockFilter = 'all'),
-                              ),
-                              const SizedBox(width: 4),
-                              ChoiceChip(
-                                label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
-                                selected: _lowStockFilter == 'checked',
-                                onSelected: (_) => setState(() => _lowStockFilter = 'checked'),
-                              ),
-                              const SizedBox(width: 4),
-                              ChoiceChip(
-                                label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
-                                selected: _lowStockFilter == 'unchecked',
-                                onSelected: (_) => setState(() => _lowStockFilter = 'unchecked'),
-                              ),
-                              if (_checkedProductIds.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            _updatePurchaseViewState(() {
+                              _isLowStockExpanded = !_isLowStockExpanded;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                                const SizedBox(width: AppSpacing.xs),
+                                Expanded(
+                                  child: Text(
+                                    'تێبینی: ${lowStockProducts.length} کاڵا گەیشتوونەتە کەمترین بڕی ستۆک و پێویستن بۆ کڕین',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.add_shopping_cart, size: 16),
-                                  label: Text(
-                                    'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                                ),
+                                Icon(
+                                  _isLowStockExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                  size: 20,
                                 ),
                               ],
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 140),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
-                          itemCount: filteredLowStock.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final prod = filteredLowStock[index];
-                            final isChecked = _checkedProductIds.contains(prod.id);
-                            final unitStr = prod.unit?.trim().isNotEmpty == true ? prod.unit! : 'دانە';
-
-                            return Row(
-                              children: [
-                                Checkbox(
-                                  value: isChecked,
-                                  visualDensity: VisualDensity.compact,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (val == true) {
-                                        _checkedProductIds.add(prod.id);
-                                      } else {
-                                        _checkedProductIds.remove(prod.id);
-                                      }
-                                    });
-                                  },
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        prod.name,
-                                        style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'کەمترین بڕی ستۆک: ${prod.minStockLevel} • بارکۆد: ${prod.barcode}',
-                                        style: AppTextStyles.caption.copyWith(fontSize: 11),
-                                      ),
-                                    ],
+                        if (_isLowStockExpanded) ...[
+                          const Divider(height: 1),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // Filter Chips
+                                  ChoiceChip(
+                                    label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
+                                    selected: _lowStockFilter == 'all',
+                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'all'),
                                   ),
-                                ),
-                                StatusBadge(
-                                  label: 'مەوجود: ${prod.totalStock} $unitStr',
-                                  type: prod.totalStock <= 0 ? StatusBadgeType.danger : StatusBadgeType.warning,
-                                ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: const Icon(Icons.add_circle_outline, size: 20),
-                                  tooltip: 'زیادکردن بۆ سەبەتە',
-                                  onPressed: () => _addProductToCart(prod),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                                  const SizedBox(width: 4),
+                                  ChoiceChip(
+                                    label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                    selected: _lowStockFilter == 'checked',
+                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'checked'),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  ChoiceChip(
+                                    label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                    selected: _lowStockFilter == 'unchecked',
+                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'unchecked'),
+                                  ),
+                                  if (_checkedProductIds.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        visualDensity: VisualDensity.compact,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      ),
+                                      icon: const Icon(Icons.add_shopping_cart, size: 16),
+                                      label: Text(
+                                        'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: lowStockMaxHeight),
+                            child: filteredLowStock.isEmpty
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Center(
+                                      child: Text(
+                                        'هیچ کاڵایەک لەم فلتەرەدا نییە',
+                                        style: AppTextStyles.caption,
+                                      ),
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    shrinkWrap: true,
+                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                                    itemCount: filteredLowStock.length,
+                                    separatorBuilder: (context, index) => const Divider(height: 1),
+                                    itemBuilder: (context, index) {
+                                      final prod = filteredLowStock[index];
+                                      final isChecked = _checkedProductIds.contains(prod.id);
+                                      final unitStr = prod.unit?.trim().isNotEmpty == true ? prod.unit! : 'دانە';
 
-            // Section 2: Top Control Bar (Supplier + Add Supplier + Warehouse + Notes)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-              color: theme.colorScheme.surfaceContainerLow,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+                                      return Row(
+                                        children: [
+                                          Checkbox(
+                                            value: isChecked,
+                                            visualDensity: VisualDensity.compact,
+                                            onChanged: (val) {
+                                              _updatePurchaseViewState(() {
+                                                if (val == true) {
+                                                  _checkedProductIds.add(prod.id);
+                                                } else {
+                                                  _checkedProductIds.remove(prod.id);
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  prod.name,
+                                                  style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  'کەمترین بڕی ستۆک: ${prod.minStockLevel} • بارکۆد: ${prod.barcode}',
+                                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          StatusBadge(
+                                            label: 'مەوجود: ${prod.totalStock} $unitStr',
+                                            type: prod.totalStock <= 0 ? StatusBadgeType.danger : StatusBadgeType.warning,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_circle_outline, size: 20),
+                                            tooltip: 'زیادکردن بۆ سەبەتە',
+                                            onPressed: () => _addProductToCart(prod),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                // Section 2: Top Control Bar (Supplier + Add Supplier + Warehouse + Notes)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+                  color: theme.colorScheme.surfaceContainerLow,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Supplier selection dropdown
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          height: 42,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                      Row(
+                        children: [
+                          // Supplier selection dropdown
+                          Expanded(
+                            flex: 3,
+                            child: Container(
+                              height: 40,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(8),
@@ -2835,7 +2861,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
 
                   // Notes text field
                   AppTextField(
@@ -2850,7 +2876,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
             // Section 3: Product Search Bar & Barcode Scanner
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
               child: RawAutocomplete<ProductModel>(
                 textEditingController: _productSearchController,
                 focusNode: _productSearchFocusNode,
@@ -2902,7 +2928,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               icon: const Icon(Icons.clear, size: 18),
                               onPressed: () {
                                 controller.clear();
-                                setState(() {});
+                                _updatePurchaseViewState(() {});
                               },
                             ),
                           IconButton(
@@ -2912,7 +2938,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           ),
                         ],
                       ),
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (_) => _updatePurchaseViewState(() {}),
                     ),
                   );
                 },
@@ -3311,7 +3337,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               ),
                               onChanged: (_) {
                                 _userModifiedPaidAmount = true;
-                                setState(() {});
+                                _updatePurchaseViewState(() {});
                               },
                             ),
                           ],
@@ -3369,6 +3395,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       );
     },
   );
+},
+);
 }
 
   Widget _buildDraftPurchasesView({
