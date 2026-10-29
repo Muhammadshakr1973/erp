@@ -37,7 +37,7 @@ enum PurchaseUnitType { baseUnit, carton }
 enum CartonContentMode { byUnit, byPieces }
 
 class PurchaseCartItem {
-  final ProductModel product;
+  ProductModel product;
   PurchaseUnitType unitType;
   int quantity; // Base unit count OR carton count
   CartonContentMode cartonContentMode;
