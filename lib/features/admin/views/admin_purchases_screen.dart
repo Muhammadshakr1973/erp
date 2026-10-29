@@ -681,7 +681,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     super.dispose();
   }
 
-  Future<void> _showAddSupplierDialog(BuildContext context) async {
+  Future<void> _showAddSupplierDialog(
+    BuildContext context, {
+    VoidCallback? onSupplierSelectionChanged,
+  }) async {
     final result = await showDialog<Object?>(
       context: context,
       barrierDismissible: false,
@@ -694,10 +697,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       await ref.read(suppliersListProvider.future);
       if (!mounted) return;
       setState(() => _selectedSupplierId = result.id);
+      onSupplierSelectionChanged?.call();
       await _saveCartDraft();
     } else if (result == true) {
       ref.invalidate(suppliersListProvider);
       await ref.read(suppliersListProvider.future);
+      onSupplierSelectionChanged?.call();
     }
   }
 
@@ -2698,7 +2703,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         icon: const Icon(Icons.person_add_alt_1_outlined, size: 22),
                         tooltip: 'زیادکردنی دابینکەری نوێ',
                         onPressed: () {
-                          _showAddSupplierDialog(context);
+                          _showAddSupplierDialog(
+                            context,
+                            onSupplierSelectionChanged:
+                                onSupplierSelectionChanged,
+                          );
                         },
                       ),
                       const SizedBox(width: 4),
