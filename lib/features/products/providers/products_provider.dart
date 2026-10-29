@@ -377,6 +377,14 @@ class ProductsListNotifier
     }
   }
 
+  void removeProductLocally(int id) {
+    final currentList = state.valueOrNull;
+    if (currentList != null) {
+      final updatedList = currentList.where((p) => p.id != id).toList();
+      state = AsyncValue.data(updatedList);
+    }
+  }
+
   @override
   void dispose() {
     _pusher.unsubscribeFromChannel('private-products');
@@ -453,10 +461,15 @@ class ProductActions {
     }
   }
 
-  Future<void> updateProduct(int id, Map<String, dynamic> data) async {
+  Future<ProductModel> updateProduct(int id, Map<String, dynamic> data) async {
     try {
-      await api.client.put('/products/$id', data: data);
-      ref.invalidate(productsListProvider);
+      final response = await api.client.put('/products/$id', data: data);
+      final rawData = response.data['data'] ?? response.data;
+      final updatedProduct = ProductModel.fromJson(
+        Map<String, dynamic>.from(rawData as Map),
+      );
+      ref.read(productsListProvider.notifier).addProductLocally(updatedProduct);
+      return updatedProduct;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -465,7 +478,7 @@ class ProductActions {
   Future<void> deleteProduct(int id) async {
     try {
       await api.client.delete('/products/$id');
-      ref.invalidate(productsListProvider);
+      ref.read(productsListProvider.notifier).removeProductLocally(id);
     } catch (e) {
       throw Exception(api.parseError(e));
     }

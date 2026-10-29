@@ -177,6 +177,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   String? _lastSavedDraftSignature;
   bool _isEditingPurchaseDraft = false;
   bool _isPurchaseDraftDialogOpen = false;
+  StateSetter? _draftDialogSetState;
   int? _selectedSupplierId; // null = دابینکەری نوێ (بێناو)
   int? _selectedWarehouseId;
   final TextEditingController _poNotesController = TextEditingController();
@@ -192,6 +193,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   bool _hasRestoredDraft = false;
   Timer? _draftDebounceTimer;
+
+  void _notifyCartAndDialogChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+    _draftDialogSetState?.call(() {});
+  }
 
   @override
   void initState() {
@@ -343,41 +351,55 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       context: context,
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => Dialog.fullscreen(
-          child: Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'داخستن',
-                      icon: const Icon(Icons.close),
-                      onPressed: _closePurchaseDraftEditor,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Directionality(
-                        textDirection: TextDirection.rtl,
-                        child: Text(
-                          'دەستکاریکردنی پسوڵەی کڕین',
-                          style: AppTextStyles.h2,
-                        ),
+        builder: (dialogContext, setDialogState) {
+          _draftDialogSetState = setDialogState;
+          return Consumer(
+            builder: (consumerContext, ref, _) {
+              ref.watch(productsListProvider);
+              ref.watch(suppliersListProvider);
+              ref.watch(warehouseListProvider);
+              ref.watch(purchaseOrdersProvider);
+
+              return Dialog.fullscreen(
+                child: Scaffold(
+                  resizeToAvoidBottomInset: true,
+                  appBar: AppBar(
+                    automaticallyImplyLeading: false,
+                    title: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'داخستن',
+                            icon: const Icon(Icons.close),
+                            onPressed: _closePurchaseDraftEditor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Directionality(
+                              textDirection: TextDirection.rtl,
+                              child: Text(
+                                'دەستکاریکردنی پسوڵەی کڕین',
+                                style: AppTextStyles.h2,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
+                  body: _buildPurchasesTab(
+                    dialogContext,
+                    onSupplierSelectionChanged: () => setDialogState(() {}),
+                  ),
                 ),
-              ),
-            ),
-            body: _buildPurchasesTab(
-              dialogContext,
-              onSupplierSelectionChanged: () => setDialogState(() {}),
-            ),
-          ),
-        ),
+              );
+            },
+          );
+        },
       ),
     ).whenComplete(() {
+      _draftDialogSetState = null;
       _isPurchaseDraftDialogOpen = false;
       if (mounted && _isEditingPurchaseDraft) {
         setState(() => _isEditingPurchaseDraft = false);
@@ -652,12 +674,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      setState(() {
-        _purchaseCart.clear();
-        _poNotesController.clear();
-        _poPaidAmountController.text = '0';
-        _userModifiedPaidAmount = false;
-      });
+      _purchaseCart.clear();
+      _poNotesController.clear();
+      _poPaidAmountController.text = '0';
+      _userModifiedPaidAmount = false;
+      _notifyCartAndDialogChanged();
       _clearCartDraft();
       if (mounted) {
         AppSnackbar.show(
@@ -916,29 +937,28 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (force || !_userModifiedPaidAmount) {
       _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
     }
-    if (mounted) setState(() {});
+    _notifyCartAndDialogChanged();
     _saveCartDraft();
   }
 
   void _addProductToCart(ProductModel product, {bool clearSearch = true}) {
     int currentQty = 1;
-    setState(() {
-      final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
-      if (existingIndex >= 0) {
-        _purchaseCart[existingIndex].quantity += 1;
-        currentQty = _purchaseCart[existingIndex].quantity;
-      } else {
-        _purchaseCart.add(PurchaseCartItem(
-          product: product,
-          quantity: 1,
-        ));
-        currentQty = 1;
-      }
-      if (clearSearch) {
-        _productSearchController.clear();
-      }
-      _updatePaidAmountToTotal();
-    });
+    final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
+    if (existingIndex >= 0) {
+      _purchaseCart[existingIndex].quantity += 1;
+      currentQty = _purchaseCart[existingIndex].quantity;
+    } else {
+      _purchaseCart.add(PurchaseCartItem(
+        product: product,
+        quantity: 1,
+      ));
+      currentQty = 1;
+    }
+    if (clearSearch) {
+      _productSearchController.clear();
+    }
+    _updatePaidAmountToTotal();
+    _notifyCartAndDialogChanged();
     _saveCartDraft();
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -966,10 +986,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   void _removeFromCart(PurchaseCartItem item) {
     if (item.quantity > 1) {
-      setState(() {
-        item.quantity -= 1;
-        _updatePaidAmountToTotal();
-      });
+      item.quantity -= 1;
+      _updatePaidAmountToTotal();
+      _notifyCartAndDialogChanged();
       _saveCartDraft();
     } else {
       _confirmDeleteCartItem(item);
@@ -977,10 +996,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _deleteCartItem(PurchaseCartItem item) {
-    setState(() {
-      _purchaseCart.remove(item);
-      _updatePaidAmountToTotal();
-    });
+    _purchaseCart.remove(item);
+    _updatePaidAmountToTotal();
+    _notifyCartAndDialogChanged();
     _saveCartDraft();
   }
 
@@ -1028,22 +1046,28 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Header with close button at TOP-LEFT (Rules compliant)
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            tooltip: 'داخستن',
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              'دەستکاری کڕینی ${item.product.name}',
-                              style: AppTextStyles.h3,
-                              overflow: TextOverflow.ellipsis,
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              tooltip: 'داخستن',
+                              onPressed: () => Navigator.pop(ctx),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.xs),
+                            Expanded(
+                              child: Directionality(
+                                textDirection: TextDirection.rtl,
+                                child: Text(
+                                  'دەستکاری کڕینی ${item.product.name}',
+                                  style: AppTextStyles.h3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const Divider(),
                       const SizedBox(height: AppSpacing.sm),
@@ -1363,10 +1387,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               item.cartonContentValue = safeContent;
                               item.cartonCost = cartonCost;
                               item.unitCost = unitCost;
+                              item.product = item.product.copyWith(costPrice: unitCost);
                               _updatePaidAmountToTotal();
                             });
+                            _notifyCartAndDialogChanged();
                           }
-                          _saveCartDraft();
+                          ref.read(productsListProvider.notifier).addProductLocally(item.product);
+                          _saveCartDraft(forceSaveToBackend: true);
 
                           Navigator.pop(ctx);
                         },
@@ -1998,12 +2025,24 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
 
     if (createdProduct != null && mounted) {
+      ref.read(productsListProvider.notifier).addProductLocally(createdProduct);
       if (_selectedSupplierId == null && createdProduct.supplierId != null) {
-        setState(() {
-          _selectedSupplierId = createdProduct!.supplierId;
-        });
+        _selectedSupplierId = createdProduct.supplierId;
       }
-      _addProductToCart(createdProduct);
+      final existingIdx = _purchaseCart.indexWhere((it) => it.product.id == createdProduct!.id);
+      if (existingIdx >= 0) {
+        final it = _purchaseCart[existingIdx];
+        it.product = createdProduct;
+        it.unitCost = createdProduct.costPrice;
+        if (it.unitType == PurchaseUnitType.carton) {
+          it.cartonCost = createdProduct.costPrice * it.unitsPerOneCarton;
+        }
+      } else {
+        _addProductToCart(createdProduct);
+      }
+      _updatePaidAmountToTotal();
+      _notifyCartAndDialogChanged();
+      await _saveCartDraft(forceSaveToBackend: true);
     }
   }
 
@@ -2060,21 +2099,27 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             return AlertDialog(
               backgroundColor: theme.colorScheme.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'زیادکردنی ${product.name}',
-                      style: AppTextStyles.h2.copyWith(fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
+              title: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: Text(
+                          'زیادکردنی ${product.name}',
+                          style: AppTextStyles.h2.copyWith(fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               content: SingleChildScrollView(
                 child: SizedBox(
@@ -2439,6 +2484,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         child: Text('هەڵە لە بارکردنی کاڵاکان: $err', style: AppTextStyles.bodyMedium),
       ),
       data: (allProducts) {
+        for (final item in _purchaseCart) {
+          final matched = allProducts.where((p) => p.id == item.product.id).firstOrNull;
+          if (matched != null) {
+            item.product = matched;
+          }
+        }
         if (!_hasRestoredDraft) {
           _hasRestoredDraft = true;
           if (_activeDraftOrderId == null && draftOrders.isNotEmpty) {
@@ -2722,6 +2773,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   _selectedSupplierId = value;
                                 });
                                 onSupplierSelectionChanged?.call();
+                                _notifyCartAndDialogChanged();
                                 _saveCartDraft();
                               },
                             ),
@@ -2770,6 +2822,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   setState(() {
                                     _selectedWarehouseId = val;
                                   });
+                                  _notifyCartAndDialogChanged();
                                   _saveCartDraft();
                                 }
                               },
@@ -2970,37 +3023,31 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               ),
             Expanded(
               child: _purchaseCart.isEmpty
-                  ? LayoutBuilder(
-                      builder: (context, constraints) => SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.remove_shopping_cart_outlined,
-                                  size: 72,
-                                  color: Colors.grey.shade400,
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  'سەبەتەی کڕین بەتاڵە',
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'کاڵاکان لە بەشی گەڕان یان لە بەشی کەمی ستۆکی سەرەوە زیاد بکە',
-                                  style: AppTextStyles.caption,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                  ? Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.remove_shopping_cart_outlined,
+                              size: 64,
+                              color: Colors.grey.shade400,
                             ),
-                          ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'سەبەتەی کڕین بەتاڵە',
+                              style: AppTextStyles.h3.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'کاڵاکان لە بەشی گەڕان یان لە بەشی کەمی ستۆکی سەرەوە زیاد بکە',
+                              style: AppTextStyles.caption,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                     )

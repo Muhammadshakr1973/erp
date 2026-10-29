@@ -244,11 +244,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           Navigator.pop(context, newProduct);
         }
       } else {
-        await ref
+        final updatedProduct = await ref
             .read(productActionsProvider)
             .updateProduct(widget.product!.id, data);
         if (mounted) {
-          Navigator.pop(context, true);
+          Navigator.pop(context, updatedProduct);
         }
       }
     } catch (e) {
