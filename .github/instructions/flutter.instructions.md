@@ -81,6 +81,10 @@ Preserve all unrelated existing behavior.
 
 Do not refactor the surrounding code unless explicitly requested.
 
+### Targeted UI Refreshes
+
+After any add, edit, delete, or update action, refresh only the affected local state and the visible widget data without reloading the entire screen. Do not rely on a full page refresh, reopening the screen, or re-fetching the entire collection when the changed item can be updated in place. If the action is triggered from a dialog or nested `StatefulBuilder`, update the parent screen state directly so the visible list stays synchronized immediately.
+
 ---
 
 ## 4. Existing Architecture

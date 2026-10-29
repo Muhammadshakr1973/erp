@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -863,10 +862,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final customerName = order.customerName;
     final customerAddress = order.customerAddress;
     final salesmanName = order.salesmanName;
-    final warehouseName = order.warehouseName;
-
     final currentUser = ref.watch(authProvider).user;
-    final isSalesman = currentUser?.isSalesman ?? false;
 
     StatusBadgeType statusType = StatusBadgeType.warning;
     switch (order.status) {
@@ -901,7 +897,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               _buildInfoRow(context, 'کڕیار', customerName),
               _buildInfoRow(context, 'ناونیشان', customerAddress),
               _buildInfoRow(context, 'مەندوب', salesmanName),
-              if (!isSalesman) _buildInfoRow(context, 'کۆگا', warehouseName),
               _buildInfoRow(
                 context,
                 'بەروار',

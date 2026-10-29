@@ -11,6 +11,7 @@ class Supplier extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
     protected $fillable = ['name', 'phone', 'address', 'contact_person', 'is_active', 'current_balance'];
+    protected $hidden = ['active_name'];
     protected $casts = ['is_active' => 'boolean', 'current_balance' => 'integer'];
     protected $appends = ['debt'];
 

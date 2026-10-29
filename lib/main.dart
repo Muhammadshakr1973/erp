@@ -108,4 +108,4 @@ class _NotificationListenerWrapper extends ConsumerWidget {
     ref.watch(notificationsListProvider);
     return child;
   }
-}
+} 

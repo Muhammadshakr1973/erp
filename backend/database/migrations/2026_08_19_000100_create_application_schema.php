@@ -235,7 +235,7 @@ return new class extends Migration
 
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->string('name');
             $table->string('phone', 20)->nullable()->index();
             $table->string('address')->nullable();
             $table->string('contact_person')->nullable();
@@ -243,6 +243,10 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
+            $table->string('active_name')
+                ->nullable()
+                ->storedAs('CASE WHEN deleted_at IS NULL THEN name ELSE NULL END');
+            $table->unique('active_name', 'suppliers_active_name_unique');
         });
 
         Schema::create('purchase_orders', function (Blueprint $table) {

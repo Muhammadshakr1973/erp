@@ -88,7 +88,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
       final actions = ref.read(supplierActionsProvider);
       if (widget.supplier == null) {
         final initialDebt = int.tryParse(_initialDebtController.text.trim());
-        await actions.addSupplier(
+        final supplier = await actions.addSupplier(
           _nameController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
               ? null
@@ -101,6 +101,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
               : _contactPersonController.text.trim(),
           initialDebt: initialDebt,
         );
+        if (mounted) {
+          Navigator.pop(context, supplier);
+        }
       } else {
         await actions.updateSupplier(
           widget.supplier!.id,
@@ -115,10 +118,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
               ? null
               : _contactPersonController.text.trim(),
         );
-      }
-
-      if (mounted) {
-        Navigator.pop(context, true);
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {

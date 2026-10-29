@@ -45,24 +45,83 @@ final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) as
   }
 });
 
-final purchaseOrdersProvider = FutureProvider<List<PurchaseOrderModel>>((
-  ref,
-) async {
-  final apiClient = ref.watch(apiClientProvider);
-  try {
-    final response = await apiClient.client.get('/purchase-orders');
-    final resData = response.data;
-    if (resData is! Map || resData['data'] is! List) {
-      throw FormatException(
-        'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase orders response payload)',
+class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
+  final Map<int, PurchaseOrderModel> _localOrders = {};
+  final Set<int> _removedOrderIds = {};
+
+  @override
+  Future<List<PurchaseOrderModel>> build() async {
+    final apiClient = ref.watch(apiClientProvider);
+    try {
+      final response = await apiClient.client.get('/purchase-orders');
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase orders response payload)',
+        );
+      }
+      final List<dynamic> data = resData['data'] as List;
+      final orders = data
+          .map((json) => PurchaseOrderModel.fromJson(json))
+          .toList();
+      final fetchedIds = orders.map((order) => order.id).toSet();
+      _removedOrderIds.removeWhere((id) => !fetchedIds.contains(id));
+      _localOrders.removeWhere((id, _) => fetchedIds.contains(id));
+      orders.removeWhere((order) => _removedOrderIds.contains(order.id));
+      return _mergeOrders(orders, _localOrders.values);
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
+
+  void upsertOrderLocally(PurchaseOrderModel order) {
+    _removedOrderIds.remove(order.id);
+    _localOrders[order.id] = order;
+    final currentOrders = state.valueOrNull;
+    if (currentOrders != null) {
+      state = AsyncData(_mergeOrders(currentOrders, [order]));
+    }
+  }
+
+  void removeOrderLocally(int orderId) {
+    _localOrders.remove(orderId);
+    _removedOrderIds.add(orderId);
+    final currentOrders = state.valueOrNull;
+    if (currentOrders != null) {
+      state = AsyncData(
+        currentOrders.where((order) => order.id != orderId).toList(),
       );
     }
-    final List<dynamic> data = resData['data'] as List;
-    return data.map((json) => PurchaseOrderModel.fromJson(json)).toList();
-  } catch (e) {
-    throw Exception(apiClient.parseError(e));
   }
-});
+
+  List<PurchaseOrderModel> _mergeOrders(
+    Iterable<PurchaseOrderModel> currentOrders,
+    Iterable<PurchaseOrderModel> updates,
+  ) {
+    final ordersById = {
+      for (final order in currentOrders) order.id: order,
+      for (final order in updates) order.id: order,
+    };
+    final orders = ordersById.values.toList();
+    orders.sort((a, b) {
+      final aDate = a.createdAt == null
+          ? null
+          : DateTime.tryParse(a.createdAt!);
+      final bDate = b.createdAt == null
+          ? null
+          : DateTime.tryParse(b.createdAt!);
+      if (aDate == null) return bDate == null ? 0 : 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
+    return orders;
+  }
+}
+
+final purchaseOrdersProvider =
+    AsyncNotifierProvider<PurchaseOrdersNotifier, List<PurchaseOrderModel>>(
+      PurchaseOrdersNotifier.new,
+    );
 
 final purchaseActionsProvider = Provider<PurchaseActions>((ref) {
   return PurchaseActions(ref);
@@ -80,6 +139,7 @@ class PurchaseActions {
     num? paidAmount,
     bool autoReceive = true,
     String? notes,
+    bool refreshRelatedProviders = true,
   }) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
@@ -99,14 +159,17 @@ class PurchaseActions {
 
       final resData = response.data;
       final poData = resData['data'];
+      final order = PurchaseOrderModel.fromJson(poData);
+      _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
-      _ref.invalidate(purchaseOrdersProvider);
-      _ref.invalidate(purchaseRequirementsProvider);
-      _ref.invalidate(purchaseRequirementsGroupProvider);
-      _ref.invalidate(productsListProvider);
-      _ref.invalidate(suppliersListProvider);
+      if (refreshRelatedProviders) {
+        _ref.invalidate(purchaseRequirementsProvider);
+        _ref.invalidate(purchaseRequirementsGroupProvider);
+        _ref.invalidate(productsListProvider);
+        _ref.invalidate(suppliersListProvider);
+      }
 
-      return PurchaseOrderModel.fromJson(poData);
+      return order;
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -120,6 +183,7 @@ class PurchaseActions {
     num? paidAmount,
     bool? autoReceive,
     String? notes,
+    bool refreshRelatedProviders = true,
   }) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
@@ -139,14 +203,17 @@ class PurchaseActions {
 
       final resData = response.data;
       final poData = resData['data'];
+      final order = PurchaseOrderModel.fromJson(poData);
+      _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
-      _ref.invalidate(purchaseOrdersProvider);
-      _ref.invalidate(purchaseRequirementsProvider);
-      _ref.invalidate(purchaseRequirementsGroupProvider);
-      _ref.invalidate(productsListProvider);
-      _ref.invalidate(suppliersListProvider);
+      if (refreshRelatedProviders) {
+        _ref.invalidate(purchaseRequirementsProvider);
+        _ref.invalidate(purchaseRequirementsGroupProvider);
+        _ref.invalidate(productsListProvider);
+        _ref.invalidate(suppliersListProvider);
+      }
 
-      return PurchaseOrderModel.fromJson(poData);
+      return order;
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -156,7 +223,7 @@ class PurchaseActions {
     final apiClient = _ref.read(apiClientProvider);
     try {
       await apiClient.client.delete('/purchase-orders/$orderId');
-      _ref.invalidate(purchaseOrdersProvider);
+      _ref.read(purchaseOrdersProvider.notifier).removeOrderLocally(orderId);
       _ref.invalidate(purchaseRequirementsProvider);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
@@ -185,7 +252,7 @@ class PurchaseActions {
       final key = idempotencyKey ??
           'convert_${_deterministicHash(jsonEncode(payload))}';
 
-      await apiClient.client.post(
+      final response = await apiClient.client.post(
         '/purchase-requirements/convert',
         data: payload,
         options: Options(
@@ -194,10 +261,28 @@ class PurchaseActions {
           },
         ),
       );
-      // Invalidate the lists to trigger a refresh
+      final resData = response.data;
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed created purchase orders response payload)',
+        );
+      }
+      for (final orderData in resData['data'] as List) {
+        if (orderData is! Map) {
+          throw FormatException(
+            'داتای پسوڵەی کڕین لە وەڵامی سێرڤەر نادروستە',
+          );
+        }
+        _ref
+            .read(purchaseOrdersProvider.notifier)
+            .upsertOrderLocally(
+              PurchaseOrderModel.fromJson(
+                Map<String, dynamic>.from(orderData),
+              ),
+            );
+      }
       _ref.invalidate(purchaseRequirementsProvider);
       _ref.invalidate(purchaseRequirementsGroupProvider);
-      _ref.invalidate(purchaseOrdersProvider);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -207,7 +292,7 @@ class PurchaseActions {
     final apiClient = _ref.read(apiClientProvider);
     try {
       final key = idempotencyKey ?? 'confirm_po_$orderId';
-      await apiClient.client.post(
+      final response = await apiClient.client.post(
         '/purchase-orders/$orderId/confirm',
         options: Options(
           headers: {
@@ -215,7 +300,8 @@ class PurchaseActions {
           },
         ),
       );
-      _ref.invalidate(purchaseOrdersProvider);
+      final order = _purchaseOrderFromResponse(response.data);
+      _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -229,7 +315,7 @@ class PurchaseActions {
         payload['items'] = items;
       }
       final key = 'receive_po_${orderId}_${DateTime.now().microsecondsSinceEpoch}';
-      await apiClient.client.post(
+      final response = await apiClient.client.post(
         '/purchase-orders/$orderId/receive',
         data: payload,
         options: Options(
@@ -238,8 +324,8 @@ class PurchaseActions {
           },
         ),
       );
-      // Invalidate purchase orders provider to refresh list
-      _ref.invalidate(purchaseOrdersProvider);
+      final order = _purchaseOrderFromResponse(response.data);
+      _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -257,13 +343,27 @@ class PurchaseActions {
           },
         ),
       );
-      // Invalidate both lists
-      _ref.invalidate(purchaseOrdersProvider);
+      final response = await apiClient.client.get(
+        '/purchase-orders/$orderId',
+      );
+      final order = _purchaseOrderFromResponse(response.data);
+      _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
       _ref.invalidate(purchaseRequirementsProvider);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
   }
+}
+
+PurchaseOrderModel _purchaseOrderFromResponse(dynamic responseData) {
+  if (responseData is! Map || responseData['data'] is! Map) {
+    throw FormatException(
+      'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase order response payload)',
+    );
+  }
+  return PurchaseOrderModel.fromJson(
+    Map<String, dynamic>.from(responseData['data']),
+  );
 }
 
 String _deterministicHash(String input) {

@@ -348,6 +348,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
             .read(supplierActionsProvider)
             .addSupplier(result.trim());
         // چاوەڕێ دەکەین تا لیستەکە نوێ دەبێتەوە
+        ref.invalidate(suppliersListProvider);
         await ref.read(suppliersListProvider.future);
 
         if (mounted) {
@@ -651,7 +652,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             : null;
                                         return DropdownButtonHideUnderline(
                                           child: DropdownButtonFormField<int>(
-                                            value: validValue,
+                                            initialValue: validValue,
                                             isExpanded: true,
                                             hint: const Text('جۆر هەڵبژێرە'),
                                             decoration: const InputDecoration(
@@ -736,7 +737,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             : null;
                                         return DropdownButtonHideUnderline(
                                           child: DropdownButtonFormField<int>(
-                                            value: validValue,
+                                            initialValue: validValue,
                                             isExpanded: true,
                                             hint: const Text(
                                               'کۆمپانیا هەڵبژێرە',

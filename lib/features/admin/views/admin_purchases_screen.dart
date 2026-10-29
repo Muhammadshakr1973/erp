@@ -28,11 +28,9 @@ import '../../auth/providers/auth_provider.dart';
 import '../../shared/models/receipt_data.dart';
 import '../../shared/services/receipt_print_service.dart';
 import '../models/purchase_order_model.dart';
-import '../models/purchase_requirement_model.dart';
 import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
 import 'supplier_form_dialog.dart';
-import 'purchase_order_builder_dialog.dart';
 
 enum PurchaseUnitType { baseUnit, carton }
 enum CartonContentMode { byUnit, byPieces }
@@ -171,11 +169,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   static const String _kPurchaseCartDraftKey = 'admin_purchase_cart_draft';
 
   late TabController _tabController;
-  final Set<int> _selectedRequirementIds = {};
-  bool _isConverting = false;
 
   final List<PurchaseCartItem> _purchaseCart = [];
+  final Map<int, PurchaseOrderModel> _purchaseOrderOverrides = {};
   int? _activeDraftOrderId;
+  String? _lastSavedDraftSignature;
+  bool _isEditingPurchaseDraft = false;
+  bool _isPurchaseDraftDialogOpen = false;
   int? _selectedSupplierId; // null = دابینکەری نوێ (بێناو)
   int? _selectedWarehouseId;
   final TextEditingController _poNotesController = TextEditingController();
@@ -211,14 +211,24 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     });
   }
 
+  int _resolveWarehouseId(List<WarehouseModel> warehouses) {
+    if (_selectedWarehouseId != null &&
+        warehouses.any((warehouse) => warehouse.id == _selectedWarehouseId)) {
+      return _selectedWarehouseId!;
+    }
+
+    final mainWarehouse = warehouses.where((warehouse) => warehouse.isMain);
+    if (mainWarehouse.isNotEmpty) return mainWarehouse.first.id;
+    if (warehouses.isNotEmpty) return warehouses.first.id;
+    return _selectedWarehouseId ?? 1;
+  }
+
   void _loadDraftOrderData(PurchaseOrderModel draft, List<ProductModel> allProducts) {
     _selectedSupplierId = draft.supplierId > 0 ? draft.supplierId : null;
     _selectedWarehouseId = draft.warehouseId;
     _poNotesController.text = draft.notes ?? '';
-    _poPaidAmountController.text = draft.paidAmount > 0
-        ? draft.paidAmount.toInt().toString()
-        : draft.totalAmount.toInt().toString();
-    _userModifiedPaidAmount = draft.paidAmount > 0;
+    _poPaidAmountController.text = draft.paidAmount.toInt().toString();
+    _userModifiedPaidAmount = draft.paidAmount != draft.totalAmount;
 
     _purchaseCart.clear();
     for (final it in draft.items) {
@@ -241,40 +251,69 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         unitCost: it.unitCost.toDouble(),
       ));
     }
+
+    final warehouses = ref.read(warehouseListProvider).asData?.value ?? [];
+    final warehouseId = _selectedWarehouseId ??
+        (warehouses.any((warehouse) => warehouse.isMain)
+            ? warehouses.firstWhere((warehouse) => warehouse.isMain).id
+            : (warehouses.isNotEmpty ? warehouses.first.id : 1));
+    _lastSavedDraftSignature = _draftSignature(
+      supplierId: _selectedSupplierId,
+      warehouseId: warehouseId,
+      items: _purchaseCart
+          .map(
+            (item) => {
+              'product_id': item.product.id,
+              'quantity': item.totalStockUnits,
+              'unit_cost': item.effectiveUnitCostForServer,
+            },
+          )
+          .toList(),
+      paidAmount:
+          double.tryParse(_poPaidAmountController.text.trim()) ?? 0,
+      notes: _poNotesController.text.trim().isEmpty
+          ? null
+          : _poNotesController.text.trim(),
+    );
   }
 
-  Future<void> _createNewDraftInvoice(List<dynamic> warehouses) async {
+  Future<void> _createNewDraftInvoice(
+    List<dynamic> warehouses, {
+    required int? supplierId,
+  }) async {
     try {
+      _selectedSupplierId = supplierId;
       final defaultWhId = _selectedWarehouseId ??
           (warehouses.any((w) => (w as dynamic).isMain == true)
               ? (warehouses.firstWhere((w) => (w as dynamic).isMain == true) as dynamic).id
               : (warehouses.isNotEmpty ? (warehouses.first as dynamic).id : 1));
 
       final newOrder = await ref.read(purchaseActionsProvider).createPurchaseOrder(
-        supplierId: _selectedSupplierId,
+        supplierId: supplierId,
         warehouseId: defaultWhId,
         items: [],
         autoReceive: false,
         notes: null,
+        refreshRelatedProviders: false,
       );
 
       setState(() {
         _activeDraftOrderId = newOrder.id;
+        _purchaseOrderOverrides[newOrder.id] = newOrder;
+        _isEditingPurchaseDraft = true;
         _purchaseCart.clear();
         _poNotesController.clear();
         _poPaidAmountController.text = '0';
         _userModifiedPaidAmount = false;
-      });
-
-      ref.invalidate(purchaseOrdersProvider);
-
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'پسوڵەی نوێ #${newOrder.orderNumber} دروستکرا و تۆمارکرا',
-          type: SnackbarType.success,
+        _lastSavedDraftSignature = _draftSignature(
+          supplierId: supplierId,
+          warehouseId: defaultWhId,
+          items: const [],
+          paidAmount: 0.0,
+          notes: null,
         );
-      }
+      });
+      _showPurchaseDraftDialog();
     } catch (e) {
       if (mounted) {
         AppSnackbar.show(
@@ -286,29 +325,95 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
   }
 
-  Future<void> _deleteCurrentDraftOrder() async {
-    if (_activeDraftOrderId == null) return;
+  Future<void> _closePurchaseDraftEditor() async {
+    _draftDebounceTimer?.cancel();
+    await _saveCartDraft(forceSaveToBackend: true);
+    if (!mounted) return;
+    setState(() => _isEditingPurchaseDraft = false);
+    if (_isPurchaseDraftDialogOpen) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
 
+  void _showPurchaseDraftDialog() {
+    if (!mounted || _isPurchaseDraftDialogOpen) return;
+    _isPurchaseDraftDialogOpen = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => Dialog.fullscreen(
+          child: Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'داخستن',
+                      icon: const Icon(Icons.close),
+                      onPressed: _closePurchaseDraftEditor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Directionality(
+                        textDirection: TextDirection.rtl,
+                        child: Text(
+                          'دەستکاریکردنی پسوڵەی کڕین',
+                          style: AppTextStyles.h2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            body: _buildPurchasesTab(
+              dialogContext,
+              onSupplierSelectionChanged: () => setDialogState(() {}),
+            ),
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      _isPurchaseDraftDialogOpen = false;
+      if (mounted && _isEditingPurchaseDraft) {
+        setState(() => _isEditingPurchaseDraft = false);
+      }
+    });
+  }
+
+  Future<void> _deletePurchaseDraft(PurchaseOrderModel order) async {
     final confirmed = await AppDialog.showConfirm(
       context,
       title: 'سڕینەوەی پسوڵەی کڕین',
-      message: 'ئایا دڵنیایت لە سڕینەوەی ئەم پسوڵەیە لە داتابەیس؟',
+      message:
+          'ئایا دڵنیایت لە سڕینەوەی پسوڵەی کڕینی #${order.orderNumber} لە داتابەیس؟',
       confirmText: 'بەڵێ، بسڕەوە',
       isDanger: true,
     );
 
     if (confirmed == true && mounted) {
       try {
-        final idToDelete = _activeDraftOrderId!;
-        await ref.read(purchaseActionsProvider).deletePurchaseOrder(idToDelete);
-        setState(() {
-          _activeDraftOrderId = null;
-          _purchaseCart.clear();
-          _poNotesController.clear();
-          _poPaidAmountController.text = '0';
-        });
-        await _clearCartDraft();
-        ref.invalidate(purchaseOrdersProvider);
+        await ref.read(purchaseActionsProvider).deletePurchaseOrder(order.id);
+        if (!mounted) return;
+        _purchaseOrderOverrides.remove(order.id);
+        if (_activeDraftOrderId == order.id) {
+          setState(() {
+            _activeDraftOrderId = null;
+            _isEditingPurchaseDraft = false;
+            _lastSavedDraftSignature = null;
+            _purchaseCart.clear();
+            _poNotesController.clear();
+            _poPaidAmountController.text = '0';
+          });
+          if (_isPurchaseDraftDialogOpen) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+          await _clearCartDraft();
+        }
+        _refreshPurchaseOrders();
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -333,9 +438,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     List<PurchaseOrderModel> draftOrders,
     List<ProductModel> allProducts,
   ) async {
-    if (_activeDraftOrderId == draftId) return;
+    if (_activeDraftOrderId == draftId) {
+      setState(() => _isEditingPurchaseDraft = true);
+      _showPurchaseDraftDialog();
+      return;
+    }
 
     if (_activeDraftOrderId != null && _purchaseCart.isNotEmpty) {
+      _draftDebounceTimer?.cancel();
       await _saveCartDraft(forceSaveToBackend: true);
     }
 
@@ -343,7 +453,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     setState(() {
       _activeDraftOrderId = draftId;
       _loadDraftOrderData(draft, allProducts);
+      _isEditingPurchaseDraft = true;
     });
+    _showPurchaseDraftDialog();
   }
 
   Future<void> _saveCartDraft({bool forceSaveToBackend = false}) async {
@@ -353,22 +465,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         await prefs.remove(_kPurchaseCartDraftKey);
         return;
       }
+      final warehousesAsync = ref.read(warehouseListProvider);
+      final warehouses = warehousesAsync.asData?.value ?? [];
+      final warehouseId = _resolveWarehouseId(warehouses);
       final draftData = {
         'active_draft_order_id': _activeDraftOrderId,
         'items': _purchaseCart.map((item) => item.toJson()).toList(),
         'supplier_id': _selectedSupplierId,
-        'warehouse_id': _selectedWarehouseId,
+        'warehouse_id': warehouseId,
         'notes': _poNotesController.text,
         'paid_amount': _poPaidAmountController.text,
       };
       await prefs.setString(_kPurchaseCartDraftKey, jsonEncode(draftData));
-
-      final warehousesAsync = ref.read(warehouseListProvider);
-      final warehouses = warehousesAsync.asData?.value ?? [];
-      final warehouseId = _selectedWarehouseId ??
-          (warehouses.any((w) => w.isMain)
-              ? warehouses.firstWhere((w) => w.isMain).id
-              : (warehouses.isNotEmpty ? warehouses.first.id : 1));
 
       final itemsPayload = _purchaseCart.map((item) {
         return {
@@ -382,17 +490,34 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       final parsedPaid = double.tryParse(textVal);
       final totalAmount = _calculateCartTotal();
       final paidAmount = parsedPaid ?? (_userModifiedPaidAmount ? 0.0 : totalAmount);
+      final notes = _poNotesController.text.trim().isEmpty
+          ? null
+          : _poNotesController.text.trim();
+      final signature = _draftSignature(
+        supplierId: _selectedSupplierId,
+        warehouseId: warehouseId,
+        items: itemsPayload,
+        paidAmount: paidAmount,
+        notes: notes,
+      );
 
       if (_activeDraftOrderId != null) {
-        await ref.read(purchaseActionsProvider).updatePurchaseOrder(
-          orderId: _activeDraftOrderId!,
-          supplierId: _selectedSupplierId,
-          warehouseId: warehouseId,
-          items: itemsPayload,
-          paidAmount: paidAmount,
-          autoReceive: false,
-          notes: _poNotesController.text.trim().isEmpty ? null : _poNotesController.text.trim(),
-        );
+        if (signature != _lastSavedDraftSignature) {
+          final updatedOrder = await ref
+              .read(purchaseActionsProvider)
+              .updatePurchaseOrder(
+                orderId: _activeDraftOrderId!,
+                supplierId: _selectedSupplierId,
+                warehouseId: warehouseId,
+                items: itemsPayload,
+                paidAmount: paidAmount,
+                autoReceive: false,
+                notes: notes,
+                refreshRelatedProviders: false,
+              );
+          _purchaseOrderOverrides[updatedOrder.id] = updatedOrder;
+          _lastSavedDraftSignature = signature;
+        }
       } else if (_purchaseCart.isNotEmpty && forceSaveToBackend) {
         final newOrder = await ref.read(purchaseActionsProvider).createPurchaseOrder(
           supplierId: _selectedSupplierId,
@@ -400,17 +525,57 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           items: itemsPayload,
           paidAmount: paidAmount,
           autoReceive: false,
-          notes: _poNotesController.text.trim().isEmpty ? null : _poNotesController.text.trim(),
+          notes: notes,
+          refreshRelatedProviders: false,
         );
         if (mounted) {
           setState(() {
             _activeDraftOrderId = newOrder.id;
+            _purchaseOrderOverrides[newOrder.id] = newOrder;
+            _lastSavedDraftSignature = signature;
           });
         }
       }
+
     } catch (e) {
       debugPrint('Error saving purchase cart draft: $e');
     }
+  }
+
+  String _draftSignature({
+    required int? supplierId,
+    required int warehouseId,
+    required List<Map<String, dynamic>> items,
+    required num paidAmount,
+    required String? notes,
+  }) {
+    return jsonEncode({
+      'supplier_id': supplierId,
+      'warehouse_id': warehouseId,
+      'items': items,
+      'paid_amount': paidAmount,
+      'notes': notes,
+    });
+  }
+
+  List<PurchaseOrderModel> _mergePurchaseOrderOverrides(
+    List<PurchaseOrderModel> orders,
+  ) {
+    final merged = List<PurchaseOrderModel>.from(orders);
+    for (final entry in _purchaseOrderOverrides.entries) {
+      final index = merged.indexWhere((order) => order.id == entry.key);
+      if (index == -1) {
+        merged.add(entry.value);
+      } else {
+        merged[index] = entry.value;
+      }
+    }
+    return merged;
+  }
+
+  void _refreshPurchaseOrders() {
+    _purchaseOrderOverrides.clear();
+    ref.invalidate(purchaseOrdersProvider);
   }
 
   Future<void> _clearCartDraft() async {
@@ -516,28 +681,39 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     super.dispose();
   }
 
-  void _showAddSupplierDialog(BuildContext context) {
-    showDialog<bool>(
+  Future<void> _showAddSupplierDialog(BuildContext context) async {
+    final result = await showDialog<Object?>(
       context: context,
       barrierDismissible: false,
       builder: (context) => const SupplierFormDialog(),
-    ).then((success) {
-      if (success == true) {
-        ref.invalidate(suppliersListProvider);
-      }
-    });
+    );
+    if (!mounted) return;
+
+    if (result is SupplierModel) {
+      ref.invalidate(suppliersListProvider);
+      await ref.read(suppliersListProvider.future);
+      if (!mounted) return;
+      setState(() => _selectedSupplierId = result.id);
+      await _saveCartDraft();
+    } else if (result == true) {
+      ref.invalidate(suppliersListProvider);
+      await ref.read(suppliersListProvider.future);
+    }
   }
 
-  void _showEditSupplierDialog(BuildContext context, SupplierModel supplier) {
-    showDialog<bool>(
+  Future<void> _showEditSupplierDialog(
+    BuildContext context,
+    SupplierModel supplier,
+  ) async {
+    final success = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => SupplierFormDialog(supplier: supplier),
-    ).then((success) {
-      if (success == true) {
-        ref.invalidate(suppliersListProvider);
-      }
-    });
+    );
+    if (success == true && mounted) {
+      ref.invalidate(suppliersListProvider);
+      await ref.read(suppliersListProvider.future);
+    }
   }
 
   void _deleteSupplier(SupplierModel supplier) async {
@@ -553,6 +729,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (confirmed == true && mounted) {
       try {
         await ref.read(supplierActionsProvider).deleteSupplier(supplier.id);
+        if (!mounted) return;
+        ref.invalidate(suppliersListProvider);
+        await ref.read(suppliersListProvider.future);
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -572,32 +751,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
   }
 
-  void _convertSelectedToPO() async {
-    if (_isConverting) return;
-    final requirements =
-        ref.read(purchaseRequirementsProvider).valueOrNull ??
-        <PurchaseRequirementModel>[];
-    final selectedRequirements = requirements
-        .where((requirement) => _selectedRequirementIds.contains(requirement.id))
-        .toList();
-
-    setState(() => _isConverting = true);
-    try {
-      final created = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => PurchaseOrderBuilderDialog(
-          requirements: selectedRequirements,
-        ),
-      );
-      if (created == true && mounted) {
-        setState(() => _selectedRequirementIds.clear());
-      }
-    } finally {
-      if (mounted) setState(() => _isConverting = false);
-    }
-  }
-
   void _confirmPO(PurchaseOrderModel order) async {
     final confirmed = await AppDialog.showConfirm(
       context,
@@ -611,6 +764,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (confirmed == true && mounted) {
       try {
         await ref.read(purchaseActionsProvider).confirmPurchaseOrder(order.id);
+        _purchaseOrderOverrides.remove(order.id);
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -641,11 +795,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      AppSnackbar.show(
-        context,
-        message: 'کرداری وەرگرتنی پسوڵەی کڕین جێبەجێکرا',
-        type: SnackbarType.success,
-      );
+    _purchaseOrderOverrides.remove(order.id);
+    AppSnackbar.show(
+      context,
+      message: 'کرداری وەرگرتنی پسوڵەی کڕین جێبەجێکرا',
+      type: SnackbarType.success,
+    );
     }
   }
 
@@ -663,6 +818,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     if (confirmed == true && mounted) {
       try {
         await ref.read(purchaseActionsProvider).cancelPurchaseOrder(order.id);
+        _purchaseOrderOverrides.remove(order.id);
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -693,13 +849,30 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('بازاڕ و کۆمپانیا', style: AppTextStyles.h2),
+        automaticallyImplyLeading:
+            !(_tabController.index == 0 && _isEditingPurchaseDraft),
+        leading: _tabController.index == 0 && _isEditingPurchaseDraft
+            ? IconButton(
+                tooltip: 'گەڕانەوە بۆ پسوڵەکان',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _closePurchaseDraftEditor,
+              )
+            : null,
+        title: Text(
+          _tabController.index == 0 && _isEditingPurchaseDraft
+              ? 'دەستکاریکردنی پسوڵەی کڕین'
+              : 'بازاڕ و کۆمپانیا',
+          style: AppTextStyles.h2,
+        ),
         actions: [
-          if (_tabController.index == 0)
-            IconButton(
+          if (_tabController.index == 0 && !_isEditingPurchaseDraft)
+            IconButton.filled(
               tooltip: 'دروستکردنی پسوڵەی کڕین',
               icon: const Icon(Icons.add_shopping_cart),
-              onPressed: _isConverting ? null : _convertSelectedToPO,
+              onPressed: () => _createNewDraftInvoice(
+                ref.read(warehouseListProvider).asData?.value ?? [],
+                supplierId: null,
+              ),
             ),
           if (_tabController.index == 2)
             IconButton(
@@ -809,10 +982,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     final qtyController = TextEditingController(text: item.quantity.toString());
     final cartonQtyController = TextEditingController(text: item.quantity.toString());
     final contentValController = TextEditingController(text: item.cartonContentValue.toString());
-    final costController = TextEditingController(text: item.unitCost.toInt().toString());
-
     PurchaseUnitType selectedUnitType = item.unitType;
     CartonContentMode selectedCartonMode = item.cartonContentMode;
+    final costController = TextEditingController(
+      text: (selectedUnitType == PurchaseUnitType.carton
+              ? item.cartonCost ?? item.unitCost * item.unitsPerOneCarton
+              : item.unitCost)
+          .toString(),
+    );
 
     showDialog<void>(
       context: context,
@@ -871,6 +1048,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           Expanded(
                             child: InkWell(
                               onTap: () {
+                                final currentCost =
+                                    double.tryParse(costController.text);
+                                if (currentCost != null &&
+                                    selectedUnitType == PurchaseUnitType.carton) {
+                                  costController.text =
+                                      (currentCost / computedUnitsPerCarton)
+                                          .round()
+                                          .toString();
+                                }
                                 setDialogState(() {
                                   selectedUnitType = PurchaseUnitType.baseUnit;
                                 });
@@ -906,6 +1092,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           Expanded(
                             child: InkWell(
                               onTap: () {
+                                final currentCost =
+                                    double.tryParse(costController.text);
+                                if (currentCost != null &&
+                                    selectedUnitType == PurchaseUnitType.baseUnit) {
+                                  costController.text =
+                                      (currentCost * computedUnitsPerCarton)
+                                          .toString();
+                                }
                                 setDialogState(() {
                                   selectedUnitType = PurchaseUnitType.carton;
                                 });
@@ -1110,7 +1304,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
                         controller: costController,
-                        labelText: 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
+                        labelText: selectedUnitType == PurchaseUnitType.carton
+                            ? 'نرخی کارتۆن - د.ع'
+                            : 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
                         keyboardType: TextInputType.number,
                       ),
 
@@ -1123,16 +1319,47 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               ? (int.tryParse(qtyController.text) ?? 1)
                               : (int.tryParse(cartonQtyController.text) ?? 1);
                           final parsedContent = int.tryParse(contentValController.text) ?? 1;
-                          final parsedCost = double.tryParse(costController.text) ?? item.unitCost;
+                          final parsedCost =
+                              double.tryParse(costController.text) ??
+                                  (selectedUnitType == PurchaseUnitType.carton
+                                      ? item.cartonCost ??
+                                          item.unitCost *
+                                              item.unitsPerOneCarton
+                                      : item.unitCost);
+                          final safeContent =
+                              parsedContent > 0 ? parsedContent : 1;
+                          var unitsPerCarton = safeContent;
+                          if (selectedCartonMode == CartonContentMode.byPieces) {
+                            unitsPerCarton =
+                                (safeContent / item.piecesPerUnit).round();
+                            if (unitsPerCarton <= 0) unitsPerCarton = 1;
+                          }
+                          final safeCost = parsedCost >= 0
+                              ? parsedCost
+                              : (selectedUnitType == PurchaseUnitType.carton
+                                  ? item.cartonCost ??
+                                      item.unitCost * item.unitsPerOneCarton
+                                  : item.unitCost);
+                          final unitCost = selectedUnitType ==
+                                  PurchaseUnitType.carton
+                              ? (safeCost / unitsPerCarton).roundToDouble()
+                              : safeCost;
+                          final cartonCost =
+                              selectedUnitType == PurchaseUnitType.carton
+                                  ? unitCost * unitsPerCarton
+                                  : null;
 
-                          setState(() {
-                            item.unitType = selectedUnitType;
-                            item.cartonContentMode = selectedCartonMode;
-                            item.quantity = parsedQty > 0 ? parsedQty : 1;
-                            item.cartonContentValue = parsedContent > 0 ? parsedContent : 1;
-                            item.unitCost = parsedCost >= 0 ? parsedCost : item.unitCost;
-                            _updatePaidAmountToTotal();
-                          });
+                          if (mounted) {
+                            setState(() {
+                              item.unitType = selectedUnitType;
+                              item.cartonContentMode = selectedCartonMode;
+                              item.quantity = parsedQty > 0 ? parsedQty : 1;
+                              item.cartonContentValue = safeContent;
+                              item.cartonCost = cartonCost;
+                              item.unitCost = unitCost;
+                              _updatePaidAmountToTotal();
+                            });
+                          }
                           _saveCartDraft();
 
                           Navigator.pop(ctx);
@@ -1153,7 +1380,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     CameraBarcodeScanner.show(
       context,
       (barcode) {
-        final found = allProducts.where((p) => p.barcode == barcode.trim()).firstOrNull;
+        final found = allProducts.where((p) {
+          final matchesSupplier = _selectedSupplierId == null ||
+              p.supplierId == _selectedSupplierId;
+          return matchesSupplier && p.barcode == barcode.trim();
+        }).firstOrNull;
         if (found != null) {
           _addProductToCart(found);
         } else {
@@ -1259,6 +1490,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       if (mounted) {
         setState(() {
           _activeDraftOrderId = null;
+          _isEditingPurchaseDraft = false;
           _purchaseCart.clear();
           _poNotesController.clear();
           _poPaidAmountController.text = '0';
@@ -1474,7 +1706,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           ],
           autoReceive: false,
         );
-        ref.invalidate(purchaseOrdersProvider);
+        _refreshPurchaseOrders();
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -1506,7 +1738,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           items: updatedItems,
         );
 
-        ref.invalidate(purchaseOrdersProvider);
+        _refreshPurchaseOrders();
         if (mounted) {
           AppSnackbar.show(
             context,
@@ -1642,15 +1874,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         SizedBox(
                           width: 90,
                           height: 38,
-                          child: TextField(
+                          child: AppTextField(
                             controller: thresholdController,
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyBold.copyWith(fontSize: 14),
-                            decoration: InputDecoration(
+                            customDecoration: InputDecoration(
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 8,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             onChanged: (_) => setDialogState(() {}),
                           ),
@@ -1774,7 +2010,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 : safeQty * computedUnitsPerCarton;
 
             final parsedCost = double.tryParse(costController.text) ?? product.costPrice;
-            final double computedTotalCost = computedTotalStock * parsedCost;
+            final safeCost = parsedCost >= 0 ? parsedCost : product.costPrice;
+            final computedUnitCost = selectedUnitType == PurchaseUnitType.carton
+                ? (safeCost / computedUnitsPerCarton).roundToDouble()
+                : safeCost;
+            final double computedTotalCost = selectedUnitType ==
+                    PurchaseUnitType.carton
+                ? safeQty * computedUnitCost * computedUnitsPerCarton
+                : safeQty * computedUnitCost;
             final unitName = product.unit?.trim().isNotEmpty == true ? product.unit! : 'دانە';
 
             return AlertDialog(
@@ -1808,6 +2051,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           Expanded(
                             child: InkWell(
                               onTap: () {
+                                final currentCost =
+                                    double.tryParse(costController.text);
+                                if (currentCost != null &&
+                                    selectedUnitType == PurchaseUnitType.carton) {
+                                  costController.text =
+                                      (currentCost / computedUnitsPerCarton)
+                                          .round()
+                                          .toString();
+                                }
                                 setDialogState(() {
                                   selectedUnitType = PurchaseUnitType.baseUnit;
                                 });
@@ -1844,6 +2096,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           Expanded(
                             child: InkWell(
                               onTap: () {
+                                final currentCost =
+                                    double.tryParse(costController.text);
+                                if (currentCost != null &&
+                                    selectedUnitType == PurchaseUnitType.baseUnit) {
+                                  costController.text =
+                                      (currentCost * computedUnitsPerCarton)
+                                          .toString();
+                                }
                                 setDialogState(() {
                                   selectedUnitType = PurchaseUnitType.carton;
                                 });
@@ -1895,18 +2155,131 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           onChanged: (_) => setDialogState(() {}),
                         ),
                         const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'ناوەڕۆکی کارتۆن بە چی هەژمار دەکرێت؟',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedCartonMode = CartonContentMode.byUnit;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selectedCartonMode ==
+                                            CartonContentMode.byUnit
+                                        ? theme.colorScheme.primaryContainer
+                                        : theme.colorScheme
+                                            .surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: selectedCartonMode ==
+                                              CartonContentMode.byUnit
+                                          ? theme.colorScheme.primary
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'ژمارەی یەکە ($unitName)',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: selectedCartonMode ==
+                                              CartonContentMode.byUnit
+                                          ? theme.colorScheme.primary
+                                          : null,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedCartonMode =
+                                        CartonContentMode.byPieces;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selectedCartonMode ==
+                                            CartonContentMode.byPieces
+                                        ? theme.colorScheme.primaryContainer
+                                        : theme.colorScheme
+                                            .surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: selectedCartonMode ==
+                                              CartonContentMode.byPieces
+                                          ? theme.colorScheme.primary
+                                          : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'دانە',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: selectedCartonMode ==
+                                              CartonContentMode.byPieces
+                                          ? theme.colorScheme.primary
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
                         AppTextField(
                           controller: contentValController,
-                          labelText: 'ژمارەی یەکە ($unitName) لە هەر کارتۆنێک',
+                          labelText: selectedCartonMode ==
+                                  CartonContentMode.byUnit
+                              ? 'ژمارەی یەکە ($unitName) لە هەر کارتۆنێک'
+                              : 'ژمارەی دانە لە هەر کارتۆنێک',
                           keyboardType: TextInputType.number,
                           onChanged: (_) => setDialogState(() {}),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          selectedCartonMode == CartonContentMode.byUnit
+                              ? 'هەر کارتۆنێک = $currentContentVal $unitName'
+                              : 'هەر کارتۆنێک = $currentContentVal دانە ÷ $piecesPerUnit = $computedUnitsPerCarton $unitName',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
 
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
                         controller: costController,
-                        labelText: 'نرخی تێچووی یەکە ($unitName) - د.ع',
+                        labelText: selectedUnitType == PurchaseUnitType.carton
+                            ? 'نرخی تێچووی کارتۆن - د.ع'
+                            : 'نرخی تێچووی یەکە ($unitName) - د.ع',
                         keyboardType: TextInputType.number,
                         onChanged: (_) => setDialogState(() {}),
                       ),
@@ -1925,9 +2298,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               'کۆی ستۆکی زیادکراو: $computedTotalStock $unitName',
                               style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
                             ),
+                            if (selectedUnitType == PurchaseUnitType.carton) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'نرخی تێچووی هەر $unitName: ${Formatters.currency(computedUnitCost)}',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 2),
                             Text(
-                              'کۆی نرخی ئەم کاڵایە: ${Formatters.currency(computedTotalCost)} د.ع',
+                              'کۆی نرخی ئەم کاڵایە: ${Formatters.currency(computedTotalCost)}',
                               style: AppTextStyles.caption.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.primary,
@@ -1944,27 +2326,40 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 AppButton(
                   text: 'زیادکردن بۆ پسوڵە',
                   onPressed: () {
-                    final parsedItemCost = double.tryParse(costController.text) ?? product.costPrice;
+                    final unitCost = selectedUnitType == PurchaseUnitType.carton
+                        ? (safeCost / computedUnitsPerCarton).roundToDouble()
+                        : safeCost;
+                    final cartonCost =
+                        selectedUnitType == PurchaseUnitType.carton
+                            ? unitCost * computedUnitsPerCarton
+                            : null;
 
-                    setState(() {
-                      final existingIndex = _purchaseCart.indexWhere((it) => it.product.id == product.id);
-                      if (existingIndex >= 0) {
-                        _purchaseCart[existingIndex].quantity += safeQty;
-                        _purchaseCart[existingIndex].unitCost = parsedItemCost;
-                        _purchaseCart[existingIndex].unitType = selectedUnitType;
-                        _purchaseCart[existingIndex].cartonContentValue = currentContentVal;
-                      } else {
-                        _purchaseCart.add(PurchaseCartItem(
-                          product: product,
-                          unitType: selectedUnitType,
-                          cartonContentMode: selectedCartonMode,
-                          quantity: safeQty,
-                          cartonContentValue: currentContentVal,
-                          unitCost: parsedItemCost,
-                        ));
-                      }
-                      _updatePaidAmountToTotal();
-                    });
+                    if (mounted) {
+                      setState(() {
+                        final existingIndex = _purchaseCart.indexWhere((it) =>
+                            it.product.id == product.id &&
+                            it.unitType == selectedUnitType &&
+                            it.unitCost == unitCost &&
+                            (selectedUnitType == PurchaseUnitType.baseUnit ||
+                                (it.cartonContentMode == selectedCartonMode &&
+                                    it.cartonContentValue == currentContentVal &&
+                                    it.cartonCost == cartonCost)));
+                        if (existingIndex >= 0) {
+                          _purchaseCart[existingIndex].quantity += safeQty;
+                        } else {
+                          _purchaseCart.add(PurchaseCartItem(
+                            product: product,
+                            unitType: selectedUnitType,
+                            cartonContentMode: selectedCartonMode,
+                            quantity: safeQty,
+                            cartonContentValue: currentContentVal,
+                            unitCost: unitCost,
+                            cartonCost: cartonCost,
+                          ));
+                        }
+                        _updatePaidAmountToTotal();
+                      });
+                    }
 
                     _saveCartDraft(forceSaveToBackend: true);
                     Navigator.of(ctx).pop();
@@ -1987,13 +2382,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
-  Widget _buildPurchasesTab(BuildContext context) {
+  Widget _buildPurchasesTab(
+    BuildContext context, {
+    VoidCallback? onSupplierSelectionChanged,
+  }) {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(productsListProvider);
     final suppliersAsync = ref.watch(suppliersListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
     final posAsync = ref.watch(purchaseOrdersProvider);
-    final allOrders = posAsync.asData?.value ?? [];
+    final allOrders = _mergePurchaseOrderOverrides(
+      posAsync.asData?.value ?? [],
+    );
     final draftOrders = allOrders.where((o) => o.status.toUpperCase() == 'DRAFT').toList();
 
     return productsAsync.when(
@@ -2021,8 +2421,20 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             });
           }
         }
+        if (!_isEditingPurchaseDraft) {
+          return _buildDraftPurchasesView(
+            allProducts: allProducts,
+            ordersAsync: posAsync,
+            warehouses: warehousesAsync.asData?.value ?? [],
+          );
+        }
+
         // Find products that need purchasing (totalStock <= minStockLevel or stock <= 0)
         final lowStockProducts = allProducts.where((p) {
+          if (_selectedSupplierId != null &&
+              p.supplierId != _selectedSupplierId) {
+            return false;
+          }
           if (p.minStockLevel > 0) {
             return p.totalStock <= p.minStockLevel;
           }
@@ -2040,6 +2452,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
         final suppliers = suppliersAsync.asData?.value ?? [];
         final warehouses = warehousesAsync.asData?.value ?? [];
+        final selectedWarehouseId = _resolveWarehouseId(warehouses);
 
         final totalAmount = _calculateCartTotal();
         final textVal = _poPaidAmountController.text.trim();
@@ -2202,86 +2615,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 ),
               ),
 
-            // Section 2: Top Control Bar (Draft Invoices Selector + Supplier selection + Add Supplier + Warehouse + Notes)
+            // Section 2: Top Control Bar (Supplier + Add Supplier + Warehouse + Notes)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
               color: theme.colorScheme.surfaceContainerLow,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Row 0: Draft Invoices Selector Bar (درۆپداونی پسوڵەکان)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          'پسوڵەکان:',
-                          style: AppTextStyles.bodyBold.copyWith(fontSize: 12, color: theme.colorScheme.primary),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int?>(
-                              value: _activeDraftOrderId,
-                              isExpanded: true,
-                              hint: const Text('پسوڵەی کڕینی نوێ'),
-                              items: [
-                                if (_activeDraftOrderId == null || !draftOrders.any((d) => d.id == _activeDraftOrderId))
-                                  const DropdownMenuItem<int?>(
-                                    value: null,
-                                    child: Text('پسوڵەی نوێ (دەستپێکردن)'),
-                                  ),
-                                ...draftOrders.map((d) {
-                                  final sName = d.supplierName.isNotEmpty ? d.supplierName : 'بێناو';
-                                  return DropdownMenuItem<int?>(
-                                    value: d.id,
-                                    child: Text(
-                                      '#${d.orderNumber} ($sName) • ${d.items.length} کاڵا',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTextStyles.bodyBold.copyWith(fontSize: 12),
-                                    ),
-                                  );
-                                }),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  _switchDraftOrder(val, draftOrders, allProducts);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 22),
-                          tooltip: 'دروستکردنی پسوڵەی نوێ',
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          onPressed: () => _createNewDraftInvoice(warehouses),
-                        ),
-                        if (_activeDraftOrderId != null) ...[
-                          const SizedBox(width: 2),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-                            tooltip: 'سڕینەوەی ئەم پسوڵەیە لە داتابەیس',
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                            onPressed: () => _deleteCurrentDraftOrder(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
                   Row(
                     children: [
                       // Supplier selection dropdown
@@ -2293,7 +2633,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.4,
+                              ),
+                            ),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int?>(
@@ -2305,32 +2649,42 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   value: null,
                                   child: Row(
                                     children: [
-                                      Icon(Icons.person_outline, size: 18, color: Colors.grey),
+                                      Icon(
+                                        Icons.person_outline,
+                                        size: 18,
+                                        color: Colors.grey,
+                                      ),
                                       SizedBox(width: 8),
                                       Text('دابینکەری نوێ (بێناو)'),
                                     ],
                                   ),
                                 ),
-                                ...suppliers.map((s) => DropdownMenuItem<int?>(
-                                      value: s.id,
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.business_outlined, size: 18),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              '${s.name}${s.debt > 0 ? " (قەرز: ${Formatters.currency(s.debt)})" : ""}',
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                ...suppliers.map(
+                                  (supplier) => DropdownMenuItem<int?>(
+                                    value: supplier.id,
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.business_outlined,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '${supplier.name}${supplier.debt > 0 ? " (قەرز: ${Formatters.currency(supplier.debt)})" : ""}',
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ],
-                                      ),
-                                    )),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
-                              onChanged: (val) {
+                              onChanged: (value) {
                                 setState(() {
-                                  _selectedSupplierId = val;
+                                  _selectedSupplierId = value;
                                 });
+                                onSupplierSelectionChanged?.call();
                                 _saveCartDraft();
                               },
                             ),
@@ -2362,10 +2716,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
-                              value: _selectedWarehouseId ??
-                                  (warehouses.any((w) => (w as dynamic).isMain == true)
-                                      ? (warehouses.firstWhere((w) => (w as dynamic).isMain == true) as dynamic).id
-                                      : (warehouses.isNotEmpty ? (warehouses.first as dynamic).id : 1)),
+                              value: selectedWarehouseId,
                               isExpanded: true,
                               items: warehouses.map((w) {
                                 return DropdownMenuItem<int>(
@@ -2416,10 +2767,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     return const Iterable<ProductModel>.empty();
                   }
                   final query = textEditingValue.text.toLowerCase().trim();
-                  return allProducts.where((p) =>
-                      p.name.toLowerCase().contains(query) ||
-                      p.barcode.toLowerCase().contains(query) ||
-                      (p.sku != null && p.sku!.toLowerCase().contains(query)));
+                  return allProducts.where((p) {
+                    final matchesSupplier = _selectedSupplierId == null ||
+                        p.supplierId == _selectedSupplierId;
+                    return matchesSupplier &&
+                        (p.name.toLowerCase().contains(query) ||
+                            p.barcode.toLowerCase().contains(query) ||
+                            (p.sku != null &&
+                                p.sku!.toLowerCase().contains(query)));
+                  });
                 },
                 fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
                   return GestureDetector(
@@ -2568,23 +2924,38 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               ),
             Expanded(
               child: _purchaseCart.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.remove_shopping_cart_outlined, size: 72, color: Colors.grey.shade400),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'سەبەتەی کڕین بەتاڵە',
-                            style: AppTextStyles.h3.copyWith(color: Colors.grey.shade600),
+                  ? LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            'کاڵاکان لە بەشی گەڕان یان لە بەشی کەمی ستۆکی سەرەوە زیاد بکە',
-                            style: AppTextStyles.caption,
-                            textAlign: TextAlign.center,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.remove_shopping_cart_outlined,
+                                  size: 72,
+                                  color: Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  'سەبەتەی کڕین بەتاڵە',
+                                  style: AppTextStyles.h3.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  'کاڵاکان لە بەشی گەڕان یان لە بەشی کەمی ستۆکی سەرەوە زیاد بکە',
+                                  style: AppTextStyles.caption,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -2785,6 +3156,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 ],
               ),
               child: SafeArea(
+                bottom: false,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -2904,6 +3276,158 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
+  Widget _buildDraftPurchasesView({
+    required List<ProductModel> allProducts,
+    required AsyncValue<List<PurchaseOrderModel>> ordersAsync,
+    required List<dynamic> warehouses,
+  }) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ordersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'کێشە لە بارکردنی پسوڵەکان: '
+                      '${error.toString().replaceAll('Exception: ', '')}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton.icon(
+                      onPressed: _refreshPurchaseOrders,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('دووبارە هەوڵبدەرەوە'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            data: (orders) {
+              final drafts = orders
+                  .where((order) => order.status.toUpperCase() == 'DRAFT')
+                  .toList();
+              if (drafts.isEmpty) {
+                return RefreshIndicator(
+                  onRefresh: () async =>
+                      _refreshPurchaseOrders(),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.55,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 64,
+                                color: theme.colorScheme.outline,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              const Text('هیچ پسوڵەیەکی چاوەڕوانی تەئکید نییە'),
+                              const SizedBox(height: AppSpacing.xs),
+                              const Text(
+                                'پسوڵەی نوێ زیاد بکە و دابینکەر لە ناو پسوڵەکە دیاری بکە',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => _refreshPurchaseOrders(),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                  itemCount: drafts.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final order = drafts[index];
+                    return AppCard(
+                      onTap: () =>
+                          _switchDraftOrder(order.id, drafts, allProducts),
+                      onLongPress: () => _deletePurchaseDraft(order),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.xs,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.receipt_long_outlined,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    order.supplierName.isNotEmpty
+                                        ? order.supplierName
+                                        : 'بێ دابینکەر',
+                                    style: AppTextStyles.bodyBold,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const StatusBadge(
+                                  label: 'چاوەڕوانی تەئکید',
+                                  type: StatusBadgeType.warning,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'پسوڵە #${order.orderNumber} • '
+                              '${order.itemsCount} کاڵا',
+                              style: AppTextStyles.caption,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Wrap(
+                              spacing: AppSpacing.md,
+                              runSpacing: AppSpacing.xs,
+                              children: [
+                                Text(
+                                  'کۆی پسوڵە: ${_formatCurrency(order.totalAmount)}',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                                if (order.paidAmount != order.totalAmount)
+                                  Text(
+                                    'پارەی دراو: '
+                                    '${_formatCurrency(order.paidAmount)}',
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPurchaseOrdersTab(BuildContext context) {
     final posAsync = ref.watch(purchaseOrdersProvider);
     final theme = Theme.of(context);
@@ -2932,7 +3456,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               ),
               const SizedBox(height: AppSpacing.lg),
               ElevatedButton.icon(
-                onPressed: () => ref.invalidate(purchaseOrdersProvider),
+                onPressed: _refreshPurchaseOrders,
                 icon: const Icon(Icons.refresh),
                 label: const Text('دووبارە هەوڵبدەرەوە'),
               ),
@@ -2941,9 +3465,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         ),
       ),
       data: (orders) {
-        if (orders.isEmpty) {
+        final visibleOrders = _mergePurchaseOrderOverrides(orders);
+        if (visibleOrders.isEmpty) {
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(purchaseOrdersProvider),
+            onRefresh: () async => _refreshPurchaseOrders(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Container(
@@ -2973,14 +3498,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(purchaseOrdersProvider),
+          onRefresh: () async => _refreshPurchaseOrders(),
           child: ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-            itemCount: orders.length,
+            itemCount: visibleOrders.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
-              final order = orders[index];
+              final order = visibleOrders[index];
               final status = order.status.toUpperCase();
               final isDraft = status == 'DRAFT';
               final isConfirmed = status == 'CONFIRMED';
@@ -3004,10 +3529,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 onTap: isDraft
                     ? () {
                         final allProducts = ref.read(productsListProvider).valueOrNull ?? [];
-                        _switchDraftOrder(order.id, orders, allProducts);
+                        _switchDraftOrder(order.id, visibleOrders, allProducts);
                         _tabController.animateTo(0);
                       }
                     : (isConfirmed ? () => _receivePO(order) : null),
+                onLongPress: isDraft
+                    ? () => _deletePurchaseDraft(order)
+                    : null,
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(

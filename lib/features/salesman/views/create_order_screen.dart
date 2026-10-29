@@ -2141,53 +2141,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 1. Notes Input (replaces Customer Selection)
-          Expanded(
-            flex: 2,
-            child: AppTextField(
-              controller: _notesController,
-              hintText: 'تێبینی...',
-              prefixIcon: Icons.note_alt_outlined,
-              suffixIcon: _buildFieldStatusIcon('order_notes'),
-              borderRadius: BorderRadius.circular(8),
-              onChanged: (val) {
-                _lastChangedField = 'order_notes';
-                _triggerDebouncedAutoSave();
-              },
-            ),
-          ),
-          if (currentUser?.isCashVan == true) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.local_shipping_outlined,
-                    size: 16,
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'کاشڤان: ${currentUser?.warehouseName ?? "ئۆتۆمبێل"}',
-                    style: AppTextStyles.caption.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else if (!isSalesman) ...[
-            const SizedBox(width: AppSpacing.sm),
-
-            // 2. Warehouse Selection
+          if (!isSalesman && currentUser?.isCashVan != true)
             Expanded(
               flex: 2,
               child: warehousesAsync.when(
@@ -2250,6 +2204,49 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     },
                   );
                 },
+              ),
+            )
+          else
+            Expanded(
+              flex: 2,
+              child: AppTextField(
+                controller: _notesController,
+                hintText: 'تێبینی...',
+                prefixIcon: Icons.note_alt_outlined,
+                suffixIcon: _buildFieldStatusIcon('order_notes'),
+                borderRadius: BorderRadius.circular(8),
+                onChanged: (val) {
+                  _lastChangedField = 'order_notes';
+                  _triggerDebouncedAutoSave();
+                },
+              ),
+            ),
+          if (currentUser?.isCashVan == true) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.local_shipping_outlined,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'کاشڤان: ${currentUser?.warehouseName ?? "ئۆتۆمبێل"}',
+                    style: AppTextStyles.caption.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
