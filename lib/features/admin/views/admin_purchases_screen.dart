@@ -187,7 +187,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   final Set<int> _checkedProductIds = {};
   String _lowStockFilter = 'all'; // 'all', 'checked', 'unchecked'
-  bool _isLowStockExpanded = true;
+  bool _isLowStockExpanded = false;
   bool _isSubmittingPO = false;
   bool _userModifiedPaidAmount = false;
 
@@ -2548,8 +2548,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         final paidAmount = parsedPaid ?? (_userModifiedPaidAmount ? 0.0 : totalAmount);
         final remainingDebt = max(0.0, totalAmount - paidAmount);
 
-        return Column(
-          children: [
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: Column(
+            children: [
             // Section 1: Note/Notice of Low Stock / Needed Products (کەمی ستۆک / پێویست بۆ کڕین)
             if (lowStockProducts.isNotEmpty)
               Container(
@@ -3234,140 +3237,139 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       },
                     ),
             ),
-
-            // Section 5: Bottom Summary Bar (Total Amount + Paid Amount + Debt + Confirm Button)
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    offset: const Offset(0, -2),
-                    blurRadius: 6,
-                  ),
-                ],
+          ],
+        ),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                offset: const Offset(0, -2),
+                blurRadius: 6,
               ),
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Financial Summary: Total, Paid Amount, Remaining Debt
+                Row(
                   children: [
-                    // Financial Summary: Total, Paid Amount, Remaining Debt
-                    Row(
-                      children: [
-                        // Total
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('کۆی پسوڵە:', style: AppTextStyles.caption),
-                                Text(
-                                  Formatters.currency(totalAmount),
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                    // Total
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-
-                        // Paid Amount field
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('کۆی پسوڵە:', style: AppTextStyles.caption),
+                            Text(
+                              Formatters.currency(totalAmount),
+                              style: AppTextStyles.bodyBold.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontSize: 16,
+                              ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
-                                TextField(
-                                  controller: _poPaidAmountController,
-                                  keyboardType: TextInputType.number,
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    fontSize: 15,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                    hintText: '0',
-                                  ),
-                                  onChanged: (_) {
-                                    _userModifiedPaidAmount = true;
-                                    setState(() {});
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-
-                        // Remaining Debt
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: remainingDebt > 0
-                                  ? AppColors.warning.withValues(alpha: 0.15)
-                                  : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                              border: remainingDebt > 0
-                                  ? Border.all(color: AppColors.warning.withValues(alpha: 0.35))
-                                  : null,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('قەرزی ماوە:', style: AppTextStyles.caption),
-                                Text(
-                                  Formatters.currency(remainingDebt),
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: remainingDebt > 0 ? AppColors.warning : theme.colorScheme.onSurface,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(width: AppSpacing.xs),
 
-                    // Confirm Purchase Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: AppButton(
-                        text: 'تەئکیدکردنەوە و تۆمارکردنی پسوڵە',
-                        isLoading: _isSubmittingPO,
-                        onPressed: _purchaseCart.isEmpty ? null : _submitPurchaseInvoice,
+                    // Paid Amount field
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
+                            TextField(
+                              controller: _poPaidAmountController,
+                              keyboardType: TextInputType.number,
+                              style: AppTextStyles.bodyBold.copyWith(
+                                fontSize: 15,
+                                color: theme.colorScheme.primary,
+                              ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintText: '0',
+                              ),
+                              onChanged: (_) {
+                                _userModifiedPaidAmount = true;
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+
+                    // Remaining Debt
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: remainingDebt > 0
+                              ? AppColors.warning.withValues(alpha: 0.15)
+                              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: remainingDebt > 0
+                              ? Border.all(color: AppColors.warning.withValues(alpha: 0.35))
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('قەرزی ماوە:', style: AppTextStyles.caption),
+                            Text(
+                              Formatters.currency(remainingDebt),
+                              style: AppTextStyles.bodyBold.copyWith(
+                                color: remainingDebt > 0 ? AppColors.warning : theme.colorScheme.onSurface,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: AppSpacing.sm),
+
+                // Confirm Purchase Button
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    text: 'تەئکیدکردنەوە و تۆمارکردنی پسوڵە',
+                    isLoading: _isSubmittingPO,
+                    onPressed: _purchaseCart.isEmpty ? null : _submitPurchaseInvoice,
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
-      },
-    );
-  }
+          ),
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildDraftPurchasesView({
     required List<ProductModel> allProducts,
