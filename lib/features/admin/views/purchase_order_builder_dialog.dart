@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_snackbar.dart';
+import '../../../core/components/app_text_field.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -464,13 +465,10 @@ class _PurchaseOrderBuilderDialogState
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
+                  child: AppTextField(
                     controller: line.quantityController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'بڕی کڕین',
-                      border: OutlineInputBorder(),
-                    ),
+                    labelText: 'بڕی کڕین',
                     validator: (value) {
                       final quantity = int.tryParse(value ?? '');
                       if (quantity == null ||
@@ -523,13 +521,10 @@ class _PurchaseOrderBuilderDialogState
               style: AppTextStyles.caption,
             ),
             const SizedBox(height: AppSpacing.xs),
-            TextFormField(
+            AppTextField(
               controller: line.quantityController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'بڕی کڕین',
-                border: OutlineInputBorder(),
-              ),
+              labelText: 'بڕی کڕین',
               validator: (value) {
                 final quantity = int.tryParse(value ?? '');
                 return quantity == null || quantity < 1

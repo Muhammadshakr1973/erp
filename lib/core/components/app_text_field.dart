@@ -26,6 +26,7 @@ class AppTextField extends ConsumerStatefulWidget {
   final InputDecoration? customDecoration;
   final bool autofocus;
   final TextAlign? textAlign;
+  final TextStyle? style;
 
   const AppTextField({
     super.key,
@@ -48,6 +49,7 @@ class AppTextField extends ConsumerStatefulWidget {
     this.customDecoration,
     this.autofocus = false,
     this.textAlign,
+    this.style,
   });
 
   @override
@@ -190,9 +192,10 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         maxLines: widget.maxLines,
         textInputAction: widget.textInputAction,
         onFieldSubmitted: widget.onFieldSubmitted,
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: theme.colorScheme.onSurface,
-        ),
+        style: widget.style ??
+            AppTextStyles.bodyMedium.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
         decoration: widget.customDecoration ??
             InputDecoration(
               labelText: widget.labelText,

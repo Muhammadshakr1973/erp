@@ -3322,18 +3322,27 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
-                            TextField(
+                            AppTextField(
                               controller: _poPaidAmountController,
                               keyboardType: TextInputType.number,
+                              labelText: 'بڕی پارەی دراو',
+                              hintText: '0',
+                              textAlign: TextAlign.start,
                               style: AppTextStyles.bodyBold.copyWith(
                                 fontSize: 15,
                                 color: theme.colorScheme.primary,
                               ),
-                              decoration: const InputDecoration(
+                              customDecoration: InputDecoration(
                                 isDense: true,
                                 border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                                 hintText: '0',
+                                hintStyle: AppTextStyles.bodyBold.copyWith(
+                                  fontSize: 15,
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                                ),
                               ),
                               onChanged: (_) {
                                 _userModifiedPaidAmount = true;
