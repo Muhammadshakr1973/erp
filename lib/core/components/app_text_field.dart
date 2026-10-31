@@ -28,8 +28,6 @@ class AppTextField extends ConsumerStatefulWidget {
   final TextAlign? textAlign;
   final TextStyle? style;
 
-  final TextStyle? style;
-
   const AppTextField({
     super.key,
     this.hintText,
