@@ -88,7 +88,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       text: p?.unitsPerCarton.toString() ?? '12',
     );
     _unitFocusNode = FocusNode();
-    _unitController = TextEditingController(text: p?.unit ?? '');
+    _unitController = TextEditingController(
+      text: (p?.unit != null && p!.unit!.isNotEmpty) ? p.unit : 'ج',
+    );
     _stockController = TextEditingController(
       text: p != null ? currentStock.toString() : '0',
     );
@@ -142,15 +144,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       textEditingController: _unitController,
       focusNode: _unitFocusNode,
       optionsBuilder: (TextEditingValue textEditingValue) {
-        if (textEditingValue.text == '') {
-          return const Iterable<String>.empty();
+        if (textEditingValue.text.trim().isEmpty) {
+          return unitOptions;
         }
         return unitOptions.where((String option) {
-          return option.contains(textEditingValue.text);
+          return option.toLowerCase().contains(textEditingValue.text.toLowerCase().trim());
         });
       },
       onSelected: (String selection) {
         _unitController.text = selection;
+        setState(() {});
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
         if (isUnified) {
@@ -181,30 +184,36 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         );
       },
       optionsViewBuilder: (context, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4.0,
-            borderRadius: BorderRadius.circular(12),
-            color: theme.colorScheme.surface,
-            child: SizedBox(
-              width: 200,
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final String option = options.elementAt(index);
-                  return InkWell(
-                    onTap: () {
-                      onSelected(option);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(option),
-                    ),
-                  );
-                },
+        return TapRegion(
+          groupId: _unitFocusNode,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 4.0,
+              borderRadius: BorderRadius.circular(12),
+              color: theme.colorScheme.surface,
+              child: SizedBox(
+                width: 200,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final String option = options.elementAt(index);
+                    return InkWell(
+                      onTap: () {
+                        onSelected(option);
+                        _unitController.text = option;
+                        setState(() {});
+                        _unitFocusNode.unfocus();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(option),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -227,7 +236,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'price_n2': double.tryParse(_priceN2Controller.text) ?? 0,
       'price_n3': double.tryParse(_priceN3Controller.text) ?? 0,
       'units_per_carton': int.tryParse(_unitsPerCartonController.text) ?? 12,
-      'unit': _unitController.text,
+      'unit': _unitController.text.trim().isEmpty ? 'ج' : _unitController.text.trim(),
       'category_id': _selectedCategoryId,
       'supplier_id': _selectedSupplierId,
       'is_active': _isActive ? 1 : 0,

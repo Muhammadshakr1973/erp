@@ -16,3 +16,13 @@
 - **ئاگادارکردنەوە لە دەستکاریکردنی فایلەکانی باکێند (Notify Backend Changes)**:
   - هەرکاتێک هەر دەستکاریەک، چاکسازیەک یان گۆڕانکاریەک لە کۆدەکانی بەشی باکێند (`backend/`) ئەنجامدرا، دەبێت ڕاستەوخۆ لە وەڵامەکەدا ناوی تەواو و ڕێڕەوی (Path) ئەو فایلانەی دەستکاری کراون بنووسرێت، بۆ ئەوەی بەکارهێنەر بتوانێت ئەو فایلانە بۆ هۆست (Server) بەرزبکاتەوە (Upload).
   - Whenever any change, fix, or modification is made to the backend files, always explicitly list the exact modified file paths in the response so the user can easily upload them to the hosting server.
+
+- **ڕێنمایی و فەرمانی SQL بۆ هەر مایگرەیشنێک (SQL Commands for Migrations)**:
+  - بۆ هەر مایگرەیشنێک (Database Migration) کە دروست دەکرێت یان پێویست بێت، دەبێت کۆد و فەرمانە ڕاستەوخۆکانی SQL بە تەواوی ئامادە بکرێن و بخرێنە ڕوو بۆ ئەوەی بەکارهێنەر بتوانێت لە phpMyAdmin یان لە ڕێگەی MySQL Client ڕاستەوخۆ فەرمانەکان بەبێ کێشە جێبەجێ بکات.
+  - For any database migration created or required, always provide the exact raw SQL queries so the user can execute them directly (e.g. via phpMyAdmin or MySQL console).
+
+## Data Updates & State Management (نوێبوونەوەی داتا بەبێ ڕیلۆد)
+
+- **نوێبوونەوەی زیرەکانە لە کاتی Add / Edit / Delete (Optimistic / Smart State Updates)**:
+  - بۆ هەر کردارێکی زیادکردن (Add)، دەستکاریکردن (Edit) و سڕینەوە (Delete) دەبێت بە شێوەیەک کار بکرێت کە بەبێ ڕیلۆدکردن داتای گۆڕاو بەشێوەیەکی زیرەکانە لە ڕووکاردا ڕاستەوخۆ نوێ ببێتەوە (Optimistic UI / State mutation بەبێ پێویستی بە نوێکردنەوەی تەواوی پەڕەکە).
+  - For any Add, Edit, or Delete action, the UI state must update smartly and instantly without requiring a full page or screen reload.

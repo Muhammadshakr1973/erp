@@ -26,7 +26,7 @@ class CreateSalesReturnDialog extends ConsumerStatefulWidget {
 
 class _CreateSalesReturnDialogState
     extends ConsumerState<CreateSalesReturnDialog> {
-  final Map<int, int> _returnQuantities = {};
+  final Map<int, double> _returnQuantities = {};
   final Map<int, TextEditingController> _qtyControllers = {};
   final Map<int, TextEditingController> _itemReasonControllers = {};
   final TextEditingController _generalReasonController =
@@ -39,7 +39,7 @@ class _CreateSalesReturnDialogState
   void initState() {
     super.initState();
     for (final item in widget.order.items) {
-      _returnQuantities[item.id] = 0;
+      _returnQuantities[item.id] = 0.0;
       _qtyControllers[item.id] = TextEditingController(text: '0');
       _itemReasonControllers[item.id] = TextEditingController();
     }
@@ -57,11 +57,13 @@ class _CreateSalesReturnDialogState
     super.dispose();
   }
 
-  void _updateQuantity(int itemId, int newQty, int maxQty) {
-    final clamped = newQty.clamp(0, maxQty);
+  void _updateQuantity(int itemId, double newQty, double maxQty) {
+    final clamped = newQty.clamp(0.0, maxQty);
     setState(() {
       _returnQuantities[itemId] = clamped;
-      _qtyControllers[itemId]?.text = clamped.toString();
+      _qtyControllers[itemId]?.text = clamped % 1 == 0
+          ? clamped.toInt().toString()
+          : clamped.toString();
       _errorMessage = null;
     });
   }
@@ -75,8 +77,8 @@ class _CreateSalesReturnDialogState
     return total;
   }
 
-  int _calculateTotalReturnCount() {
-    return _returnQuantities.values.fold<int>(0, (sum, q) => sum + q);
+  double _calculateTotalReturnCount() {
+    return _returnQuantities.values.fold<double>(0.0, (sum, q) => sum + q);
   }
 
   String? _validate() {
@@ -86,8 +88,8 @@ class _CreateSalesReturnDialogState
     }
 
     for (final item in widget.order.items) {
-      final maxQty = item.quantity.toInt();
-      final qty = _returnQuantities[item.id] ?? 0;
+      final maxQty = item.quantity;
+      final qty = _returnQuantities[item.id] ?? 0.0;
       if (qty < 0) {
         return 'بڕی گەڕاندنەوە بۆ "${item.productName}" ناتوانێت کەمتر بێت لە سفر';
       }
@@ -261,8 +263,8 @@ class _CreateSalesReturnDialogState
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
                           final item = widget.order.items[index];
-                          final maxQty = item.quantity.toInt();
-                          final currentQty = _returnQuantities[item.id] ?? 0;
+                          final maxQty = item.quantity;
+                          final currentQty = _returnQuantities[item.id] ?? 0.0;
                           final itemSubtotal = currentQty * item.unitPrice;
 
                           return AppCard(
@@ -293,7 +295,7 @@ class _CreateSalesReturnDialogState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'بڕی کڕدراو: $maxQty دانە',
+                                      'بڕی کڕدراو: ${maxQty % 1 == 0 ? maxQty.toInt() : maxQty} دانە',
                                       style: AppTextStyles.caption,
                                     ),
                                     Text(
@@ -330,7 +332,7 @@ class _CreateSalesReturnDialogState
                                       width: 60,
                                       child: AppTextField(
                                         controller: _qtyControllers[item.id],
-                                        keyboardType: TextInputType.number,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         borderRadius: BorderRadius.circular(4),
                                         customDecoration: const InputDecoration(
                                           isDense: true,
@@ -341,7 +343,7 @@ class _CreateSalesReturnDialogState
                                           border: OutlineInputBorder(),
                                         ),
                                         onChanged: (val) {
-                                          final parsed = int.tryParse(val) ?? 0;
+                                          final parsed = double.tryParse(val) ?? 0.0;
                                           _updateQuantity(
                                             item.id,
                                             parsed,

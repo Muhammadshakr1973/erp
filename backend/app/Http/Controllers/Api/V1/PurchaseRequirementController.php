@@ -74,13 +74,13 @@ class PurchaseRequirementController extends Controller
             'requirement_ids.*' => 'required|integer|exists:purchase_requirements,id',
             'requirement_items' => 'sometimes|array',
             'requirement_items.*.id' => 'required|integer|distinct|exists:purchase_requirements,id',
-            'requirement_items.*.quantity' => 'required|integer|min:1',
+            'requirement_items.*.quantity' => 'required|numeric|gt:0',
             'requirement_items.*.supplier_id' => 'required|integer|exists:suppliers,id',
             'additional_items' => 'sometimes|array',
             'additional_items.*.product_id' => 'required|integer|exists:products,id',
             'additional_items.*.supplier_id' => 'required|integer|exists:suppliers,id',
             'additional_items.*.warehouse_id' => 'required|integer|exists:warehouses,id',
-            'additional_items.*.quantity' => 'required|integer|min:1',
+            'additional_items.*.quantity' => 'required|numeric|gt:0',
             'notes' => 'nullable|string',
         ]);
 

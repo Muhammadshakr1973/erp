@@ -12,7 +12,7 @@ class WarehouseStock extends Model
     use HasFactory;
     protected $table = 'warehouse_stock';
     protected $fillable = ['warehouse_id', 'product_id', 'quantity', 'reserved_quantity', 'min_stock_level', 'max_stock_level', 'average_cost'];
-    protected $casts = ['quantity' => 'integer', 'reserved_quantity' => 'integer', 'min_stock_level' => 'integer'];
+    protected $casts = ['quantity' => 'float', 'reserved_quantity' => 'float', 'min_stock_level' => 'float'];
     public static function booted()
     {
         static::saved(function (WarehouseStock $stock) {

@@ -90,7 +90,7 @@ class PurchaseOrderController extends Controller
             'items' => 'nullable|array',
             'items.*.product_id' => 'nullable|integer',
             'items.*.item_id' => 'nullable|integer',
-            'items.*.quantity' => 'required_with:items|integer|min:1',
+            'items.*.quantity' => 'required_with:items|numeric|gt:0',
         ]);
 
         $itemsPayload = $request->input('items');
@@ -163,8 +163,8 @@ class PurchaseOrderController extends Controller
             'auto_receive' => 'nullable|boolean',
             'items'        => 'nullable|array',
             'items.*.product_id' => 'required_with:items|integer|exists:products,id',
-            'items.*.quantity'   => 'required_with:items|integer|min:1',
-            'items.*.unit_cost'  => 'required_with:items|integer|min:0',
+            'items.*.quantity'   => 'required_with:items|numeric|gt:0',
+            'items.*.unit_cost'  => 'required_with:items|numeric|min:0',
         ]);
 
         $updatedOrder = $this->purchaseService->updateOrder($order, $request->all(), $user);

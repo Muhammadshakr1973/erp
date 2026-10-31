@@ -39,7 +39,7 @@ enum CartonContentMode { byUnit, byPieces }
 class PurchaseCartItem {
   ProductModel product;
   PurchaseUnitType unitType;
-  int quantity; // Base unit count OR carton count
+  double quantity; // Base unit count OR carton count
   CartonContentMode cartonContentMode;
   int cartonContentValue; // If byUnit: units per carton. If byPieces: pieces per carton.
   double unitCost;
@@ -49,7 +49,7 @@ class PurchaseCartItem {
   PurchaseCartItem({
     required this.product,
     this.unitType = PurchaseUnitType.baseUnit,
-    this.quantity = 1,
+    this.quantity = 1.0,
     this.cartonContentMode = CartonContentMode.byUnit,
     int? cartonContentValue,
     double? unitCost,
@@ -77,17 +77,17 @@ class PurchaseCartItem {
     }
   }
 
-  int get totalStockUnits {
+  double get totalStockUnits {
     if (unitType == PurchaseUnitType.baseUnit) {
-      return quantity > 0 ? quantity : 1;
+      return quantity > 0 ? quantity : 1.0;
     } else {
-      return (quantity > 0 ? quantity : 1) * unitsPerOneCarton;
+      return (quantity > 0 ? quantity : 1.0) * unitsPerOneCarton;
     }
   }
 
   double get totalLineCost {
     if (unitType == PurchaseUnitType.carton && cartonCost != null && cartonCost! > 0) {
-      return (quantity > 0 ? quantity : 1) * cartonCost!;
+      return (quantity > 0 ? quantity : 1.0) * cartonCost!;
     }
     return totalStockUnits * unitCost;
   }
@@ -129,12 +129,12 @@ class PurchaseCartItem {
           barcode: json['product_barcode'] ?? '',
           sku: json['product_sku'],
           unit: json['product_unit'],
-          costPrice: (json['product_cost_price'] as num?)?.toDouble() ?? 0.0,
-          priceN1: (json['product_price_n1'] as num?)?.toDouble() ?? 0.0,
-          priceN2: (json['product_price_n2'] as num?)?.toDouble() ?? 0.0,
-          priceN3: (json['product_price_n3'] as num?)?.toDouble() ?? 0.0,
+          costPrice: double.tryParse(json['product_cost_price']?.toString() ?? '0') ?? 0.0,
+          priceN1: double.tryParse(json['product_price_n1']?.toString() ?? '0') ?? 0.0,
+          priceN2: double.tryParse(json['product_price_n2']?.toString() ?? '0') ?? 0.0,
+          priceN3: double.tryParse(json['product_price_n3']?.toString() ?? '0') ?? 0.0,
           unitsPerCarton:
-              (json['product_units_per_carton'] as num?)?.toInt() ?? 1,
+              int.tryParse(json['product_units_per_carton']?.toString() ?? '1') ?? 1,
         );
 
     final uType = (json['unit_type'] == 'carton')
@@ -147,11 +147,11 @@ class PurchaseCartItem {
     return PurchaseCartItem(
       product: prod,
       unitType: uType,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      quantity: double.tryParse(json['quantity']?.toString() ?? '1') ?? 1.0,
       cartonContentMode: cMode,
-      cartonContentValue: (json['carton_content_value'] as num?)?.toInt(),
-      unitCost: (json['unit_cost'] as num?)?.toDouble(),
-      cartonCost: (json['carton_cost'] as num?)?.toDouble(),
+      cartonContentValue: int.tryParse(json['carton_content_value']?.toString() ?? ''),
+      unitCost: double.tryParse(json['unit_cost']?.toString() ?? ''),
+      cartonCost: double.tryParse(json['carton_cost']?.toString() ?? ''),
       notes: json['notes'] as String?,
     );
   }
@@ -952,17 +952,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _addProductToCart(ProductModel product, {bool clearSearch = true}) {
-    int currentQty = 1;
+    double currentQty = 1.0;
     final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == product.id);
     if (existingIndex >= 0) {
-      _purchaseCart[existingIndex].quantity += 1;
+      _purchaseCart[existingIndex].quantity += 1.0;
       currentQty = _purchaseCart[existingIndex].quantity;
     } else {
       _purchaseCart.add(PurchaseCartItem(
         product: product,
-        quantity: 1,
+        quantity: 1.0,
       ));
-      currentQty = 1;
+      currentQty = 1.0;
     }
     if (clearSearch) {
       _productSearchController.clear();
@@ -971,10 +971,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     _notifyCartAndDialogChanged();
     _saveCartDraft();
 
+    final qtyStr = currentQty % 1 == 0 ? currentQty.toInt().toString() : currentQty.toString();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product.name} زیادکرا بۆ پسوڵە (بڕ: $currentQty)'),
+        content: Text('${product.name} زیادکرا بۆ پسوڵە (بڕ: $qtyStr)'),
         backgroundColor: AppColors.success,
         duration: const Duration(milliseconds: 700),
       ),
@@ -1013,16 +1014,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _showItemConfigDialog(PurchaseCartItem item) {
-    final qtyController = TextEditingController(text: item.quantity.toString());
-    final cartonQtyController = TextEditingController(text: item.quantity.toString());
-    final contentValController = TextEditingController(text: item.cartonContentValue.toString());
-    PurchaseUnitType selectedUnitType = item.unitType;
-    CartonContentMode selectedCartonMode = item.cartonContentMode;
+    final qtyController = TextEditingController(
+      text: item.quantity % 1 == 0
+          ? item.quantity.toInt().toString()
+          : item.quantity.toString(),
+    );
     final costController = TextEditingController(
-      text: (selectedUnitType == PurchaseUnitType.carton
-              ? item.cartonCost ?? item.unitCost * item.unitsPerOneCarton
-              : item.unitCost)
-          .toString(),
+      text: item.unitCost.round().toString(),
     );
 
     showDialog<void>(
@@ -1031,20 +1029,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final theme = Theme.of(context);
-            final currentCartonQty = int.tryParse(cartonQtyController.text) ?? 1;
-            final currentContentVal = int.tryParse(contentValController.text) ?? 1;
-
-            int computedUnitsPerCarton;
-            if (selectedCartonMode == CartonContentMode.byUnit) {
-              computedUnitsPerCarton = currentContentVal > 0 ? currentContentVal : 1;
-            } else {
-              final p = item.piecesPerUnit;
-              computedUnitsPerCarton = (currentContentVal / p).round();
-              if (computedUnitsPerCarton <= 0) computedUnitsPerCarton = 1;
-            }
-            final computedTotalStock = currentCartonQty * computedUnitsPerCarton;
-
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: ConstrainedBox(
@@ -1082,272 +1066,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       const Divider(),
                       const SizedBox(height: AppSpacing.sm),
 
-                      // Unit Type toggle
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                final currentCost =
-                                    double.tryParse(costController.text);
-                                if (currentCost != null &&
-                                    selectedUnitType == PurchaseUnitType.carton) {
-                                  costController.text =
-                                      (currentCost / computedUnitsPerCarton)
-                                          .round()
-                                          .toString();
-                                }
-                                setDialogState(() {
-                                  selectedUnitType = PurchaseUnitType.baseUnit;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: selectedUnitType == PurchaseUnitType.baseUnit
-                                      ? theme.colorScheme.primaryContainer
-                                      : theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: selectedUnitType == PurchaseUnitType.baseUnit
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'یەکە (${item.baseUnitName})',
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: selectedUnitType == PurchaseUnitType.baseUnit
-                                        ? theme.colorScheme.primary
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                final currentCost =
-                                    double.tryParse(costController.text);
-                                if (currentCost != null &&
-                                    selectedUnitType == PurchaseUnitType.baseUnit) {
-                                  costController.text =
-                                      (currentCost * computedUnitsPerCarton)
-                                          .toString();
-                                }
-                                setDialogState(() {
-                                  selectedUnitType = PurchaseUnitType.carton;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: selectedUnitType == PurchaseUnitType.carton
-                                      ? theme.colorScheme.primaryContainer
-                                      : theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: selectedUnitType == PurchaseUnitType.carton
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'کارتۆن',
-                                  style: AppTextStyles.bodyBold.copyWith(
-                                    color: selectedUnitType == PurchaseUnitType.carton
-                                        ? theme.colorScheme.primary
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      AppTextField(
+                        controller: qtyController,
+                        labelText: 'بڕی یەکە (${item.baseUnitName})',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      if (selectedUnitType == PurchaseUnitType.baseUnit) ...[
-                        AppTextField(
-                          controller: qtyController,
-                          labelText: 'بڕی یەکە (${item.baseUnitName})',
-                          keyboardType: TextInputType.number,
-                        ),
-                      ] else ...[
-                        // Carton Mode inputs
-                        AppTextField(
-                          controller: cartonQtyController,
-                          labelText: 'بڕی کارتۆن (چەند کارتۆن کڕاوە)',
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setDialogState(() {}),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-
-                        Text(
-                          'ناوەڕۆکی کارتۆن بە چی هەژمار دەکرێت؟',
-                          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedCartonMode = CartonContentMode.byUnit;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                  decoration: BoxDecoration(
-                                    color: selectedCartonMode == CartonContentMode.byUnit
-                                        ? theme.colorScheme.primaryContainer
-                                        : theme.colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selectedCartonMode == CartonContentMode.byUnit
-                                          ? theme.colorScheme.primary
-                                          : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        selectedCartonMode == CartonContentMode.byUnit
-                                            ? Icons.radio_button_checked
-                                            : Icons.radio_button_unchecked,
-                                        size: 18,
-                                        color: selectedCartonMode == CartonContentMode.byUnit
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.outline,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: Text(
-                                          'یەکە (${item.baseUnitName})',
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: selectedCartonMode == CartonContentMode.byUnit
-                                                ? theme.colorScheme.primary
-                                                : null,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedCartonMode = CartonContentMode.byPieces;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                  decoration: BoxDecoration(
-                                    color: selectedCartonMode == CartonContentMode.byPieces
-                                        ? theme.colorScheme.primaryContainer
-                                        : theme.colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selectedCartonMode == CartonContentMode.byPieces
-                                          ? theme.colorScheme.primary
-                                          : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        selectedCartonMode == CartonContentMode.byPieces
-                                            ? Icons.radio_button_checked
-                                            : Icons.radio_button_unchecked,
-                                        size: 18,
-                                        color: selectedCartonMode == CartonContentMode.byPieces
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.outline,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'دانە',
-                                        style: AppTextStyles.caption.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedCartonMode == CartonContentMode.byPieces
-                                             ? theme.colorScheme.primary
-                                             : null,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        AppTextField(
-                          controller: contentValController,
-                          labelText: selectedCartonMode == CartonContentMode.byUnit
-                              ? 'ژمارەی یەکە (${item.baseUnitName}) لە هەر کارتۆنێک'
-                              : 'ژمارەی دانە لە هەر کارتۆنێک (بۆ نمونە: ١٢٠ دانە)',
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setDialogState(() {}),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-
-                        Container(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.info.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calculate_outlined, size: 20, color: AppColors.info),
-                              const SizedBox(width: AppSpacing.xs),
-                              Expanded(
-                                child: Text(
-                                  selectedCartonMode == CartonContentMode.byPieces
-                                      ? 'هەر کارتۆنێک = $computedUnitsPerCarton ${item.baseUnitName} ($currentContentVal دانە ÷ ${item.piecesPerUnit})\nکۆی ستۆکی زیادکراو = $computedTotalStock ${item.baseUnitName}'
-                                      : 'هەر کارتۆنێک = $currentContentVal ${item.baseUnitName}\nکۆی ستۆکی زیادکراو = $computedTotalStock ${item.baseUnitName}',
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
 
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
                         controller: costController,
-                        labelText: selectedUnitType == PurchaseUnitType.carton
-                            ? 'نرخی کارتۆن - د.ع'
-                            : 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
-                        keyboardType: TextInputType.number,
+                        labelText: 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       ),
 
                       const SizedBox(height: AppSpacing.lg),
@@ -1355,49 +1084,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       AppButton(
                         text: 'پاشەکەوتکردن',
                         onPressed: () {
-                          final parsedQty = selectedUnitType == PurchaseUnitType.baseUnit
-                              ? (int.tryParse(qtyController.text) ?? 1)
-                              : (int.tryParse(cartonQtyController.text) ?? 1);
-                          final parsedContent = int.tryParse(contentValController.text) ?? 1;
-                          final parsedCost =
-                              double.tryParse(costController.text) ??
-                                  (selectedUnitType == PurchaseUnitType.carton
-                                      ? item.cartonCost ??
-                                          item.unitCost *
-                                              item.unitsPerOneCarton
-                                      : item.unitCost);
-                          final safeContent =
-                              parsedContent > 0 ? parsedContent : 1;
-                          var unitsPerCarton = safeContent;
-                          if (selectedCartonMode == CartonContentMode.byPieces) {
-                            unitsPerCarton =
-                                (safeContent / item.piecesPerUnit).round();
-                            if (unitsPerCarton <= 0) unitsPerCarton = 1;
-                          }
-                          final safeCost = parsedCost >= 0
-                              ? parsedCost
-                              : (selectedUnitType == PurchaseUnitType.carton
-                                  ? item.cartonCost ??
-                                      item.unitCost * item.unitsPerOneCarton
-                                  : item.unitCost);
-                          final unitCost = selectedUnitType ==
-                                  PurchaseUnitType.carton
-                              ? (safeCost / unitsPerCarton).roundToDouble()
-                              : safeCost;
-                          final cartonCost =
-                              selectedUnitType == PurchaseUnitType.carton
-                                  ? unitCost * unitsPerCarton
-                                  : null;
+                          final parsedQty = double.tryParse(qtyController.text) ?? 1.0;
+                          final parsedCost = double.tryParse(costController.text) ?? item.unitCost;
+                          final safeCost = parsedCost >= 0 ? parsedCost : item.unitCost;
 
                           if (mounted) {
                             setState(() {
-                              item.unitType = selectedUnitType;
-                              item.cartonContentMode = selectedCartonMode;
-                              item.quantity = parsedQty > 0 ? parsedQty : 1;
-                              item.cartonContentValue = safeContent;
-                              item.cartonCost = cartonCost;
-                              item.unitCost = unitCost;
-                              item.product = item.product.copyWith(costPrice: unitCost);
+                              item.unitType = PurchaseUnitType.baseUnit;
+                              item.quantity = parsedQty > 0 ? parsedQty : 1.0;
+                              item.cartonCost = null;
+                              item.unitCost = safeCost;
+                              item.product = item.product.copyWith(costPrice: safeCost.roundToDouble());
                               _updatePaidAmountToTotal();
                             });
                             _notifyCartAndDialogChanged();
@@ -1423,11 +1120,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     CameraBarcodeScanner.show(
       context,
       (barcode) {
-        final found = allProducts.where((p) {
-          final matchesSupplier = _selectedSupplierId == null ||
-              p.supplierId == _selectedSupplierId;
-          return matchesSupplier && p.barcode == barcode.trim();
-        }).firstOrNull;
+        final trimmed = barcode.trim();
+        final matches = allProducts.where((p) => p.barcode == trimmed).toList();
+        if (_selectedSupplierId != null) {
+          matches.sort((a, b) {
+            final aIsSupplier = a.supplierId == _selectedSupplierId ? 0 : 1;
+            final bIsSupplier = b.supplierId == _selectedSupplierId ? 0 : 1;
+            return aIsSupplier.compareTo(bIsSupplier);
+          });
+        }
+        final found = matches.firstOrNull;
         if (found != null) {
           _addProductToCart(found);
         } else {
@@ -1457,7 +1159,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         } else {
           _purchaseCart.add(PurchaseCartItem(
             product: prod,
-            quantity: qtyToAdd,
+            quantity: qtyToAdd.toDouble(),
           ));
         }
         addedCount++;
@@ -1619,7 +1321,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                '${item.product.name} (بڕ: ${item.quantity} ${item.unitType == PurchaseUnitType.carton ? "کارتۆن" : item.baseUnitName})',
+                                '${item.product.name} (بڕ: ${item.quantity} ${item.baseUnitName})',
                                 style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
                               ),
                             ),
@@ -1664,7 +1366,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   final sName = d.supplierName.isNotEmpty ? d.supplierName : 'بێناو';
                                   return DropdownMenuItem<int>(
                                     value: d.id,
-                                    child: Text('#${d.orderNumber} ($sName) • ${d.items.length} کاڵا'),
+                                    child: Text(sName),
                                   );
                                 }).toList(),
                                 onChanged: (val) {
@@ -1818,7 +1520,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             final theme = Theme.of(context);
             final threshold = int.tryParse(thresholdController.text.trim()) ?? 10;
 
+            final cartProductIds = _purchaseCart.map((item) => item.product.id).toSet();
+
             var filtered = allProducts.where((p) {
+              if (cartProductIds.contains(p.id)) return false;
               final matchSupplier = currentSupplierFilter == null || p.supplierId == currentSupplierFilter;
               final matchStock = p.totalStock < threshold;
               return matchSupplier && matchStock;
@@ -2057,13 +1762,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _showAddLowStockProductToCartDialog(ProductModel product) {
-    PurchaseUnitType selectedUnitType = PurchaseUnitType.baseUnit;
-    CartonContentMode selectedCartonMode = CartonContentMode.byUnit;
     final TextEditingController qtyController = TextEditingController(text: '1');
-    final TextEditingController cartonQtyController = TextEditingController(text: '1');
-    final TextEditingController contentValController = TextEditingController(
-      text: product.unitsPerCarton > 0 ? product.unitsPerCarton.toString() : '10',
-    );
     final TextEditingController costController = TextEditingController(
       text: product.costPrice.toInt().toString(),
     );
@@ -2075,35 +1774,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final theme = Theme.of(context);
-            final parsedContentVal = int.tryParse(contentValController.text) ?? 1;
-            final int currentContentVal = parsedContentVal > 0 ? parsedContentVal : 1;
-            final int piecesPerUnit = product.unitsPerCarton > 0 ? product.unitsPerCarton : 1;
-
-            int computedUnitsPerCarton;
-            if (selectedCartonMode == CartonContentMode.byUnit) {
-              computedUnitsPerCarton = currentContentVal;
-            } else {
-              final val = (currentContentVal / piecesPerUnit).round();
-              computedUnitsPerCarton = val > 0 ? val : 1;
-            }
-
-            final parsedQty = selectedUnitType == PurchaseUnitType.baseUnit
-                ? (int.tryParse(qtyController.text) ?? 1)
-                : (int.tryParse(cartonQtyController.text) ?? 1);
-            final int safeQty = parsedQty > 0 ? parsedQty : 1;
-            final int computedTotalStock = selectedUnitType == PurchaseUnitType.baseUnit
-                ? safeQty
-                : safeQty * computedUnitsPerCarton;
-
+            final parsedQty = double.tryParse(qtyController.text) ?? 1.0;
+            final double safeQty = parsedQty > 0 ? parsedQty : 1.0;
             final parsedCost = double.tryParse(costController.text) ?? product.costPrice;
             final safeCost = parsedCost >= 0 ? parsedCost : product.costPrice;
-            final computedUnitCost = selectedUnitType == PurchaseUnitType.carton
-                ? (safeCost / computedUnitsPerCarton).roundToDouble()
-                : safeCost;
-            final double computedTotalCost = selectedUnitType ==
-                    PurchaseUnitType.carton
-                ? safeQty * computedUnitCost * computedUnitsPerCarton
-                : safeQty * computedUnitCost;
+            final double computedTotalCost = safeQty * safeCost;
             final unitName = product.unit?.trim().isNotEmpty == true ? product.unit! : 'دانە';
 
             return AlertDialog(
@@ -2138,244 +1813,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                final currentCost =
-                                    double.tryParse(costController.text);
-                                if (currentCost != null &&
-                                    selectedUnitType == PurchaseUnitType.carton) {
-                                  costController.text =
-                                      (currentCost / computedUnitsPerCarton)
-                                          .round()
-                                          .toString();
-                                }
-                                setDialogState(() {
-                                  selectedUnitType = PurchaseUnitType.baseUnit;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: selectedUnitType == PurchaseUnitType.baseUnit
-                                      ? theme.colorScheme.primaryContainer
-                                      : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: selectedUnitType == PurchaseUnitType.baseUnit
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'بە یەکە ($unitName)',
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: selectedUnitType == PurchaseUnitType.baseUnit
-                                        ? theme.colorScheme.primary
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                final currentCost =
-                                    double.tryParse(costController.text);
-                                if (currentCost != null &&
-                                    selectedUnitType == PurchaseUnitType.baseUnit) {
-                                  costController.text =
-                                      (currentCost * computedUnitsPerCarton)
-                                          .toString();
-                                }
-                                setDialogState(() {
-                                  selectedUnitType = PurchaseUnitType.carton;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: selectedUnitType == PurchaseUnitType.carton
-                                      ? theme.colorScheme.primaryContainer
-                                      : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: selectedUnitType == PurchaseUnitType.carton
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'بە کارتۆن',
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: selectedUnitType == PurchaseUnitType.carton
-                                        ? theme.colorScheme.primary
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      AppTextField(
+                        controller: qtyController,
+                        labelText: 'بڕی کڕین بە یەکە ($unitName)',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (_) => setDialogState(() {}),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      if (selectedUnitType == PurchaseUnitType.baseUnit) ...[
-                        AppTextField(
-                          controller: qtyController,
-                          labelText: 'بڕی کڕین بە یەکە ($unitName)',
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setDialogState(() {}),
-                        ),
-                      ] else ...[
-                        AppTextField(
-                          controller: cartonQtyController,
-                          labelText: 'ژمارەی کارتۆن',
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setDialogState(() {}),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'ناوەڕۆکی کارتۆن بە چی هەژمار دەکرێت؟',
-                          style: AppTextStyles.caption.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedCartonMode = CartonContentMode.byUnit;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: selectedCartonMode ==
-                                            CartonContentMode.byUnit
-                                        ? theme.colorScheme.primaryContainer
-                                        : theme.colorScheme
-                                            .surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selectedCartonMode ==
-                                              CartonContentMode.byUnit
-                                          ? theme.colorScheme.primary
-                                          : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'ژمارەی یەکە ($unitName)',
-                                    style: AppTextStyles.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: selectedCartonMode ==
-                                              CartonContentMode.byUnit
-                                          ? theme.colorScheme.primary
-                                          : null,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedCartonMode =
-                                        CartonContentMode.byPieces;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: selectedCartonMode ==
-                                            CartonContentMode.byPieces
-                                        ? theme.colorScheme.primaryContainer
-                                        : theme.colorScheme
-                                            .surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selectedCartonMode ==
-                                              CartonContentMode.byPieces
-                                          ? theme.colorScheme.primary
-                                          : Colors.transparent,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'دانە',
-                                    style: AppTextStyles.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: selectedCartonMode ==
-                                              CartonContentMode.byPieces
-                                          ? theme.colorScheme.primary
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        AppTextField(
-                          controller: contentValController,
-                          labelText: selectedCartonMode ==
-                                  CartonContentMode.byUnit
-                              ? 'ژمارەی یەکە ($unitName) لە هەر کارتۆنێک'
-                              : 'ژمارەی دانە لە هەر کارتۆنێک',
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setDialogState(() {}),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          selectedCartonMode == CartonContentMode.byUnit
-                              ? 'هەر کارتۆنێک = $currentContentVal $unitName'
-                              : 'هەر کارتۆنێک = $currentContentVal دانە ÷ $piecesPerUnit = $computedUnitsPerCarton $unitName',
-                          style: AppTextStyles.caption.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
                         controller: costController,
-                        labelText: selectedUnitType == PurchaseUnitType.carton
-                            ? 'نرخی تێچووی کارتۆن - د.ع'
-                            : 'نرخی تێچووی یەکە ($unitName) - د.ع',
-                        keyboardType: TextInputType.number,
+                        labelText: 'نرخی تێچووی یەکە ($unitName) - د.ع',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         onChanged: (_) => setDialogState(() {}),
                       ),
-
                       const SizedBox(height: AppSpacing.sm),
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.sm),
@@ -2387,18 +1837,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'کۆی ستۆکی زیادکراو: $computedTotalStock $unitName',
+                              'کۆی ستۆکی زیادکراو: ${safeQty % 1 == 0 ? safeQty.toInt() : safeQty} $unitName',
                               style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
                             ),
-                            if (selectedUnitType == PurchaseUnitType.carton) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                'نرخی تێچووی هەر $unitName: ${Formatters.currency(computedUnitCost)}',
-                                style: AppTextStyles.caption.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
                             const SizedBox(height: 2),
                             Text(
                               'کۆی نرخی ئەم کاڵایە: ${Formatters.currency(computedTotalCost)}',
@@ -2418,35 +1859,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 AppButton(
                   text: 'زیادکردن بۆ پسوڵە',
                   onPressed: () {
-                    final unitCost = selectedUnitType == PurchaseUnitType.carton
-                        ? (safeCost / computedUnitsPerCarton).roundToDouble()
-                        : safeCost;
-                    final cartonCost =
-                        selectedUnitType == PurchaseUnitType.carton
-                            ? unitCost * computedUnitsPerCarton
-                            : null;
-
                     if (mounted) {
                       setState(() {
                         final existingIndex = _purchaseCart.indexWhere((it) =>
                             it.product.id == product.id &&
-                            it.unitType == selectedUnitType &&
-                            it.unitCost == unitCost &&
-                            (selectedUnitType == PurchaseUnitType.baseUnit ||
-                                (it.cartonContentMode == selectedCartonMode &&
-                                    it.cartonContentValue == currentContentVal &&
-                                    it.cartonCost == cartonCost)));
+                            it.unitCost == safeCost);
                         if (existingIndex >= 0) {
                           _purchaseCart[existingIndex].quantity += safeQty;
                         } else {
                           _purchaseCart.add(PurchaseCartItem(
                             product: product,
-                            unitType: selectedUnitType,
-                            cartonContentMode: selectedCartonMode,
+                            unitType: PurchaseUnitType.baseUnit,
                             quantity: safeQty,
-                            cartonContentValue: currentContentVal,
-                            unitCost: unitCost,
-                            cartonCost: cartonCost,
+                            unitCost: safeCost,
                           ));
                         }
                         _updatePaidAmountToTotal();
@@ -2529,7 +1954,23 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
 
         // Find products that need purchasing (totalStock <= minStockLevel or stock <= 0)
+        // Exclude products that are already added to the purchase cart
+        // Exclude products that are already present in any "Awaiting Confirmation" (DRAFT) purchase order
+        final draftOrderProductIds = <int>{};
+        for (final draft in draftOrders) {
+          for (final item in draft.items) {
+            draftOrderProductIds.add(item.productId);
+          }
+        }
+
+        final cartProductIds = _purchaseCart.map((item) => item.product.id).toSet();
         final lowStockProducts = allProducts.where((p) {
+          if (cartProductIds.contains(p.id)) {
+            return false;
+          }
+          if (draftOrderProductIds.contains(p.id)) {
+            return false;
+          }
           if (_selectedSupplierId != null &&
               p.supplierId != _selectedSupplierId) {
             return false;
@@ -2539,6 +1980,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           }
           return p.totalStock <= 0;
         }).toList();
+
+        final activeCheckedCount = lowStockProducts.where((p) => _checkedProductIds.contains(p.id)).length;
 
         List<ProductModel> filteredLowStock;
         if (_lowStockFilter == 'checked') {
@@ -2629,17 +2072,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                   ),
                                   const SizedBox(width: 4),
                                   ChoiceChip(
-                                    label: Text('چێککراو (${_checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                    label: Text('چێککراو ($activeCheckedCount)', style: const TextStyle(fontSize: 11)),
                                     selected: _lowStockFilter == 'checked',
                                     onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'checked'),
                                   ),
                                   const SizedBox(width: 4),
                                   ChoiceChip(
-                                    label: Text('چێکنەکراو (${lowStockProducts.length - _checkedProductIds.length})', style: const TextStyle(fontSize: 11)),
+                                    label: Text('چێکنەکراو (${lowStockProducts.length - activeCheckedCount})', style: const TextStyle(fontSize: 11)),
                                     selected: _lowStockFilter == 'unchecked',
                                     onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'unchecked'),
                                   ),
-                                  if (_checkedProductIds.isNotEmpty) ...[
+                                  if (activeCheckedCount > 0) ...[
                                     const SizedBox(width: 8),
                                     ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(
@@ -2890,15 +2333,21 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                     return const Iterable<ProductModel>.empty();
                   }
                   final query = textEditingValue.text.toLowerCase().trim();
-                  return allProducts.where((p) {
-                    final matchesSupplier = _selectedSupplierId == null ||
-                        p.supplierId == _selectedSupplierId;
-                    return matchesSupplier &&
-                        (p.name.toLowerCase().contains(query) ||
-                            p.barcode.toLowerCase().contains(query) ||
-                            (p.sku != null &&
-                                p.sku!.toLowerCase().contains(query)));
-                  });
+                  final matched = allProducts.where((p) {
+                    return p.name.toLowerCase().contains(query) ||
+                        p.barcode.toLowerCase().contains(query) ||
+                        (p.sku != null && p.sku!.toLowerCase().contains(query));
+                  }).toList();
+
+                  if (_selectedSupplierId != null) {
+                    matched.sort((a, b) {
+                      final aIsSupplier = a.supplierId == _selectedSupplierId ? 0 : 1;
+                      final bIsSupplier = b.supplierId == _selectedSupplierId ? 0 : 1;
+                      return aIsSupplier.compareTo(bIsSupplier);
+                    });
+                  }
+
+                  return matched;
                 },
                 fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
                   return GestureDetector(
@@ -3086,7 +2535,6 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                       separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.xs),
                       itemBuilder: (context, index) {
                         final item = _purchaseCart[index];
-                        final isCarton = item.unitType == PurchaseUnitType.carton;
 
                         return InkWell(
                           onTap: () => _showItemConfigDialog(item),
@@ -3155,7 +2603,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                           Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 6),
                                             child: Text(
-                                              '${item.quantity}',
+                                              item.quantity % 1 == 0
+                                                  ? '${item.quantity.toInt()}'
+                                                  : '${item.quantity}',
                                               style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
                                             ),
                                           ),
@@ -3192,12 +2642,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: isCarton
-                                                    ? AppColors.purple.withValues(alpha: 0.15)
-                                                    : theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                                color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
                                                 borderRadius: BorderRadius.circular(4),
                                                 border: Border.all(
-                                                  color: isCarton ? AppColors.purple : theme.colorScheme.outlineVariant,
+                                                  color: theme.colorScheme.outlineVariant,
                                                   width: 0.8,
                                                 ),
                                               ),
@@ -3205,18 +2653,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(
-                                                    isCarton ? Icons.all_inbox_outlined : Icons.straighten,
+                                                    Icons.straighten,
                                                     size: 13,
-                                                    color: isCarton ? AppColors.purple : theme.colorScheme.primary,
+                                                    color: theme.colorScheme.primary,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    isCarton
-                                                        ? 'کارتۆن (${item.quantity} کارتۆن = ${item.totalStockUnits} ${item.baseUnitName})'
-                                                        : 'یەکە: ${item.baseUnitName}',
+                                                    'یەکە: ${item.baseUnitName}',
                                                     style: AppTextStyles.caption.copyWith(
                                                       fontWeight: FontWeight.bold,
-                                                      color: isCarton ? AppColors.purple : null,
                                                       fontSize: 11,
                                                     ),
                                                   ),
@@ -3224,7 +2669,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                   Icon(
                                                     Icons.edit_outlined,
                                                     size: 11,
-                                                    color: isCarton ? AppColors.purple : theme.colorScheme.onSurfaceVariant,
+                                                    color: theme.colorScheme.onSurfaceVariant,
                                                   ),
                                                 ],
                                               ),
@@ -3324,25 +2769,22 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             Text('بڕی پارەی دراو:', style: AppTextStyles.caption),
                             AppTextField(
                               controller: _poPaidAmountController,
-                              keyboardType: TextInputType.number,
                               labelText: 'بڕی پارەی دراو',
-                              hintText: '0',
-                              textAlign: TextAlign.start,
+                              keyboardType: TextInputType.number,
                               style: AppTextStyles.bodyBold.copyWith(
                                 fontSize: 15,
                                 color: theme.colorScheme.primary,
                               ),
-                              customDecoration: InputDecoration(
+                              customDecoration: const InputDecoration(
                                 isDense: true,
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
                                 focusedBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                focusedErrorBorder: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                                 hintText: '0',
-                                hintStyle: AppTextStyles.bodyBold.copyWith(
-                                  fontSize: 15,
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                                ),
+                                filled: false,
                               ),
                               onChanged: (_) {
                                 _userModifiedPaidAmount = true;

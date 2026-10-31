@@ -855,7 +855,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               flex: 1,
                               child: AppTextField(
                                 controller: qtyController,
-                                keyboardType: TextInputType.number,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 labelText: 'بڕ (دانە)',
                               ),
                             ),
@@ -922,7 +922,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       ? null
                       : () {
                           final qty =
-                              int.tryParse(qtyController.text.trim()) ?? 1;
+                              double.tryParse(qtyController.text.trim()) ?? 1.0;
                           final price =
                               double.tryParse(priceController.text.trim()) ??
                               _getProductUnitPrice(selectedProduct!);

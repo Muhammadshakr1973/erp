@@ -65,9 +65,9 @@ class PurchaseOrderService
             // ئایتمەکانی پسوڵەی کڕین
             $itemsList = $data['items'] ?? [];
             foreach ($itemsList as $item) {
-                $qty = (int) $item['quantity'];
-                $unitCost = (int) $item['unit_cost'];
-                $lineTotal = $qty * $unitCost;
+                $qty = (float) $item['quantity'];
+                $unitCost = (float) $item['unit_cost'];
+                $lineTotal = round($qty * $unitCost, 2);
                 $totalAmount += $lineTotal;
 
                 $order->items()->create([
@@ -252,7 +252,7 @@ class PurchaseOrderService
                 foreach ($receivingItems as $reqItem) {
                     $productId = $reqItem['product_id'] ?? null;
                     $itemId = $reqItem['item_id'] ?? null;
-                    $qtyToReceive = (int) ($reqItem['quantity'] ?? 0);
+                    $qtyToReceive = (float) ($reqItem['quantity'] ?? 0);
 
                     if ($qtyToReceive <= 0) {
                         throw ValidationException::withMessages(['items' => 'بڕی وەرگیراو دەبێت لە ٠ گەورەتر بێت.']);
@@ -569,9 +569,9 @@ class PurchaseOrderService
                 $lockedOrder->items()->delete();
 
                 foreach ($data['items'] as $item) {
-                    $qty = (int) $item['quantity'];
-                    $unitCost = (int) $item['unit_cost'];
-                    $lineTotal = $qty * $unitCost;
+                    $qty = (float) $item['quantity'];
+                    $unitCost = (float) $item['unit_cost'];
+                    $lineTotal = round($qty * $unitCost, 2);
                     $totalAmount += $lineTotal;
 
                     $lockedOrder->items()->create([

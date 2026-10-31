@@ -5,8 +5,8 @@ class PurchaseOrderItemModel {
   final String productName;
   final String? productUnit;
   final int unitsPerCarton;
-  final int quantity;
-  final int receivedQuantity;
+  final double quantity;
+  final double receivedQuantity;
   final num unitCost;
   final num totalCost;
 
@@ -33,22 +33,26 @@ class PurchaseOrderItemModel {
         : json['product_unit']?.toString();
 
     return PurchaseOrderItemModel(
-      id: json['id'] ?? 0,
-      purchaseOrderId: json['purchase_order_id'] ?? 0,
-      productId: json['product_id'] ?? 0,
+      id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
+      purchaseOrderId: json['purchase_order_id'] is int
+          ? json['purchase_order_id']
+          : (int.tryParse(json['purchase_order_id']?.toString() ?? '0') ?? 0),
+      productId: json['product_id'] is int
+          ? json['product_id']
+          : (int.tryParse(json['product_id']?.toString() ?? '0') ?? 0),
       productName: productMap != null
           ? productMap['name']?.toString() ?? ''
           : (json['product_name']?.toString() ?? ''),
       productUnit: unit,
       unitsPerCarton: upc > 0 ? upc : 1,
-      quantity: json['quantity'] ?? 0,
-      receivedQuantity: json['received_quantity'] ?? 0,
-      unitCost: json['unit_cost'] ?? 0,
-      totalCost: json['total_cost'] ?? 0,
+      quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
+      receivedQuantity: double.tryParse(json['received_quantity']?.toString() ?? '0') ?? 0.0,
+      unitCost: num.tryParse(json['unit_cost']?.toString() ?? '0') ?? 0,
+      totalCost: num.tryParse(json['total_cost']?.toString() ?? '0') ?? 0,
     );
   }
 
-  int get remainingQuantity => quantity - receivedQuantity;
+  double get remainingQuantity => quantity - receivedQuantity;
 }
 
 class PurchaseOrderModel {
@@ -103,23 +107,27 @@ class PurchaseOrderModel {
     }
 
     return PurchaseOrderModel(
-      id: json['id'],
-      orderNumber: json['order_number'] ?? '',
-      supplierId: json['supplier_id'] ?? 0,
+      id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
+      orderNumber: json['order_number']?.toString() ?? '',
+      supplierId: json['supplier_id'] is int
+          ? json['supplier_id']
+          : (int.tryParse(json['supplier_id']?.toString() ?? '0') ?? 0),
       supplierName: json['supplier'] != null
-          ? json['supplier']['name'] ?? ''
+          ? json['supplier']['name']?.toString() ?? ''
           : '',
       supplierPhone: json['supplier'] is Map
           ? json['supplier']['phone']?.toString()
           : null,
-      warehouseId: json['warehouse_id'] ?? 0,
+      warehouseId: json['warehouse_id'] is int
+          ? json['warehouse_id']
+          : (int.tryParse(json['warehouse_id']?.toString() ?? '0') ?? 0),
       warehouseName: json['warehouse'] != null
-          ? json['warehouse']['name'] ?? ''
+          ? json['warehouse']['name']?.toString() ?? ''
           : '',
-      status: json['status'] ?? 'DRAFT',
-      totalAmount: json['total_amount'] ?? 0,
-      paidAmount: json['paid_amount'] ?? 0,
-      notes: json['notes'],
+      status: json['status']?.toString() ?? 'DRAFT',
+      totalAmount: num.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
+      paidAmount: num.tryParse(json['paid_amount']?.toString() ?? '0') ?? 0,
+      notes: json['notes']?.toString(),
       receivedAt: parsedReceivedAt,
       createdAt: json['created_at']?.toString(),
       itemsCount: itemsList != null ? itemsList.length : 0,

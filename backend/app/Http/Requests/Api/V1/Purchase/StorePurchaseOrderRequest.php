@@ -24,8 +24,8 @@ class StorePurchaseOrderRequest extends FormRequest
             // ئایتمەکانی ناو پسوڵەی کڕین
             'items'              => [$isAutoReceive ? 'required' : 'nullable', 'array'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity'   => ['required', 'integer', 'min:1'],
-            'items.*.unit_cost'  => ['required', 'integer', 'min:0'], // نرخی کڕینی یەک دانە
+            'items.*.quantity'   => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_cost'  => ['required', 'numeric', 'min:0'], // نرخی کڕینی یەک دانە
         ];
     }
 }

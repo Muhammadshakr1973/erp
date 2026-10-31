@@ -16,6 +16,9 @@ class Product extends Model
     protected static function booted()
     {
         static::saving(function ($product) {
+            if (empty($product->unit)) {
+                $product->unit = 'دانە';
+            }
             if (!isset($product->cost_price) || $product->cost_price === null) {
                 $product->cost_price = 0;
             }

@@ -19,7 +19,7 @@ class StoreSalesReturnRequest extends FormRequest
             'reason'                          => ['nullable', 'string', 'max:500'],
             'items'                           => ['required', 'array', 'min:1'],
             'items.*.sales_order_item_id'     => ['required', 'integer', 'exists:sales_order_items,id'],
-            'items.*.quantity'                => ['required', 'integer', 'min:1'],
+            'items.*.quantity'                => ['required', 'numeric', 'gt:0'],
             'items.*.reason'                  => ['nullable', 'string', 'max:255'],
         ];
     }

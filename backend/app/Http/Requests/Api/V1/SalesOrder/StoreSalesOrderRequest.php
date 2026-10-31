@@ -60,14 +60,14 @@ class StoreSalesOrderRequest extends FormRequest
             // پشکنینی ئایتمەکانی پسوڵەکە (ڕێگە بە بەتاڵبوون دەدرێت بۆ دراوتی سەرەتایی)
             'items' => ['nullable', 'array'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.notes' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'in:PACKING,READY,DRAFT,CONFIRMED,IN_DELIVERY'],
 
             // پشکنینی کاڵا گەڕاوەکان لە هەمان پسوڵەدا
             'returned_items' => ['nullable', 'array'],
             'returned_items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'returned_items.*.quantity' => ['required', 'integer', 'min:1'],
+            'returned_items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'returned_items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'returned_items.*.reason' => ['nullable', 'string', 'max:255'],
         ];

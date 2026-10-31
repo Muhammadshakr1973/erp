@@ -73,6 +73,9 @@ class ProductController extends Controller
         if ($request->has('barcode') && empty($request->barcode)) {
             $request->merge(['barcode' => null]);
         }
+        if (empty($request->unit)) {
+            $request->merge(['unit' => 'دانە']);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -132,6 +135,9 @@ class ProductController extends Controller
         }
         if ($request->has('barcode') && empty($request->barcode)) {
             $request->merge(['barcode' => null]);
+        }
+        if (empty($request->unit)) {
+            $request->merge(['unit' => 'دانە']);
         }
 
         $validated = $request->validate([
