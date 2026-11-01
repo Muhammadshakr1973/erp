@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Tab index 0 always represents the 'سەرەکی' (Dashboard/Main) screen across all roles.
 
 final adminTabIndexProvider = StateProvider<int>((ref) => 0);
+final adminPurchasesSubTabIndexProvider = StateProvider<int>((ref) => 0);
 final salesmanTabIndexProvider = StateProvider<int>((ref) => 0);
 final warehouseTabIndexProvider = StateProvider<int>((ref) => 0);
 final driverTabIndexProvider = StateProvider<int>((ref) => 0);
@@ -11,6 +12,7 @@ final driverTabIndexProvider = StateProvider<int>((ref) => 0);
 /// Resets all navigation tab providers to 0 ('سەرەکی') using WidgetRef.
 void resetAllNavigationTabs(WidgetRef ref) {
   ref.read(adminTabIndexProvider.notifier).state = 0;
+  ref.read(adminPurchasesSubTabIndexProvider.notifier).state = 0;
   ref.read(salesmanTabIndexProvider.notifier).state = 0;
   ref.read(warehouseTabIndexProvider.notifier).state = 0;
   ref.read(driverTabIndexProvider.notifier).state = 0;
@@ -19,6 +21,7 @@ void resetAllNavigationTabs(WidgetRef ref) {
 /// Resets all navigation tab providers to 0 ('سەرەکی') using Ref.
 void resetAllNavigationTabsWithRef(Ref ref) {
   ref.read(adminTabIndexProvider.notifier).state = 0;
+  ref.read(adminPurchasesSubTabIndexProvider.notifier).state = 0;
   ref.read(salesmanTabIndexProvider.notifier).state = 0;
   ref.read(warehouseTabIndexProvider.notifier).state = 0;
   ref.read(driverTabIndexProvider.notifier).state = 0;
@@ -27,6 +30,7 @@ void resetAllNavigationTabsWithRef(Ref ref) {
 /// Resets all navigation tab providers to 0 ('سەرەکی') using ProviderContainer.
 void resetAllNavigationTabsWithContainer(ProviderContainer container) {
   container.read(adminTabIndexProvider.notifier).state = 0;
+  container.read(adminPurchasesSubTabIndexProvider.notifier).state = 0;
   container.read(salesmanTabIndexProvider.notifier).state = 0;
   container.read(warehouseTabIndexProvider.notifier).state = 0;
   container.read(driverTabIndexProvider.notifier).state = 0;

@@ -235,7 +235,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin-purchases',
         name: 'adminPurchases',
-        builder: (context, state) => const AdminPurchasesScreen(),
+        builder: (context, state) {
+          final tabExtra = state.extra;
+          int? initialTab;
+          if (tabExtra is int) {
+            initialTab = tabExtra;
+          } else if (state.uri.queryParameters.containsKey('tab')) {
+            initialTab = int.tryParse(state.uri.queryParameters['tab']!);
+          }
+          return AdminPurchasesScreen(initialTabIndex: initialTab);
+        },
       ),
       GoRoute(
         path: '/admin-audit-logs',

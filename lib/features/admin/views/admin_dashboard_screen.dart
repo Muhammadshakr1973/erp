@@ -21,6 +21,7 @@ import '../../shared/models/report_models.dart';
 // import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -164,6 +165,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           icon: AppIcons.customerDebt,
                           color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                           subText: 'کۆی قەرزی کڕیار: ${Formatters.currency(dashboard.totalCustomerDebts)}',
+                          onTap: () {
+                            ref.read(adminPurchasesSubTabIndexProvider.notifier).state = 2;
+                            ref.read(adminTabIndexProvider.notifier).state = 1;
+                          },
                         ),
                         _buildStatCard(
                           context: context,

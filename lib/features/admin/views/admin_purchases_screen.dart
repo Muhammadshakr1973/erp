@@ -32,6 +32,7 @@ import '../providers/purchase_provider.dart';
 import '../../products/views/supplier_reconciliation_dialog.dart';
 import '../../products/views/product_form_dialog.dart';
 import 'supplier_form_dialog.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 
 enum PurchaseUnitType { baseUnit, carton }
 enum CartonContentMode { byUnit, byPieces }
@@ -158,7 +159,8 @@ class PurchaseCartItem {
 }
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
-  const AdminPurchasesScreen({super.key});
+  final int? initialTabIndex;
+  const AdminPurchasesScreen({super.key, this.initialTabIndex});
 
   @override
   ConsumerState<AdminPurchasesScreen> createState() =>
@@ -214,8 +216,18 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   void initState() {
     super.initState();
     _poPaidAmountController.text = '0';
-    _tabController = TabController(length: 3, vsync: this);
+    final initialTab = widget.initialTabIndex ?? ref.read(adminPurchasesSubTabIndexProvider);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: (initialTab >= 0 && initialTab < 3) ? initialTab : 0,
+    );
     _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        if (ref.read(adminPurchasesSubTabIndexProvider) != _tabController.index) {
+          ref.read(adminPurchasesSubTabIndexProvider.notifier).state = _tabController.index;
+        }
+      }
       setState(() {});
     });
     _poNotesController.addListener(_onCartDataChanged);
@@ -877,6 +889,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(adminPurchasesSubTabIndexProvider, (previous, next) {
+      if (next >= 0 && next < _tabController.length) {
+        if (_isEditingPurchaseDraft && next != 0) {
+          setState(() {
+            _isEditingPurchaseDraft = false;
+          });
+        }
+        if (next != _tabController.index) {
+          _tabController.animateTo(next);
+        }
+      }
+    });
+
     return PermissionGuard(
       permission: 'suppliers.manage',
       child: _buildScaffold(context),
