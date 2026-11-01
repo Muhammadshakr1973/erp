@@ -101,83 +101,6 @@ class _AdminSuppliersFullscreenDialogState
     }
   }
 
-  Widget _buildAddSupplierButton(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 8, top: 7, bottom: 7, end: 4),
-      child: Tooltip(
-        message: 'زیادکردنی کۆمپانیا',
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _showAddSupplierDialog(context),
-            borderRadius: BorderRadius.circular(10),
-            child: Ink(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: isDark
-                    ? const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : const LinearGradient(
-                        colors: [Color(0xFF1B3B6F), Color(0xFF122D5A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : Colors.white.withValues(alpha: 0.18),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark
-                        ? const Color(0xFF2563EB).withValues(alpha: 0.32)
-                        : const Color(0xFF122D5A).withValues(alpha: 0.22),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.add_business_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'کۆمپانیای نوێ',
-                    style: TextStyle(
-                      fontFamily: 'KJino',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSupplierCard(
     BuildContext context,
@@ -397,7 +320,6 @@ class _AdminSuppliersFullscreenDialogState
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            _buildAddSupplierButton(context),
           ],
         ),
         body: RefreshIndicator(

@@ -474,39 +474,38 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
           ),
           child: Column(
             children: [
+              DropdownButtonFormField<String?>(
+                initialValue: _ledgerEntryType,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'جۆری جوڵە',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
+                  DropdownMenuItem(
+                    value: 'PAYMENT',
+                    child: Text('پارەدان'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'PURCHASE',
+                    child: Text('کڕین'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ADJUSTMENT',
+                    child: Text('ڕاستکردنەوە'),
+                  ),
+                ],
+                onChanged: (val) =>
+                    setState(() => _ledgerEntryType = val),
+              ),
+              const SizedBox(height: AppSpacing.xs),
               Row(
                 children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String?>(
-                      initialValue: _ledgerEntryType,
-                      decoration: const InputDecoration(
-                        labelText: 'جۆری جوڵە',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'ALL', child: Text('گشتی')),
-                        DropdownMenuItem(
-                          value: 'PAYMENT',
-                          child: Text('پارەدان'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'PURCHASE',
-                          child: Text('کڕین'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'ADJUSTMENT',
-                          child: Text('ڕاستکردنەوە'),
-                        ),
-                      ],
-                      onChanged: (val) =>
-                          setState(() => _ledgerEntryType = val),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: InkWell(
                       onTap: () => _selectLedgerDate(context, true),
@@ -515,8 +514,8 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                           labelText: 'لە بەرواری',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                            horizontal: 10,
+                            vertical: 10,
                           ),
                         ),
                         child: Text(
@@ -527,11 +526,12 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                                     .first
                               : 'دیارینەکراوە',
                           style: AppTextStyles.caption,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: InkWell(
                       onTap: () => _selectLedgerDate(context, false),
@@ -540,8 +540,8 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                           labelText: 'تا بەرواری',
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                            horizontal: 10,
+                            vertical: 10,
                           ),
                         ),
                         child: Text(
@@ -552,25 +552,31 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
                                     .first
                               : 'دیارینەکراوە',
                           style: AppTextStyles.caption,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
                     onPressed: _clearLedgerFilters,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     child: const Text(
                       'پاککردنەوە',
                       style: TextStyle(color: AppColors.danger),
                     ),
                   ),
                   SizedBox(
-                    width: 120,
+                    width: 100,
                     child: AppButton(
                       text: 'فلتەر',
                       onPressed: _applyLedgerFilters,
