@@ -903,19 +903,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         ),
         actions: [
           if (_tabController.index == 0 && !_isEditingPurchaseDraft)
-            IconButton.filled(
-              tooltip: 'دروستکردنی پسوڵەی کڕین',
-              icon: const Icon(Icons.add_shopping_cart),
-              onPressed: () => _createNewDraftInvoice(
-                ref.read(warehouseListProvider).asData?.value ?? [],
-                supplierId: null,
-              ),
-            ),
+            _buildCreatePurchaseOrderButton(context),
           if (_tabController.index == 2)
-            IconButton(
-              icon: const Icon(AppIcons.add),
-              onPressed: () => _showAddSupplierDialog(context),
-            ),
+            _buildAddSupplierButton(context),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -934,6 +924,165 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           _buildPurchaseOrdersTab(context),
           _buildSuppliersTab(context),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCreatePurchaseOrderButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 12, top: 7, bottom: 7, end: 4),
+      child: Tooltip(
+        message: 'دروستکردنی پسوڵەی کڕینی نوێ',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _createNewDraftInvoice(
+              ref.read(warehouseListProvider).asData?.value ?? [],
+              supplierId: null,
+            ),
+            borderRadius: BorderRadius.circular(10),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: isDark
+                    ? const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : const LinearGradient(
+                        colors: [Color(0xFF1B3B6F), Color(0xFF122D5A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.white.withValues(alpha: 0.18),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? const Color(0xFF2563EB).withValues(alpha: 0.32)
+                        : const Color(0xFF122D5A).withValues(alpha: 0.22),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.add_shopping_cart_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'پسوڵەی نوێ',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddSupplierButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 12, top: 7, bottom: 7, end: 4),
+      child: Tooltip(
+        message: 'زیادکردنی کۆمپانیا',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showAddSupplierDialog(context),
+            borderRadius: BorderRadius.circular(10),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: isDark
+                    ? const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : const LinearGradient(
+                        colors: [Color(0xFF1B3B6F), Color(0xFF122D5A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.white.withValues(alpha: 0.18),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? const Color(0xFF2563EB).withValues(alpha: 0.32)
+                        : const Color(0xFF122D5A).withValues(alpha: 0.22),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.add_business_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'کۆمپانیای نوێ',
+                    style: TextStyle(
+                      fontFamily: 'KJino',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2911,6 +3060,23 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                               const Text(
                                 'پسوڵەی نوێ زیاد بکە و دابینکەر لە ناو پسوڵەکە دیاری بکە',
                                 style: AppTextStyles.caption,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                      ? AppColors.primaryDark
+                                      : AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                ),
+                                onPressed: () => _createNewDraftInvoice(warehouses, supplierId: null),
+                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                                label: const Text(
+                                  'دروستکردنی پسوڵەی نوێ',
+                                  style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold),
+                                ),
                               ),
                             ],
                           ),
