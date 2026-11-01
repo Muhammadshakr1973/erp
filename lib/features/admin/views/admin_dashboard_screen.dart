@@ -22,7 +22,7 @@ import '../../shared/models/report_models.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
-import 'admin_purchases_screen.dart';
+import 'admin_suppliers_dialog.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -167,16 +167,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           color: theme.brightness == Brightness.dark ? AppColors.dangerDark : AppColors.danger,
                           subText: 'کۆی قەرزی کڕیار: ${Formatters.currency(dashboard.totalCustomerDebts)}',
                           onTap: () {
-                            showDialog<void>(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (ctx) => const Dialog.fullscreen(
-                                child: AdminPurchasesScreen(
-                                  initialTabIndex: 2,
-                                  isDialog: true,
-                                ),
-                              ),
-                            );
+                            AdminSuppliersFullscreenDialog.show(context);
                           },
                         ),
                         _buildStatCard(
