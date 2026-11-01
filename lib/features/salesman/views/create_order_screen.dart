@@ -422,12 +422,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
     switch (tier) {
       case 'N1':
-        return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
+        return product.priceN1;
       case 'N3':
-        return product.priceN3 > 0 ? product.priceN3 : product.costPrice;
+        return product.priceN3;
       case 'N2':
       default:
-        return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+        return product.priceN2;
     }
   }
 
@@ -1012,10 +1012,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final hasSpecial = _customerSpecialPrices.containsKey(product.id);
     final currentSpecial = _customerSpecialPrices[product.id];
     final defaultPrice = _selectedCustomer!.priceType?.toUpperCase() == 'N1'
-        ? (product.priceN1 > 0 ? product.priceN1 : product.costPrice)
+        ? product.priceN1
         : (_selectedCustomer!.priceType?.toUpperCase() == 'N3'
-              ? (product.priceN3 > 0 ? product.priceN3 : product.costPrice)
-              : (product.priceN2 > 0 ? product.priceN2 : product.costPrice));
+              ? product.priceN3
+              : product.priceN2);
 
     final controller = TextEditingController(
       text: hasSpecial

@@ -51,12 +51,12 @@ class Product extends Model
     }
     public function getPriceForType(string $type): int
     {
-        return (int) match ($type) {
-            'N1' => $this->price_n1,
-            'N2' => $this->price_n2,
-            'N3' => $this->price_n3,
-            'special' => $this->price_n1,
-            default => $this->price_n1
+        return (int) match (strtoupper($type)) {
+            'N1' => $this->price_n1 ?? 0,
+            'N2' => $this->price_n2 ?? 0,
+            'N3' => $this->price_n3 ?? 0,
+            'SPECIAL' => $this->price_n3 ?? 0,
+            default => $this->price_n3 ?? 0
         };
     }
     public function scopeActive($q)

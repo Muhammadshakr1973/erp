@@ -180,12 +180,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (_isManualPriceTierOverride) {
       switch (_selectedPriceTier) {
         case 'N1':
-          return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
+          return product.priceN1;
         case 'N2':
-          return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+          return product.priceN2;
         case 'N3':
         default:
-          return product.priceN3 > 0 ? product.priceN3 : product.costPrice;
+          return product.priceN3;
       }
     }
 
@@ -198,12 +198,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     // Otherwise use selected price tier (which is set to customer's tier)
     switch (_selectedPriceTier) {
       case 'N1':
-        return product.priceN1 > 0 ? product.priceN1 : product.costPrice;
+        return product.priceN1;
       case 'N2':
-        return product.priceN2 > 0 ? product.priceN2 : product.costPrice;
+        return product.priceN2;
       case 'N3':
       default:
-        return product.priceN3 > 0 ? product.priceN3 : product.costPrice;
+        return product.priceN3;
     }
   }
 

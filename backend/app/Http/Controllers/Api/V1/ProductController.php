@@ -39,6 +39,9 @@ class ProductController extends Controller
         }
 
         $products = $query->get();
+        if ($user && in_array($user->role?->name, ['salesman', 'driver'])) {
+            $products->makeHidden(['cost_price']);
+        }
         return response()->json([
             'message' => 'لیستی کاڵاکان',
             'data' => $products
@@ -59,9 +62,14 @@ class ProductController extends Controller
             }
         }
 
+        $productData = $product->load(['category', 'supplier', 'stocks']);
+        if ($user && in_array($user->role?->name, ['salesman', 'driver'])) {
+            $productData->makeHidden(['cost_price']);
+        }
+
         return response()->json([
             'message' => 'زانیاریی کاڵا',
-            'data' => $product->load(['category', 'supplier', 'stocks'])
+            'data' => $productData
         ]);
     }
 
