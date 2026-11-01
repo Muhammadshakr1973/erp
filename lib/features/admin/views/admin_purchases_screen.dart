@@ -160,7 +160,12 @@ class PurchaseCartItem {
 
 class AdminPurchasesScreen extends ConsumerStatefulWidget {
   final int? initialTabIndex;
-  const AdminPurchasesScreen({super.key, this.initialTabIndex});
+  final bool isDialog;
+  const AdminPurchasesScreen({
+    super.key,
+    this.initialTabIndex,
+    this.isDialog = false,
+  });
 
   @override
   ConsumerState<AdminPurchasesScreen> createState() =>
@@ -928,6 +933,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           style: AppTextStyles.h2,
         ),
         actions: [
+          if (widget.isDialog)
+            IconButton(
+              tooltip: 'داخستن',
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           if (_tabController.index == 0 && !_isEditingPurchaseDraft)
             _buildCreatePurchaseOrderButton(context),
           if (_tabController.index == 2)
