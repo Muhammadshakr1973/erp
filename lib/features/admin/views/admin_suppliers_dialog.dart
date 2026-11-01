@@ -42,18 +42,6 @@ class _AdminSuppliersFullscreenDialogState
     return Formatters.currency(amount);
   }
 
-  Future<void> _showAddSupplierDialog(BuildContext context) async {
-    final result = await showDialog<Object?>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const SupplierFormDialog(),
-    );
-    if (!mounted) return;
-
-    if (result is SupplierModel || result == true) {
-      ref.invalidate(suppliersListProvider);
-    }
-  }
 
   Future<void> _showEditSupplierDialog(
     BuildContext context,
@@ -344,75 +332,73 @@ class _AdminSuppliersFullscreenDialogState
                       ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      InkWell(
-                        onTap: () => setState(() => _debtFilter = 'with_debt'),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Radio<String>(
-                                value: 'with_debt',
-                                groupValue: _debtFilter,
-                                activeColor: AppColors.danger,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                                onChanged: (val) {
-                                  if (val != null) setState(() => _debtFilter = val);
-                                },
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'قەرزدار ($withDebtCount)',
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: _debtFilter == 'with_debt'
-                                      ? AppColors.danger
-                                      : Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 13,
+                  child: RadioGroup<String>(
+                    groupValue: _debtFilter,
+                    onChanged: (val) {
+                      if (val != null) setState(() => _debtFilter = val);
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        InkWell(
+                          onTap: () => setState(() => _debtFilter = 'with_debt'),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Radio<String>(
+                                  value: 'with_debt',
+                                  activeColor: AppColors.danger,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'قەرزدار ($withDebtCount)',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: _debtFilter == 'with_debt'
+                                        ? AppColors.danger
+                                        : Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      InkWell(
-                        onTap: () => setState(() => _debtFilter = 'no_debt'),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Radio<String>(
-                                value: 'no_debt',
-                                groupValue: _debtFilter,
-                                activeColor: AppColors.success,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                                onChanged: (val) {
-                                  if (val != null) setState(() => _debtFilter = val);
-                                },
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'بێ قەرز ($noDebtCount)',
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: _debtFilter == 'no_debt'
-                                      ? AppColors.success
-                                      : Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 13,
+                        const SizedBox(width: AppSpacing.md),
+                        InkWell(
+                          onTap: () => setState(() => _debtFilter = 'no_debt'),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Radio<String>(
+                                  value: 'no_debt',
+                                  activeColor: AppColors.success,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'بێ قەرز ($noDebtCount)',
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: _debtFilter == 'no_debt'
+                                        ? AppColors.success
+                                        : Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

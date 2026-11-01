@@ -21,7 +21,6 @@ import '../../shared/models/report_models.dart';
 // import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
-import '../../../core/router/navigation_tabs_provider.dart';
 import 'admin_suppliers_dialog.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
