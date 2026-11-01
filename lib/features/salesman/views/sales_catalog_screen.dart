@@ -1735,10 +1735,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final bool canDecrement = quantity > 0;
     final bool isInSelectedOrder = _selectedOrder != null && quantity > 0;
 
-    // Visual inactive look when in selected order (dimmed opacity), while remaining 100% interactive
-    final double cardOpacity = isOutOfStock
+    // Visual inactive look when in selected order or out of stock, while remaining interactive
+    final bool isStockDepleted = isOutOfStock || isLimitReached;
+    final double cardOpacity = isStockDepleted
         ? 0.50
         : (isInSelectedOrder ? 0.60 : 1.0);
+
+    final Color borderColor = isStockDepleted
+        ? (isDark ? const Color(0xFFFE3F30) : const Color(0xFFE53935))
+        : (isInSelectedOrder
+            ? (isDark ? const Color(0xFF00E676) : const Color(0xFF10B981))
+            : (quantity > 0
+                ? AppColors.primary
+                : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300)));
+
+    final double borderWidth = (isStockDepleted || isInSelectedOrder)
+        ? 2.5
+        : (quantity > 0 ? 1.5 : 1.0);
 
     return Container(
       key: key,
@@ -1746,15 +1759,18 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         color: isDark ? const Color(0xFF242C38) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isInSelectedOrder
-              ? (isDark ? const Color(0xFF00E676) : const Color(0xFF10B981))
-              : (quantity > 0
-                  ? AppColors.primary
-                  : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300)),
-          width: isInSelectedOrder ? 2.5 : (quantity > 0 ? 1.5 : 1),
+          color: borderColor,
+          width: borderWidth,
         ),
         boxShadow: [
-          if (isInSelectedOrder)
+          if (isStockDepleted)
+            BoxShadow(
+              color: (isDark ? const Color(0xFFFE3F30) : const Color(0xFFE53935))
+                  .withValues(alpha: 0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            )
+          else if (isInSelectedOrder)
             BoxShadow(
               color: (isDark ? const Color(0xFF00E676) : const Color(0xFF10B981))
                   .withValues(alpha: 0.25),
