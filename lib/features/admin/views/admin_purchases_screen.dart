@@ -216,11 +216,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   void initState() {
     super.initState();
     _poPaidAmountController.text = '0';
-    final initialTab = widget.initialTabIndex ?? ref.read(adminPurchasesSubTabIndexProvider);
+    final int selectedTab = widget.initialTabIndex ?? ref.read(adminPurchasesSubTabIndexProvider);
+    final int safeInitialIndex = (selectedTab >= 0 && selectedTab < 3) ? selectedTab : 0;
     _tabController = TabController(
       length: 3,
       vsync: this,
-      initialIndex: (initialTab >= 0 && initialTab < 3) ? initialTab : 0,
+      initialIndex: safeInitialIndex,
     );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
