@@ -1733,29 +1733,45 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final bool isLimitReached = remainingStock <= 0;
     final bool canIncrement = remainingStock > 0;
     final bool canDecrement = quantity > 0;
+    final bool isInSelectedOrder = _selectedOrder != null && quantity > 0;
 
-    return AnimatedOpacity(
+    // Visual inactive look when in selected order (dimmed opacity), while remaining 100% interactive
+    final double cardOpacity = isOutOfStock
+        ? 0.50
+        : (isInSelectedOrder ? 0.60 : 1.0);
+
+    return Container(
       key: key,
-      opacity: isOutOfStock ? 0.55 : 1.0,
-      duration: const Duration(milliseconds: 200),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF242C38) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: quantity > 0
-                ? AppColors.primary
-                : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300),
-            width: quantity > 0 ? 1.5 : 1,
-          ),
-          boxShadow: [
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF242C38) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isInSelectedOrder
+              ? (isDark ? const Color(0xFF00E676) : const Color(0xFF10B981))
+              : (quantity > 0
+                  ? AppColors.primary
+                  : (isDark ? const Color(0xFF333E4F) : Colors.grey.shade300)),
+          width: isInSelectedOrder ? 2.5 : (quantity > 0 ? 1.5 : 1),
+        ),
+        boxShadow: [
+          if (isInSelectedOrder)
+            BoxShadow(
+              color: (isDark ? const Color(0xFF00E676) : const Color(0xFF10B981))
+                  .withValues(alpha: 0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            )
+          else
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
-          ],
-        ),
+        ],
+      ),
+      child: AnimatedOpacity(
+        opacity: cardOpacity,
+        duration: const Duration(milliseconds: 200),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1776,6 +1792,46 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                 _buildPlaceholderImage(),
                           )
                         : _buildPlaceholderImage(),
+
+                    // In-order badge at top-left
+                    if (isInSelectedOrder)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (isDark
+                                    ? const Color(0xFF00E676)
+                                    : const Color(0xFF0A9C6E))
+                                .withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 12,
+                                color: isDark ? Colors.black : Colors.white,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                'لە پسوڵەدایە',
+                                style: TextStyle(
+                                  fontFamily: 'KJino',
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.black : Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     // Stock badge at top-right
                     Positioned(
