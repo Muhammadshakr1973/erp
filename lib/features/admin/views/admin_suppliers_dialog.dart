@@ -36,6 +36,8 @@ class AdminSuppliersFullscreenDialog extends ConsumerStatefulWidget {
 
 class _AdminSuppliersFullscreenDialogState
     extends ConsumerState<AdminSuppliersFullscreenDialog> {
+  String _debtFilter = 'with_debt'; // 'with_debt', 'no_debt'
+
   String _formatCurrency(num amount) {
     return Formatters.currency(amount);
   }
@@ -322,87 +324,193 @@ class _AdminSuppliersFullscreenDialogState
             ),
           ],
         ),
-        body: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(suppliersListProvider),
-          child: suppliersAsync.when(
-            data: (suppliers) {
-              if (suppliers.isEmpty) {
-                return LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.store_outlined,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            const Text(
-                              'هیچ کۆمپانیایەک نییە',
-                              style: AppTextStyles.bodyBold,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            TextButton.icon(
-                              onPressed: () => _showAddSupplierDialog(context),
-                              icon: const Icon(Icons.add),
-                              label: const Text('زیادکردنی کۆمپانیا'),
-                            ),
-                          ],
-                        ),
+        body: Column(
+          children: [
+            // Top Filter Bar with 2 Radio Buttons
+            suppliersAsync.maybeWhen(
+              data: (suppliers) {
+                final withDebtCount = suppliers.where((s) => s.debt > 0).length;
+                final noDebtCount = suppliers.where((s) => s.debt <= 0).length;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenHorizontal,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                       ),
                     ),
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      InkWell(
+                        onTap: () => setState(() => _debtFilter = 'with_debt'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Radio<String>(
+                                value: 'with_debt',
+                                groupValue: _debtFilter,
+                                activeColor: AppColors.danger,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _debtFilter = val);
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'قەرزدار ($withDebtCount)',
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: _debtFilter == 'with_debt'
+                                      ? AppColors.danger
+                                      : Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      InkWell(
+                        onTap: () => setState(() => _debtFilter = 'no_debt'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Radio<String>(
+                                value: 'no_debt',
+                                groupValue: _debtFilter,
+                                activeColor: AppColors.success,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _debtFilter = val);
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'بێ قەرز ($noDebtCount)',
+                                style: AppTextStyles.bodyBold.copyWith(
+                                  color: _debtFilter == 'no_debt'
+                                      ? AppColors.success
+                                      : Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
-              }
+              },
+              orElse: () => const SizedBox.shrink(),
+            ),
 
-              final screenWidth = MediaQuery.of(context).size.width;
-              int crossAxisCount = 1;
-              if (screenWidth >= 1024) {
-                crossAxisCount = 3;
-              } else if (screenWidth >= 600) {
-                crossAxisCount = 2;
-              }
+            // Filtered Suppliers List
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async => ref.invalidate(suppliersListProvider),
+                child: suppliersAsync.when(
+                  data: (suppliers) {
+                    final filteredSuppliers = suppliers.where((s) {
+                      if (_debtFilter == 'with_debt') {
+                        return s.debt > 0;
+                      } else {
+                        return s.debt <= 0;
+                      }
+                    }).toList();
 
-              final bool isMobileOrTablet = screenWidth < AppBreakpoints.desktopMin;
+                    if (filteredSuppliers.isEmpty) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _debtFilter == 'with_debt'
+                                        ? Icons.check_circle_outline
+                                        : Icons.store_outlined,
+                                    size: 56,
+                                    color: Theme.of(context).colorScheme.outline,
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    _debtFilter == 'with_debt'
+                                        ? 'هیچ کۆمپانیایەکی قەرزدار نییە'
+                                        : 'هیچ کۆمپانیایەکی بێ قەرز نییە',
+                                    style: AppTextStyles.bodyBold,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
-              return GridView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                itemCount: suppliers.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: AppSpacing.md,
-                  mainAxisSpacing: AppSpacing.sm,
-                  mainAxisExtent: isMobileOrTablet ? 124 : 82,
-                ),
-                itemBuilder: (context, index) => _buildSupplierCard(
-                  context,
-                  suppliers[index],
-                  isMobileOrTablet: isMobileOrTablet,
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Center(
-                    child: Text(
-                      'شکست لە هێنانی زانیارییەکان: $error',
-                      style: const TextStyle(color: AppColors.danger),
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    int crossAxisCount = 1;
+                    if (screenWidth >= 1024) {
+                      crossAxisCount = 3;
+                    } else if (screenWidth >= 600) {
+                      crossAxisCount = 2;
+                    }
+
+                    final bool isMobileOrTablet = screenWidth < AppBreakpoints.desktopMin;
+
+                    return GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                      itemCount: filteredSuppliers.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: AppSpacing.md,
+                        mainAxisSpacing: AppSpacing.sm,
+                        mainAxisExtent: isMobileOrTablet ? 124 : 82,
+                      ),
+                      itemBuilder: (context, index) => _buildSupplierCard(
+                        context,
+                        filteredSuppliers[index],
+                        isMobileOrTablet: isMobileOrTablet,
+                      ),
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Center(
+                          child: Text(
+                            'شکست لە هێنانی زانیارییەکان: $error',
+                            style: const TextStyle(color: AppColors.danger),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
