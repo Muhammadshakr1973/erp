@@ -2406,7 +2406,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            '${supplier.name}${supplier.debt > 0 ? " (قەرز: ${Formatters.currency(supplier.debt)})" : ""}',
+                                            '${supplier.name}${supplier.debt > 0 ? " (${Formatters.currency(supplier.debt)})" : ""}',
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
