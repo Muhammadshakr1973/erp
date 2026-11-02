@@ -205,8 +205,6 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
             _triggerNumericKeyboard();
           }
         },
-        showCursor: true,
-        enableInteractiveSelection: true,
         textDirection: _isNumeric ? TextDirection.ltr : null,
         textAlign: widget.textAlign ?? (_isNumeric ? TextAlign.right : TextAlign.start),
         autofocus: widget.autofocus,
