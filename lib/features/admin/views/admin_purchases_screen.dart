@@ -3076,7 +3076,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               ),
             ),
             data: (orders) {
-              final drafts = orders
+              final visibleOrders = _mergePurchaseOrderOverrides(orders);
+              final drafts = visibleOrders
                   .where((order) => order.status.toUpperCase() == 'DRAFT')
                   .toList();
               if (drafts.isEmpty) {
@@ -3130,79 +3131,231 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 );
               }
 
-              return RefreshIndicator(
-                onRefresh: () async => _refreshPurchaseOrders(),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-                  itemCount: drafts.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final order = drafts[index];
-                    return AppCard(
-                      onTap: () =>
-                          _switchDraftOrder(order.id, drafts, allProducts),
-                      onLongPress: () => _deletePurchaseDraft(order),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.xs,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.receipt_long_outlined,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Text(
-                                    order.supplierName.isNotEmpty
-                                        ? order.supplierName
-                                        : 'بێ دابینکەر',
-                                    style: AppTextStyles.bodyBold,
-                                    overflow: TextOverflow.ellipsis,
+              final totalDraftsCount = drafts.length;
+              final totalDraftsAmount = drafts.fold<num>(
+                0,
+                (sum, order) => sum + order.totalAmount,
+              );
+              final totalDraftsPaid = drafts.fold<num>(
+                0,
+                (sum, order) => sum + order.paidAmount,
+              );
+              final totalDraftsRemaining = drafts.fold<num>(
+                0,
+                (sum, order) => sum + order.remainingDebt,
+              );
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async => _refreshPurchaseOrders(),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                        itemCount: drafts.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final order = drafts[index];
+                          return AppCard(
+                            onTap: () =>
+                                _switchDraftOrder(order.id, drafts, allProducts),
+                            onLongPress: () => _deletePurchaseDraft(order),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.xs,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.receipt_long_outlined,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          order.supplierName.isNotEmpty
+                                              ? order.supplierName
+                                              : 'بێ دابینکەر',
+                                          style: AppTextStyles.bodyBold,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const StatusBadge(
+                                        label: 'چاوەڕوانی تەئکید',
+                                        type: StatusBadgeType.warning,
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    'پسوڵە #${order.orderNumber} • '
+                                    '${order.itemsCount} کاڵا',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Wrap(
+                                    spacing: AppSpacing.md,
+                                    runSpacing: AppSpacing.xs,
+                                    children: [
+                                      Text(
+                                        'کۆی پسوڵە: ${_formatCurrency(order.totalAmount)}',
+                                        style: AppTextStyles.bodyBold.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      if (order.paidAmount > 0)
+                                        Text(
+                                          'پارەی دراو: '
+                                          '${_formatCurrency(order.paidAmount)}',
+                                          style: AppTextStyles.bodyBold,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          offset: const Offset(0, -2),
+                          blurRadius: 8,
+                        ),
+                      ],
+                      border: Border(
+                        top: BorderSide(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.calculate_outlined,
+                              color: theme.colorScheme.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'کۆی پسوڵەکان',
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '$totalDraftsCount پسوڵە',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.warning,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const StatusBadge(
-                                  label: 'چاوەڕوانی تەئکید',
-                                  type: StatusBadgeType.warning,
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatCurrency(totalDraftsAmount),
+                                  style: AppTextStyles.h3.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              'پسوڵە #${order.orderNumber} • '
-                              '${order.itemsCount} کاڵا',
-                              style: AppTextStyles.caption,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Wrap(
-                              spacing: AppSpacing.md,
-                              runSpacing: AppSpacing.xs,
+                          ),
+                          if (totalDraftsPaid > 0) ...[
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'کۆی پسوڵە: ${_formatCurrency(order.totalAmount)}',
+                                  'کۆی دراوە:',
+                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatCurrency(totalDraftsPaid),
                                   style: AppTextStyles.bodyBold.copyWith(
-                                    color: theme.colorScheme.primary,
+                                    color: AppColors.success,
+                                    fontSize: 13,
                                   ),
                                 ),
-                                if (order.paidAmount != order.totalAmount)
-                                  Text(
-                                    'پارەی دراو: '
-                                    '${_formatCurrency(order.paidAmount)}',
-                                    style: AppTextStyles.bodyBold,
+                              ],
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                          ],
+                          if (totalDraftsRemaining > 0) ...[
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'کۆی قەرز:',
+                                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatCurrency(totalDraftsRemaining),
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    color: AppColors.warning,
+                                    fontSize: 13,
                                   ),
+                                ),
                               ],
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               );
             },
           ),

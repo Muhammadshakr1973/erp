@@ -32,6 +32,11 @@ class PurchaseOrderItemModel {
         ? productMap['unit']?.toString()
         : json['product_unit']?.toString();
 
+    final parsedQty = double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0;
+    final parsedUnitCost = num.tryParse(json['unit_cost']?.toString() ?? '0') ?? 0;
+    final parsedTotalCost = num.tryParse(json['total_cost']?.toString() ?? '0') ?? 0;
+    final effectiveTotalCost = parsedTotalCost > 0 ? parsedTotalCost : (parsedQty * parsedUnitCost);
+
     return PurchaseOrderItemModel(
       id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
       purchaseOrderId: json['purchase_order_id'] is int
@@ -45,10 +50,10 @@ class PurchaseOrderItemModel {
           : (json['product_name']?.toString() ?? ''),
       productUnit: unit,
       unitsPerCarton: upc > 0 ? upc : 1,
-      quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
+      quantity: parsedQty,
       receivedQuantity: double.tryParse(json['received_quantity']?.toString() ?? '0') ?? 0.0,
-      unitCost: num.tryParse(json['unit_cost']?.toString() ?? '0') ?? 0,
-      totalCost: num.tryParse(json['total_cost']?.toString() ?? '0') ?? 0,
+      unitCost: parsedUnitCost,
+      totalCost: effectiveTotalCost,
     );
   }
 
@@ -106,6 +111,10 @@ class PurchaseOrderModel {
       parsedReceivedAt = DateTime.tryParse(json['received_at'].toString());
     }
 
+    final parsedTotal = num.tryParse(json['total_amount']?.toString() ?? '0') ?? 0;
+    final itemsSum = parsedItems.fold<num>(0, (sum, item) => sum + item.totalCost);
+    final effectiveTotalAmount = parsedTotal > 0 ? parsedTotal : itemsSum;
+
     return PurchaseOrderModel(
       id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
       orderNumber: json['order_number']?.toString() ?? '',
@@ -125,12 +134,12 @@ class PurchaseOrderModel {
           ? json['warehouse']['name']?.toString() ?? ''
           : '',
       status: json['status']?.toString() ?? 'DRAFT',
-      totalAmount: num.tryParse(json['total_amount']?.toString() ?? '0') ?? 0,
+      totalAmount: effectiveTotalAmount,
       paidAmount: num.tryParse(json['paid_amount']?.toString() ?? '0') ?? 0,
       notes: json['notes']?.toString(),
       receivedAt: parsedReceivedAt,
       createdAt: json['created_at']?.toString(),
-      itemsCount: itemsList != null ? itemsList.length : 0,
+      itemsCount: parsedItems.isNotEmpty ? parsedItems.length : (itemsList != null ? itemsList.length : 0),
       items: parsedItems,
     );
   }
