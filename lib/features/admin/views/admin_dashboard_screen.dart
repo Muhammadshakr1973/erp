@@ -397,53 +397,36 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               child: Icon(
                 Icons.monetization_on_outlined,
                 color: warningColor,
-                size: 24,
+                size: 22,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        'ئاگاداری نرخەکان',
-                        style: AppTextStyles.bodyBold.copyWith(
-                          color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$missingPriceCount کاڵا',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'KJino',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
                   Text(
-                    'نرخی (N1 یان N2 یان N3) بۆ $missingPriceCount کاڵا دیاری نەکراوە یان 0ە. کلیک بکە بۆ بەشی کاڵاکان.',
-                    style: AppTextStyles.caption.copyWith(
-                      color: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
-                      fontSize: 11.5,
-                      height: 1.2,
+                    'ئاگاداری نرخەکان',
+                    style: AppTextStyles.bodyBold.copyWith(
+                      color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                      fontSize: 14,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$missingPriceCount کاڵا',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'KJino',
+                      ),
+                    ),
                   ),
                 ],
               ),
