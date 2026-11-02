@@ -1,3 +1,5 @@
+import '../../../core/utils/formatters.dart';
+
 class StockTransferItemModel {
   final int id;
   final int productId;
@@ -22,13 +24,13 @@ class StockTransferItemModel {
   factory StockTransferItemModel.fromJson(Map<String, dynamic> json) {
     final product = json['product'] as Map<String, dynamic>?;
     return StockTransferItemModel(
-      id: json['id'] ?? 0,
-      productId: json['product_id'] ?? 0,
+      id: Formatters.parseInt(json['id']),
+      productId: Formatters.parseInt(json['product_id']),
       productName: product?['name']?.toString() ?? 'کاڵا #${json['product_id']}',
       productBarcode: product?['barcode']?.toString(),
       productUnit: product?['unit']?.toString() ?? 'دانە',
-      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      quantityReceived: (json['quantity_received'] as num?)?.toInt() ?? 0,
+      quantity: Formatters.parseInt(json['quantity']),
+      quantityReceived: Formatters.parseInt(json['quantity_received']),
       notes: json['notes']?.toString(),
     );
   }
@@ -76,10 +78,10 @@ class StockTransferModel {
     final rawItems = json['items'] as List? ?? [];
 
     return StockTransferModel(
-      id: json['id'] ?? 0,
+      id: Formatters.parseInt(json['id']),
       transferNumber: json['transfer_number']?.toString() ?? 'TRF-${json['id']}',
-      fromWarehouseId: json['from_warehouse_id'] ?? 0,
-      toWarehouseId: json['to_warehouse_id'] ?? 0,
+      fromWarehouseId: Formatters.parseInt(json['from_warehouse_id']),
+      toWarehouseId: Formatters.parseInt(json['to_warehouse_id']),
       fromWarehouseName: fromW?['name']?.toString() ?? 'کۆگا #${json['from_warehouse_id']}',
       toWarehouseName: toW?['name']?.toString() ?? 'کۆگا #${json['to_warehouse_id']}',
       status: json['status']?.toString().toUpperCase() ?? 'DRAFT',

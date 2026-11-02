@@ -1,3 +1,5 @@
+import '../../../core/utils/formatters.dart';
+
 class WarehouseOrderModel {
   final int id;
   final String orderNumber;
@@ -34,10 +36,10 @@ class WarehouseOrderModel {
         .toList();
 
     return WarehouseOrderModel(
-      id: json['id'] ?? 0,
-      orderNumber: json['order_number'] ?? '',
-      status: json['status'] ?? 'CONFIRMED',
-      createdAt: json['created_at'] ?? '',
+      id: Formatters.parseInt(json['id']),
+      orderNumber: json['order_number']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'CONFIRMED',
+      createdAt: json['created_at']?.toString() ?? '',
       customerName: cName,
       salesmanName: sName,
       items: parsedItems,
@@ -89,14 +91,14 @@ class WarehouseOrderItemModel {
         : json['sku']?.toString();
 
     return WarehouseOrderItemModel(
-      id: json['id'] ?? 0,
-      productId: json['product_id'] ?? 0,
+      id: Formatters.parseInt(json['id']),
+      productId: Formatters.parseInt(json['product_id']),
       productName: pName,
-      quantity: json['quantity'] ?? 0,
+      quantity: Formatters.parseInt(json['quantity']),
       isPacked: isPacked,
-      packedAt: json['packed_at'],
-      productUnit: productObj != null ? (productObj['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
-      unitsPerCarton: productObj != null ? (productObj['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      packedAt: json['packed_at']?.toString(),
+      productUnit: productObj != null ? (productObj['unit']?.toString() ?? 'دانە') : (json['product_unit']?.toString() ?? 'دانە'),
+      unitsPerCarton: Formatters.parseInt(productObj != null ? productObj['units_per_carton'] : json['units_per_carton'], 1),
       productImagePath: imgPath?.toString(),
       sku: pSku,
     );

@@ -5,6 +5,7 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../../core/utils/formatters.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
 import '../models/stock_transfer_model.dart';
@@ -107,11 +108,11 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
           .toList();
 
       return WarehouseDashboardData(
-        warehouseId: data['warehouse_id'] as int?,
-        warehouseName: data['warehouse_name'] ?? 'کۆگای سەرەکی',
-        pendingPackingCount: (data['pending_packing_count'] as num?)?.toInt() ?? 0,
-        readyTodayCount: (data['ready_today_count'] as num?)?.toInt() ?? 0,
-        lowStockCount: (data['low_stock_count'] as num?)?.toInt() ?? 0,
+        warehouseId: data['warehouse_id'] != null ? Formatters.parseInt(data['warehouse_id']) : null,
+        warehouseName: data['warehouse_name']?.toString() ?? 'کۆگای سەرەکی',
+        pendingPackingCount: Formatters.parseInt(data['pending_packing_count']),
+        readyTodayCount: Formatters.parseInt(data['ready_today_count']),
+        lowStockCount: Formatters.parseInt(data['low_stock_count']),
         recentOrders: recentOrdersList,
         lowStockItems: lowStockList,
       );

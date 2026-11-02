@@ -5,6 +5,49 @@ class Formatters {
   static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
   static final NumberFormat _unitFormat = NumberFormat('#,##0.##', 'en_US');
 
+  /// Safely parses any value (int, double, num, or String e.g. "2.000") to int without throwing TypeError.
+  static int parseInt(dynamic value, [int defaultValue = 0]) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      final str = value.trim();
+      if (str.isEmpty) return defaultValue;
+      final d = double.tryParse(str);
+      if (d != null) return d.toInt();
+      final i = int.tryParse(str);
+      if (i != null) return i;
+    }
+    return defaultValue;
+  }
+
+  /// Safely parses any value (int, double, num, or String e.g. "2.000") to double without throwing TypeError.
+  static double parseDouble(dynamic value, [double defaultValue = 0.0]) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final str = value.trim();
+      if (str.isEmpty) return defaultValue;
+      final d = double.tryParse(str);
+      if (d != null) return d;
+    }
+    return defaultValue;
+  }
+
+  /// Safely parses any value (int, double, num, or String e.g. "2.000") to num without throwing TypeError.
+  static num parseNum(dynamic value, [num defaultValue = 0]) {
+    if (value == null) return defaultValue;
+    if (value is num) return value;
+    if (value is String) {
+      final str = value.trim();
+      if (str.isEmpty) return defaultValue;
+      final n = num.tryParse(str);
+      if (n != null) return n;
+    }
+    return defaultValue;
+  }
+
   static String currency(num amount) {
     return '${_currencyFormat.format(amount)} د.ع';
   }

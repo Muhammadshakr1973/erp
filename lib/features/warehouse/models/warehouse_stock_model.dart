@@ -1,3 +1,5 @@
+import '../../../core/utils/formatters.dart';
+
 class WarehouseStockModel {
   final int id;
   final int warehouseId;
@@ -40,15 +42,15 @@ class WarehouseStockModel {
         : '';
 
     return WarehouseStockModel(
-      id: json['id'] ?? 0,
-      warehouseId: json['warehouse_id'] ?? 0,
+      id: Formatters.parseInt(json['id']),
+      warehouseId: Formatters.parseInt(json['warehouse_id']),
       warehouseName: wName,
-      productId: json['product_id'] ?? 0,
+      productId: Formatters.parseInt(json['product_id']),
       productName: pName,
       barcode: pBarcode,
-      quantity: json['quantity'] ?? 0,
-      reservedQuantity: json['reserved_quantity'] ?? 0,
-      minStockLevel: json['min_stock_level'] ?? 0,
+      quantity: Formatters.parseInt(json['quantity']),
+      reservedQuantity: Formatters.parseInt(json['reserved_quantity']),
+      minStockLevel: Formatters.parseInt(json['min_stock_level']),
     );
   }
 }
@@ -72,11 +74,11 @@ class StockReconciliationModel {
 
   factory StockReconciliationModel.fromJson(Map<String, dynamic> json) {
     return StockReconciliationModel(
-      isConsistent: json['is_consistent'] ?? false,
-      storedQuantity: json['stored_quantity'] ?? 0,
-      recalculatedQuantity: json['recalculated_quantity'] ?? 0,
-      storedReserved: json['stored_reserved'] ?? 0,
-      recalculatedReserved: json['recalculated_reserved'] ?? 0,
+      isConsistent: json['is_consistent'] == true || json['is_consistent'] == 1,
+      storedQuantity: Formatters.parseInt(json['stored_quantity']),
+      recalculatedQuantity: Formatters.parseInt(json['recalculated_quantity']),
+      storedReserved: Formatters.parseInt(json['stored_reserved']),
+      recalculatedReserved: Formatters.parseInt(json['recalculated_reserved']),
       discrepancies: List<String>.from(json['discrepancies'] ?? []),
     );
   }

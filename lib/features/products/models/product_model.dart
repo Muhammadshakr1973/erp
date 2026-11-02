@@ -1,3 +1,5 @@
+import '../../../core/utils/formatters.dart';
+
 class ProductModel {
   final int id;
   final String name;
@@ -79,21 +81,21 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      sku: json['sku'],
-      barcode: json['barcode'] ?? '',
-      categoryId: json['category_id'],
-      supplierId: json['supplier_id'],
+      id: Formatters.parseInt(json['id']),
+      name: json['name']?.toString() ?? '',
+      sku: json['sku']?.toString(),
+      barcode: json['barcode']?.toString() ?? '',
+      categoryId: json['category_id'] != null ? Formatters.parseInt(json['category_id']) : null,
+      supplierId: json['supplier_id'] != null ? Formatters.parseInt(json['supplier_id']) : null,
       category: json['category'],
       supplier: json['supplier'],
-      unit: json['unit'],
-      costPrice: double.tryParse(json['cost_price']?.toString() ?? '0') ?? 0.0,
-      priceN1: double.tryParse(json['price_n1']?.toString() ?? '0') ?? 0.0,
-      priceN2: double.tryParse(json['price_n2']?.toString() ?? '0') ?? 0.0,
-      priceN3: double.tryParse(json['price_n3']?.toString() ?? '0') ?? 0.0,
-      unitsPerCarton: json['units_per_carton'] ?? 12,
-      imagePath: json['image_path'],
+      unit: json['unit']?.toString(),
+      costPrice: Formatters.parseDouble(json['cost_price']),
+      priceN1: Formatters.parseDouble(json['price_n1']),
+      priceN2: Formatters.parseDouble(json['price_n2']),
+      priceN3: Formatters.parseDouble(json['price_n3']),
+      unitsPerCarton: Formatters.parseInt(json['units_per_carton'], 12),
+      imagePath: json['image_path']?.toString(),
       isActive: json['is_active'] == 1 || json['is_active'] == true,
       stocks: json['stocks'] ?? [],
     );
@@ -104,7 +106,7 @@ class ProductModel {
     int minLevel = 0;
     for (var s in stocks) {
       if (s is Map) {
-        minLevel += (s['min_stock_level'] as num?)?.toInt() ?? 0;
+        minLevel += Formatters.parseInt(s['min_stock_level']);
       }
     }
     return minLevel;
@@ -114,7 +116,7 @@ class ProductModel {
     int total = 0;
     for (var s in stocks) {
       if (s is Map) {
-        total += (s['quantity'] as num?)?.toInt() ?? 0;
+        total += Formatters.parseInt(s['quantity']);
       }
     }
     return total;
@@ -123,8 +125,8 @@ class ProductModel {
   int getStockForWarehouse(int? warehouseId) {
     if (warehouseId == null || stocks.isEmpty) return 0;
     for (var s in stocks) {
-      if (s is Map && (s['warehouse_id'] as num?)?.toInt() == warehouseId) {
-        return (s['quantity'] as num?)?.toInt() ?? 0;
+      if (s is Map && Formatters.parseInt(s['warehouse_id']) == warehouseId) {
+        return Formatters.parseInt(s['quantity']);
       }
     }
     return 0;
