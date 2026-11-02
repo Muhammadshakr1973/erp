@@ -123,7 +123,58 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     ThemeData theme,
     int? selectedCategory,
     List<CategoryModel> categories,
+    List<ProductModel> allProducts,
   ) {
+    final int countNoCategory =
+        allProducts.where((p) => p.categoryId == null).length;
+
+    DropdownMenuItem<int?> buildCatItem(
+      int? val,
+      String label,
+      int count,
+    ) {
+      final isSelected = selectedCategory == val;
+      return DropdownMenuItem<int?>(
+        value: val,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+                fontFamily: 'KJino',
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.danger,
+                    fontFamily: 'KJino',
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -163,18 +214,13 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             fontFamily: 'KJino',
           ),
           items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('هەموو جۆرەکان'),
-            ),
-            const DropdownMenuItem<int?>(
-              value: -1,
-              child: Text('بێ جۆر'),
-            ),
-            ...categories.map((c) => DropdownMenuItem<int?>(
-                  value: c.id,
-                  child: Text(c.name),
-                )),
+            buildCatItem(null, 'هەموو جۆرەکان', 0),
+            buildCatItem(-1, 'بێ جۆر', countNoCategory),
+            ...categories.map((c) {
+              final catCount =
+                  allProducts.where((p) => p.categoryId == c.id).length;
+              return buildCatItem(c.id, c.name, catCount);
+            }),
           ],
           onChanged: (val) {
             ref.read(selectedCategoryFilterProvider.notifier).state = val;
@@ -188,13 +234,37 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     BuildContext context,
     ThemeData theme,
     String selectedStatusFilter,
+    List<ProductModel> allProducts,
   ) {
     final isFiltered = selectedStatusFilter != 'all';
+
+    final int countNoImage = allProducts
+        .where((p) => p.imagePath == null || p.imagePath!.trim().isEmpty)
+        .length;
+
+    final int countMissingPrice = allProducts
+        .where((p) =>
+            p.costPrice <= 0 ||
+            p.priceN1 <= 0 ||
+            p.priceN2 <= 0 ||
+            p.priceN3 <= 0)
+        .length;
+
+    final int countNoSupplier =
+        allProducts.where((p) => p.supplierId == null).length;
+
+    final int countNoBarcode =
+        allProducts.where((p) => p.barcode.trim().isEmpty).length;
+
+    final int countNoUnit = allProducts
+        .where((p) => p.unit == null || p.unit!.trim().isEmpty)
+        .length;
 
     DropdownMenuItem<String> buildMenuItem(
       String value,
       String label,
       IconData defaultIcon,
+      int count,
     ) {
       final isSelected = selectedStatusFilter == value;
       return DropdownMenuItem<String>(
@@ -231,6 +301,26 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                 fontFamily: 'KJino',
               ),
             ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.danger,
+                    fontFamily: 'KJino',
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -278,31 +368,37 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               'all',
               'هەموو کاڵاکان',
               Icons.inventory_2_outlined,
+              0,
             ),
             buildMenuItem(
               'no_image',
               'بێ وێنە',
               Icons.image_not_supported_outlined,
+              countNoImage,
             ),
             buildMenuItem(
               'missing_price',
               'نرخەکان',
               Icons.monetization_on_outlined,
+              countMissingPrice,
             ),
             buildMenuItem(
               'no_supplier',
               'بێ کۆمپانیا',
               Icons.business_outlined,
+              countNoSupplier,
             ),
             buildMenuItem(
               'no_barcode',
               'بێ بارکۆد',
               Icons.qr_code_scanner_outlined,
+              countNoBarcode,
             ),
             buildMenuItem(
               'no_unit',
               'بێ یەکە',
               Icons.straighten_outlined,
+              countNoUnit,
             ),
           ],
           onChanged: (val) {
@@ -319,6 +415,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(filteredProductsProvider);
+    final allProducts = ref.watch(productsListProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesListProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
     final statusFilter = ref.watch(productStatusFilterProvider);
@@ -430,26 +527,30 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     theme,
                     selectedCategory,
                     categories,
+                    allProducts,
                   ),
                   loading: () => _buildCategoryDropdown(
                     context,
                     theme,
                     selectedCategory,
                     [],
+                    allProducts,
                   ),
                   error: (_, __) => _buildCategoryDropdown(
                     context,
                     theme,
                     selectedCategory,
                     [],
+                    allProducts,
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 2. Dropdown for Status filters ("بێ وێنە", "نرخەکان", "بێ کۆمپانیا") with Radio Buttons
+                // 2. Dropdown for Status filters ("بێ وێنە", "نرخەکان", "بێ کۆمپانیا", "بێ بارکۆد", "بێ یەکە") with Radio Buttons
                 _buildStatusFilterDropdown(
                   context,
                   theme,
                   statusFilter,
+                  allProducts,
                 ),
               ],
             ),
