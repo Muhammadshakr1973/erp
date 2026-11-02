@@ -22,6 +22,8 @@ import '../../shared/models/report_models.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
 import 'admin_suppliers_dialog.dart';
+import '../../products/providers/products_provider.dart';
+import '../../../core/router/navigation_tabs_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -190,6 +192,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(height: AppSpacing.sectionGap),
 
+              // Alert Banner for Products Missing Prices (N1, N2, N3)
+              _buildMissingPricesAlertBanner(context, ref),
+
+              const SizedBox(height: AppSpacing.sectionGap),
+
               // Today's Salesmen Plan Section (Authoritative Server-Calculated)
               todayAssignmentsAsync.when(
                 loading: () => dashboardAsync.maybeWhen(
@@ -332,6 +339,121 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingPricesAlertBanner(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final products = ref.watch(productsListProvider).valueOrNull ?? [];
+
+    final missingPriceCount = products.where((p) =>
+        p.costPrice <= 0 || p.priceN1 <= 0 || p.priceN2 <= 0 || p.priceN3 <= 0
+    ).length;
+
+    if (missingPriceCount == 0) {
+      return const SizedBox.shrink();
+    }
+
+    final isDark = theme.brightness == Brightness.dark;
+    final warningColor = isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+    final bgColor = isDark
+        ? const Color(0xFF78350F).withValues(alpha: 0.3)
+        : const Color(0xFFFEF3C7);
+    final borderColor = isDark
+        ? const Color(0xFFF59E0B).withValues(alpha: 0.45)
+        : const Color(0xFFFDE68A);
+
+    return InkWell(
+      onTap: () {
+        ref.read(productStatusFilterProvider.notifier).state = 'missing_price';
+        ref.read(adminTabIndexProvider.notifier).state = 7;
+      },
+      borderRadius: AppRadius.radiusMd,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: AppRadius.radiusMd,
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: warningColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.monetization_on_outlined,
+                color: warningColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'ئاگاداری نرخەکان',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$missingPriceCount کاڵا',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'KJino',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'نرخی (N1 یان N2 یان N3) بۆ $missingPriceCount کاڵا دیاری نەکراوە یان 0ە. کلیک بکە بۆ بەشی کاڵاکان.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
+                      fontSize: 11.5,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: warningColor,
+              size: 16,
+            ),
           ],
         ),
       ),
