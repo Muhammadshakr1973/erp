@@ -414,18 +414,14 @@ final productSearchProvider =
 });
 
 final selectedCategoryFilterProvider = StateProvider<int?>((ref) => null);
-final noImageFilterProvider = StateProvider<bool>((ref) => false);
-final missingPriceFilterProvider = StateProvider<bool>((ref) => false);
-final noSupplierFilterProvider = StateProvider<bool>((ref) => false);
+final productStatusFilterProvider = StateProvider<String>((ref) => 'all');
 
 final filteredProductsProvider =
     Provider<AsyncValue<List<ProductModel>>>((ref) {
   final productsAsync = ref.watch(productsListProvider);
   final searchQuery = ref.watch(productSearchProvider).toLowerCase();
   final selectedCategory = ref.watch(selectedCategoryFilterProvider);
-  final noImageOnly = ref.watch(noImageFilterProvider);
-  final missingPriceOnly = ref.watch(missingPriceFilterProvider);
-  final noSupplierOnly = ref.watch(noSupplierFilterProvider);
+  final statusFilter = ref.watch(productStatusFilterProvider);
 
   return productsAsync.whenData((products) {
     return products.where((p) {
@@ -444,29 +440,19 @@ final filteredProductsProvider =
         }
       }
 
-      bool matchesNoImage = true;
-      if (noImageOnly) {
-        matchesNoImage = p.imagePath == null || p.imagePath!.trim().isEmpty;
-      }
-
-      bool matchesMissingPrice = true;
-      if (missingPriceOnly) {
-        matchesMissingPrice = p.costPrice <= 0 ||
+      bool matchesStatus = true;
+      if (statusFilter == 'no_image') {
+        matchesStatus = p.imagePath == null || p.imagePath!.trim().isEmpty;
+      } else if (statusFilter == 'missing_price') {
+        matchesStatus = p.costPrice <= 0 ||
             p.priceN1 <= 0 ||
             p.priceN2 <= 0 ||
             p.priceN3 <= 0;
+      } else if (statusFilter == 'no_supplier') {
+        matchesStatus = p.supplierId == null;
       }
 
-      bool matchesNoSupplier = true;
-      if (noSupplierOnly) {
-        matchesNoSupplier = p.supplierId == null;
-      }
-
-      return matchesQuery &&
-          matchesCategory &&
-          matchesNoImage &&
-          matchesMissingPrice &&
-          matchesNoSupplier;
+      return matchesQuery && matchesCategory && matchesStatus;
     }).toList();
   });
 });

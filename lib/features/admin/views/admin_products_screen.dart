@@ -184,36 +184,36 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
-  Widget _buildFilterChip({
-    required BuildContext context,
-    required String label,
-    required bool isSelected,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.15)
-              : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withValues(alpha: 0.5),
-          ),
-        ),
+  Widget _buildStatusFilterDropdown(
+    BuildContext context,
+    ThemeData theme,
+    String selectedStatusFilter,
+  ) {
+    final isFiltered = selectedStatusFilter != 'all';
+
+    DropdownMenuItem<String> buildMenuItem(
+      String value,
+      String label,
+      IconData defaultIcon,
+    ) {
+      final isSelected = selectedStatusFilter == value;
+      return DropdownMenuItem<String>(
+        value: value,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              icon,
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 18,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              defaultIcon,
               size: 16,
               color: isSelected
                   ? theme.colorScheme.primary
@@ -233,6 +233,74 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             ),
           ],
         ),
+      );
+    }
+
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isFiltered
+            ? theme.colorScheme.primary.withValues(alpha: 0.15)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isFiltered
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedStatusFilter,
+          isDense: true,
+          dropdownColor: theme.colorScheme.surface,
+          icon: Padding(
+            padding: const EdgeInsets.only(right: 4.0),
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: isFiltered
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: isFiltered ? FontWeight.bold : FontWeight.w500,
+            color: isFiltered
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+            fontFamily: 'KJino',
+          ),
+          items: [
+            buildMenuItem(
+              'all',
+              'هەموو کاڵاکان',
+              Icons.inventory_2_outlined,
+            ),
+            buildMenuItem(
+              'no_image',
+              'بێ وێنە',
+              Icons.image_not_supported_outlined,
+            ),
+            buildMenuItem(
+              'missing_price',
+              'نرخەکان',
+              Icons.monetization_on_outlined,
+            ),
+            buildMenuItem(
+              'no_supplier',
+              'بێ کۆمپانیا',
+              Icons.business_outlined,
+            ),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              ref.read(productStatusFilterProvider.notifier).state = val;
+            }
+          },
+        ),
       ),
     );
   }
@@ -243,9 +311,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final productsAsync = ref.watch(filteredProductsProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
-    final noImageOnly = ref.watch(noImageFilterProvider);
-    final missingPriceOnly = ref.watch(missingPriceFilterProvider);
-    final noSupplierOnly = ref.watch(noSupplierFilterProvider);
+    final statusFilter = ref.watch(productStatusFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -369,40 +435,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 2. "بێ وێنە" Filter Chip
-                _buildFilterChip(
-                  context: context,
-                  label: 'بێ وێنە',
-                  isSelected: noImageOnly,
-                  icon: Icons.image_not_supported_outlined,
-                  onTap: () {
-                    ref.read(noImageFilterProvider.notifier).state =
-                        !noImageOnly;
-                  },
-                ),
-                const SizedBox(width: 8),
-                // 3. "نرخەکان" Filter Chip
-                _buildFilterChip(
-                  context: context,
-                  label: 'نرخەکان',
-                  isSelected: missingPriceOnly,
-                  icon: Icons.monetization_on_outlined,
-                  onTap: () {
-                    ref.read(missingPriceFilterProvider.notifier).state =
-                        !missingPriceOnly;
-                  },
-                ),
-                const SizedBox(width: 8),
-                // 4. "بێ کۆمپانیا" Filter Chip
-                _buildFilterChip(
-                  context: context,
-                  label: 'بێ کۆمپانیا',
-                  isSelected: noSupplierOnly,
-                  icon: Icons.business_outlined,
-                  onTap: () {
-                    ref.read(noSupplierFilterProvider.notifier).state =
-                        !noSupplierOnly;
-                  },
+                // 2. Dropdown for Status filters ("بێ وێنە", "نرخەکان", "بێ کۆمپانیا") with Radio Buttons
+                _buildStatusFilterDropdown(
+                  context,
+                  theme,
+                  statusFilter,
                 ),
               ],
             ),
