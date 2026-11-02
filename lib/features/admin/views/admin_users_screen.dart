@@ -860,12 +860,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     _passwordController = TextEditingController();
     _commissionRateController = TextEditingController(
       text: widget.user?.commissionRate != null
-          ? widget.user!.commissionRate!.toString()
+          ? Formatters.cleanNumberString(widget.user!.commissionRate)
           : '',
     );
     _fixedSalaryController = TextEditingController(
       text: widget.user?.fixedSalary != null && widget.user!.fixedSalary != 0
-          ? widget.user!.fixedSalary!.toString()
+          ? Formatters.cleanNumberString(widget.user!.fixedSalary)
           : '',
     );
     _barcodeController = TextEditingController(text: widget.user?.barcode);

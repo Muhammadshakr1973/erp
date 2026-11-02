@@ -268,30 +268,33 @@ class NumericKeyboardDialog extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header with Title/Label and Top-Left Close Button (RTL)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          labelText ?? hintText ?? '',
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                          style: AppTextStyles.bodyBold.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontSize: 16,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  // Header with Title/Label and Top-Left Close Button
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
+                        Expanded(
+                          child: Text(
+                            labelText ?? hintText ?? '',
+                            textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   

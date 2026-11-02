@@ -18,6 +18,24 @@ class Formatters {
     return _currencyFormat.format(value);
   }
 
+  /// Cleans a number or string representation of a number to display cleanly without trailing .0:
+  /// e.g. 10000.0 -> "10000", 12500.50 -> "12500.5", 24.0 -> "24"
+  static String cleanNumberString(dynamic value) {
+    if (value == null) return '';
+    final strVal = value.toString().trim();
+    if (strVal.isEmpty) return '';
+    final num? n = num.tryParse(strVal);
+    if (n == null) return strVal;
+    if (n % 1 == 0) {
+      return n.toInt().toString();
+    }
+    String s = n.toString();
+    if (s.contains('.')) {
+      s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    }
+    return s;
+  }
+
   static String date(DateTime date) {
     return DateFormat('yyyy/MM/dd').format(date);
   }

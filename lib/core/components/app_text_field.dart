@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../utils/formatters.dart';
 import 'numeric_keyboard_manager.dart';
 import 'global_numeric_keyboard.dart';
 
@@ -95,17 +97,33 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
   }
 
   bool get _isNumeric {
-    final typeStr = widget.keyboardType.toString().toLowerCase();
+    final type = widget.keyboardType;
+    if (type == TextInputType.number ||
+        type == TextInputType.phone ||
+        type == const TextInputType.numberWithOptions(decimal: true) ||
+        type == const TextInputType.numberWithOptions(signed: true) ||
+        type == const TextInputType.numberWithOptions(decimal: true, signed: true)) {
+      return true;
+    }
+    final typeStr = type.toString().toLowerCase();
     return typeStr.contains('number') || typeStr.contains('phone');
   }
 
   void _triggerNumericKeyboard() {
     if (!_isNumeric) return;
+
+    // Clean any accidental trailing .0 before opening keyboard dialog
+    final rawText = _effectiveController.text;
+    final cleaned = Formatters.cleanNumberString(rawText);
+    if (cleaned != rawText && (rawText.endsWith('.0') || rawText.endsWith('.00') || rawText.endsWith('.000'))) {
+      _effectiveController.text = cleaned;
+    }
+
     ref.read(numericKeyboardProvider.notifier).register(
           controller: _effectiveController,
           focusNode: _effectiveFocusNode,
-          decimal: true, // Always allow decimals on our custom iOS layout
-          signed: true,  // Always allow negative sign on our custom iOS layout
+          decimal: true, // Always allow decimals on our custom layout
+          signed: true,  // Always allow negative sign on our custom layout
           onChanged: widget.onChanged,
         );
     _showKeyboardDialog();
@@ -127,26 +145,28 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     if (_isDialogShowing) return;
     _isDialogShowing = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return NumericKeyboardDialog(
-            controller: _effectiveController,
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            onChanged: widget.onChanged,
-          );
-        },
-      ).then((_) {
-        _isDialogShowing = false;
-        if (mounted) {
-          _effectiveFocusNode.unfocus();
-          ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
-        }
-      });
+    // Immediately dismiss any soft keyboard from the platform
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) {
+        return NumericKeyboardDialog(
+          controller: _effectiveController,
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          onChanged: widget.onChanged,
+        );
+      },
+    ).then((_) {
+      _isDialogShowing = false;
+      if (mounted) {
+        _effectiveFocusNode.unfocus();
+        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
+      }
     });
   }
 
@@ -155,14 +175,16 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
     final theme = Theme.of(context);
     final radius = widget.borderRadius ?? BorderRadius.circular(24);
 
-    final bool isReadOnly = (widget.readOnly ?? false) || _isNumeric;
-    final TextInputType effectiveKeyboardType = _isNumeric
+    final bool isNumeric = _isNumeric;
+    final bool isReadOnly = (widget.readOnly ?? false) || isNumeric;
+    final TextInputType effectiveKeyboardType = isNumeric
         ? TextInputType.none
         : widget.keyboardType;
 
     return TapRegion(
       groupId: _effectiveFocusNode,
       onTapOutside: (event) {
+        if (_isDialogShowing) return;
         // If the user tapped completely outside the input field, unfocus it.
         if (_effectiveFocusNode.hasFocus) {
           _effectiveFocusNode.unfocus();
@@ -175,8 +197,11 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         keyboardType: effectiveKeyboardType,
         obscureText: widget.obscureText,
         readOnly: isReadOnly,
+        canRequestFocus: !isNumeric,
+        enableInteractiveSelection: !isNumeric,
+        showCursor: !isNumeric,
         onTap: () {
-          if (_isNumeric) {
+          if (isNumeric) {
             _triggerNumericKeyboard();
           }
         },

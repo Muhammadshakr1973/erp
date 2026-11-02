@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../utils/formatters.dart';
 
 class NumericKeyboardState {
   final TextEditingController? controller;
@@ -74,6 +75,13 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
   }) {
     if (state.controller != controller) {
       _removeListener();
+    }
+
+    // Ensure initial controller text is clean without trailing .0
+    final initialText = controller.text;
+    final cleaned = Formatters.cleanNumberString(initialText);
+    if (cleaned != initialText && (initialText.endsWith('.0') || initialText.endsWith('.00') || initialText.endsWith('.000'))) {
+      controller.text = cleaned;
     }
 
     // Position the cursor at the end of the text to ensure natural appending and deleting

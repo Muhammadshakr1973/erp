@@ -11,6 +11,7 @@ import '../providers/products_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/suppliers_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/formatters.dart';
 import 'barcode_generator_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
@@ -56,46 +57,50 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     int currentStock = 0;
     int currentMinStock = 5;
     if (p != null) {
-      int foundMin = 0;
+      num foundMin = 0;
       bool hasMin = false;
+      num foundStock = 0;
       for (var s in p.stocks) {
-        currentStock += (s['quantity'] as int?) ?? 0;
-        if (s is Map && s['min_stock_level'] != null) {
-          foundMin += (s['min_stock_level'] as num).toInt();
-          hasMin = true;
+        if (s is Map) {
+          foundStock += num.tryParse(s['quantity']?.toString() ?? '0') ?? 0;
+          if (s['min_stock_level'] != null) {
+            foundMin += num.tryParse(s['min_stock_level']?.toString() ?? '0') ?? 0;
+            hasMin = true;
+          }
         }
       }
+      currentStock = foundStock.toInt();
       if (hasMin) {
-        currentMinStock = foundMin;
+        currentMinStock = foundMin.toInt();
       }
     }
     _nameController = TextEditingController(text: p?.name ?? '');
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
     _costPriceController = TextEditingController(
-      text: p != null ? p.costPrice.toString() : '',
+      text: p != null ? Formatters.cleanNumberString(p.costPrice) : '',
     );
     _priceN1Controller = TextEditingController(
-      text: p != null ? p.priceN1.toString() : '',
+      text: p != null ? Formatters.cleanNumberString(p.priceN1) : '',
     );
     _priceN2Controller = TextEditingController(
-      text: p != null ? p.priceN2.toString() : '',
+      text: p != null ? Formatters.cleanNumberString(p.priceN2) : '',
     );
     _priceN3Controller = TextEditingController(
-      text: p != null ? p.priceN3.toString() : '',
+      text: p != null ? Formatters.cleanNumberString(p.priceN3) : '',
     );
     _unitsPerCartonController = TextEditingController(
-      text: p?.unitsPerCarton.toString() ?? '12',
+      text: p != null ? Formatters.cleanNumberString(p.unitsPerCarton) : '12',
     );
     _unitFocusNode = FocusNode();
     _unitController = TextEditingController(
       text: (p?.unit != null && p!.unit!.isNotEmpty) ? p.unit : 'ج',
     );
     _stockController = TextEditingController(
-      text: p != null ? currentStock.toString() : '0',
+      text: p != null ? Formatters.cleanNumberString(currentStock) : '0',
     );
     _minStockController = TextEditingController(
-      text: p != null ? currentMinStock.toString() : '5',
+      text: p != null ? Formatters.cleanNumberString(currentMinStock) : '5',
     );
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;

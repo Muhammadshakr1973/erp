@@ -363,7 +363,7 @@ class _AdminDriverCollectionsScreenState
 
     // Prefill with outstanding amount for easier reconciliation
     if (summary.remainingAmount > 0) {
-      amountController.text = summary.remainingAmount.toString();
+      amountController.text = Formatters.cleanNumberString(summary.remainingAmount);
     }
 
     showDialog(
