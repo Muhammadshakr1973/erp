@@ -414,12 +414,18 @@ final productSearchProvider =
 });
 
 final selectedCategoryFilterProvider = StateProvider<int?>((ref) => null);
+final noImageFilterProvider = StateProvider<bool>((ref) => false);
+final missingPriceFilterProvider = StateProvider<bool>((ref) => false);
+final noSupplierFilterProvider = StateProvider<bool>((ref) => false);
 
 final filteredProductsProvider =
     Provider<AsyncValue<List<ProductModel>>>((ref) {
   final productsAsync = ref.watch(productsListProvider);
   final searchQuery = ref.watch(productSearchProvider).toLowerCase();
   final selectedCategory = ref.watch(selectedCategoryFilterProvider);
+  final noImageOnly = ref.watch(noImageFilterProvider);
+  final missingPriceOnly = ref.watch(missingPriceFilterProvider);
+  final noSupplierOnly = ref.watch(noSupplierFilterProvider);
 
   return productsAsync.whenData((products) {
     return products.where((p) {
@@ -428,10 +434,39 @@ final filteredProductsProvider =
           p.barcode.toLowerCase().contains(searchQuery) ||
           (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
 
-      final matchesCategory =
-          selectedCategory == null || p.categoryId == selectedCategory;
+      bool matchesCategory = true;
+      if (selectedCategory != null) {
+        if (selectedCategory == -1) {
+          // "بێ جۆر" - Products without a category
+          matchesCategory = p.categoryId == null;
+        } else {
+          matchesCategory = p.categoryId == selectedCategory;
+        }
+      }
 
-      return matchesQuery && matchesCategory;
+      bool matchesNoImage = true;
+      if (noImageOnly) {
+        matchesNoImage = p.imagePath == null || p.imagePath!.trim().isEmpty;
+      }
+
+      bool matchesMissingPrice = true;
+      if (missingPriceOnly) {
+        matchesMissingPrice = p.costPrice <= 0 ||
+            p.priceN1 <= 0 ||
+            p.priceN2 <= 0 ||
+            p.priceN3 <= 0;
+      }
+
+      bool matchesNoSupplier = true;
+      if (noSupplierOnly) {
+        matchesNoSupplier = p.supplierId == null;
+      }
+
+      return matchesQuery &&
+          matchesCategory &&
+          matchesNoImage &&
+          matchesMissingPrice &&
+          matchesNoSupplier;
     }).toList();
   });
 });

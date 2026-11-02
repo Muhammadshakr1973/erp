@@ -14,8 +14,8 @@ import '../../products/providers/products_provider.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/views/product_form_dialog.dart';
 import 'admin_categories_dialog.dart';
-// import '../../products/views/product_details_dialog.dart';
 import '../../products/models/product_model.dart';
+import '../../products/models/category_model.dart';
 import '../../products/views/barcode_generator_dialog.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
@@ -118,12 +118,134 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
+  Widget _buildCategoryDropdown(
+    BuildContext context,
+    ThemeData theme,
+    int? selectedCategory,
+    List<CategoryModel> categories,
+  ) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: selectedCategory != null
+            ? theme.colorScheme.primary.withValues(alpha: 0.15)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selectedCategory != null
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int?>(
+          value: selectedCategory,
+          isDense: true,
+          dropdownColor: theme.colorScheme.surface,
+          icon: Padding(
+            padding: const EdgeInsets.only(right: 4.0),
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: selectedCategory != null
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight:
+                selectedCategory != null ? FontWeight.bold : FontWeight.w500,
+            color: selectedCategory != null
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+            fontFamily: 'KJino',
+          ),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('هەموو جۆرەکان'),
+            ),
+            const DropdownMenuItem<int?>(
+              value: -1,
+              child: Text('بێ جۆر'),
+            ),
+            ...categories.map((c) => DropdownMenuItem<int?>(
+                  value: c.id,
+                  child: Text(c.name),
+                )),
+          ],
+          onChanged: (val) {
+            ref.read(selectedCategoryFilterProvider.notifier).state = val;
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required BuildContext context,
+    required String label,
+    required bool isSelected,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.15)
+              : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+                fontFamily: 'KJino',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final productsAsync = ref.watch(filteredProductsProvider);
     final categoriesAsync = ref.watch(categoriesListProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
+    final noImageOnly = ref.watch(noImageFilterProvider);
+    final missingPriceOnly = ref.watch(missingPriceFilterProvider);
+    final noSupplierOnly = ref.watch(noSupplierFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -217,52 +339,73 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          categoriesAsync.when(
-            data: (categories) {
-              if (categories.isEmpty) return const SizedBox.shrink();
-              return SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenHorizontal,
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenHorizontal,
+              ),
+              children: [
+                // 1. Dropdown for Category filter (includes "هەموو جۆرەکان" and "بێ جۆر")
+                categoriesAsync.when(
+                  data: (categories) => _buildCategoryDropdown(
+                    context,
+                    theme,
+                    selectedCategory,
+                    categories,
                   ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: ChoiceChip(
-                        label: const Text('هەموو جۆرەکان'),
-                        selected: selectedCategory == null,
-                        onSelected: (_) {
-                          ref
-                                  .read(selectedCategoryFilterProvider.notifier)
-                                  .state =
-                              null;
-                        },
-                      ),
-                    ),
-                    ...categories.map((c) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: ChoiceChip(
-                          label: Text(c.name),
-                          selected: selectedCategory == c.id,
-                          onSelected: (selected) {
-                            ref
-                                .read(selectedCategoryFilterProvider.notifier)
-                                .state = selected
-                                ? c.id
-                                : null;
-                          },
-                        ),
-                      );
-                    }),
-                  ],
+                  loading: () => _buildCategoryDropdown(
+                    context,
+                    theme,
+                    selectedCategory,
+                    [],
+                  ),
+                  error: (_, __) => _buildCategoryDropdown(
+                    context,
+                    theme,
+                    selectedCategory,
+                    [],
+                  ),
                 ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
+                const SizedBox(width: 8),
+                // 2. "بێ وێنە" Filter Chip
+                _buildFilterChip(
+                  context: context,
+                  label: 'بێ وێنە',
+                  isSelected: noImageOnly,
+                  icon: Icons.image_not_supported_outlined,
+                  onTap: () {
+                    ref.read(noImageFilterProvider.notifier).state =
+                        !noImageOnly;
+                  },
+                ),
+                const SizedBox(width: 8),
+                // 3. "نرخەکان" Filter Chip
+                _buildFilterChip(
+                  context: context,
+                  label: 'نرخەکان',
+                  isSelected: missingPriceOnly,
+                  icon: Icons.monetization_on_outlined,
+                  onTap: () {
+                    ref.read(missingPriceFilterProvider.notifier).state =
+                        !missingPriceOnly;
+                  },
+                ),
+                const SizedBox(width: 8),
+                // 4. "بێ کۆمپانیا" Filter Chip
+                _buildFilterChip(
+                  context: context,
+                  label: 'بێ کۆمپانیا',
+                  isSelected: noSupplierOnly,
+                  icon: Icons.business_outlined,
+                  onTap: () {
+                    ref.read(noSupplierFilterProvider.notifier).state =
+                        !noSupplierOnly;
+                  },
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Expanded(
