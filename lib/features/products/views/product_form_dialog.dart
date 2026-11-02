@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,6 +113,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     if (url.trim().isEmpty) return false;
     final uri = Uri.tryParse(url.trim());
     return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  String _generateRandomBarcode() {
+    final random = Random();
+    final prefix = '604';
+    final suffix = List.generate(8, (_) => random.nextInt(10)).join();
+    return '$prefix$suffix';
   }
 
   @override
@@ -519,6 +527,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     controller: _barcodeController,
                                     labelText: 'بارکۆد',
                                     hintText: 'بارکۆد',
+                                    onLongPress: () {
+                                      CameraBarcodeScanner.show(
+                                        context,
+                                        (scanned) {
+                                          setState(() {
+                                            _barcodeController.text = scanned;
+                                          });
+                                        },
+                                        closeOnScan: true,
+                                      );
+                                    },
                                     borderRadius: const BorderRadius.only(
                                       topRight: Radius.circular(24),
                                       bottomRight: Radius.circular(24),
@@ -529,33 +548,28 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.qr_code_scanner),
+                                          icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 22),
+                                          tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
                                           onPressed: () {
-                                            CameraBarcodeScanner.show(
-                                              context,
-                                              (scanned) {
-                                                setState(() {
-                                                  _barcodeController.text = scanned;
-                                                });
-                                              },
-                                              closeOnScan: true,
+                                            setState(() {
+                                              _barcodeController.text = _generateRandomBarcode();
+                                            });
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                          tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (context) => BarcodeGeneratorDialog(
+                                                product: widget.product,
+                                                initialBarcode: _barcodeController.text,
+                                              ),
                                             );
                                           },
                                         ),
-                                        if (widget.product != null)
-                                          IconButton(
-                                            icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
-                                            tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (context) => BarcodeGeneratorDialog(
-                                                  product: widget.product,
-                                                ),
-                                              );
-                                            },
-                                          ),
                                       ],
                                     ),
                                   ),
@@ -597,37 +611,43 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   controller: _barcodeController,
                                   labelText: 'بارکۆد',
                                   hintText: 'بارکۆد',
+                                  onLongPress: () {
+                                    CameraBarcodeScanner.show(
+                                      context,
+                                      (scanned) {
+                                        setState(() {
+                                          _barcodeController.text = scanned;
+                                        });
+                                      },
+                                      closeOnScan: true,
+                                    );
+                                  },
                                   suffixIcon: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.qr_code_scanner),
+                                        icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 22),
+                                        tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
                                         onPressed: () {
-                                          CameraBarcodeScanner.show(
-                                            context,
-                                            (scanned) {
-                                              setState(() {
-                                                _barcodeController.text = scanned;
-                                              });
-                                            },
-                                            closeOnScan: true,
+                                          setState(() {
+                                            _barcodeController.text = _generateRandomBarcode();
+                                          });
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                        tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (context) => BarcodeGeneratorDialog(
+                                              product: widget.product,
+                                              initialBarcode: _barcodeController.text,
+                                            ),
                                           );
                                         },
                                       ),
-                                      if (widget.product != null)
-                                        IconButton(
-                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
-                                          tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              barrierDismissible: false,
-                                              builder: (context) => BarcodeGeneratorDialog(
-                                                product: widget.product,
-                                              ),
-                                            );
-                                          },
-                                        ),
                                     ],
                                   ),
                                 ),

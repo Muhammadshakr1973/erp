@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../models/product_model.dart';
@@ -39,6 +40,13 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
       result = result.replaceAll(arabicDigits[i], englishDigits[i]);
     }
     return result;
+  }
+
+  String _generateRandomBarcode() {
+    final random = Random();
+    final prefix = '604';
+    final suffix = List.generate(8, (_) => random.nextInt(10)).join();
+    return '$prefix$suffix';
   }
 
   @override
@@ -200,6 +208,26 @@ class _BarcodeGeneratorDialogState extends State<BarcodeGeneratorDialog> {
                       labelText: 'کۆدی کاڵا (بارکۆد / QR)',
                       hintText: '07849564845',
                       prefixIcon: Icons.qr_code_2_outlined,
+                      onLongPress: () {
+                        CameraBarcodeScanner.show(
+                          context,
+                          (scanned) {
+                            setState(() {
+                              _barcodeController.text = scanned;
+                            });
+                          },
+                          closeOnScan: true,
+                        );
+                      },
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.qr_code_2, color: AppColors.primary),
+                        tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
+                        onPressed: () {
+                          setState(() {
+                            _barcodeController.text = _generateRandomBarcode();
+                          });
+                        },
+                      ),
                       onChanged: (value) {
                         final normalized = _normalizeToEnglishDigits(value);
                         if (normalized != value) {

@@ -29,6 +29,7 @@ class AppTextField extends ConsumerStatefulWidget {
   final bool autofocus;
   final TextAlign? textAlign;
   final TextStyle? style;
+  final VoidCallback? onLongPress;
 
   const AppTextField({
     super.key,
@@ -52,6 +53,7 @@ class AppTextField extends ConsumerStatefulWidget {
     this.autofocus = false,
     this.textAlign,
     this.style,
+    this.onLongPress,
   });
 
   @override
@@ -191,7 +193,10 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
           ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
         }
       },
-      child: TextFormField(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: widget.onLongPress,
+        child: TextFormField(
         controller: _effectiveController,
         focusNode: _effectiveFocusNode,
         keyboardType: effectiveKeyboardType,
@@ -272,6 +277,7 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
                 borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
               ),
             ),
+      ),
       ),
     );
   }
