@@ -2074,6 +2074,26 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
+  Widget _buildSupplierDropdownText(SupplierModel supplier) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: supplier.name),
+          if (supplier.debt > 0)
+            TextSpan(
+              text: ' (${Formatters.number(supplier.debt)})',
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
+      ),
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   Widget _buildPurchasesTab(
     BuildContext context, {
     bool isInsideDialog = false,
@@ -2405,10 +2425,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         ),
                                         const SizedBox(width: 8),
                                         Expanded(
-                                          child: Text(
-                                            '${supplier.name}${supplier.debt > 0 ? " (${Formatters.currency(supplier.debt)})" : ""}',
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
+                                          child: _buildSupplierDropdownText(supplier),
                                         ),
                                       ],
                                     ),
