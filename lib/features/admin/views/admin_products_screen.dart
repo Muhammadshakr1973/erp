@@ -294,6 +294,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
               'بێ کۆمپانیا',
               Icons.business_outlined,
             ),
+            buildMenuItem(
+              'no_barcode',
+              'بێ بارکۆد',
+              Icons.qr_code_scanner_outlined,
+            ),
+            buildMenuItem(
+              'no_unit',
+              'بێ یەکە',
+              Icons.straighten_outlined,
+            ),
           ],
           onChanged: (val) {
             if (val != null) {

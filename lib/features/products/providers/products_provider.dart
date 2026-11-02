@@ -450,6 +450,10 @@ final filteredProductsProvider =
             p.priceN3 <= 0;
       } else if (statusFilter == 'no_supplier') {
         matchesStatus = p.supplierId == null;
+      } else if (statusFilter == 'no_barcode') {
+        matchesStatus = p.barcode.trim().isEmpty;
+      } else if (statusFilter == 'no_unit') {
+        matchesStatus = p.unit == null || p.unit!.trim().isEmpty;
       }
 
       return matchesQuery && matchesCategory && matchesStatus;
