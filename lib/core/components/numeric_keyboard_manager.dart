@@ -84,15 +84,15 @@ class NumericKeyboardNotifier extends StateNotifier<NumericKeyboardState> {
       controller.text = cleaned;
     }
 
-    // Position the cursor at the end of the text to ensure natural appending and deleting
+    // Select all text when opening keyboard
     final text = controller.text;
-    if (text == '0') {
-      controller.selection = const TextSelection(
+    if (text.isNotEmpty) {
+      controller.selection = TextSelection(
         baseOffset: 0,
-        extentOffset: 1,
+        extentOffset: text.length,
       );
     } else {
-      controller.selection = TextSelection.collapsed(offset: text.length);
+      controller.selection = const TextSelection.collapsed(offset: 0);
     }
     _lastSelection = controller.selection;
 

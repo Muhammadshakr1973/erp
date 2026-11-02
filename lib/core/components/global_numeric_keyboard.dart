@@ -303,44 +303,71 @@ class NumericKeyboardDialog extends ConsumerWidget {
                     valueListenable: controller,
                     builder: (context, value, _) {
                       final text = value.text;
+                      final selection = value.selection;
+                      final bool isAllSelected = selection.isValid &&
+                          selection.start == 0 &&
+                          selection.end == text.length &&
+                          text.isNotEmpty;
+
                       return Directionality(
                         textDirection: TextDirection.ltr,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withOpacity(0.5),
-                              width: 1.5,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (isAllSelected && text.isNotEmpty) {
+                              controller.selection = TextSelection.collapsed(offset: text.length);
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withOpacity(0.5),
+                                width: 1.5,
+                              ),
                             ),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  text.isEmpty ? (hintText ?? '0') : text,
-                                  textDirection: TextDirection.ltr,
-                                  style: AppTextStyles.h1.copyWith(
-                                    color: text.isEmpty 
-                                        ? (isDark ? Colors.white38 : Colors.black38)
-                                        : (isDark ? Colors.white : Colors.black87),
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Container(
+                                    padding: isAllSelected
+                                        ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                                        : EdgeInsets.zero,
+                                    decoration: isAllSelected
+                                        ? BoxDecoration(
+                                            color: theme.colorScheme.primary.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(6),
+                                          )
+                                        : null,
+                                    child: Text(
+                                      text.isEmpty ? (hintText ?? '0') : text,
+                                      textDirection: TextDirection.ltr,
+                                      style: AppTextStyles.h1.copyWith(
+                                        color: text.isEmpty 
+                                            ? (isDark ? Colors.white38 : Colors.black38)
+                                            : (isAllSelected
+                                                ? (isDark ? Colors.white : theme.colorScheme.primary)
+                                                : (isDark ? Colors.white : Colors.black87)),
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              // Soft blinking cursor effect
-                              Container(
-                                width: 2,
-                                height: 28,
-                                margin: const EdgeInsets.only(left: 4),
-                                color: theme.colorScheme.primary,
-                              ),
-                            ],
+                                if (!isAllSelected)
+                                  // Soft blinking cursor effect
+                                  Container(
+                                    width: 2,
+                                    height: 28,
+                                    margin: const EdgeInsets.only(left: 4),
+                                    color: theme.colorScheme.primary,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       );
