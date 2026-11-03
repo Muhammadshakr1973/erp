@@ -1050,6 +1050,29 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             _selectedOrderCustomerName.contains('کاتی'));
   }
 
+  /// Distinct color palette for category frames
+  Color _getCategoryColor(int? categoryId, int index, bool isDark) {
+    const colors = [
+      Color(0xFF2563EB), // Vibrant Blue
+      Color(0xFF10B981), // Emerald Green
+      Color(0xFF8B5CF6), // Purple
+      Color(0xFFF59E0B), // Amber / Gold
+      Color(0xFFEC4899), // Rose / Pink
+      Color(0xFF06B6D4), // Cyan
+      Color(0xFFEF4444), // Coral Red
+      Color(0xFF6366F1), // Indigo
+      Color(0xFF84CC16), // Lime Green
+      Color(0xFFD97706), // Orange
+      Color(0xFF14B8A6), // Teal
+      Color(0xFFA855F7), // Light Purple
+    ];
+    if (categoryId == null || categoryId <= 0) {
+      return isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+    }
+    final colorIndex = (categoryId * 3 + index) % colors.length;
+    return colors[colorIndex];
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1133,7 +1156,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               // 3. CATEGORY HEADER & HORIZONTAL SELECTOR (Matching image 8.png)
               _buildCategoryBar(context, categoriesAsync, productsAsync),
 
-              // 4. PRODUCT CARDS GRID
+              // 4. PRODUCT CARDS GRID (Grouped by Category & Sorted by Product Name)
               Expanded(
                 child: productsAsync.when(
                   loading: () =>
@@ -1197,6 +1220,32 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       );
                     }
 
+                    final categories = categoriesAsync.asData?.value ?? [];
+                    final categoryMap = {for (final c in categories) c.id: c.name};
+
+                    // Group products by Category ID
+                    final Map<int?, List<ProductModel>> groupedByCat = {};
+                    for (final p in filteredProducts) {
+                      groupedByCat.putIfAbsent(p.categoryId, () => []).add(p);
+                    }
+
+                    // Sort items within each category alphabetically by Product Name (ناوی کاڵا)
+                    for (final catId in groupedByCat.keys) {
+                      groupedByCat[catId]!.sort(
+                        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+                      );
+                    }
+
+                    // Sort category groups by category list order / name (with uncategorized last)
+                    final sortedCatKeys = groupedByCat.keys.toList()
+                      ..sort((a, b) {
+                        if (a == null || a <= 0) return 1;
+                        if (b == null || b <= 0) return -1;
+                        final nameA = categoryMap[a] ?? '';
+                        final nameB = categoryMap[b] ?? '';
+                        return nameA.compareTo(nameB);
+                      });
+
                     return LayoutBuilder(
                       builder: (context, constraints) {
                         final crossAxisCount = constraints.maxWidth < 600
@@ -1205,29 +1254,151 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             ? 3
                             : 4;
 
-                        return GridView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                childAspectRatio: 0.68,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(top: 8, bottom: 24),
+                          itemCount: sortedCatKeys.length,
+                          itemBuilder: (context, catIndex) {
+                            final catId = sortedCatKeys[catIndex];
+                            final productsInGroup = groupedByCat[catId]!;
+                            final catName = (catId != null && categoryMap.containsKey(catId))
+                                ? categoryMap[catId]!
+                                : 'بێ جۆر';
+                            final frameColor = _getCategoryColor(catId, catIndex, isDark);
+
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
                               ),
-                          itemCount: filteredProducts.length,
-                          itemBuilder: (context, index) {
-                            final product = filteredProducts[index];
-                            final qtyInCart = _orderCart[product.id] ?? 0;
-                            return _buildProductCard(
-                              context,
-                              key: ValueKey(product.id),
-                              product: product,
-                              quantity: qtyInCart,
-                              user: authUser,
-                              warehouseId: salesWarehouseId,
+                              decoration: BoxDecoration(
+                                color: frameColor.withValues(
+                                  alpha: isDark ? 0.08 : 0.04,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: frameColor.withValues(
+                                    alpha: isDark ? 0.85 : 0.75,
+                                  ),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: frameColor.withValues(
+                                      alpha: isDark ? 0.18 : 0.1,
+                                    ),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Distinct Category Frame Header
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: frameColor.withValues(
+                                        alpha: isDark ? 0.24 : 0.14,
+                                      ),
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(14),
+                                      ),
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: frameColor.withValues(
+                                            alpha: isDark ? 0.45 : 0.35,
+                                          ),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: frameColor.withValues(alpha: 0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.category_rounded,
+                                            size: 18,
+                                            color: frameColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            catName,
+                                            style: TextStyle(
+                                              fontFamily: 'KJino',
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: frameColor,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            '${productsInGroup.length} کاڵا',
+                                            style: const TextStyle(
+                                              fontFamily: 'KJino',
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Product Grid inside category frame
+                                  Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: GridView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        childAspectRatio: 0.68,
+                                        crossAxisSpacing: 10,
+                                        mainAxisSpacing: 10,
+                                      ),
+                                      itemCount: productsInGroup.length,
+                                      itemBuilder: (context, index) {
+                                        final product = productsInGroup[index];
+                                        final qtyInCart =
+                                            _orderCart[product.id] ?? 0;
+                                        return _buildProductCard(
+                                          context,
+                                          key: ValueKey(product.id),
+                                          product: product,
+                                          quantity: qtyInCart,
+                                          user: authUser,
+                                          warehouseId: salesWarehouseId,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         );
