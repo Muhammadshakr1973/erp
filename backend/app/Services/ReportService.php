@@ -841,59 +841,6 @@ class ReportService
     }
 
     /**
-     * ٨. ڕاپۆرتی جوڵەی ستۆک (Stock Movements Report)
-     */
-    public function getStockMovementsReport(array $filters): array
-    {
-        $query = StockTransaction::query()
-            ->with(['product:id,name,sku,unit', 'warehouse:id,name'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id');
-
-        if (!empty($filters['warehouse_id'])) {
-            $query->where('warehouse_id', $filters['warehouse_id']);
-        }
-        if (!empty($filters['product_id'])) {
-            $query->where('product_id', $filters['product_id']);
-        }
-        if (!empty($filters['type']) && $filters['type'] !== 'ALL') {
-            $query->where('type', $filters['type']);
-        }
-        if (!empty($filters['start_date'])) {
-            $query->whereDate('created_at', '>=', $filters['start_date']);
-        }
-        if (!empty($filters['end_date'])) {
-            $query->whereDate('created_at', '<=', $filters['end_date']);
-        }
-
-        $summaryData = (clone $query)
-            ->withoutEagerLoads()
-            ->reorder()
-            ->selectRaw('
-            COUNT(*) as total_transactions,
-            COALESCE(SUM(CASE WHEN quantity_change > 0 THEN quantity_change ELSE 0 END), 0) as total_in_qty,
-            COALESCE(SUM(CASE WHEN quantity_change < 0 THEN ABS(quantity_change) ELSE 0 END), 0) as total_out_qty
-        ')->first();
-
-        $totalTransactions = (int) ($summaryData->total_transactions ?? 0);
-        $totalInQty = (float) ($summaryData->total_in_qty ?? 0);
-        $totalOutQty = (float) ($summaryData->total_out_qty ?? 0);
-
-        $perPage = (int) ($filters['per_page'] ?? 30);
-        $page = (int) ($filters['page'] ?? 1);
-        $paginated = $query->paginate($perPage, ['*'], 'page', $page);
-
-        return [
-            'summary' => [
-                'total_transactions' => $totalTransactions,
-                'total_quantity_in'  => $totalInQty,
-                'total_quantity_out' => $totalOutQty,
-            ],
-            'transactions' => $paginated,
-        ];
-    }
-
-    /**
      * ٩. ڕاپۆرتی گواستنەوەی کۆگاکان (Stock Transfers Report)
      */
     public function getStockTransfersReport(array $filters): array

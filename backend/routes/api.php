@@ -270,7 +270,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/supplier-debts', [ReportController::class, 'supplierDebts'])->middleware('permission:users.manage');
         Route::get('/reports/payments-history', [ReportController::class, 'paymentsHistory'])->middleware('permission:users.manage');
         Route::get('/reports/low-stock', [ReportController::class, 'lowStock'])->middleware('permission:users.manage');
-        Route::get('/reports/stock-movements', [ReportController::class, 'stockMovements'])->middleware('permission:users.manage');
         Route::get('/reports/stock-transfers', [ReportController::class, 'stockTransfers'])->middleware('permission:users.manage');
 
         // Audit Trail (Admin / Owner inspection)

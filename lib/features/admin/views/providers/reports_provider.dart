@@ -258,33 +258,6 @@ final lowStockReportProvider =
       }
     });
 
-// Stock Movements Provider
-final stockMovementsReportProvider =
-    FutureProvider.family<StockMovementsReportData, Map<String, dynamic>>((
-      ref,
-      filters,
-    ) async {
-      final api = ref.watch(apiClientProvider);
-      try {
-        final response = await api.client.get(
-          '/reports/stock-movements',
-          queryParameters: filters,
-        );
-        if (response.statusCode == 200) {
-          final resData = response.data;
-          if (resData is! Map || resData['data'] is! Map) {
-            throw FormatException(
-              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed stock movements report payload)',
-            );
-          }
-          return StockMovementsReportData.fromJson(Map<String, dynamic>.from(resData['data']));
-        }
-        throw Exception('نەتوانرا داتای جوڵەی ستۆک بهێنرێت');
-      } catch (e) {
-        throw Exception(api.parseError(e));
-      }
-    });
-
 // Stock Transfers Provider
 final stockTransfersReportProvider =
     FutureProvider.family<StockTransfersReportData, Map<String, dynamic>>((

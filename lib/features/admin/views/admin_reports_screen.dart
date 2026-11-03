@@ -13,7 +13,6 @@ import 'reports/sales_report_screen.dart';
 import 'reports/profit_report_screen.dart';
 import 'reports/sales_by_salesman_report_screen.dart';
 import 'reports/low_stock_report_screen.dart';
-import 'reports/stock_movements_report_screen.dart';
 
 class AdminReportsScreen extends StatelessWidget {
   const AdminReportsScreen({super.key});
@@ -89,10 +88,6 @@ class AdminReportsScreen extends StatelessWidget {
               _ReportItem(
                 'ڕاپۆرتی کاڵا کەمبووەکان (Low Stock)',
                 () => const LowStockReportScreen(),
-              ),
-              _ReportItem(
-                'جوڵەی ستۆک (Stock Movements)',
-                () => const StockMovementsReportScreen(),
               ),
             ],
           ),

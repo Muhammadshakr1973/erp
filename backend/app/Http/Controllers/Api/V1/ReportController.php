@@ -316,29 +316,6 @@ class ReportController extends Controller
     }
 
     /**
-     * Stock Movements Report (جوڵەی ستۆک)
-     */
-    public function stockMovements(Request $request): JsonResponse
-    {
-        $filters = $request->only([
-            'warehouse_id',
-            'product_id',
-            'type',
-            'start_date',
-            'end_date',
-            'per_page',
-            'page',
-        ]);
-
-        $report = $this->reportService->getStockMovementsReport($filters);
-
-        return response()->json([
-            'message' => 'ڕاپۆرتی جوڵەی ستۆک',
-            'data'    => $report,
-        ], 200);
-    }
-
-    /**
      * Stock Transfers Report (گواستنەوەی کۆگاکان)
      */
     public function stockTransfers(Request $request): JsonResponse
