@@ -1408,6 +1408,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       }
 
       if (mounted) {
+        if (_isPurchaseDraftDialogOpen) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
         setState(() {
           _activeDraftOrderId = null;
           _isEditingPurchaseDraft = false;
@@ -1418,6 +1422,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           _userModifiedPaidAmount = false;
         });
         _clearCartDraft();
+        _refreshPurchaseOrders();
 
         final remainingDebt = order.remainingDebt;
         final debtMsg = remainingDebt > 0
@@ -1430,7 +1435,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           type: SnackbarType.success,
         );
 
-        _tabController.animateTo(1);
+        _tabController.animateTo(0);
       }
     } catch (e) {
       if (mounted) {
