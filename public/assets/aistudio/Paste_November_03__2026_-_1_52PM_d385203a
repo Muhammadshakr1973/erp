@@ -1,0 +1,1381 @@
+[{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "uri_does_not_exist",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/uri_does_not_exist",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Target of URI doesn't exist: '../../core/utils/formatters.dart'.\nTry creating the file referenced by the URI, or try using a URI for a file that does exist.",
+	"source": "dart",
+	"startLineNumber": 1,
+	"startColumn": 8,
+	"endLineNumber": 1,
+	"endColumn": 42,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 26,
+	"startColumn": 25,
+	"endLineNumber": 26,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 27,
+	"startColumn": 28,
+	"endLineNumber": 27,
+	"endColumn": 38,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 28,
+	"startColumn": 25,
+	"endLineNumber": 28,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 29,
+	"startColumn": 28,
+	"endLineNumber": 29,
+	"endColumn": 38,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 30,
+	"startColumn": 22,
+	"endLineNumber": 30,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 31,
+	"startColumn": 24,
+	"endLineNumber": 31,
+	"endColumn": 34,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 32,
+	"startColumn": 26,
+	"endLineNumber": 32,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 33,
+	"startColumn": 26,
+	"endLineNumber": 33,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 55,
+	"startColumn": 19,
+	"endLineNumber": 55,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 57,
+	"startColumn": 20,
+	"endLineNumber": 57,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 58,
+	"startColumn": 19,
+	"endLineNumber": 58,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 59,
+	"startColumn": 20,
+	"endLineNumber": 59,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 79,
+	"startColumn": 43,
+	"endLineNumber": 79,
+	"endColumn": 53,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 81,
+	"startColumn": 20,
+	"endLineNumber": 81,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 82,
+	"startColumn": 19,
+	"endLineNumber": 82,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 123,
+	"startColumn": 11,
+	"endLineNumber": 123,
+	"endColumn": 21,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 131,
+	"startColumn": 17,
+	"endLineNumber": 131,
+	"endColumn": 27,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 132,
+	"startColumn": 23,
+	"endLineNumber": 132,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 133,
+	"startColumn": 20,
+	"endLineNumber": 133,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 134,
+	"startColumn": 20,
+	"endLineNumber": 134,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 200,
+	"startColumn": 21,
+	"endLineNumber": 200,
+	"endColumn": 31,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 201,
+	"startColumn": 18,
+	"endLineNumber": 201,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 202,
+	"startColumn": 20,
+	"endLineNumber": 202,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 203,
+	"startColumn": 23,
+	"endLineNumber": 203,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 204,
+	"startColumn": 28,
+	"endLineNumber": 204,
+	"endColumn": 38,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 234,
+	"startColumn": 18,
+	"endLineNumber": 234,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 238,
+	"startColumn": 18,
+	"endLineNumber": 238,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 239,
+	"startColumn": 21,
+	"endLineNumber": 239,
+	"endColumn": 31,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 240,
+	"startColumn": 18,
+	"endLineNumber": 240,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 241,
+	"startColumn": 20,
+	"endLineNumber": 241,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 242,
+	"startColumn": 22,
+	"endLineNumber": 242,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 304,
+	"startColumn": 19,
+	"endLineNumber": 304,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 307,
+	"startColumn": 23,
+	"endLineNumber": 307,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 308,
+	"startColumn": 20,
+	"endLineNumber": 308,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 309,
+	"startColumn": 24,
+	"endLineNumber": 309,
+	"endColumn": 34,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 310,
+	"startColumn": 19,
+	"endLineNumber": 310,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 311,
+	"startColumn": 20,
+	"endLineNumber": 311,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 312,
+	"startColumn": 24,
+	"endLineNumber": 312,
+	"endColumn": 34,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 313,
+	"startColumn": 30,
+	"endLineNumber": 313,
+	"endColumn": 40,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 314,
+	"startColumn": 30,
+	"endLineNumber": 314,
+	"endColumn": 40,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 315,
+	"startColumn": 28,
+	"endLineNumber": 315,
+	"endColumn": 38,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 316,
+	"startColumn": 26,
+	"endLineNumber": 316,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 317,
+	"startColumn": 26,
+	"endLineNumber": 317,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 344,
+	"startColumn": 22,
+	"endLineNumber": 344,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 345,
+	"startColumn": 25,
+	"endLineNumber": 345,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 346,
+	"startColumn": 26,
+	"endLineNumber": 346,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 347,
+	"startColumn": 24,
+	"endLineNumber": 347,
+	"endColumn": 34,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 348,
+	"startColumn": 27,
+	"endLineNumber": 348,
+	"endColumn": 37,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 395,
+	"startColumn": 20,
+	"endLineNumber": 395,
+	"endColumn": 30,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 397,
+	"startColumn": 18,
+	"endLineNumber": 397,
+	"endColumn": 28,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 404,
+	"startColumn": 17,
+	"endLineNumber": 404,
+	"endColumn": 27,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 405,
+	"startColumn": 25,
+	"endLineNumber": 405,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 406,
+	"startColumn": 26,
+	"endLineNumber": 406,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 407,
+	"startColumn": 22,
+	"endLineNumber": 407,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 408,
+	"startColumn": 25,
+	"endLineNumber": 408,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 409,
+	"startColumn": 22,
+	"endLineNumber": 409,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 430,
+	"startColumn": 27,
+	"endLineNumber": 430,
+	"endColumn": 37,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 431,
+	"startColumn": 29,
+	"endLineNumber": 431,
+	"endColumn": 39,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 473,
+	"startColumn": 11,
+	"endLineNumber": 473,
+	"endColumn": 21,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 479,
+	"startColumn": 23,
+	"endLineNumber": 479,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 480,
+	"startColumn": 22,
+	"endLineNumber": 480,
+	"endColumn": 32,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 482,
+	"startColumn": 51,
+	"endLineNumber": 482,
+	"endColumn": 61,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 508,
+	"startColumn": 26,
+	"endLineNumber": 508,
+	"endColumn": 36,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 509,
+	"startColumn": 24,
+	"endLineNumber": 509,
+	"endColumn": 34,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 510,
+	"startColumn": 25,
+	"endLineNumber": 510,
+	"endColumn": 35,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 545,
+	"startColumn": 11,
+	"endLineNumber": 545,
+	"endColumn": 21,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 574,
+	"startColumn": 23,
+	"endLineNumber": 574,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/home/muhammad/Documents/ChatGPT/Gardi/pos_app/lib/features/shared/models/report_models.dart",
+	"owner": "dartAnalysisLSP",
+	"code": {
+		"value": "undefined_identifier",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_identifier",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "Undefined name 'Formatters'.\nTry correcting the name to one that is defined, or defining the name.",
+	"source": "dart",
+	"startLineNumber": 575,
+	"startColumn": 27,
+	"endLineNumber": 575,
+	"endColumn": 37,
+	"origin": "extHost1"
+}]

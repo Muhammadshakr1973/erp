@@ -1,4 +1,4 @@
-import '../../core/utils/formatters.dart';
+import '../../../core/utils/formatters.dart';
 
 class SalesReportSummary {
   final int totalOrdersCount;
