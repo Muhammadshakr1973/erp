@@ -1,3 +1,5 @@
+import '../../core/utils/formatters.dart';
+
 class SalesReportSummary {
   final int totalOrdersCount;
   final int totalDeliveredCount;
@@ -21,14 +23,14 @@ class SalesReportSummary {
 
   factory SalesReportSummary.fromJson(Map<String, dynamic> json) {
     return SalesReportSummary(
-      totalOrdersCount: (json['total_orders_count'] ?? 0) as int,
-      totalDeliveredCount: (json['total_delivered_count'] ?? 0) as int,
-      totalGrossAmount: (json['total_gross_amount'] ?? 0) as int,
-      totalDiscountAmount: (json['total_discount_amount'] ?? 0) as int,
-      totalNetSales: (json['total_net_sales'] ?? 0) as int,
-      totalCostAmount: (json['total_cost_amount'] ?? 0) as int,
-      totalProfitAmount: (json['total_profit_amount'] ?? 0) as int,
-      averageOrderValue: (json['average_order_value'] ?? 0) as int,
+      totalOrdersCount: Formatters.parseInt(json['total_orders_count']),
+      totalDeliveredCount: Formatters.parseInt(json['total_delivered_count']),
+      totalGrossAmount: Formatters.parseInt(json['total_gross_amount']),
+      totalDiscountAmount: Formatters.parseInt(json['total_discount_amount']),
+      totalNetSales: Formatters.parseInt(json['total_net_sales']),
+      totalCostAmount: Formatters.parseInt(json['total_cost_amount']),
+      totalProfitAmount: Formatters.parseInt(json['total_profit_amount']),
+      averageOrderValue: Formatters.parseInt(json['average_order_value']),
     );
   }
 }
@@ -50,11 +52,11 @@ class SalesReportSalesmanBreakdown {
 
   factory SalesReportSalesmanBreakdown.fromJson(Map<String, dynamic> json) {
     return SalesReportSalesmanBreakdown(
-      salesmanId: (json['salesman_id'] ?? 0) as int,
-      salesmanName: (json['salesman_name'] ?? '') as String,
-      ordersCount: (json['orders_count'] ?? 0) as int,
-      totalSales: (json['total_sales'] ?? 0) as int,
-      totalProfit: (json['total_profit'] ?? 0) as int,
+      salesmanId: Formatters.parseInt(json['salesman_id']),
+      salesmanName: json['salesman_name']?.toString() ?? '',
+      ordersCount: Formatters.parseInt(json['orders_count']),
+      totalSales: Formatters.parseInt(json['total_sales']),
+      totalProfit: Formatters.parseInt(json['total_profit']),
     );
   }
 }
@@ -74,10 +76,10 @@ class SalesReportRouteBreakdown {
 
   factory SalesReportRouteBreakdown.fromJson(Map<String, dynamic> json) {
     return SalesReportRouteBreakdown(
-      routeId: json['route_id'] as int?,
-      routeName: (json['route_name'] ?? '') as String,
-      ordersCount: (json['orders_count'] ?? 0) as int,
-      totalSales: (json['total_sales'] ?? 0) as int,
+      routeId: json['route_id'] != null ? Formatters.parseInt(json['route_id']) : null,
+      routeName: json['route_name']?.toString() ?? '',
+      ordersCount: Formatters.parseInt(json['orders_count']),
+      totalSales: Formatters.parseInt(json['total_sales']),
     );
   }
 }
@@ -118,18 +120,18 @@ class SalesReportOrderItem {
     final warehouse = json['warehouse'] as Map<String, dynamic>?;
 
     return SalesReportOrderItem(
-      id: (json['id'] ?? 0) as int,
-      orderNumber: (json['order_number'] ?? '') as String,
-      orderDate: (json['order_date'] ?? json['created_at'] ?? '') as String,
-      status: (json['status'] ?? '') as String,
-      customerName: (customer?['name'] ?? 'N/A') as String,
-      routeName: (route?['name'] ?? 'بێ ڕێگا') as String,
-      salesmanName: (salesman?['name'] ?? 'N/A') as String,
-      warehouseName: (warehouse?['name'] ?? 'N/A') as String,
-      subtotal: (json['subtotal'] ?? 0) as int,
-      discountAmount: (json['discount_amount'] ?? 0) as int,
-      totalAmount: (json['total_amount'] ?? 0) as int,
-      totalProfit: (json['total_profit'] ?? 0) as int,
+      id: Formatters.parseInt(json['id']),
+      orderNumber: json['order_number']?.toString() ?? '',
+      orderDate: (json['order_date'] ?? json['created_at'])?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      customerName: customer?['name']?.toString() ?? 'N/A',
+      routeName: route?['name']?.toString() ?? 'بێ ڕێگا',
+      salesmanName: salesman?['name']?.toString() ?? 'N/A',
+      warehouseName: warehouse?['name']?.toString() ?? 'N/A',
+      subtotal: Formatters.parseInt(json['subtotal']),
+      discountAmount: Formatters.parseInt(json['discount_amount']),
+      totalAmount: Formatters.parseInt(json['total_amount']),
+      totalProfit: Formatters.parseInt(json['total_profit']),
     );
   }
 }
@@ -182,7 +184,7 @@ class ProfitReportSummary {
   final int totalRevenue;
   final int totalCost;
   final int totalProfit;
-  final int totalUnitsSold;
+  final double totalUnitsSold;
   final double profitMarginPercent;
 
   ProfitReportSummary({
@@ -195,13 +197,11 @@ class ProfitReportSummary {
 
   factory ProfitReportSummary.fromJson(Map<String, dynamic> json) {
     return ProfitReportSummary(
-      totalRevenue: (json['total_revenue'] ?? 0) as int,
-      totalCost: (json['total_cost'] ?? 0) as int,
-      totalProfit: (json['total_profit'] ?? 0) as int,
-      totalUnitsSold: (json['total_units_sold'] ?? 0) as int,
-      profitMarginPercent: (json['profit_margin_percent'] ?? 0.0) is int
-          ? ((json['profit_margin_percent'] ?? 0) as int).toDouble()
-          : (json['profit_margin_percent'] ?? 0.0) as double,
+      totalRevenue: Formatters.parseInt(json['total_revenue']),
+      totalCost: Formatters.parseInt(json['total_cost']),
+      totalProfit: Formatters.parseInt(json['total_profit']),
+      totalUnitsSold: Formatters.parseDouble(json['total_units_sold']),
+      profitMarginPercent: Formatters.parseDouble(json['profit_margin_percent']),
     );
   }
 }
@@ -211,7 +211,7 @@ class ProfitProductBreakdown {
   final String productName;
   final String sku;
   final String categoryName;
-  final int unitsSold;
+  final double unitsSold;
   final int totalRevenue;
   final int totalCost;
   final int totalProfit;
@@ -231,17 +231,15 @@ class ProfitProductBreakdown {
 
   factory ProfitProductBreakdown.fromJson(Map<String, dynamic> json) {
     return ProfitProductBreakdown(
-      productId: (json['product_id'] ?? 0) as int,
-      productName: (json['product_name'] ?? '') as String,
-      sku: (json['sku'] ?? '') as String,
-      categoryName: (json['category_name'] ?? '') as String,
-      unitsSold: (json['units_sold'] ?? 0) as int,
-      totalRevenue: (json['total_revenue'] ?? 0) as int,
-      totalCost: (json['total_cost'] ?? 0) as int,
-      totalProfit: (json['total_profit'] ?? 0) as int,
-      marginPercent: (json['margin_percent'] ?? 0.0) is int
-          ? ((json['margin_percent'] ?? 0) as int).toDouble()
-          : (json['margin_percent'] ?? 0.0) as double,
+      productId: Formatters.parseInt(json['product_id']),
+      productName: json['product_name']?.toString() ?? '',
+      sku: json['sku']?.toString() ?? '',
+      categoryName: json['category_name']?.toString() ?? '',
+      unitsSold: Formatters.parseDouble(json['units_sold']),
+      totalRevenue: Formatters.parseInt(json['total_revenue']),
+      totalCost: Formatters.parseInt(json['total_cost']),
+      totalProfit: Formatters.parseInt(json['total_profit']),
+      marginPercent: Formatters.parseDouble(json['margin_percent']),
     );
   }
 }
@@ -303,22 +301,20 @@ class SalesmanPerformanceItem {
 
   factory SalesmanPerformanceItem.fromJson(Map<String, dynamic> json) {
     return SalesmanPerformanceItem(
-      salesmanId: (json['salesman_id'] ?? 0) as int,
-      salesmanName: (json['salesman_name'] ?? '') as String,
-      phone: json['salesman_phone'] as String?,
-      commissionRate: (json['commission_rate'] ?? 0.0) is int
-          ? ((json['commission_rate'] ?? 0) as int).toDouble()
-          : (json['commission_rate'] ?? 0.0) as double,
-      totalOrders: (json['total_orders'] ?? 0) as int,
-      deliveredOrders: (json['delivered_orders'] ?? 0) as int,
-      totalSales: (json['total_sales'] ?? 0) as int,
-      totalProfit: (json['total_profit'] ?? 0) as int,
-      lastMonthProfit: (json['last_month_profit'] ?? 0) as int,
-      newCustomersThisMonth: (json['new_customers_this_month'] ?? json['new_customers'] ?? 0) as int,
-      newCustomersLastMonth: (json['new_customers_last_month'] ?? 0) as int,
-      estimatedCommission: (json['estimated_commission'] ?? 0) as int,
-      paymentsCollected: (json['payments_collected'] ?? 0) as int,
-      averageOrderValue: (json['average_order_value'] ?? 0) as int,
+      salesmanId: Formatters.parseInt(json['salesman_id']),
+      salesmanName: json['salesman_name']?.toString() ?? '',
+      phone: json['salesman_phone']?.toString(),
+      commissionRate: Formatters.parseDouble(json['commission_rate']),
+      totalOrders: Formatters.parseInt(json['total_orders']),
+      deliveredOrders: Formatters.parseInt(json['delivered_orders']),
+      totalSales: Formatters.parseInt(json['total_sales']),
+      totalProfit: Formatters.parseInt(json['total_profit']),
+      lastMonthProfit: Formatters.parseInt(json['last_month_profit']),
+      newCustomersThisMonth: Formatters.parseInt(json['new_customers_this_month'] ?? json['new_customers']),
+      newCustomersLastMonth: Formatters.parseInt(json['new_customers_last_month']),
+      estimatedCommission: Formatters.parseInt(json['estimated_commission']),
+      paymentsCollected: Formatters.parseInt(json['payments_collected']),
+      averageOrderValue: Formatters.parseInt(json['average_order_value']),
     );
   }
 }
@@ -345,11 +341,11 @@ class SalesBySalesmanReportData {
     final list = json['salesmen'] as List? ?? [];
 
     return SalesBySalesmanReportData(
-      totalSalesmen: (summaryJson['total_salesmen'] ?? 0) as int,
-      totalSalesAmount: (summaryJson['total_sales_amount'] ?? 0) as int,
-      totalProfitAmount: (summaryJson['total_profit_amount'] ?? 0) as int,
-      totalCommission: (summaryJson['total_commission'] ?? 0) as int,
-      totalCollectedCash: (summaryJson['total_collected_cash'] ?? 0) as int,
+      totalSalesmen: Formatters.parseInt(summaryJson['total_salesmen']),
+      totalSalesAmount: Formatters.parseInt(summaryJson['total_sales_amount']),
+      totalProfitAmount: Formatters.parseInt(summaryJson['total_profit_amount']),
+      totalCommission: Formatters.parseInt(summaryJson['total_commission']),
+      totalCollectedCash: Formatters.parseInt(summaryJson['total_collected_cash']),
       salesmen: list
           .map(
             (e) => SalesmanPerformanceItem.fromJson(e as Map<String, dynamic>),
@@ -369,11 +365,11 @@ class LowStockItem {
   final String unit;
   final String categoryName;
   final String supplierName;
-  final int quantity;
-  final int reservedQuantity;
-  final int availableQuantity;
-  final int minStockLevel;
-  final int suggestedReorder;
+  final double quantity;
+  final double reservedQuantity;
+  final double availableQuantity;
+  final double minStockLevel;
+  final double suggestedReorder;
   final int estimatedCost;
 
   LowStockItem({
@@ -396,21 +392,21 @@ class LowStockItem {
 
   factory LowStockItem.fromJson(Map<String, dynamic> json) {
     return LowStockItem(
-      warehouseId: (json['warehouse_id'] ?? 0) as int,
-      warehouseName: (json['warehouse_name'] ?? '') as String,
-      productId: (json['product_id'] ?? 0) as int,
-      productName: (json['product_name'] ?? '') as String,
-      sku: (json['sku'] ?? '') as String,
-      barcode: (json['barcode'] ?? '') as String,
-      unit: (json['unit'] ?? 'PCS') as String,
-      categoryName: (json['category_name'] ?? '') as String,
-      supplierName: (json['supplier_name'] ?? '') as String,
-      quantity: (json['quantity'] ?? 0) as int,
-      reservedQuantity: (json['reserved_quantity'] ?? 0) as int,
-      availableQuantity: (json['available_quantity'] ?? 0) as int,
-      minStockLevel: (json['min_stock_level'] ?? 0) as int,
-      suggestedReorder: (json['suggested_reorder'] ?? 0) as int,
-      estimatedCost: (json['estimated_cost'] ?? 0) as int,
+      warehouseId: Formatters.parseInt(json['warehouse_id']),
+      warehouseName: json['warehouse_name']?.toString() ?? '',
+      productId: Formatters.parseInt(json['product_id']),
+      productName: json['product_name']?.toString() ?? '',
+      sku: json['sku']?.toString() ?? '',
+      barcode: json['barcode']?.toString() ?? '',
+      unit: (json['unit'] ?? 'PCS').toString(),
+      categoryName: json['category_name']?.toString() ?? '',
+      supplierName: json['supplier_name']?.toString() ?? '',
+      quantity: Formatters.parseDouble(json['quantity']),
+      reservedQuantity: Formatters.parseDouble(json['reserved_quantity']),
+      availableQuantity: Formatters.parseDouble(json['available_quantity']),
+      minStockLevel: Formatters.parseDouble(json['min_stock_level']),
+      suggestedReorder: Formatters.parseDouble(json['suggested_reorder']),
+      estimatedCost: Formatters.parseInt(json['estimated_cost']),
     );
   }
 }
@@ -431,8 +427,8 @@ class LowStockReportData {
     final list = json['items'] as List? ?? [];
 
     return LowStockReportData(
-      totalLowStockItems: (summaryJson['total_low_stock_items'] ?? 0) as int,
-      estimatedReorderCost: (summaryJson['estimated_reorder_cost'] ?? 0) as int,
+      totalLowStockItems: Formatters.parseInt(summaryJson['total_low_stock_items']),
+      estimatedReorderCost: Formatters.parseInt(summaryJson['estimated_reorder_cost']),
       items: list
           .map((e) => LowStockItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -447,8 +443,8 @@ class StockMovementItem {
   final String sku;
   final String unit;
   final String type;
-  final int quantityChange;
-  final int quantityAfter;
+  final double quantityChange;
+  final double quantityAfter;
   final String? referenceType;
   final int? referenceId;
   final String? notes;
@@ -474,26 +470,26 @@ class StockMovementItem {
     final product = json['product'] as Map<String, dynamic>?;
 
     return StockMovementItem(
-      id: (json['id'] ?? 0) as int,
-      warehouseName: (warehouse?['name'] ?? '') as String,
-      productName: (product?['name'] ?? '') as String,
-      sku: (product?['sku'] ?? '') as String,
-      unit: (product?['unit'] ?? 'PCS') as String,
-      type: (json['type'] ?? '') as String,
-      quantityChange: (json['quantity_change'] ?? 0) as int,
-      quantityAfter: (json['quantity_after'] ?? 0) as int,
-      referenceType: json['reference_type'] as String?,
-      referenceId: json['reference_id'] as int?,
-      notes: json['notes'] as String?,
-      createdAt: (json['created_at'] ?? '') as String,
+      id: Formatters.parseInt(json['id']),
+      warehouseName: warehouse?['name']?.toString() ?? '',
+      productName: product?['name']?.toString() ?? '',
+      sku: product?['sku']?.toString() ?? '',
+      unit: (product?['unit'] ?? 'PCS').toString(),
+      type: json['type']?.toString() ?? '',
+      quantityChange: Formatters.parseDouble(json['quantity_change']),
+      quantityAfter: Formatters.parseDouble(json['quantity_after']),
+      referenceType: json['reference_type']?.toString(),
+      referenceId: json['reference_id'] != null ? Formatters.parseInt(json['reference_id']) : null,
+      notes: json['notes']?.toString(),
+      createdAt: json['created_at']?.toString() ?? '',
     );
   }
 }
 
 class StockMovementsReportData {
   final int totalTransactions;
-  final int totalQuantityIn;
-  final int totalQuantityOut;
+  final double totalQuantityIn;
+  final double totalQuantityOut;
   final List<StockMovementItem> transactions;
 
   StockMovementsReportData({
@@ -509,9 +505,9 @@ class StockMovementsReportData {
     final list = transJson['data'] as List? ?? [];
 
     return StockMovementsReportData(
-      totalTransactions: (summaryJson['total_transactions'] ?? 0) as int,
-      totalQuantityIn: (summaryJson['total_quantity_in'] ?? 0) as int,
-      totalQuantityOut: (summaryJson['total_quantity_out'] ?? 0) as int,
+      totalTransactions: Formatters.parseInt(summaryJson['total_transactions']),
+      totalQuantityIn: Formatters.parseDouble(summaryJson['total_quantity_in']),
+      totalQuantityOut: Formatters.parseDouble(summaryJson['total_quantity_out']),
       transactions: list
           .map((e) => StockMovementItem.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -546,14 +542,14 @@ class StockTransferReportItem {
     final creator = json['creator'] as Map<String, dynamic>?;
 
     return StockTransferReportItem(
-      id: (json['id'] ?? 0) as int,
-      transferNumber: json['transfer_number'] as String?,
-      fromWarehouseName: (from?['name'] ?? '') as String,
-      toWarehouseName: (to?['name'] ?? '') as String,
-      status: (json['status'] ?? '') as String,
-      notes: json['notes'] as String?,
-      creatorName: creator?['name'] as String?,
-      createdAt: (json['created_at'] ?? '') as String,
+      id: Formatters.parseInt(json['id']),
+      transferNumber: json['transfer_number']?.toString(),
+      fromWarehouseName: from?['name']?.toString() ?? '',
+      toWarehouseName: to?['name']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      notes: json['notes']?.toString(),
+      creatorName: creator?['name']?.toString(),
+      createdAt: json['created_at']?.toString() ?? '',
     );
   }
 }
@@ -575,8 +571,8 @@ class StockTransfersReportData {
     final list = transJson['data'] as List? ?? [];
 
     return StockTransfersReportData(
-      totalTransfers: (summaryJson['total_transfers'] ?? 0) as int,
-      completedTransfers: (summaryJson['completed_transfers'] ?? 0) as int,
+      totalTransfers: Formatters.parseInt(summaryJson['total_transfers']),
+      completedTransfers: Formatters.parseInt(summaryJson['completed_transfers']),
       transfers: list
           .map(
             (e) => StockTransferReportItem.fromJson(e as Map<String, dynamic>),
@@ -585,3 +581,4 @@ class StockTransfersReportData {
     );
   }
 }
+

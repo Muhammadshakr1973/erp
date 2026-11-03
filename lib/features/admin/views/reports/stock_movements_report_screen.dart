@@ -337,7 +337,7 @@ class _StockMovementsReportScreenState
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '+${data.totalQuantityIn}',
+                                '+${Formatters.cleanNumberString(data.totalQuantityIn)}',
                                 style: AppTextStyles.h3.copyWith(
                                   color: AppColors.success,
                                   fontWeight: FontWeight.bold,
@@ -359,7 +359,7 @@ class _StockMovementsReportScreenState
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '-${data.totalQuantityOut}',
+                                '-${Formatters.cleanNumberString(data.totalQuantityOut)}',
                                 style: AppTextStyles.h3.copyWith(
                                   color: AppColors.danger,
                                   fontWeight: FontWeight.bold,
@@ -433,14 +433,14 @@ class _StockMovementsReportScreenState
                 DataCell(Text(t.type)),
                 DataCell(
                   Text(
-                    '${isPositive ? '+' : ''}${t.quantityChange} ${t.unit}',
+                    '${isPositive ? '+' : ''}${Formatters.cleanNumberString(t.quantityChange)} ${t.unit}',
                     style: TextStyle(
                       color: isPositive ? AppColors.success : AppColors.danger,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                DataCell(Text('${t.quantityAfter} ${t.unit}')),
+                DataCell(Text('${Formatters.cleanNumberString(t.quantityAfter)} ${t.unit}')),
                 DataCell(Text(t.notes ?? '-')),
               ],
             );

@@ -876,8 +876,8 @@ class ReportService
         ')->first();
 
         $totalTransactions = (int) ($summaryData->total_transactions ?? 0);
-        $totalInQty = (int) ($summaryData->total_in_qty ?? 0);
-        $totalOutQty = (int) ($summaryData->total_out_qty ?? 0);
+        $totalInQty = (float) ($summaryData->total_in_qty ?? 0);
+        $totalOutQty = (float) ($summaryData->total_out_qty ?? 0);
 
         $perPage = (int) ($filters['per_page'] ?? 30);
         $page = (int) ($filters['page'] ?? 1);
