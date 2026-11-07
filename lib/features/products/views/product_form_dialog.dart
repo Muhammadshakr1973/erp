@@ -302,6 +302,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
           content: TextField(
             autofocus: true,
+            contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
             decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
             onChanged: (val) => newCategoryName = val,
           ),
@@ -360,6 +361,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
           content: TextField(
             autofocus: true,
+            contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
             decoration: const InputDecoration(hintText: 'ناوی کۆمپانیا'),
             onChanged: (val) => newSupplierName = val,
           ),

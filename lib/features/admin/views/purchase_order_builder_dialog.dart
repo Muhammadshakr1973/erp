@@ -355,6 +355,7 @@ class _PurchaseOrderBuilderDialogState
               const SizedBox(height: AppSpacing.xs),
               TextFormField(
                 controller: _productSearchController,
+                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
                 decoration: InputDecoration(
                   labelText: 'گەڕان بۆ کاڵا',
                   prefixIcon: const Icon(Icons.search),
@@ -419,6 +420,7 @@ class _PurchaseOrderBuilderDialogState
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _notesController,
+                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
                 decoration: const InputDecoration(
                   labelText: 'تێبینی (ئارەزوومەندانە)',
                   border: OutlineInputBorder(),

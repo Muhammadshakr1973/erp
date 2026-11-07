@@ -51,6 +51,7 @@ class _SalesReturnsListScreenState
               ),
               child: TextField(
                 controller: _searchController,
+                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
                 decoration: InputDecoration(
                   hintText: 'گەڕان بەپێی ژمارەی گەڕاندنەوە، کڕیار، یان پسوڵە...',
                   prefixIcon: const Icon(Icons.search),

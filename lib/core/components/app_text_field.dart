@@ -30,6 +30,7 @@ class AppTextField extends ConsumerStatefulWidget {
   final TextAlign? textAlign;
   final TextStyle? style;
   final VoidCallback? onLongPress;
+  final EditableTextContextMenuBuilder? contextMenuBuilder;
 
   const AppTextField({
     super.key,
@@ -54,6 +55,7 @@ class AppTextField extends ConsumerStatefulWidget {
     this.textAlign,
     this.style,
     this.onLongPress,
+    this.contextMenuBuilder,
   });
 
   @override
@@ -199,6 +201,8 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         child: TextFormField(
         controller: _effectiveController,
         focusNode: _effectiveFocusNode,
+        contextMenuBuilder: widget.contextMenuBuilder ??
+            (context, editableTextState) => const SizedBox.shrink(),
         keyboardType: effectiveKeyboardType,
         obscureText: widget.obscureText,
         readOnly: isReadOnly,
