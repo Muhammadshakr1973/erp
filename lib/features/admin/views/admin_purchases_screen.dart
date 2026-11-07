@@ -3231,7 +3231,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       const Icon(
                                         Icons.receipt_long_outlined,
@@ -3258,91 +3258,94 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         ),
                                       ),
                                       const SizedBox(width: AppSpacing.xs),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const StatusBadge(
-                                            label: 'چاوەڕوانی تەئکید',
-                                            type: StatusBadgeType.warning,
-                                          ),
-                                          if (supplier != null && supplierDebt > 0) ...[
-                                            const SizedBox(height: 4),
-                                            Material(
-                                              color: Colors.transparent,
-                                              child: InkWell(
-                                                onTap: () {
-                                                  showDialog(
-                                                    context: context,
-                                                    barrierDismissible: false,
-                                                    builder: (dialogCtx) => SupplierFormDialog(
-                                                      supplier: supplier,
-                                                      initialTabIndex: 1,
-                                                    ),
-                                                  );
-                                                },
-                                                borderRadius: BorderRadius.circular(12),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.danger,
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: AppColors.danger.withValues(alpha: 0.3),
-                                                        blurRadius: 4,
-                                                        offset: const Offset(0, 1),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.payments_outlined,
-                                                        color: Colors.white,
-                                                        size: 13,
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        'قەرز: ${_formatCurrency(supplierDebt)}',
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 11,
-                                                          fontWeight: FontWeight.bold,
-                                                          fontFamily: 'KJino',
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
+                                      const StatusBadge(
+                                        label: 'چاوەڕوانی تەئکید',
+                                        type: StatusBadgeType.warning,
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
-                                  Wrap(
-                                    spacing: AppSpacing.md,
-                                    runSpacing: AppSpacing.xs,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        'کۆی پسوڵە: ${_formatCurrency(order.totalAmount)}',
-                                        style: AppTextStyles.bodyBold.copyWith(
-                                          color: theme.colorScheme.primary,
+                                      Expanded(
+                                        child: Wrap(
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          spacing: AppSpacing.md,
+                                          runSpacing: AppSpacing.xs,
+                                          children: [
+                                            Text(
+                                              'کۆی پسوڵە: ${_formatCurrency(order.totalAmount)}',
+                                              style: AppTextStyles.bodyBold.copyWith(
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                            ),
+                                            if (order.paidAmount > 0)
+                                              Text(
+                                                'پارەی دراو: '
+                                                '${_formatCurrency(order.paidAmount)}',
+                                                style: AppTextStyles.bodyBold,
+                                              ),
+                                          ],
                                         ),
                                       ),
-                                      if (order.paidAmount > 0)
-                                        Text(
-                                          'پارەی دراو: '
-                                          '${_formatCurrency(order.paidAmount)}',
-                                          style: AppTextStyles.bodyBold,
+                                      if (supplier != null && supplierDebt > 0) ...[
+                                        const SizedBox(width: AppSpacing.xs),
+                                        Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: () {
+                                              showDialog(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder: (dialogCtx) => SupplierFormDialog(
+                                                  supplier: supplier,
+                                                  initialTabIndex: 1,
+                                                ),
+                                              );
+                                            },
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 3,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.danger,
+                                                borderRadius: BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppColors.danger.withValues(alpha: 0.3),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.payments_outlined,
+                                                    color: Colors.white,
+                                                    size: 13,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'قەرز: ${_formatCurrency(supplierDebt)}',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontFamily: 'KJino',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                         ),
+                                      ],
                                     ],
                                   ),
                                 ],
