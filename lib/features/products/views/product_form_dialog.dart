@@ -528,23 +528,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             textDirection: TextDirection.rtl,
                             child: Row(
                               children: [
-                                // Right input (first child in RTL: Barcode)
+                                // Right input (first child in RTL: Barcode col-8)
                                 Expanded(
+                                  flex: 8,
                                   child: AppTextField(
                                     controller: _barcodeController,
                                     labelText: 'بارکۆد',
                                     hintText: 'بارکۆد',
-                                    onLongPress: () {
-                                      CameraBarcodeScanner.show(
-                                        context,
-                                        (scanned) {
-                                          setState(() {
-                                            _barcodeController.text = scanned;
-                                          });
-                                        },
-                                        closeOnScan: true,
-                                      );
-                                    },
                                     borderRadius: const BorderRadius.only(
                                       topRight: Radius.circular(24),
                                       bottomRight: Radius.circular(24),
@@ -553,9 +543,29 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     ),
                                     suffixIcon: Row(
                                       mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 22),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                          icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 19),
+                                          tooltip: 'سکانکردنی بارکۆد بە کامێرا',
+                                          onPressed: () {
+                                            CameraBarcodeScanner.show(
+                                              context,
+                                              (scanned) {
+                                                setState(() {
+                                                  _barcodeController.text = scanned;
+                                                });
+                                              },
+                                              closeOnScan: true,
+                                            );
+                                          },
+                                        ),
+                                        IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                          icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 20),
                                           tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
                                           onPressed: () {
                                             setState(() {
@@ -564,7 +574,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                           },
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                          icon: const Icon(Icons.print_outlined, color: AppColors.primary, size: 19),
                                           tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
                                           onPressed: () {
                                             showDialog(
@@ -577,12 +589,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             );
                                           },
                                         ),
+                                        const SizedBox(width: 4),
                                       ],
                                     ),
                                   ),
                                 ),
-                                // Left input (second child in RTL: SKU)
+                                // Left input (second child in RTL: SKU col-4)
                                 Expanded(
+                                  flex: 4,
                                   child: AppTextField(
                                     controller: _skuController,
                                     labelText: 'SKU',
@@ -613,27 +627,36 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
-                                flex: 1,
+                                flex: 8,
                                 child: AppTextField(
                                   controller: _barcodeController,
                                   labelText: 'بارکۆد',
                                   hintText: 'بارکۆد',
-                                  onLongPress: () {
-                                    CameraBarcodeScanner.show(
-                                      context,
-                                      (scanned) {
-                                        setState(() {
-                                          _barcodeController.text = scanned;
-                                        });
-                                      },
-                                      closeOnScan: true,
-                                    );
-                                  },
                                   suffixIcon: Row(
                                     mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 22),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 19),
+                                        tooltip: 'سکانکردنی بارکۆد بە کامێرا',
+                                        onPressed: () {
+                                          CameraBarcodeScanner.show(
+                                            context,
+                                            (scanned) {
+                                              setState(() {
+                                                _barcodeController.text = scanned;
+                                              });
+                                            },
+                                            closeOnScan: true,
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 20),
                                         tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
                                         onPressed: () {
                                           setState(() {
@@ -642,7 +665,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                         },
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.print, color: AppColors.primary, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        icon: const Icon(Icons.print_outlined, color: AppColors.primary, size: 19),
                                         tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
                                         onPressed: () {
                                           showDialog(
@@ -655,13 +680,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                           );
                                         },
                                       ),
+                                      const SizedBox(width: 4),
                                     ],
                                   ),
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
-                                flex: 1,
+                                flex: 4,
                                 child: AppTextField(
                                   controller: _skuController,
                                   labelText: 'SKU',
