@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -29,6 +30,10 @@ bool _shouldIgnoreWebTextInputError(Object error, StackTrace? stack) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kIsWeb) {
+    await BrowserContextMenu.enableContextMenu();
+  }
 
   // Handle known Flutter web text input issues without hiding unrelated app errors.
   FlutterError.onError = (FlutterErrorDetails details) {
