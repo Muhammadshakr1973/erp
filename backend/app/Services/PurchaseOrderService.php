@@ -41,7 +41,8 @@ class PurchaseOrderService
             $orderNumber = 'PO-' . strtoupper(Str::random(8));
             $totalAmount = 0;
             $autoReceive = isset($data['auto_receive']) ? (bool) $data['auto_receive'] : true;
-            $paidAmount = isset($data['paid_amount']) ? max(0, (float) $data['paid_amount']) : 0;
+            $hasExplicitPaid = array_key_exists('paid_amount', $data);
+            $paidAmount = $hasExplicitPaid ? max(0, (float) $data['paid_amount']) : 0;
 
             $initialStatus = $autoReceive ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_DRAFT;
 
@@ -108,7 +109,8 @@ class PurchaseOrderService
             // ئەپدەیتکردنی کۆی گشتی و بڕی دراو
             $updatePayload = ['total_amount' => $totalAmount];
             if (Schema::hasColumn('purchase_orders', 'paid_amount')) {
-                $updatePayload['paid_amount'] = min($paidAmount, $totalAmount);
+                $finalPaid = $hasExplicitPaid ? min($paidAmount, $totalAmount) : $totalAmount;
+                $updatePayload['paid_amount'] = $finalPaid;
             }
             $order->update($updatePayload);
 
@@ -558,10 +560,15 @@ class PurchaseOrderService
                 throw ValidationException::withMessages(['status' => 'تەنها دەتوانرێت پسوڵەی ڕەشنووس دەستکاری بکرێت.']);
             }
 
+            $previousTotal = (float) $lockedOrder->total_amount;
+            $previousPaid = (float) $lockedOrder->paid_amount;
+            $wasFullyPaid = ($previousPaid == $previousTotal || $previousPaid == 0);
+
             $supplierId = array_key_exists('supplier_id', $data) ? $data['supplier_id'] : $lockedOrder->supplier_id;
             $warehouseId = array_key_exists('warehouse_id', $data) ? (int)$data['warehouse_id'] : $lockedOrder->warehouse_id;
             $notes = array_key_exists('notes', $data) ? $data['notes'] : $lockedOrder->notes;
-            $paidAmount = array_key_exists('paid_amount', $data) ? max(0, (float)$data['paid_amount']) : (float)$lockedOrder->paid_amount;
+            $hasExplicitPaid = array_key_exists('paid_amount', $data);
+            $paidAmount = $hasExplicitPaid ? max(0, (float)$data['paid_amount']) : (float)$lockedOrder->paid_amount;
             $autoReceive = !empty($data['auto_receive']);
 
             $totalAmount = 0;
@@ -616,6 +623,9 @@ class PurchaseOrderService
             $lockedOrder->warehouse_id = $warehouseId;
             $lockedOrder->notes = $notes;
             if (Schema::hasColumn('purchase_orders', 'paid_amount')) {
+                if (!$hasExplicitPaid && $wasFullyPaid) {
+                    $paidAmount = $totalAmount;
+                }
                 $lockedOrder->paid_amount = min($paidAmount, $totalAmount);
             }
 

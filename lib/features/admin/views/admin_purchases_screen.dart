@@ -1619,6 +1619,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               : (warehouses.isNotEmpty ? (warehouses.first as dynamic).id : 1));
 
       if (isCreateNew) {
+        final itemCost = item.totalStockUnits * item.effectiveUnitCostForServer;
         final newOrder = await ref.read(purchaseActionsProvider).createPurchaseOrder(
           supplierId: item.product.supplierId ?? _selectedSupplierId,
           warehouseId: defaultWhId,
@@ -1629,8 +1630,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               'unit_cost': item.effectiveUnitCostForServer,
             }
           ],
+          paidAmount: itemCost,
           autoReceive: false,
         );
+        _purchaseOrderOverrides[newOrder.id] = newOrder;
         _refreshPurchaseOrders();
         if (mounted) {
           AppSnackbar.show(
@@ -1658,10 +1661,24 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
           });
         }
 
-        await ref.read(purchaseActionsProvider).updatePurchaseOrder(
+        double newTargetTotal = 0.0;
+        for (final it in updatedItems) {
+          final q = (it['quantity'] as num).toDouble();
+          final c = (it['unit_cost'] as num).toDouble();
+          newTargetTotal += q * c;
+        }
+
+        final bool wasFullyPaid = (targetDraft.paidAmount == targetDraft.totalAmount || targetDraft.paidAmount == 0);
+        final num targetPaidAmount = wasFullyPaid
+            ? newTargetTotal
+            : (targetDraft.paidAmount + (item.totalStockUnits * item.effectiveUnitCostForServer));
+
+        final updatedOrder = await ref.read(purchaseActionsProvider).updatePurchaseOrder(
           orderId: targetDraft.id,
           items: updatedItems,
+          paidAmount: targetPaidAmount,
         );
+        _purchaseOrderOverrides[updatedOrder.id] = updatedOrder;
 
         _refreshPurchaseOrders();
         if (mounted) {
