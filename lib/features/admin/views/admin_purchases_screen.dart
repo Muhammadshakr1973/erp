@@ -3126,15 +3126,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 return p.totalStock <= 0;
               }).toList();
 
-              return Column(
-                children: [
-                  if (lowStockNotInDrafts.isNotEmpty)
-                    _buildDraftViewLowStockBanner(
-                      lowStockProducts: lowStockNotInDrafts,
-                      existingDrafts: drafts,
-                      warehouses: warehouses,
-                    ),
-                  if (drafts.isEmpty)
+              if (drafts.isEmpty) {
+                return Column(
+                  children: [
+                    if (lowStockNotInDrafts.isNotEmpty)
+                      _buildDraftViewLowStockBanner(
+                        lowStockProducts: lowStockNotInDrafts,
+                        existingDrafts: drafts,
+                        warehouses: warehouses,
+                      ),
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async => _refreshPurchaseOrders(),
@@ -3183,8 +3183,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           ],
                         ),
                       ),
-                    )
-                  else
+                    ),
+                  ],
+                );
+              }
 
               final totalDraftsCount = drafts.length;
               final totalDraftsAmount = drafts.fold<num>(
@@ -3912,7 +3914,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     List<dynamic> warehouses,
   ) async {
     try {
-      final warehouseId = _resolveWarehouseId(warehouses);
+      final warehouseId = _resolveWarehouseId(List<WarehouseModel>.from(warehouses.whereType<WarehouseModel>()));
       final supplierIds = products.map((p) => p.supplierId).where((id) => id != null && id > 0).toSet();
       final supplierId = supplierIds.length == 1 ? supplierIds.first : null;
 
