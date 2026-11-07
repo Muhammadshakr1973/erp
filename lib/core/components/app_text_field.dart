@@ -203,7 +203,13 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         controller: _effectiveController,
         focusNode: _effectiveFocusNode,
         contextMenuBuilder: widget.contextMenuBuilder ??
-            (context, editableTextState) => const SizedBox.shrink(),
+            (context, editableTextState) {
+              if (kIsWeb) return const SizedBox.shrink();
+              return AdaptiveTextSelectionToolbar.buttonItems(
+                anchors: editableTextState.contextMenuAnchors,
+                buttonItems: editableTextState.contextMenuButtonItems,
+              );
+            },
         keyboardType: effectiveKeyboardType,
         obscureText: widget.obscureText,
         readOnly: isReadOnly,
