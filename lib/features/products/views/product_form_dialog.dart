@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -302,7 +303,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
           content: TextField(
             autofocus: true,
-            contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+            contextMenuBuilder: (context, editableTextState) {
+              if (kIsWeb) return const SizedBox.shrink();
+              return AdaptiveTextSelectionToolbar.buttonItems(
+                anchors: editableTextState.contextMenuAnchors,
+                buttonItems: editableTextState.contextMenuButtonItems,
+              );
+            },
             decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
             onChanged: (val) => newCategoryName = val,
           ),
@@ -361,7 +368,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
           content: TextField(
             autofocus: true,
-            contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+            contextMenuBuilder: (context, editableTextState) {
+              if (kIsWeb) return const SizedBox.shrink();
+              return AdaptiveTextSelectionToolbar.buttonItems(
+                anchors: editableTextState.contextMenuAnchors,
+                buttonItems: editableTextState.contextMenuButtonItems,
+              );
+            },
             decoration: const InputDecoration(hintText: 'ناوی کۆمپانیا'),
             onChanged: (val) => newSupplierName = val,
           ),

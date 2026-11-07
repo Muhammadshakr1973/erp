@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -51,7 +52,13 @@ class _SalesReturnsListScreenState
               ),
               child: TextField(
                 controller: _searchController,
-                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                contextMenuBuilder: (context, editableTextState) {
+                  if (kIsWeb) return const SizedBox.shrink();
+                  return AdaptiveTextSelectionToolbar.buttonItems(
+                    anchors: editableTextState.contextMenuAnchors,
+                    buttonItems: editableTextState.contextMenuButtonItems,
+                  );
+                },
                 decoration: InputDecoration(
                   hintText: 'گەڕان بەپێی ژمارەی گەڕاندنەوە، کڕیار، یان پسوڵە...',
                   prefixIcon: const Icon(Icons.search),

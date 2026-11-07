@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -355,7 +356,13 @@ class _PurchaseOrderBuilderDialogState
               const SizedBox(height: AppSpacing.xs),
               TextFormField(
                 controller: _productSearchController,
-                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                contextMenuBuilder: (context, editableTextState) {
+                  if (kIsWeb) return const SizedBox.shrink();
+                  return AdaptiveTextSelectionToolbar.buttonItems(
+                    anchors: editableTextState.contextMenuAnchors,
+                    buttonItems: editableTextState.contextMenuButtonItems,
+                  );
+                },
                 decoration: InputDecoration(
                   labelText: 'گەڕان بۆ کاڵا',
                   prefixIcon: const Icon(Icons.search),
@@ -420,7 +427,13 @@ class _PurchaseOrderBuilderDialogState
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _notesController,
-                contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                contextMenuBuilder: (context, editableTextState) {
+                  if (kIsWeb) return const SizedBox.shrink();
+                  return AdaptiveTextSelectionToolbar.buttonItems(
+                    anchors: editableTextState.contextMenuAnchors,
+                    buttonItems: editableTextState.contextMenuButtonItems,
+                  );
+                },
                 decoration: const InputDecoration(
                   labelText: 'تێبینی (ئارەزوومەندانە)',
                   border: OutlineInputBorder(),
