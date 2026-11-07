@@ -3231,7 +3231,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Icon(
                                         Icons.receipt_long_outlined,
@@ -3258,10 +3258,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                         ),
                                       ),
                                       const SizedBox(width: AppSpacing.xs),
-                                      Row(
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          const StatusBadge(
+                                            label: 'چاوەڕوانی تەئکید',
+                                            type: StatusBadgeType.warning,
+                                          ),
                                           if (supplier != null && supplierDebt > 0) ...[
+                                            const SizedBox(height: 4),
                                             Material(
                                               color: Colors.transparent,
                                               child: InkWell(
@@ -3315,12 +3321,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(width: 6),
                                           ],
-                                          const StatusBadge(
-                                            label: 'چاوەڕوانی تەئکید',
-                                            type: StatusBadgeType.warning,
-                                          ),
                                         ],
                                       ),
                                     ],
