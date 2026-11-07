@@ -3231,32 +3231,37 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       const Icon(
                                         Icons.receipt_long_outlined,
                                         color: AppColors.primary,
                                       ),
-                                      const SizedBox(width: AppSpacing.sm),
+                                      const SizedBox(width: AppSpacing.xs),
                                       Expanded(
-                                        child: Text(
-                                          order.supplierName.isNotEmpty
-                                              ? order.supplierName
-                                              : 'بێ دابینکەر',
-                                          style: AppTextStyles.bodyBold,
-                                          overflow: TextOverflow.ellipsis,
+                                        child: Wrap(
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          spacing: 6,
+                                          children: [
+                                            Text(
+                                              order.supplierName.isNotEmpty
+                                                  ? order.supplierName
+                                                  : 'بێ دابینکەر',
+                                              style: AppTextStyles.bodyBold,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              '• ${order.itemsCount} کاڵا',
+                                              style: AppTextStyles.caption,
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const StatusBadge(
-                                            label: 'چاوەڕوانی تەئکید',
-                                            type: StatusBadgeType.warning,
-                                          ),
                                           if (supplier != null && supplierDebt > 0) ...[
-                                            const SizedBox(height: 4),
                                             Material(
                                               color: Colors.transparent,
                                               child: InkWell(
@@ -3310,16 +3315,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                 ),
                                               ),
                                             ),
+                                            const SizedBox(width: 6),
                                           ],
+                                          const StatusBadge(
+                                            label: 'چاوەڕوانی تەئکید',
+                                            type: StatusBadgeType.warning,
+                                          ),
                                         ],
                                       ),
                                     ],
-                                  ),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    'پسوڵە #${order.orderNumber} • '
-                                    '${order.itemsCount} کاڵا',
-                                    style: AppTextStyles.caption,
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
                                   Wrap(
@@ -3879,7 +3883,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                             style: AppTextStyles.bodyBold,
                                           ),
                                           Text(
-                                            'پسوڵە #${draft.orderNumber} • ${draft.itemsCount} کاڵا',
+                                            '${draft.itemsCount} کاڵا',
                                             style: AppTextStyles.caption,
                                           ),
                                         ],
