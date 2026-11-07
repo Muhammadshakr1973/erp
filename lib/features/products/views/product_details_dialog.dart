@@ -60,8 +60,8 @@ class ProductDetailsDialog extends ConsumerWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
 
-    final int totalStock = product.totalStock;
-    final int minStockLevel = product.minStockLevel;
+    final double totalStock = product.totalStock;
+    final double minStockLevel = product.minStockLevel;
     final bool isLowStock = product.isLowStock;
 
     return Dialog(

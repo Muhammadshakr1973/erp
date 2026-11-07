@@ -223,19 +223,19 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   }
 
   /// Calculates total available stock of product for current active order
-  int _getProductAvailableStock(ProductModel product) {
+  double _getProductAvailableStock(ProductModel product) {
     final targetWarehouseId = _getTargetWarehouseId();
-    final int warehouseStock = product.getStockForWarehouse(targetWarehouseId);
+    final double warehouseStock = product.getStockForWarehouse(targetWarehouseId);
 
     // If active order was already saved with some quantity of this product on the server,
     // that quantity was deducted on the server, so it is part of this order's available pool:
-    int savedInThisOrder = 0;
+    double savedInThisOrder = 0.0;
     if (_selectedOrder != null) {
       final savedItem = _selectedOrder!.items
           .where((it) => it.productId == product.id)
           .firstOrNull;
       if (savedItem != null) {
-        savedInThisOrder = savedItem.quantity.toInt();
+        savedInThisOrder = savedItem.quantity;
       }
     }
 
@@ -243,11 +243,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   }
 
   /// Calculates remaining stock after deducting currently selected quantity in this order
-  int _getProductRemainingStock(ProductModel product) {
+  double _getProductRemainingStock(ProductModel product) {
     final totalAvailable = _getProductAvailableStock(product);
     final currentQty = _orderCart[product.id] ?? 0;
     final remaining = totalAvailable - currentQty;
-    return remaining < 0 ? 0 : remaining;
+    return remaining < 0 ? 0.0 : remaining;
   }
 
   /// Increment product quantity in active order

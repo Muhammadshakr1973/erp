@@ -536,7 +536,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     [],
                     allProducts,
                   ),
-                  error: (_, __) => _buildCategoryDropdown(
+                  error: (_, _) => _buildCategoryDropdown(
                     context,
                     theme,
                     selectedCategory,
@@ -648,8 +648,8 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      final int totalStock = product.totalStock;
-                      final int minStock = product.minStockLevel;
+                      final double totalStock = product.totalStock;
+                      final double minStock = product.minStockLevel;
                       final bool isLowStock = product.isLowStock;
 
                       return AppCard(

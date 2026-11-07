@@ -34,7 +34,7 @@ class _CreateVanTransferDialogState
   late int _selectedFromWarehouseId;
   int? _selectedToWarehouseId;
   late final TextEditingController _notesController;
-  final Map<int, int> _items = {}; // productId -> quantity
+  final Map<int, num> _items = {}; // productId -> quantity
   bool _isSubmitting = false;
 
   final TextEditingController _productSearchController =
@@ -59,7 +59,7 @@ class _CreateVanTransferDialogState
       fromWarehouseId: _selectedFromWarehouseId,
       toWarehouseId: _selectedToWarehouseId,
       notes: _notesController.text,
-      items: Map<int, int>.from(_items),
+      items: Map<int, num>.from(_items),
     );
   }
 
@@ -303,11 +303,11 @@ class _CreateVanTransferDialogState
 
   Future<void> _promptForQuantity(
     ProductModel product,
-    int available, {
+    double available, {
     VoidCallback? onQuantityChanged,
   }) async {
     final isAlreadyInCart = _items.containsKey(product.id);
-    int currentQty = _items[product.id] ?? 1;
+    num currentQty = _items[product.id] ?? 1;
     Timer? repeatTimer;
 
     void stopTimer() {
