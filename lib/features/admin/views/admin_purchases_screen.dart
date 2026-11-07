@@ -3070,6 +3070,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     required List<dynamic> warehouses,
   }) {
     final theme = Theme.of(context);
+    final suppliers = ref.watch(suppliersListProvider).asData?.value ?? [];
 
     return Column(
       children: [
@@ -3179,6 +3180,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
                           final order = drafts[index];
+                          final supplier = order.supplierId > 0
+                              ? suppliers.where((s) => s.id == order.supplierId).firstOrNull
+                              : null;
+                          final int supplierDebt = supplier?.debt ?? 0;
+
                           return AppCard(
                             onTap: () =>
                                 _switchDraftOrder(order.id, drafts, allProducts),
@@ -3191,6 +3197,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Icon(
                                         Icons.receipt_long_outlined,
@@ -3206,9 +3213,71 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      const StatusBadge(
-                                        label: 'چاوەڕوانی تەئکید',
-                                        type: StatusBadgeType.warning,
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const StatusBadge(
+                                            label: 'چاوەڕوانی تەئکید',
+                                            type: StatusBadgeType.warning,
+                                          ),
+                                          if (supplier != null && supplierDebt > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    barrierDismissible: false,
+                                                    builder: (dialogCtx) => SupplierFormDialog(
+                                                      supplier: supplier,
+                                                      initialTabIndex: 1,
+                                                    ),
+                                                  );
+                                                },
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.danger,
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: AppColors.danger.withValues(alpha: 0.3),
+                                                        blurRadius: 4,
+                                                        offset: const Offset(0, 1),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.payments_outlined,
+                                                        color: Colors.white,
+                                                        size: 13,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'قەرز: ${_formatCurrency(supplierDebt)}',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          fontFamily: 'KJino',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ],
                                   ),

@@ -18,8 +18,13 @@ import 'providers/reports_provider.dart';
 
 class SupplierFormDialog extends ConsumerStatefulWidget {
   final SupplierModel? supplier;
+  final int initialTabIndex;
 
-  const SupplierFormDialog({super.key, this.supplier});
+  const SupplierFormDialog({
+    super.key,
+    this.supplier,
+    this.initialTabIndex = 0,
+  });
 
   @override
   ConsumerState<SupplierFormDialog> createState() => _SupplierFormDialogState();
@@ -196,6 +201,7 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
         ? _buildProfileForm(context)
         : DefaultTabController(
             length: 3,
+            initialIndex: widget.initialTabIndex,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
