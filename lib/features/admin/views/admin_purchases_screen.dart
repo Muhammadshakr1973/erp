@@ -190,6 +190,11 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   final Set<int> _checkedProductIds = {};
   String _lowStockFilter = 'all'; // 'all', 'checked', 'unchecked'
   bool _isLowStockExpanded = false;
+
+  bool _isDraftViewLowStockExpanded = false;
+  String _draftViewLowStockFilter = 'all';
+  final Set<int> _draftViewCheckedProductIds = {};
+
   bool _isSubmittingPO = false;
   bool _userModifiedPaidAmount = false;
 
@@ -3103,56 +3108,83 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               final drafts = visibleOrders
                   .where((order) => order.status.toUpperCase() == 'DRAFT')
                   .toList();
-              if (drafts.isEmpty) {
-                return RefreshIndicator(
-                  onRefresh: () async =>
-                      _refreshPurchaseOrders(),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.55,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 64,
-                                color: theme.colorScheme.outline,
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              const Text('هیچ پسوڵەیەکی چاوەڕوانی تەئکید نییە'),
-                              const SizedBox(height: AppSpacing.xs),
-                              const Text(
-                                'پسوڵەی نوێ زیاد بکە و دابینکەر لە ناو پسوڵەکە دیاری بکە',
-                                style: AppTextStyles.caption,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                      ? AppColors.primaryDark
-                                      : AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+
+              final draftOrderProductIds = <int>{};
+              for (final draft in drafts) {
+                for (final item in draft.items) {
+                  draftOrderProductIds.add(item.productId);
+                }
+              }
+
+              final lowStockNotInDrafts = allProducts.where((p) {
+                if (draftOrderProductIds.contains(p.id)) {
+                  return false;
+                }
+                if (p.minStockLevel > 0) {
+                  return p.totalStock <= p.minStockLevel;
+                }
+                return p.totalStock <= 0;
+              }).toList();
+
+              return Column(
+                children: [
+                  if (lowStockNotInDrafts.isNotEmpty)
+                    _buildDraftViewLowStockBanner(
+                      lowStockProducts: lowStockNotInDrafts,
+                      existingDrafts: drafts,
+                      warehouses: warehouses,
+                    ),
+                  if (drafts.isEmpty)
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () async => _refreshPurchaseOrders(),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.45,
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.receipt_long_outlined,
+                                      size: 64,
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    const Text('هیچ پسوڵەیەکی چاوەڕوانی تەئکید نییە'),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    const Text(
+                                      'پسوڵەی نوێ زیاد بکە و دابینکەر لە ناو پسوڵەکە دیاری بکە',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                            ? AppColors.primaryDark
+                                            : AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      ),
+                                      onPressed: () => _createNewDraftInvoice(warehouses, supplierId: null),
+                                      icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                                      label: const Text(
+                                        'دروستکردنی پسوڵەی نوێ',
+                                        style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                onPressed: () => _createNewDraftInvoice(warehouses, supplierId: null),
-                                icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                                label: const Text(
-                                  'دروستکردنی پسوڵەی نوێ',
-                                  style: TextStyle(fontFamily: 'KJino', fontWeight: FontWeight.bold),
-                                ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                );
-              }
+                    )
+                  else
 
               final totalDraftsCount = drafts.length;
               final totalDraftsAmount = drafts.fold<num>(
@@ -3453,6 +3485,549 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildDraftViewLowStockBanner({
+    required List<ProductModel> lowStockProducts,
+    required List<PurchaseOrderModel> existingDrafts,
+    required List<dynamic> warehouses,
+  }) {
+    final theme = Theme.of(context);
+    final activeCheckedCount = lowStockProducts
+        .where((p) => _draftViewCheckedProductIds.contains(p.id))
+        .length;
+
+    List<ProductModel> filteredLowStock;
+    if (_draftViewLowStockFilter == 'checked') {
+      filteredLowStock = lowStockProducts
+          .where((p) => _draftViewCheckedProductIds.contains(p.id))
+          .toList();
+    } else if (_draftViewLowStockFilter == 'unchecked') {
+      filteredLowStock = lowStockProducts
+          .where((p) => !_draftViewCheckedProductIds.contains(p.id))
+          .toList();
+    } else {
+      filteredLowStock = lowStockProducts;
+    }
+
+    final checkedProducts = lowStockProducts
+        .where((p) => _draftViewCheckedProductIds.contains(p.id))
+        .toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight;
+        final lowStockMaxHeight = max(65.0, min(140.0, availableHeight * 0.25));
+
+        return Container(
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 4,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.warning.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () {
+                  _updatePurchaseViewState(() {
+                    _isDraftViewLowStockExpanded = !_isDraftViewLowStockExpanded;
+                  });
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.warning,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'تێبینی: ${lowStockProducts.length} کاڵا گەیشتوونەتە کەمترین بڕی ستۆک و پێویستن بۆ کڕین',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _isDraftViewLowStockExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_isDraftViewLowStockExpanded) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 4,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ChoiceChip(
+                          label: Text(
+                            'هەموو (${lowStockProducts.length})',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          selected: _draftViewLowStockFilter == 'all',
+                          onSelected: (_) => _updatePurchaseViewState(
+                            () => _draftViewLowStockFilter = 'all',
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        ChoiceChip(
+                          label: Text(
+                            'چێککراو ($activeCheckedCount)',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          selected: _draftViewLowStockFilter == 'checked',
+                          onSelected: (_) => _updatePurchaseViewState(
+                            () => _draftViewLowStockFilter = 'checked',
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        ChoiceChip(
+                          label: Text(
+                            'چێکنەکراو (${lowStockProducts.length - activeCheckedCount})',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          selected: _draftViewLowStockFilter == 'unchecked',
+                          onSelected: (_) => _updatePurchaseViewState(
+                            () => _draftViewLowStockFilter = 'unchecked',
+                          ),
+                        ),
+                        if (activeCheckedCount > 0) ...[
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                            ),
+                            icon: const Icon(Icons.playlist_add_check_rounded, size: 16),
+                            label: Text(
+                              'خستنە نێو پسوڵەی کڕین ($activeCheckedCount)',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            onPressed: () => _showMoveProductsToPODialog(
+                              context: context,
+                              selectedProducts: checkedProducts,
+                              existingDrafts: existingDrafts,
+                              warehouses: warehouses,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: lowStockMaxHeight),
+                  child: filteredLowStock.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Center(
+                            child: Text(
+                              'هیچ کاڵایەک لەم فلتەرەدا نییە',
+                              style: AppTextStyles.caption,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: 2,
+                          ),
+                          itemCount: filteredLowStock.length,
+                          separatorBuilder: (context, index) =>
+                              const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final prod = filteredLowStock[index];
+                            final isChecked =
+                                _draftViewCheckedProductIds.contains(prod.id);
+                            final unitStr = prod.unit?.trim().isNotEmpty == true
+                                ? prod.unit!
+                                : 'دانە';
+
+                            return Row(
+                              children: [
+                                Checkbox(
+                                  value: isChecked,
+                                  visualDensity: VisualDensity.compact,
+                                  onChanged: (val) {
+                                    _updatePurchaseViewState(() {
+                                      if (val == true) {
+                                        _draftViewCheckedProductIds.add(prod.id);
+                                      } else {
+                                        _draftViewCheckedProductIds.remove(prod.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        prod.name,
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        'مابوو: ${prod.totalStock} $unitStr • کەمترین: ${prod.minStockLevel}',
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontSize: 10,
+                                          color: AppColors.danger,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.playlist_add_rounded,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                  tooltip: 'خستنە نێو پسوڵەی کڕین',
+                                  onPressed: () => _showMoveProductsToPODialog(
+                                    context: context,
+                                    selectedProducts: [prod],
+                                    existingDrafts: existingDrafts,
+                                    warehouses: warehouses,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showMoveProductsToPODialog({
+    required BuildContext context,
+    required List<ProductModel> selectedProducts,
+    required List<PurchaseOrderModel> existingDrafts,
+    required List<dynamic> warehouses,
+  }) async {
+    if (selectedProducts.isEmpty) return;
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 580),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'داخستن',
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'خستنە نێو پسوڵەی کڕین',
+                        style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'دیاری بکە بەمەبەستی گوستنەوە یان زیادکردنی ${selectedProducts.length} کاڵا بۆ پسوڵەیەک:',
+                  style: AppTextStyles.caption.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.right,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      InkWell(
+                        onTap: () async {
+                          Navigator.of(dialogCtx).pop();
+                          await _createPOFromLowStockProducts(selectedProducts, warehouses);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: (isDark ? AppColors.primaryDark : AppColors.primary).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: (isDark ? AppColors.primaryDark : AppColors.primary).withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.primaryDark : AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'دروستکردنی پسوڵەی کڕینی نوێ',
+                                      style: AppTextStyles.bodyBold.copyWith(
+                                        color: isDark ? AppColors.primaryDark : AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'پسوڵەیەکی نوێی چاوەڕوانی تەئکید بۆ ئەم کاڵایانە دروست بکە',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (existingDrafts.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'یاخود زیادی بکە بۆ پسوڵەیەکی هەبووی چاوەڕوانی تەئکید:',
+                          style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.right,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        ...existingDrafts.map((draft) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                            child: InkWell(
+                              onTap: () async {
+                                Navigator.of(dialogCtx).pop();
+                                await _addProductsToExistingDraft(draft, selectedProducts);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            draft.supplierName.isNotEmpty ? draft.supplierName : 'بێ دابینکەر',
+                                            style: AppTextStyles.bodyBold,
+                                          ),
+                                          Text(
+                                            'پسوڵە #${draft.orderNumber} • ${draft.itemsCount} کاڵا',
+                                            style: AppTextStyles.caption,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      Formatters.currency(draft.totalAmount),
+                                      style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 20),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _createPOFromLowStockProducts(
+    List<ProductModel> products,
+    List<dynamic> warehouses,
+  ) async {
+    try {
+      final warehouseId = _resolveWarehouseId(warehouses);
+      final supplierIds = products.map((p) => p.supplierId).where((id) => id != null && id > 0).toSet();
+      final supplierId = supplierIds.length == 1 ? supplierIds.first : null;
+
+      final items = products.map((p) {
+        final qty = (p.minStockLevel > p.totalStock && p.minStockLevel > 0)
+            ? (p.minStockLevel - p.totalStock)
+            : 1;
+        return {
+          'product_id': p.id,
+          'quantity': qty > 0 ? qty : 1,
+          'unit_cost': p.costPrice > 0 ? p.costPrice : 0,
+        };
+      }).toList();
+
+      final newOrder = await ref.read(purchaseActionsProvider).createPurchaseOrder(
+        supplierId: supplierId,
+        warehouseId: warehouseId,
+        items: items,
+        autoReceive: false,
+        notes: null,
+        refreshRelatedProviders: true,
+      );
+
+      setState(() {
+        _draftViewCheckedProductIds.removeAll(products.map((p) => p.id));
+      });
+      _refreshPurchaseOrders();
+
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەی نوێ #${newOrder.orderNumber} بەسەرکەوتوویی بۆ ${products.length} کاڵا دروستکرا',
+          type: SnackbarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'کێشە لە دروستکردنی پسوڵە: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _addProductsToExistingDraft(
+    PurchaseOrderModel draftOrder,
+    List<ProductModel> products,
+  ) async {
+    try {
+      final existingItems = draftOrder.items.map((it) {
+        return {
+          'product_id': it.productId,
+          'quantity': it.quantity,
+          'unit_cost': it.unitCost,
+        };
+      }).toList();
+
+      final existingMap = <int, Map<String, dynamic>>{};
+      for (final it in existingItems) {
+        existingMap[it['product_id'] as int] = it;
+      }
+
+      for (final prod in products) {
+        final neededQty = (prod.minStockLevel > prod.totalStock && prod.minStockLevel > 0)
+            ? (prod.minStockLevel - prod.totalStock)
+            : 1;
+        final qtyToAdd = neededQty > 0 ? neededQty : 1;
+        final unitCost = prod.costPrice > 0 ? prod.costPrice : 0;
+
+        if (existingMap.containsKey(prod.id)) {
+          existingMap[prod.id]!['quantity'] =
+              (existingMap[prod.id]!['quantity'] as num) + qtyToAdd;
+        } else {
+          final newItem = {
+            'product_id': prod.id,
+            'quantity': qtyToAdd,
+            'unit_cost': unitCost,
+          };
+          existingItems.add(newItem);
+          existingMap[prod.id] = newItem;
+        }
+      }
+
+      await ref.read(purchaseActionsProvider).updatePurchaseOrder(
+        orderId: draftOrder.id,
+        supplierId: draftOrder.supplierId > 0 ? draftOrder.supplierId : null,
+        warehouseId: draftOrder.warehouseId,
+        items: existingItems,
+        autoReceive: false,
+        refreshRelatedProviders: true,
+      );
+
+      setState(() {
+        _draftViewCheckedProductIds.removeAll(products.map((p) => p.id));
+      });
+      _refreshPurchaseOrders();
+
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: '${products.length} کاڵا بەسەرکەوتوویی خسترانە نێو پسوڵەی #${draftOrder.orderNumber}',
+          type: SnackbarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'کێشە لە نوێکردنەوەی پسوڵە: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 
   Widget _buildPurchaseOrdersTab(BuildContext context) {
