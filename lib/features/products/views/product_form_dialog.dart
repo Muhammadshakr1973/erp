@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/kurdish_context_menu.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -304,11 +305,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           content: TextField(
             autofocus: true,
             contextMenuBuilder: (context, editableTextState) {
-              if (kIsWeb) return const SizedBox.shrink();
-              return AdaptiveTextSelectionToolbar.buttonItems(
-                anchors: editableTextState.contextMenuAnchors,
-                buttonItems: editableTextState.contextMenuButtonItems,
-              );
+              return KurdishContextMenu.build(context, editableTextState);
             },
             decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
             onChanged: (val) => newCategoryName = val,
@@ -369,11 +366,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           content: TextField(
             autofocus: true,
             contextMenuBuilder: (context, editableTextState) {
-              if (kIsWeb) return const SizedBox.shrink();
-              return AdaptiveTextSelectionToolbar.buttonItems(
-                anchors: editableTextState.contextMenuAnchors,
-                buttonItems: editableTextState.contextMenuButtonItems,
-              );
+              return KurdishContextMenu.build(context, editableTextState);
             },
             decoration: const InputDecoration(hintText: 'ناوی کۆمپانیا'),
             onChanged: (val) => newSupplierName = val,

@@ -8,6 +8,7 @@ import '../theme/app_text_styles.dart';
 import '../utils/formatters.dart';
 import 'numeric_keyboard_manager.dart';
 import 'global_numeric_keyboard.dart';
+import 'kurdish_context_menu.dart';
 
 class AppTextField extends ConsumerStatefulWidget {
   final String? hintText;
@@ -204,10 +205,11 @@ class _AppTextFieldState extends ConsumerState<AppTextField> {
         focusNode: _effectiveFocusNode,
         contextMenuBuilder: widget.contextMenuBuilder ??
             (context, editableTextState) {
-              if (kIsWeb) return const SizedBox.shrink();
-              return AdaptiveTextSelectionToolbar.buttonItems(
-                anchors: editableTextState.contextMenuAnchors,
-                buttonItems: editableTextState.contextMenuButtonItems,
+              return KurdishContextMenu.build(
+                context,
+                editableTextState,
+                focusNode: _effectiveFocusNode,
+                tapRegionGroupId: _effectiveFocusNode,
               );
             },
         keyboardType: effectiveKeyboardType,

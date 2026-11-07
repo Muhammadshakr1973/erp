@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/components/kurdish_context_menu.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -357,11 +358,7 @@ class _PurchaseOrderBuilderDialogState
               TextFormField(
                 controller: _productSearchController,
                 contextMenuBuilder: (context, editableTextState) {
-                  if (kIsWeb) return const SizedBox.shrink();
-                  return AdaptiveTextSelectionToolbar.buttonItems(
-                    anchors: editableTextState.contextMenuAnchors,
-                    buttonItems: editableTextState.contextMenuButtonItems,
-                  );
+                  return KurdishContextMenu.build(context, editableTextState);
                 },
                 decoration: InputDecoration(
                   labelText: 'گەڕان بۆ کاڵا',
@@ -428,11 +425,7 @@ class _PurchaseOrderBuilderDialogState
               TextFormField(
                 controller: _notesController,
                 contextMenuBuilder: (context, editableTextState) {
-                  if (kIsWeb) return const SizedBox.shrink();
-                  return AdaptiveTextSelectionToolbar.buttonItems(
-                    anchors: editableTextState.contextMenuAnchors,
-                    buttonItems: editableTextState.contextMenuButtonItems,
-                  );
+                  return KurdishContextMenu.build(context, editableTextState);
                 },
                 decoration: const InputDecoration(
                   labelText: 'تێبینی (ئارەزوومەندانە)',

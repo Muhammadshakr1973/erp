@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_card.dart';
+import '../../../core/components/kurdish_context_menu.dart';
 import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
@@ -53,11 +54,7 @@ class _SalesReturnsListScreenState
               child: TextField(
                 controller: _searchController,
                 contextMenuBuilder: (context, editableTextState) {
-                  if (kIsWeb) return const SizedBox.shrink();
-                  return AdaptiveTextSelectionToolbar.buttonItems(
-                    anchors: editableTextState.contextMenuAnchors,
-                    buttonItems: editableTextState.contextMenuButtonItems,
-                  );
+                  return KurdishContextMenu.build(context, editableTextState);
                 },
                 decoration: InputDecoration(
                   hintText: 'گەڕان بەپێی ژمارەی گەڕاندنەوە، کڕیار، یان پسوڵە...',
