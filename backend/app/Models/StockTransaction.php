@@ -9,6 +9,7 @@ class StockTransaction extends Model
 {
     use HasFactory;
     protected $fillable = ['warehouse_id', 'product_id', 'type', 'quantity_change', 'quantity_after', 'reference_type', 'reference_id', 'notes', 'created_by'];
+    protected $casts = ['quantity_change' => 'float', 'quantity_after' => 'float'];
 
     // Standard authoritative movement types
     const TYPE_PURCHASE = 'PURCHASE';
@@ -40,7 +41,7 @@ class StockTransaction extends Model
                 $stock = \App\Models\WarehouseStock::where('warehouse_id', $model->warehouse_id)
                     ->where('product_id', $model->product_id)
                     ->first();
-                $model->quantity_after = $stock ? (int)$stock->quantity : 0;
+                $model->quantity_after = $stock ? (float)$stock->quantity : 0;
             }
         });
 

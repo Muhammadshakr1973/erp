@@ -77,16 +77,18 @@ class _PurchaseOrderBuilderDialogState
     }
 
     final requirementItems = _requirementLines.map((line) {
+      final parsedQty = double.tryParse(line.quantityController.text) ?? line.requirement.requiredQuantity;
       return {
         'id': line.requirement.id,
-        'quantity': int.parse(line.quantityController.text),
+        'quantity': parsedQty,
         'supplier_id': line.supplierId,
       };
     }).toList();
     final additionalItems = _additionalLines.map((line) {
+      final parsedQty = double.tryParse(line.quantityController.text) ?? 1.0;
       return {
         'product_id': line.product.id,
-        'quantity': int.parse(line.quantityController.text),
+        'quantity': parsedQty,
         'supplier_id': line.supplierId,
         'warehouse_id': line.warehouseId,
       };
@@ -474,10 +476,10 @@ class _PurchaseOrderBuilderDialogState
                 Expanded(
                   child: AppTextField(
                     controller: line.quantityController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     labelText: 'بڕی کڕین',
                     validator: (value) {
-                      final quantity = int.tryParse(value ?? '');
+                      final quantity = double.tryParse(value ?? '');
                       if (quantity == null ||
                           quantity < line.requirement.requiredQuantity) {
                         return 'لانیکەم ${line.requirement.requiredQuantity}';
@@ -530,11 +532,11 @@ class _PurchaseOrderBuilderDialogState
             const SizedBox(height: AppSpacing.xs),
             AppTextField(
               controller: line.quantityController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               labelText: 'بڕی کڕین',
               validator: (value) {
-                final quantity = int.tryParse(value ?? '');
-                return quantity == null || quantity < 1
+                final quantity = double.tryParse(value ?? '');
+                return quantity == null || quantity <= 0
                     ? 'بڕ دەبێت لە ٠ گەورەتر بێت'
                     : null;
               },

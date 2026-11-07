@@ -9,13 +9,19 @@ class PurchaseOrderItem extends Model
 {
     use HasFactory;
     protected $fillable = ['purchase_order_id', 'product_id', 'quantity', 'unit_cost', 'total_cost', 'received_quantity'];
+    protected $casts = [
+        'quantity' => 'float',
+        'received_quantity' => 'float',
+        'unit_cost' => 'float',
+        'total_cost' => 'float',
+    ];
 
     protected static function booted()
     {
         static::creating(function ($item) {
             $product = \App\Models\Product::find($item->product_id);
             if (is_null($item->unit_cost) || $item->unit_cost === '') {
-                $item->unit_cost = $product ? (int)$product->cost_price : 0;
+                $item->unit_cost = $product ? (float)$product->cost_price : 0;
             }
             if (empty($item->total_cost)) {
                 $item->total_cost = $item->quantity * $item->unit_cost;

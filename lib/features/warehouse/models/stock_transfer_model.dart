@@ -6,8 +6,8 @@ class StockTransferItemModel {
   final String productName;
   final String? productBarcode;
   final String? productUnit;
-  final int quantity;
-  final int quantityReceived;
+  final double quantity;
+  final double quantityReceived;
   final String? notes;
 
   StockTransferItemModel({
@@ -17,7 +17,7 @@ class StockTransferItemModel {
     this.productBarcode,
     this.productUnit,
     required this.quantity,
-    this.quantityReceived = 0,
+    this.quantityReceived = 0.0,
     this.notes,
   });
 
@@ -29,8 +29,8 @@ class StockTransferItemModel {
       productName: product?['name']?.toString() ?? 'کاڵا #${json['product_id']}',
       productBarcode: product?['barcode']?.toString(),
       productUnit: product?['unit']?.toString() ?? 'دانە',
-      quantity: Formatters.parseInt(json['quantity']),
-      quantityReceived: Formatters.parseInt(json['quantity_received']),
+      quantity: Formatters.parseDouble(json['quantity']),
+      quantityReceived: Formatters.parseDouble(json['quantity_received']),
       notes: json['notes']?.toString(),
     );
   }
@@ -69,7 +69,7 @@ class StockTransferModel {
   bool get isDraft => status.toUpperCase() == 'DRAFT';
   bool get isCancelled => status.toUpperCase() == 'CANCELLED';
 
-  int get totalItemsCount => items.fold(0, (sum, item) => sum + item.quantity);
+  double get totalItemsCount => items.fold(0.0, (sum, item) => sum + item.quantity);
 
   factory StockTransferModel.fromJson(Map<String, dynamic> json) {
     final fromW = json['from_warehouse'] as Map<String, dynamic>?;

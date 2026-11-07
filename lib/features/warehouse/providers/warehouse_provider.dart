@@ -265,7 +265,7 @@ class WarehouseActions {
   Future<void> adjustStock({
     required int warehouseId,
     required int productId,
-    required int quantityChange,
+    required num quantityChange,
     String type = 'ADJUSTMENT',
     String? notes,
   }) async {
@@ -436,7 +436,7 @@ class VanTransferDraft {
   final int? fromWarehouseId;
   final int? toWarehouseId;
   final String notes;
-  final Map<int, int> items; // productId -> quantity
+  final Map<int, num> items; // productId -> quantity
 
   const VanTransferDraft({
     this.fromWarehouseId,
@@ -449,7 +449,7 @@ class VanTransferDraft {
     int? fromWarehouseId,
     int? toWarehouseId,
     String? notes,
-    Map<int, int>? items,
+    Map<int, num>? items,
   }) {
     return VanTransferDraft(
       fromWarehouseId: fromWarehouseId ?? this.fromWarehouseId,

@@ -1644,12 +1644,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         final updatedItems = targetDraft.items.map((it) => {
           'product_id': it.productId,
           'quantity': it.quantity,
-          'unit_cost': it.unitCost.toInt(),
+          'unit_cost': it.unitCost,
         }).toList();
 
         final existingIdx = updatedItems.indexWhere((it) => it['product_id'] == item.product.id);
         if (existingIdx >= 0) {
-          updatedItems[existingIdx]['quantity'] = (updatedItems[existingIdx]['quantity'] as int) + item.totalStockUnits;
+          updatedItems[existingIdx]['quantity'] = (updatedItems[existingIdx]['quantity'] as num) + item.totalStockUnits;
         } else {
           updatedItems.add({
             'product_id': item.product.id,
@@ -3966,15 +3966,15 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
                         const SizedBox(height: 8),
                         AppTextField(
                           controller: controller,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           labelText: 'بڕی وەرگیراوی ئەمجارە',
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'پێویستە بڕێک بنووسیت';
                             }
-                            final qty = int.tryParse(value);
+                            final qty = double.tryParse(value);
                             if (qty == null) {
-                              return 'پێویستە ژمارەی تەواو بێت';
+                              return 'پێویستە ژمارەیەکی دروست بێت';
                             }
                             if (qty < 0) {
                               return 'ناتوانرێت بڕی کەمتر لە ٠ بێت';
@@ -4049,7 +4049,7 @@ class _ReceivePODialogState extends State<ReceivePODialog> {
       final List<Map<String, dynamic>> itemsPayload = [];
       for (var item in widget.order.items) {
         final controller = _controllers[item.id];
-        final qty = int.parse(controller!.text);
+        final qty = double.parse(controller!.text);
         if (qty > 0) {
           itemsPayload.add({
             'item_id': item.id,

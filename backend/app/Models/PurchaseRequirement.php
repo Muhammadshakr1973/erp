@@ -11,9 +11,9 @@ class PurchaseRequirement extends Model
     protected $fillable = ['product_id', 'warehouse_id', 'supplier_id', 'required_quantity', 'current_stock', 'suggested_quantity', 'is_urgent', 'status', 'created_by', 'sales_order_id', 'purchase_order_id'];
     protected $casts = [
         'is_urgent' => 'boolean',
-        'required_quantity' => 'integer',
-        'current_stock' => 'integer',
-        'suggested_quantity' => 'integer',
+        'required_quantity' => 'float',
+        'current_stock' => 'float',
+        'suggested_quantity' => 'float',
         'sales_order_id' => 'integer',
         'purchase_order_id' => 'integer',
     ];

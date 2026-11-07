@@ -41,7 +41,7 @@ class PurchaseOrderService
             $orderNumber = 'PO-' . strtoupper(Str::random(8));
             $totalAmount = 0;
             $autoReceive = isset($data['auto_receive']) ? (bool) $data['auto_receive'] : true;
-            $paidAmount = isset($data['paid_amount']) ? max(0, (int) $data['paid_amount']) : 0;
+            $paidAmount = isset($data['paid_amount']) ? max(0, (float) $data['paid_amount']) : 0;
 
             $initialStatus = $autoReceive ? PurchaseOrder::STATUS_RECEIVED : PurchaseOrder::STATUS_DRAFT;
 
@@ -114,7 +114,7 @@ class PurchaseOrderService
 
             // ئەگەر autoReceive بێت، مامەڵەی حیساباتی قەرز و بڕی پارەی دراو ئەنجام دەدرێت
             if ($autoReceive && $totalAmount > 0) {
-                $previousBalance = (int) $supplier->current_balance;
+                $previousBalance = (float) $supplier->current_balance;
                 $balanceAfterPurchase = $previousBalance + $totalAmount;
 
                 // ١. تۆمارکردنی کڕین لە دەفتەری حیساباتی دابینکەر (زیادبوونی قەرز)
@@ -348,7 +348,7 @@ class PurchaseOrderService
                 // نوێکردنەوەی نرخی تێچووی کاڵا و دابینکەر لە خشتەی کاڵاکان (products)
                 $product = \App\Models\Product::find($item->product_id);
                 if ($product) {
-                    $prodUpdate = ['cost_price' => (int) $item->unit_cost];
+                    $prodUpdate = ['cost_price' => (float) $item->unit_cost];
                     if ($lockedOrder->supplier_id) {
                         $prodUpdate['supplier_id'] = $lockedOrder->supplier_id;
                     }
@@ -357,7 +357,7 @@ class PurchaseOrderService
             }
 
             // 3. Post to SupplierLedger for the received amount
-            $previousBalance = (int) $supplier->current_balance;
+            $previousBalance = (float) $supplier->current_balance;
             $newBalance = $previousBalance + $batchTotalAmount;
 
             SupplierLedger::create([
@@ -561,7 +561,7 @@ class PurchaseOrderService
             $supplierId = array_key_exists('supplier_id', $data) ? $data['supplier_id'] : $lockedOrder->supplier_id;
             $warehouseId = array_key_exists('warehouse_id', $data) ? (int)$data['warehouse_id'] : $lockedOrder->warehouse_id;
             $notes = array_key_exists('notes', $data) ? $data['notes'] : $lockedOrder->notes;
-            $paidAmount = array_key_exists('paid_amount', $data) ? max(0, (int)$data['paid_amount']) : (int)$lockedOrder->paid_amount;
+            $paidAmount = array_key_exists('paid_amount', $data) ? max(0, (float)$data['paid_amount']) : (float)$lockedOrder->paid_amount;
             $autoReceive = !empty($data['auto_receive']);
 
             $totalAmount = 0;
@@ -609,7 +609,7 @@ class PurchaseOrderService
                 }
                 $lockedOrder->total_amount = $totalAmount;
             } else {
-                $totalAmount = (int) $lockedOrder->total_amount;
+                $totalAmount = (float) $lockedOrder->total_amount;
             }
 
             $lockedOrder->supplier_id = $supplierId;
@@ -628,7 +628,7 @@ class PurchaseOrderService
                 if ($supplierId && $totalAmount > 0) {
                     $supplier = Supplier::lockForUpdate()->find($supplierId);
                     if ($supplier) {
-                        $previousBalance = (int) $supplier->current_balance;
+                        $previousBalance = (float) $supplier->current_balance;
                         $balanceAfterPurchase = $previousBalance + $totalAmount;
 
                         SupplierLedger::create([

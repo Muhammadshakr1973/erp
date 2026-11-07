@@ -6,9 +6,9 @@ class PurchaseRequirementModel {
   final String warehouseName;
   final int? supplierId;
   final String? supplierName;
-  final int requiredQuantity;
-  final int currentStock;
-  final int suggestedQuantity;
+  final double requiredQuantity;
+  final double currentStock;
+  final double suggestedQuantity;
   final bool isUrgent;
   final String status;
   final int? salesOrderId;
@@ -46,9 +46,9 @@ class PurchaseRequirementModel {
       supplierName: json['supplier'] != null
           ? json['supplier']['name'] ?? ''
           : null,
-      requiredQuantity: json['required_quantity'] ?? 0,
-      currentStock: json['current_stock'] ?? 0,
-      suggestedQuantity: json['suggested_quantity'] ?? 0,
+      requiredQuantity: double.tryParse(json['required_quantity']?.toString() ?? '0') ?? 0.0,
+      currentStock: double.tryParse(json['current_stock']?.toString() ?? '0') ?? 0.0,
+      suggestedQuantity: double.tryParse(json['suggested_quantity']?.toString() ?? '0') ?? 0.0,
       isUrgent: json['is_urgent'] == true || json['is_urgent'] == 1,
       status: json['status'] ?? 'OPEN',
       salesOrderId: json['sales_order_id'],

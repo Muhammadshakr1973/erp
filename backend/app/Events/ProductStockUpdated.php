@@ -77,9 +77,9 @@ class ProductStockUpdated implements ShouldBroadcast
                 'stocks' => $this->product->relationLoaded('stocks')
                     ? $this->product->stocks->map(fn($s) => [
                         'warehouse_id' => $s->warehouse_id,
-                        'quantity' => (int) $s->quantity,
-                        'reserved_quantity' => (int) $s->reserved_quantity,
-                        'min_stock_level' => (int) $s->min_stock_level,
+                        'quantity' => (float) $s->quantity,
+                        'reserved_quantity' => (float) $s->reserved_quantity,
+                        'min_stock_level' => (float) $s->min_stock_level,
                     ])->values()->all()
                     : null,
             ];

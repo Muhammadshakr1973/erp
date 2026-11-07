@@ -101,35 +101,35 @@ class ProductModel {
     );
   }
 
-  int get minStockLevel {
-    if (stocks.isEmpty) return 0;
-    int minLevel = 0;
+  double get minStockLevel {
+    if (stocks.isEmpty) return 0.0;
+    double minLevel = 0.0;
     for (var s in stocks) {
       if (s is Map) {
-        minLevel += Formatters.parseInt(s['min_stock_level']);
+        minLevel += Formatters.parseDouble(s['min_stock_level']);
       }
     }
     return minLevel;
   }
 
-  int get totalStock {
-    int total = 0;
+  double get totalStock {
+    double total = 0.0;
     for (var s in stocks) {
       if (s is Map) {
-        total += Formatters.parseInt(s['quantity']);
+        total += Formatters.parseDouble(s['quantity']);
       }
     }
     return total;
   }
 
-  int getStockForWarehouse(int? warehouseId) {
-    if (warehouseId == null || stocks.isEmpty) return 0;
+  double getStockForWarehouse(int? warehouseId) {
+    if (warehouseId == null || stocks.isEmpty) return 0.0;
     for (var s in stocks) {
       if (s is Map && Formatters.parseInt(s['warehouse_id']) == warehouseId) {
-        return Formatters.parseInt(s['quantity']);
+        return Formatters.parseDouble(s['quantity']);
       }
     }
-    return 0;
+    return 0.0;
   }
 
   bool get isLowStock {

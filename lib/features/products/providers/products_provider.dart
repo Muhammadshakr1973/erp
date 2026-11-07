@@ -332,7 +332,7 @@ class ProductsListNotifier
   }
 
   void patchProductStock(
-      int productId, int warehouseId, int newQuantity, {int? reservedQuantity}) {
+      int productId, int warehouseId, num newQuantity, {num? reservedQuantity}) {
     state.whenData((currentList) {
       final index = currentList.indexWhere((p) => p.id == productId);
       if (index != -1) {

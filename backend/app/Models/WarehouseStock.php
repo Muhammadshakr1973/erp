@@ -22,8 +22,8 @@ class WarehouseStock extends Model
             }
 
             $oldQty = $stock->getOriginal('quantity');
-            $newQty = (int) $stock->quantity;
-            $threshold = (int) $stock->min_stock_level;
+            $newQty = (float) $stock->quantity;
+            $threshold = (float) $stock->min_stock_level;
 
             // We need a previous state to detect a "crossing" of the threshold.
             // If oldQty is null, it means the record was just created.
@@ -31,7 +31,7 @@ class WarehouseStock extends Model
                 return;
             }
 
-            $oldQty = (int) $oldQty;
+            $oldQty = (float) $oldQty;
 
             DB::afterCommit(function () use ($stock, $oldQty, $newQty, $threshold) {
                 // Reload the authoritative WarehouseStock row
@@ -74,9 +74,9 @@ class WarehouseStock extends Model
     {
         return $this->belongsTo(Product::class);
     }
-    public function getAvailableAttribute(): int
+    public function getAvailableAttribute(): float
     {
-        return $this->quantity - $this->reserved_quantity;
+        return (float) ($this->quantity - $this->reserved_quantity);
     }
     public function getIsLowAttribute(): bool
     {
@@ -95,17 +95,17 @@ class WarehouseStock extends Model
         return $q->where('quantity', '>', 0);
     }
 
-    public function adjustStock(int $quantityChange, string $type, $userId, $referenceType = null, $referenceId = null, $notes = null): StockTransaction
+    public function adjustStock(float $quantityChange, string $type, $userId, $referenceType = null, $referenceId = null, $notes = null): StockTransaction
     {
         return DB::transaction(function () use ($quantityChange, $type, $userId, $referenceType, $referenceId, $notes) {
             // ١. قفڵکردنی ڕیزی پەیوەندیداری ستۆک (Step 1: Lock the stock row)
             $locked = self::lockForUpdate()->find($this->id);
 
             // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی پێشوو بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
-            $currentQty = $locked->quantity;
+            $currentQty = (float) $locked->quantity;
 
             // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراو بە شێوەی باوەڕپێکراو (Step 3: Re-read authoritative reserved quantity)
-            $reservedQty = $locked->reserved_quantity;
+            $reservedQty = (float) $locked->reserved_quantity;
 
             // ٤. هەژمارکردنی بڕی فیزیکی نوێ (Step 4: Calculate new quantity)
             $newQty = $currentQty + $quantityChange;
@@ -122,7 +122,7 @@ class WarehouseStock extends Model
             $upperType = strtoupper($type);
             $newReserved = $reservedQty;
             if ($quantityChange < 0 && in_array($upperType, ['DELIVERY', 'SALE', 'PACKED'])) {
-                $newReserved = max(0, $reservedQty - abs($quantityChange));
+                $newReserved = max(0.0, $reservedQty - abs($quantityChange));
             } elseif ($quantityChange > 0 && $upperType === 'UNPACKED') {
                 $newReserved = $reservedQty + $quantityChange;
             } elseif ($quantityChange < 0 && $upperType === 'ADJUSTMENT') {
@@ -174,7 +174,7 @@ class WarehouseStock extends Model
         });
     }
 
-    public function reserveStock(int $amount, $userId, $referenceType = null, $referenceId = null, $notes = null): ?StockTransaction
+    public function reserveStock(float $amount, $userId, $referenceType = null, $referenceId = null, $notes = null): ?StockTransaction
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('بڕی حجز دەبێت لە ٠ زیاتر بێت.');
@@ -185,10 +185,10 @@ class WarehouseStock extends Model
             $locked = self::lockForUpdate()->find($this->id);
 
             // ٢. سەرلەنوێ خوێندنەوەی بڕی فیزیکی بە شێوەی باوەڕپێکراو (Step 2: Re-read authoritative current quantity)
-            $currentQty = $locked->quantity;
+            $currentQty = (float) $locked->quantity;
 
             // ٣. سەرلەنوێ خوێندنەوەی بڕی حجزکراوی پێشوو (Step 3: Re-read authoritative reserved quantity)
-            $reservedQty = $locked->reserved_quantity;
+            $reservedQty = (float) $locked->reserved_quantity;
 
             // ٤. هەژمارکردنی ستۆکی بەردەست بە شێوەی باوەڕپێکراو (Step 4: Calculate authoritative available quantity)
             $available = $currentQty - $reservedQty;
@@ -235,7 +235,7 @@ class WarehouseStock extends Model
         });
     }
 
-    public function releaseStock(int $amount, $userId, $referenceType = null, $referenceId = null, $notes = null): ?StockTransaction
+    public function releaseStock(float $amount, $userId, $referenceType = null, $referenceId = null, $notes = null): ?StockTransaction
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('بڕی ئازادکردن دەبێت لە ٠ زیاتر بێت.');
@@ -320,10 +320,10 @@ class WarehouseStock extends Model
 
         return [
             'is_consistent' => $isConsistent,
-            'stored_quantity' => (int) $this->quantity,
-            'recalculated_quantity' => (int) $calculatedQty,
-            'stored_reserved' => (int) $this->reserved_quantity,
-            'recalculated_reserved' => (int) $calculatedReserved,
+            'stored_quantity' => (float) $this->quantity,
+            'recalculated_quantity' => (float) $calculatedQty,
+            'stored_reserved' => (float) $this->reserved_quantity,
+            'recalculated_reserved' => (float) $calculatedReserved,
             'discrepancies' => $discrepancies,
         ];
     }

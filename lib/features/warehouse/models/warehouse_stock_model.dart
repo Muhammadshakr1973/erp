@@ -7,9 +7,9 @@ class WarehouseStockModel {
   final int productId;
   final String productName;
   final String barcode;
-  final int quantity;
-  final int reservedQuantity;
-  final int minStockLevel;
+  final double quantity;
+  final double reservedQuantity;
+  final double minStockLevel;
 
   WarehouseStockModel({
     required this.id,
@@ -25,7 +25,7 @@ class WarehouseStockModel {
 
   /// Authoritative available stock calculation per GARDI stock equation:
   /// Available = Physical Quantity - Reserved Quantity
-  int get availableQuantity => quantity - reservedQuantity;
+  double get availableQuantity => quantity - reservedQuantity;
 
   factory WarehouseStockModel.fromJson(Map<String, dynamic> json) {
     final warehouseObj = json['warehouse'];
@@ -48,19 +48,19 @@ class WarehouseStockModel {
       productId: Formatters.parseInt(json['product_id']),
       productName: pName,
       barcode: pBarcode,
-      quantity: Formatters.parseInt(json['quantity']),
-      reservedQuantity: Formatters.parseInt(json['reserved_quantity']),
-      minStockLevel: Formatters.parseInt(json['min_stock_level']),
+      quantity: Formatters.parseDouble(json['quantity']),
+      reservedQuantity: Formatters.parseDouble(json['reserved_quantity']),
+      minStockLevel: Formatters.parseDouble(json['min_stock_level']),
     );
   }
 }
 
 class StockReconciliationModel {
   final bool isConsistent;
-  final int storedQuantity;
-  final int recalculatedQuantity;
-  final int storedReserved;
-  final int recalculatedReserved;
+  final double storedQuantity;
+  final double recalculatedQuantity;
+  final double storedReserved;
+  final double recalculatedReserved;
   final List<String> discrepancies;
 
   StockReconciliationModel({
@@ -75,10 +75,10 @@ class StockReconciliationModel {
   factory StockReconciliationModel.fromJson(Map<String, dynamic> json) {
     return StockReconciliationModel(
       isConsistent: json['is_consistent'] == true || json['is_consistent'] == 1,
-      storedQuantity: Formatters.parseInt(json['stored_quantity']),
-      recalculatedQuantity: Formatters.parseInt(json['recalculated_quantity']),
-      storedReserved: Formatters.parseInt(json['stored_reserved']),
-      recalculatedReserved: Formatters.parseInt(json['recalculated_reserved']),
+      storedQuantity: Formatters.parseDouble(json['stored_quantity']),
+      recalculatedQuantity: Formatters.parseDouble(json['recalculated_quantity']),
+      storedReserved: Formatters.parseDouble(json['stored_reserved']),
+      recalculatedReserved: Formatters.parseDouble(json['recalculated_reserved']),
       discrepancies: List<String>.from(json['discrepancies'] ?? []),
     );
   }
