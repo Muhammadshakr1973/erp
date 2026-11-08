@@ -4,7 +4,7 @@ import '../../driver/models/delivery_trip_model.dart';
 import '../../admin/models/driver_collection_model.dart';
 import '../../orders/models/order_model.dart';
 import '../../products/models/supplier_ledger_model.dart';
-import '../../core/utils/formatters.dart';
+import '../../../core/utils/formatters.dart';
 import 'customer.dart';
 import 'customer_ledger_model.dart';
 import 'payment_history_model.dart';
