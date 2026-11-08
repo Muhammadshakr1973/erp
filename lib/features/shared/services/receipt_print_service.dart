@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/components/gardi_logo.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/receipt_data.dart';
 import 'receipt_file_service.dart';
@@ -403,7 +404,7 @@ class ReceiptCanvas extends StatelessWidget {
     final receiptContent = DefaultTextStyle(
       style: TextStyle(
         color: const Color(0xFF171717),
-        fontFamily: 'Rudaw',
+        fontFamily: AppTextStyles.fontFamily,
         fontSize: fontSize,
         height: 1.35,
       ),
