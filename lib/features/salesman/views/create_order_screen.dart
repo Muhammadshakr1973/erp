@@ -2433,14 +2433,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             final textFieldX = position?.dx ?? 0.0;
 
             final isMobile = screenWidth < 600;
-            final double dropdownWidth = isMobile
-                ? screenWidth
-                : (_searchFieldWidth != null
-                      ? (_searchFieldWidth! > (screenWidth - 32)
-                            ? (screenWidth - 32)
-                            : _searchFieldWidth!)
-                      : (screenWidth > 450 ? 450.0 : screenWidth - 32));
-            final double xOffset = isMobile ? -textFieldX : 0.0;
+            final double margin = isMobile ? 0.0 : 16.0;
+            final double dropdownWidth = screenWidth - (margin * 2);
+            final double xOffset = -textFieldX + margin;
 
             return TapRegion(
               groupId: _searchFocusNode,
