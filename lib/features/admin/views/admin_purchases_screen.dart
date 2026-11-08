@@ -1123,10 +1123,12 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _updatePaidAmountToTotal({bool force = false}) {
+    _userModifiedPaidAmount = false;
     final total = _calculateCartTotal();
-    if (force || !_userModifiedPaidAmount) {
-      _poPaidAmountController.text = total > 0 ? total.toInt().toString() : '0';
-    }
+    final formatted = total > 0
+        ? (total % 1 == 0 ? total.toInt().toString() : total.toStringAsFixed(2))
+        : '0';
+    _poPaidAmountController.text = formatted;
     _notifyCartAndDialogChanged();
     _saveCartDraft();
   }
