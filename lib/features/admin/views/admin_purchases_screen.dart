@@ -1203,89 +1203,204 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       text: item.unitCost.round().toString(),
     );
 
+    const String fallbackImageUrl =
+        'https://thumbs.dreamstime.com/b/image-not-available-icon-vector-set-white-background-eps-330821927.jpg';
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header with close button at TOP-LEFT (Rules compliant)
-                      Directionality(
-                        textDirection: TextDirection.ltr,
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.close),
-                              tooltip: 'داخستن',
-                              onPressed: () => Navigator.pop(ctx),
+            final theme = Theme.of(context);
+            final rawImagePath = item.product.imagePath;
+            final hasProductImage =
+                rawImagePath != null && rawImagePath.trim().isNotEmpty;
+            final initialImageUrl =
+                hasProductImage ? rawImagePath.trim() : fallbackImageUrl;
+
+            return Dialog.fullscreen(
+              child: Scaffold(
+                backgroundColor: theme.colorScheme.surface,
+                appBar: AppBar(
+                  elevation: 0,
+                  backgroundColor: theme.colorScheme.surface,
+                  automaticallyImplyLeading: false,
+                  leading: IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'داخستن',
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                  title: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                      'دەستکاری کڕینی ${item.product.name}',
+                      style: AppTextStyles.h3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  centerTitle: true,
+                ),
+                body: SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isLandscape = constraints.maxWidth > constraints.maxHeight &&
+                          constraints.maxWidth > 600;
+
+                      Widget buildImageWidget() {
+                        return Container(
+                          width: double.infinity,
+                          height: isLandscape
+                              ? constraints.maxHeight * 0.75
+                              : (constraints.maxHeight * 0.4).clamp(220.0, 360.0),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.2),
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Expanded(
-                              child: Directionality(
-                                textDirection: TextDirection.rtl,
-                                child: Text(
-                                  'دەستکاری کڕینی ${item.product.name}',
-                                  style: AppTextStyles.h3,
-                                  overflow: TextOverflow.ellipsis,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              initialImageUrl,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Image.network(
+                                  fallbackImageUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.image_not_supported_outlined,
+                                        size: 64,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      }
+
+                      Widget buildFormFields() {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              item.product.name,
+                              style: AppTextStyles.h2.copyWith(fontSize: 20),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (item.product.barcode.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'بارکۆد: ${item.product.barcode}',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
+                            ],
+                            const SizedBox(height: AppSpacing.md),
+                            AppTextField(
+                              controller: qtyController,
+                              labelText: 'بڕی یەکە (${item.baseUnitName})',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AppTextField(
+                              controller: costController,
+                              labelText:
+                                  'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            // Primary action button only (GEMINI.md rule compliant)
+                            AppButton(
+                              text: 'پاشەکەوتکردن',
+                              onPressed: () {
+                                final parsedQty =
+                                    double.tryParse(qtyController.text) ?? 1.0;
+                                final parsedCost =
+                                    double.tryParse(costController.text) ?? item.unitCost;
+                                final safeCost =
+                                    parsedCost >= 0 ? parsedCost : item.unitCost;
+
+                                if (mounted) {
+                                  setState(() {
+                                    item.unitType = PurchaseUnitType.baseUnit;
+                                    item.quantity = parsedQty > 0 ? parsedQty : 1.0;
+                                    item.cartonCost = null;
+                                    item.unitCost = safeCost;
+                                    item.product = item.product.copyWith(
+                                        costPrice: safeCost.roundToDouble());
+                                    _updatePaidAmountToTotal();
+                                  });
+                                  _notifyCartAndDialogChanged();
+                                }
+                                ref
+                                    .read(productsListProvider.notifier)
+                                    .addProductLocally(item.product);
+                                _saveCartDraft(forceSaveToBackend: true);
+
+                                Navigator.pop(ctx);
+                              },
                             ),
                           ],
+                        );
+                      }
+
+                      if (isLandscape) {
+                        return Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: Center(child: buildImageWidget()),
+                              ),
+                              const SizedBox(width: AppSpacing.lg),
+                              Expanded(
+                                flex: 6,
+                                child: SingleChildScrollView(
+                                  child: buildFormFields(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            buildImageWidget(),
+                            const SizedBox(height: AppSpacing.lg),
+                            buildFormFields(),
+                          ],
                         ),
-                      ),
-                      const Divider(),
-                      const SizedBox(height: AppSpacing.sm),
-
-                      AppTextField(
-                        controller: qtyController,
-                        labelText: 'بڕی یەکە (${item.baseUnitName})',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-
-                      const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        controller: costController,
-                        labelText: 'تێچووی یەکەی کاڵا (${item.baseUnitName}) - د.ع',
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-
-                      const SizedBox(height: AppSpacing.lg),
-                      // Primary action button only
-                      AppButton(
-                        text: 'پاشەکەوتکردن',
-                        onPressed: () {
-                          final parsedQty = double.tryParse(qtyController.text) ?? 1.0;
-                          final parsedCost = double.tryParse(costController.text) ?? item.unitCost;
-                          final safeCost = parsedCost >= 0 ? parsedCost : item.unitCost;
-
-                          if (mounted) {
-                            setState(() {
-                              item.unitType = PurchaseUnitType.baseUnit;
-                              item.quantity = parsedQty > 0 ? parsedQty : 1.0;
-                              item.cartonCost = null;
-                              item.unitCost = safeCost;
-                              item.product = item.product.copyWith(costPrice: safeCost.roundToDouble());
-                              _updatePaidAmountToTotal();
-                            });
-                            _notifyCartAndDialogChanged();
-                          }
-                          ref.read(productsListProvider.notifier).addProductLocally(item.product);
-                          _saveCartDraft(forceSaveToBackend: true);
-
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
