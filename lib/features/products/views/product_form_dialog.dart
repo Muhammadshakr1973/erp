@@ -9,6 +9,7 @@ import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/product_model.dart';
+import '../models/supplier_model.dart';
 import '../providers/products_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/suppliers_provider.dart';
@@ -51,6 +52,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   int? _selectedCategoryId;
   int? _selectedSupplierId;
   bool _isActive = true;
+  String _dismissedSimilarityQuery = '';
+
+  void _onNameChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   void initState() {
@@ -77,6 +85,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       }
     }
     _nameController = TextEditingController(text: p?.name ?? '');
+    _nameController.addListener(_onNameChanged);
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
     _costPriceController = TextEditingController(
@@ -123,8 +132,452 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     return '$prefix$suffix';
   }
 
+  String _normalizeForComparison(String text) {
+    if (text.isEmpty) return '';
+    var s = text.trim().toLowerCase();
+
+    s = s.replaceAll('ي', 'ی');
+    s = s.replaceAll('ى', 'ی');
+    s = s.replaceAll('ئ', 'ی');
+    s = s.replaceAll('ك', 'ک');
+    s = s.replaceAll('ة', 'ە');
+    s = s.replaceAll('ه', 'ە');
+    s = s.replaceAll('إ', 'ا');
+    s = s.replaceAll('أ', 'ا');
+    s = s.replaceAll('آ', 'ا');
+    s = s.replaceAll('ؤ', 'و');
+
+    const easternDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    for (int i = 0; i < easternDigits.length; i++) {
+      s = s.replaceAll(easternDigits[i], '$i');
+    }
+
+    s = s.replaceAll(RegExp(r'[\-_/\\()\[\]{}.,:;+*&^%$#@!~`"|]'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
+  double _bigramSimilarity(String s1, String s2) {
+    if (s1.length < 2 || s2.length < 2) return 0.0;
+    final pairs1 = <String>{};
+    for (int i = 0; i < s1.length - 1; i++) {
+      pairs1.add(s1.substring(i, i + 2));
+    }
+    final pairs2 = <String>{};
+    for (int i = 0; i < s2.length - 1; i++) {
+      pairs2.add(s2.substring(i, i + 2));
+    }
+    final intersection = pairs1.intersection(pairs2).length;
+    return (2.0 * intersection) / (pairs1.length + pairs2.length);
+  }
+
+  double _wordSimilarity(String w1, String w2) {
+    if (w1 == w2) return 1.0;
+    if (w1.length < 2 || w2.length < 2) return 0.0;
+    return _bigramSimilarity(w1, w2);
+  }
+
+  double _calculateSimilarity(String query, String target) {
+    final q = _normalizeForComparison(query);
+    final t = _normalizeForComparison(target);
+
+    if (q.isEmpty || t.isEmpty) return 0.0;
+    if (q == t) return 1.0;
+
+    if (t.contains(q)) return 0.90;
+    if (q.contains(t) && t.length >= 3) return 0.85;
+
+    final qTokens = q.split(' ').where((w) => w.trim().isNotEmpty).toList();
+    final tTokens = t.split(' ').where((w) => w.trim().isNotEmpty).toList();
+
+    if (qTokens.isEmpty || tTokens.isEmpty) return 0.0;
+
+    int matchedCount = 0;
+    for (final qWord in qTokens) {
+      bool found = false;
+      for (final tWord in tTokens) {
+        if (qWord == tWord) {
+          found = true;
+          break;
+        }
+        if (qWord.length >= 3 && tWord.length >= 3) {
+          if (tWord.contains(qWord) || qWord.contains(tWord)) {
+            found = true;
+            break;
+          }
+        }
+        if (_wordSimilarity(qWord, tWord) >= 0.75) {
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        matchedCount++;
+      }
+    }
+
+    final tokenScore = matchedCount / qTokens.length;
+    final bigramScore = _bigramSimilarity(q, t);
+
+    return max(tokenScore, bigramScore);
+  }
+
+  List<ProductModel> _getSimilarProducts(List<ProductModel> allProducts) {
+    final query = _nameController.text.trim();
+    if (query.length < 2) return [];
+
+    final List<MapEntry<ProductModel, double>> scored = [];
+    for (final p in allProducts) {
+      if (widget.product != null && p.id == widget.product!.id) {
+        continue;
+      }
+      final score = _calculateSimilarity(query, p.name);
+      if (score >= 0.5) {
+        scored.add(MapEntry(p, score));
+      }
+    }
+
+    scored.sort((a, b) => b.value.compareTo(a.value));
+    return scored.take(4).map((e) => e.key).toList();
+  }
+
+  String _extractSupplierName(ProductModel p, List<SupplierModel> suppliers) {
+    if (p.supplier is Map && p.supplier['name'] != null) {
+      return p.supplier['name'].toString();
+    }
+    if (p.supplier != null && p.supplier is String && (p.supplier as String).isNotEmpty) {
+      return p.supplier as String;
+    }
+    if (p.supplierId != null) {
+      final s = suppliers.where((element) => element.id == p.supplierId).firstOrNull;
+      if (s != null) return s.name;
+    }
+    return '';
+  }
+
+  Widget _buildSimilarityAlert(
+    List<ProductModel> similarProducts,
+    List<SupplierModel> suppliers,
+    ThemeData theme,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: const Color(0xFF261E0A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
+          width: 1.2,
+        ),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFFBBF24),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ئاگاداری: ${similarProducts.length} کاڵای هاوشێوە دۆزرایەوە!',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFDE68A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'بۆ ڕێگری لە تۆمارکردنی دووبارە، سەیری کاڵاکان بکە:',
+                      style: AppTextStyles.caption.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: 'شاردنەوە',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                onPressed: () {
+                  setState(() {
+                    _dismissedSimilarityQuery = _nameController.text.trim();
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...similarProducts.map((p) {
+            final supplierName = _extractSupplierName(p, suppliers);
+            final stockTotal = p.totalStock;
+            final unit = (p.unit != null && p.unit!.isNotEmpty) ? p.unit! : 'دانە';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                p.name,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (p.barcode.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  p.barcode,
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontSize: 10,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (supplierName.isNotEmpty)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.business,
+                                    size: 13,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    supplierName,
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 13,
+                                  color: stockTotal > 0 ? Colors.green : Colors.red,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'ستۆک: ${Formatters.cleanNumberString(stockTotal)} $unit',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: stockTotal > 0 ? Colors.green : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'نرخ: ${Formatters.formatMoney(p.priceN1)}',
+                              style: AppTextStyles.caption.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      side: BorderSide(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () => _showExistingProductDetails(p, supplierName),
+                    child: Text(
+                      'وردەکاری',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showExistingProductDetails(ProductModel p, String supplierName) {
+    final theme = Theme.of(context);
+    final unit = (p.unit != null && p.unit!.isNotEmpty) ? p.unit! : 'دانە';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'زانیاری کاڵای هاوشێوە',
+                  style: AppTextStyles.h3,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      if (p.barcode.isNotEmpty)
+                        _detailRow('بارکۆد:', p.barcode),
+                      if (p.sku != null && p.sku!.isNotEmpty)
+                        _detailRow('SKU:', p.sku!),
+                      if (supplierName.isNotEmpty)
+                        _detailRow('کۆمپانیا:', supplierName),
+                      _detailRow('کۆی ستۆک:', '${Formatters.cleanNumberString(p.totalStock)} $unit'),
+                      _detailRow('کۆست:', Formatters.formatMoney(p.costPrice)),
+                      _detailRow('نرخی فرۆشتن ۱:', Formatters.formatMoney(p.priceN1)),
+                      if (p.priceN2 > 0)
+                        _detailRow('نرخی فرۆشتن ۲:', Formatters.formatMoney(p.priceN2)),
+                      if (p.priceN3 > 0)
+                        _detailRow('نرخی فرۆشتن ۳:', Formatters.formatMoney(p.priceN3)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            AppButton(
+              label: 'پڕکردنەوەی داتای ئەم کاڵایە لە فۆرمدا',
+              variant: AppButtonVariant.primary,
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _nameController.text = p.name;
+                  _barcodeController.text = p.barcode;
+                  if (p.sku != null) _skuController.text = p.sku!;
+                  _costPriceController.text = Formatters.cleanNumberString(p.costPrice);
+                  _priceN1Controller.text = Formatters.cleanNumberString(p.priceN1);
+                  _priceN2Controller.text = Formatters.cleanNumberString(p.priceN2);
+                  _priceN3Controller.text = Formatters.cleanNumberString(p.priceN3);
+                  _unitsPerCartonController.text = Formatters.cleanNumberString(p.unitsPerCarton);
+                  if (p.unit != null && p.unit!.isNotEmpty) {
+                    _unitController.text = p.unit!;
+                  }
+                  if (p.supplierId != null) {
+                    _selectedSupplierId = p.supplierId;
+                  }
+                  if (p.categoryId != null) {
+                    _selectedCategoryId = p.categoryId;
+                  }
+                  if (p.imagePath != null && p.imagePath!.isNotEmpty) {
+                    _imageUrlController.text = p.imagePath!;
+                  }
+                  _dismissedSimilarityQuery = p.name;
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     _barcodeController.dispose();
     _skuController.dispose();
@@ -411,6 +864,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesListProvider);
     final suppliersAsync = ref.watch(suppliersListProvider);
+    final allProducts = ref.watch(productsListProvider).valueOrNull ?? [];
+    final suppliers = suppliersAsync.valueOrNull ?? [];
+    final currentNameQuery = _nameController.text.trim();
+    final similarProducts = _dismissedSimilarityQuery == currentNameQuery
+        ? <ProductModel>[]
+        : _getSimilarProducts(allProducts);
     final theme = Theme.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -523,7 +982,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppSpacing.md),
+                          if (similarProducts.isNotEmpty) ...[
+                            _buildSimilarityAlert(similarProducts, suppliers, theme),
+                          ] else ...[
+                            const SizedBox(height: AppSpacing.md),
+                          ],
                           Directionality(
                             textDirection: TextDirection.rtl,
                             child: Row(
@@ -696,8 +1159,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ),
                             ],
                           ),
+                          if (similarProducts.isNotEmpty) ...[
+                            _buildSimilarityAlert(similarProducts, suppliers, theme),
+                          ] else ...[
+                            const SizedBox(height: AppSpacing.md),
+                          ],
                         ],
-                        const SizedBox(height: AppSpacing.md),
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
