@@ -607,7 +607,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           'ج',
           'ک',
           'پاکەت',
-          'باڵە',
+          'بالە',
           'عەلاگە',
           'پ',
           'دانە',
