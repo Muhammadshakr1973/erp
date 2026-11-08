@@ -263,7 +263,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (totalAvailable <= 0) {
       AppSnackbar.show(
         context,
-        message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+        message: 'ئەم کاڵایە زیاد نابێت لەبەر ئەوەی لە ستۆک تەواو بووە',
         type: SnackbarType.warning,
       );
       return;
@@ -273,7 +273,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       AppSnackbar.show(
         context,
         message:
-            'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر دیاری بکەیت',
+            'تەنها ${totalAvailable.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
         type: SnackbarType.warning,
       );
       return;
@@ -323,7 +323,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (totalAvailable <= 0) {
       AppSnackbar.show(
         context,
-        message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+        message: 'ئەم کاڵایە زیاد نابێت لەبەر ئەوەی لە ستۆک تەواو بووە',
         type: SnackbarType.warning,
       );
       return;
@@ -397,7 +397,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         AppSnackbar.show(
                           ctx,
                           message:
-                              'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر بنووسیت',
+                              'تەنها ${totalAvailable.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر بنووسیت',
                           type: SnackbarType.warning,
                         );
                         return;

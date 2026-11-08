@@ -45,6 +45,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   String? _overridePriceType;
   final Map<int, int> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
+  final Map<int, int> _serverSavedQuantities = {}; // product_id -> quantity saved on server
   final List<Map<String, dynamic>> _returnedItems =
       []; // returned items in this order
   Timer? _debounceTimer;
@@ -138,6 +139,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(productsListProvider.notifier).fetchProducts();
       if (widget.existingOrder != null) {
         _populateFromExistingOrder(widget.existingOrder!);
       } else if (widget.preselectedCustomerId != null) {
@@ -173,8 +175,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
       _cart.clear();
       _cartNotes.clear();
+      _serverSavedQuantities.clear();
       for (var item in order.items) {
         _cart[item.productId] = item.quantity.toInt();
+        _serverSavedQuantities[item.productId] = item.quantity.toInt();
         if (item.notes != null) {
           _cartNotes[item.productId] = item.notes!;
         }
@@ -441,28 +445,81 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     return total;
   }
 
-  void _addToCart(int productId) {
-    final currentUser = ref.read(authProvider).user;
-    if (currentUser?.isCashVan == true && _selectedWarehouseId != null) {
-      final products = ref.read(productsListProvider).asData?.value ?? [];
-      final product = products.where((p) => p.id == productId).firstOrNull;
-      final maxStock = product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
-      final currentQty = _cart[productId] ?? 0;
-      if (currentQty + 1 > maxStock) {
-        AppSnackbar.show(
-          context,
-          message:
-              'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر بفرۆشیت',
-          type: SnackbarType.warning,
-        );
-        return;
-      }
+  int? _getEffectiveWarehouseId() {
+    if (_selectedWarehouseId != null) return _selectedWarehouseId;
+    if (widget.existingOrder?.warehouseId != null) {
+      return widget.existingOrder!.warehouseId;
     }
+    final currentUser = ref.read(authProvider).user;
+    final assignedId = currentUser?.warehouseId ??
+        ref.read(myAssignedVanWarehouseProvider)?.id;
+    if (assignedId != null) return assignedId;
+
+    final warehouses = ref.read(warehouseListProvider).asData?.value;
+    if (warehouses != null && warehouses.isNotEmpty) {
+      final canSell = warehouses.where((w) => w.canSell).toList();
+      if (canSell.isNotEmpty) {
+        final mainW = canSell.where((w) => w.isMain).firstOrNull;
+        return mainW?.id ?? canSell.first.id;
+      }
+      final mainW = warehouses.where((w) => w.isMain).firstOrNull;
+      return mainW?.id ?? warehouses.first.id;
+    }
+    return null;
+  }
+
+  double _getProductAvailableStock(ProductModel product) {
+    final warehouseId = _getEffectiveWarehouseId();
+    final double warehouseStock = warehouseId != null
+        ? product.getStockForWarehouse(warehouseId)
+        : product.totalStock;
+
+    final double savedInThisOrder =
+        (_serverSavedQuantities[product.id] ?? 0).toDouble();
+
+    return warehouseStock + savedInThisOrder;
+  }
+
+  bool _addToCart(int productId) {
+    final products = ref.read(productsListProvider).asData?.value ?? [];
+    final product = products.where((p) => p.id == productId).firstOrNull;
+    if (product == null) {
+      AppSnackbar.show(
+        context,
+        message: 'کاڵاکە نەدۆزرایەوە',
+        type: SnackbarType.error,
+      );
+      return false;
+    }
+
+    final maxStock = _getProductAvailableStock(product);
+    final currentQty = _cart[productId] ?? 0;
+
+    if (maxStock <= 0) {
+      AppSnackbar.show(
+        context,
+        message: 'ئەم کاڵایە زیاد نابێت لەبەر ئەوەی لە ستۆک تەواو بووە',
+        type: SnackbarType.warning,
+      );
+      return false;
+    }
+
+    if (currentQty + 1 > maxStock) {
+      AppSnackbar.show(
+        context,
+        message:
+            'تەنها ${maxStock.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
+        type: SnackbarType.warning,
+      );
+      return false;
+    }
+
     _lastChangedField = 'product_qty_$productId';
     setState(() {
-      _cart[productId] = (_cart[productId] ?? 0) + 1;
+      _cart[productId] = currentQty + 1;
     });
     _triggerDebouncedAutoSave();
+    return true;
   }
 
   void _removeFromCart(int productId) {
@@ -485,20 +542,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('سڕینەوەی کاڵا', style: AppTextStyles.h3),
+            ),
+          ],
+        ),
         content: Text(
           'ئایا دڵنیایت لە سڕینەوەی "$productName" لە پسوڵەکەدا؟',
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('سڕینەوە'),
+            child: const Text('بەڵێ، بسڕەوە'),
           ),
         ],
       ),
@@ -523,53 +592,83 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     int currentQty,
     String productName,
   ) async {
+    final products = ref.read(productsListProvider).asData?.value ?? [];
+    final product = products.where((p) => p.id == productId).firstOrNull;
+    final maxStock = product != null ? _getProductAvailableStock(product) : 0.0;
+
     final controller = TextEditingController(text: currentQty.toString());
     final newQty = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('دەستکاری بڕی $productName', style: AppTextStyles.h3),
-        content: AppTextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          labelText: 'بڕ (دانە)',
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('دەستکاری بڕی $productName', style: AppTextStyles.h3),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppTextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              labelText: 'بڕ (دانە)',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              maxStock <= 0
+                  ? 'ئەم کاڵایە لە ستۆک تەواو بووە'
+                  : 'ستۆکی بەردەست: ${maxStock.toInt()} دانە',
+              style: AppTextStyles.caption.copyWith(
+                color: maxStock > 0 ? AppColors.textSecondary : AppColors.danger,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('پاشگەزبوونەوە'),
-          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               final parsed = int.tryParse(controller.text.trim());
               if (parsed != null && parsed > 0) {
-                final currentUser = ref.read(authProvider).user;
-                if (currentUser?.isCashVan == true &&
-                    _selectedWarehouseId != null) {
-                  final products =
-                      ref.read(productsListProvider).asData?.value ?? [];
-                  final product = products
-                      .where((p) => p.id == productId)
-                      .firstOrNull;
-                  final maxStock =
-                      product?.getStockForWarehouse(_selectedWarehouseId) ?? 0;
-                  if (parsed > maxStock) {
-                    AppSnackbar.show(
-                      context,
-                      message:
-                          'ناتوانی لە ستۆکی بەردەستی ناو ئۆتۆمبێلەکەت ($maxStock دانە) زیاتر دیاری بکەیت',
-                      type: SnackbarType.warning,
-                    );
-                    return;
-                  }
+                if (maxStock <= 0) {
+                  AppSnackbar.show(
+                    context,
+                    message: 'ئەم کاڵایە زیاد نابێت لەبەر ئەوەی لە ستۆک تەواو بووە',
+                    type: SnackbarType.warning,
+                  );
+                  return;
+                }
+                if (parsed > maxStock) {
+                  AppSnackbar.show(
+                    context,
+                    message:
+                        'تەنها ${maxStock.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر دیاری بکەیت',
+                    type: SnackbarType.warning,
+                  );
+                  return;
                 }
                 Navigator.pop(context, parsed);
               } else {
                 Navigator.pop(context);
               }
             },
-            child: const Text('تەواو'),
+            child: const Text('پاشەکەوتکردن'),
           ),
         ],
       ),
@@ -619,6 +718,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             return AlertDialog(
               title: Row(
                 children: [
+                  IconButton(
+                    tooltip: 'داخستن',
+                    icon: const Icon(Icons.close),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.pop(dialogCtx),
+                  ),
+                  const SizedBox(width: 8),
                   const Icon(
                     Icons.assignment_return_rounded,
                     color: AppColors.danger,
@@ -629,11 +736,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
                       style: AppTextStyles.h3,
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'داخستن',
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(dialogCtx),
                   ),
                 ],
               ),
@@ -1033,6 +1135,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           return AlertDialog(
             title: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                ),
+                const SizedBox(width: 8),
                 const Icon(Icons.sell_outlined, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1121,10 +1230,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         },
                   child: const Text('سڕینەوەی تایبەت'),
                 ),
-              TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
-                child: const Text('پاشگەزبوونەوە'),
-              ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -1203,12 +1308,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
           .firstOrNull;
       if (matched != null) {
-        _addToCart(matched.id);
-        AppSnackbar.show(
-          context,
-          message: '${matched.name} زیادکرا بۆ سەبەتە',
-          type: SnackbarType.success,
-        );
+        final added = _addToCart(matched.id);
+        if (added) {
+          AppSnackbar.show(
+            context,
+            message: '${matched.name} زیادکرا بۆ سەبەتە',
+            type: SnackbarType.success,
+          );
+        }
         return true;
       } else {
         AppSnackbar.show(
@@ -1323,6 +1430,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
 
       if (mounted) {
+        _serverSavedQuantities.clear();
+        _cart.forEach((k, v) => _serverSavedQuantities[k] = v);
         setState(() {
           _failureCount = 0;
           _timerPausedForRetry = false;
@@ -1608,6 +1717,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     children: [
                       Row(
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'داخستن',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -1855,10 +1972,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         ),
                         onPressed: () {
                           Navigator.pop(dialogContext);
+                          final products =
+                              ref.read(productsListProvider).asData?.value ?? [];
+                          setState(() {
+                            for (var entry in _cart.entries.toList()) {
+                              final prod = products
+                                  .where((p) => p.id == entry.key)
+                                  .firstOrNull;
+                              if (prod != null) {
+                                final maxStock =
+                                    _getProductAvailableStock(prod).toInt();
+                                if (maxStock <= 0) {
+                                  _cart.remove(entry.key);
+                                  _cartNotes.remove(entry.key);
+                                } else if (entry.value > maxStock) {
+                                  _cart[entry.key] = maxStock;
+                                }
+                              }
+                            }
+                            _failureCount = 0;
+                            _timerPausedForRetry = false;
+                          });
+                          _triggerAutoSave();
                         },
-                        icon: const Icon(Icons.close, size: 18),
+                        icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
                         label: const Text(
-                          'تێگەیشتم / داخستن',
+                          'ڕێکخستنەوەی بڕ بەپێی ستۆکی بەردەست',
                           style: TextStyle(
                             fontFamily: 'KJino',
                             fontWeight: FontWeight.bold,
@@ -1964,15 +2103,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _selectedWarehouseId = assignedWarehouseId;
     }
 
+    final effectiveWhId = _getEffectiveWarehouseId();
     final rawProducts = productsAsync.asData?.value ?? [];
     final allProducts = isSalesman
-        ? assignedWarehouseId == null
-              ? <ProductModel>[]
-              : rawProducts
-                    .where(
-                      (p) => p.getStockForWarehouse(assignedWarehouseId) > 0,
-                    )
-                    .toList()
+        ? (effectiveWhId == null
+            ? <ProductModel>[]
+            : rawProducts
+                .where(
+                  (p) =>
+                      _getProductAvailableStock(p) > 0 ||
+                      _cart.containsKey(p.id),
+                )
+                .toList())
         : rawProducts;
 
     return Scaffold(
@@ -2199,6 +2341,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         _lastChangedField = 'warehouse';
                         setState(() {
                           _selectedWarehouseId = val;
+                          final products =
+                              ref.read(productsListProvider).asData?.value ?? [];
+                          final List<String> adjusted = [];
+                          _cart.keys.toList().forEach((pid) {
+                            final p = products
+                                .where((prod) => prod.id == pid)
+                                .firstOrNull;
+                            if (p != null) {
+                              final maxStock = p.getStockForWarehouse(val).toInt();
+                              final currentQty = _cart[pid] ?? 0;
+                              if (maxStock <= 0) {
+                                _cart.remove(pid);
+                                _cartNotes.remove(pid);
+                                adjusted.add(
+                                    '${p.name} (لە کۆگای نوێ بەردەست نییە و سڕایەوە)');
+                              } else if (currentQty > maxStock) {
+                                _cart[pid] = maxStock;
+                                adjusted.add(
+                                    '${p.name} (بڕەکەی کەمکرایەوە بۆ $maxStock دانە)');
+                              }
+                            }
+                          });
+                          if (adjusted.isNotEmpty) {
+                            AppSnackbar.show(
+                              context,
+                              message: adjusted.join('\n'),
+                              type: SnackbarType.warning,
+                            );
+                          }
                         });
                         _triggerDebouncedAutoSave();
                       }
@@ -2570,7 +2741,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                       color: Colors.transparent,
                                       child: InkWell(
                                         onTap: () {
-                                          _addToCart(product.id);
+                                          final added = _addToCart(product.id);
+                                          if (!added) return;
                                           _searchController.clear();
                                           _searchFocusNode.unfocus();
                                           WidgetsBinding.instance
@@ -2598,7 +2770,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           );
                                         },
                                         onLongPress: () {
-                                          _addToCart(product.id);
+                                          final added = _addToCart(product.id);
+                                          if (!added) return;
                                           ScaffoldMessenger.of(context)
                                               .hideCurrentSnackBar();
                                           ScaffoldMessenger.of(
@@ -2745,6 +2918,72 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                                     .onSurfaceVariant,
                                                                 fontSize: 10,
                                                               ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 6,
+                                                        ),
+                                                        Builder(
+                                                          builder: (context) {
+                                                            final availStock =
+                                                                _getProductAvailableStock(
+                                                                  product,
+                                                                );
+                                                            final isOut =
+                                                                availStock <= 0;
+                                                            return Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                    horizontal:
+                                                                        6,
+                                                                    vertical:
+                                                                        1.5,
+                                                                  ),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                    color: isOut
+                                                                        ? AppColors
+                                                                              .danger
+                                                                              .withValues(
+                                                                                alpha:
+                                                                                    0.12,
+                                                                              )
+                                                                        : (availStock <=
+                                                                                  3
+                                                                              ? AppColors.warning
+                                                                              : AppColors.success)
+                                                                          .withValues(
+                                                                            alpha:
+                                                                                0.12,
+                                                                          ),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          4,
+                                                                        ),
+                                                                    border: Border.all(
+                                                                      color: isOut
+                                                                          ? AppColors.danger.withValues(alpha: 0.3)
+                                                                          : (availStock <= 3 ? AppColors.warning : AppColors.success).withValues(alpha: 0.3),
+                                                                    ),
+                                                                  ),
+                                                              child: Text(
+                                                                isOut
+                                                                    ? 'لە ستۆک تەواو بووە'
+                                                                    : 'ستۆک: ${availStock.toInt()}',
+                                                                style:
+                                                                    TextStyle(
+                                                                      fontSize:
+                                                                          9.5,
+                                                                      color:
+                                                                          isOut
+                                                                              ? AppColors.danger
+                                                                              : (availStock <= 3 ? AppColors.warning : AppColors.success),
+                                                                      fontWeight:
+                                                                          FontWeight.bold,
+                                                                    ),
+                                                              ),
+                                                            );
+                                                          },
                                                         ),
                                                       ],
                                                     ),
