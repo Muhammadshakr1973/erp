@@ -2323,7 +2323,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget _buildProductAutocompleteInput(List<ProductModel> allProducts) {
     final theme = Theme.of(context);
 
-    return RawAutocomplete<ProductModel>(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final panelWidth = constraints.maxWidth;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isMobile = screenWidth < 600;
+
+        return RawAutocomplete<ProductModel>(
       textEditingController: _searchController,
       focusNode: _searchFocusNode,
       displayStringForOption: (ProductModel option) => option.name,
@@ -2373,44 +2379,86 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             FocusNode focusNode,
             VoidCallback onFieldSubmitted,
           ) {
-            return Container(
-              key: _searchKey,
-              child: AppTextField(
-                controller: textEditingController,
-                focusNode: focusNode,
-                borderRadius: BorderRadius.circular(8),
-                hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
-                prefixIcon: AppIcons.search,
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (textEditingController.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: 'سڕینەوەی دەق',
-                        onPressed: () {
-                          textEditingController.clear();
-                          focusNode.requestFocus();
+            return Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.md,
+                right: AppSpacing.md,
+                top: 2.0,
+                bottom: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      key: _searchKey,
+                      child: AppTextField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        borderRadius: BorderRadius.circular(8),
+                        hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
+                        prefixIcon: AppIcons.search,
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (textEditingController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                tooltip: 'سڕینەوەی دەق',
+                                onPressed: () {
+                                  textEditingController.clear();
+                                  focusNode.requestFocus();
+                                  setState(() {});
+                                },
+                              ),
+                            IconButton(
+                              icon: const Icon(AppIcons.scan),
+                              tooltip: 'سکانی باڕکۆد',
+                              onPressed: () => _scanBarcode(allProducts),
+                            ),
+                          ],
+                        ),
+                        onChanged: (_) {
                           setState(() {});
                         },
+                        onFieldSubmitted: (_) {
+                          _handleBarcodeOrSearchSubmit(
+                            textEditingController,
+                            focusNode,
+                            allProducts,
+                          );
+                        },
                       ),
-                    IconButton(
-                      icon: const Icon(AppIcons.scan),
-                      tooltip: 'سکانی باڕکۆد',
-                      onPressed: () => _scanBarcode(allProducts),
                     ),
-                  ],
-                ),
-                onChanged: (_) {
-                  setState(() {});
-                },
-                onFieldSubmitted: (_) {
-                  _handleBarcodeOrSearchSubmit(
-                    textEditingController,
-                    focusNode,
-                    allProducts,
-                  );
-                },
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showAddReturnedItemDialog(allProducts),
+                      icon: const Icon(
+                        Icons.assignment_return_rounded,
+                        size: 16,
+                        color: AppColors.danger,
+                      ),
+                      label: const Text(
+                        'کاڵای گەڕاوە',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'KJino',
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        side: const BorderSide(color: AppColors.danger),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -2420,40 +2468,26 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             AutocompleteOnSelected<ProductModel> onSelected,
             Iterable<ProductModel> options,
           ) {
-            final screenWidth = MediaQuery.of(context).size.width;
-
-            final RenderBox? renderBox =
-                _searchKey.currentContext?.findRenderObject() as RenderBox?;
-            final position = renderBox?.localToGlobal(Offset.zero);
-            final textFieldX = position?.dx ?? 0.0;
-
-            final isMobile = screenWidth < 600;
-            final double margin = isMobile ? 0.0 : 16.0;
-            final double dropdownWidth = screenWidth - (margin * 2);
-            final double xOffset = -textFieldX + margin;
-
             return TapRegion(
               groupId: _searchFocusNode,
               child: Align(
-                alignment: AlignmentDirectional.topStart,
+                alignment: Alignment.topLeft,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
-                  child: Transform.translate(
-                    offset: Offset(xOffset, 0),
-                    child: Material(
-                      elevation: 8,
-                      shadowColor: Colors.black.withValues(alpha: 0.15),
-                      borderRadius: isMobile
-                          ? BorderRadius.zero
-                          : BorderRadius.circular(12),
-                      clipBehavior: Clip.antiAlias,
-                      color: theme.colorScheme.surface,
-                      child: SizedBox(
-                        width: dropdownWidth,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 380),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Material(
+                    elevation: 8,
+                    shadowColor: Colors.black.withValues(alpha: 0.15),
+                    borderRadius: isMobile
+                        ? BorderRadius.zero
+                        : BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    color: theme.colorScheme.surface,
+                    child: SizedBox(
+                      width: panelWidth,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 380),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -2770,10 +2804,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ),
                   ),
                 ),
-              ),
-            );
-          },
-    );
+              );
+            },
+          );
+        },
+      );
   }
 
   Widget _buildCustomerSelectionDropdown(
@@ -3199,47 +3234,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       color: theme.colorScheme.surface,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.md,
-              right: AppSpacing.md,
-              top: 2.0,
-              bottom: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(child: _buildProductAutocompleteInput(allProducts)),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: 'تۆمارکردنی کاڵای گەڕاوە لەم پسوڵەیەدا',
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showAddReturnedItemDialog(allProducts),
-                    icon: const Icon(
-                      Icons.assignment_return_rounded,
-                      size: 16,
-                      color: AppColors.danger,
-                    ),
-                    label: const Text(
-                      'کاڵای گەڕاوە',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'KJino',
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      side: const BorderSide(color: AppColors.danger),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildProductAutocompleteInput(allProducts),
           if (_returnedItems.isNotEmpty)
             Container(
               margin: const EdgeInsets.symmetric(
