@@ -420,7 +420,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               ],
                             ),
                             Text(
-                              'نرخ: ${Formatters.formatMoney(p.priceN1)}',
+                              'نرخ: ${Formatters.currency(p.priceN1)}',
                               style: AppTextStyles.caption.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -513,12 +513,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       if (supplierName.isNotEmpty)
                         _detailRow('کۆمپانیا:', supplierName),
                       _detailRow('کۆی ستۆک:', '${Formatters.cleanNumberString(p.totalStock)} $unit'),
-                      _detailRow('کۆست:', Formatters.formatMoney(p.costPrice)),
-                      _detailRow('نرخی فرۆشتن ۱:', Formatters.formatMoney(p.priceN1)),
+                      _detailRow('کۆست:', Formatters.currency(p.costPrice)),
+                      _detailRow('نرخی فرۆشتن ۱:', Formatters.currency(p.priceN1)),
                       if (p.priceN2 > 0)
-                        _detailRow('نرخی فرۆشتن ۲:', Formatters.formatMoney(p.priceN2)),
+                        _detailRow('نرخی فرۆشتن ۲:', Formatters.currency(p.priceN2)),
                       if (p.priceN3 > 0)
-                        _detailRow('نرخی فرۆشتن ۳:', Formatters.formatMoney(p.priceN3)),
+                        _detailRow('نرخی فرۆشتن ۳:', Formatters.currency(p.priceN3)),
                     ],
                   ),
                 ),
@@ -527,8 +527,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ),
           actions: [
             AppButton(
-              label: 'پڕکردنەوەی داتای ئەم کاڵایە لە فۆرمدا',
-              variant: AppButtonVariant.primary,
+              text: 'پڕکردنەوەی داتای ئەم کاڵایە لە فۆرمدا',
+              type: AppButtonType.primary,
               onPressed: () {
                 Navigator.pop(context);
                 setState(() {
