@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -594,98 +595,94 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     super.dispose();
   }
 
-  Widget _buildUnitAutocomplete(ThemeData theme, {bool isUnified = false}) {
-    final List<String> unitOptions = [
-      'ج',
-      'ک',
-      'پاکەت',
-      'باڵە',
-      'عەلاگە',
-      'پ',
-      'دانە',
-      'پارچە',
-      'سێت',
-    ];
+  Future<void> _openUnitSpinDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _UnitSpinDialog(
+        initialUnit: _unitController.text.trim().isEmpty
+            ? 'ج'
+            : _unitController.text.trim(),
+        availableUnits: const [
+          'ج',
+          'ک',
+          'دانە',
+          'پاکەت',
+          'کارتۆن',
+          'باڵە',
+          'عەلاگە',
+          'پ',
+          'پارچە',
+          'سێت',
+          'کیلۆ',
+          'مەتر',
+          'لیتر',
+          'تەن',
+          'درەزن',
+        ],
+      ),
+    );
 
-    return RawAutocomplete<String>(
-      textEditingController: _unitController,
-      focusNode: _unitFocusNode,
-      optionsBuilder: (TextEditingValue textEditingValue) {
-        if (textEditingValue.text.trim().isEmpty) {
-          return unitOptions;
-        }
-        return unitOptions.where((String option) {
-          return option.toLowerCase().contains(textEditingValue.text.toLowerCase().trim());
-        });
-      },
-      onSelected: (String selection) {
-        _unitController.text = selection;
-        setState(() {});
-      },
-      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        if (isUnified) {
-          return AppTextField(
-            controller: controller,
-            focusNode: focusNode,
-            customDecoration: InputDecoration(
-              labelText: 'یەکە',
-              labelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              hintText: 'دانە، کیلۆ یان کارتۆن',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-            ),
-          );
-        }
-        return AppTextField(
-          controller: controller,
-          focusNode: focusNode,
-          labelText: 'یەکە',
-          hintText: 'دانە، کیلۆ یان کارتۆن',
-        );
-      },
-      optionsViewBuilder: (context, onSelected, options) {
-        return TapRegion(
-          groupId: _unitFocusNode,
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(12),
-              color: theme.colorScheme.surface,
-              child: SizedBox(
-                width: 200,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final String option = options.elementAt(index);
-                    return InkWell(
-                      onTap: () {
-                        onSelected(option);
-                        _unitController.text = option;
-                        setState(() {});
-                        _unitFocusNode.unfocus();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(option),
-                      ),
-                    );
-                  },
-                ),
+    if (result != null && result.trim().isNotEmpty) {
+      setState(() {
+        _unitController.text = result.trim();
+      });
+    }
+  }
+
+  Widget _buildUnitPickerField(ThemeData theme, {bool isUnified = false}) {
+    final currentUnit =
+        _unitController.text.trim().isEmpty ? 'ج' : _unitController.text.trim();
+
+    return InkWell(
+      onTap: _openUnitSpinDialog,
+      borderRadius: isUnified ? BorderRadius.zero : BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'یەکە',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    currentUnit,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      },
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.unfold_more_rounded,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1685,7 +1682,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             .withValues(alpha: 0.4),
                                       ),
                                       Expanded(
-                                        child: _buildUnitAutocomplete(
+                                        child: _buildUnitPickerField(
                                           theme,
                                           isUnified: true,
                                         ),
@@ -1812,7 +1809,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   ),
                                   // Unit
                                   Expanded(
-                                    child: _buildUnitAutocomplete(
+                                    child: _buildUnitPickerField(
                                       theme,
                                       isUnified: true,
                                     ),
@@ -1921,4 +1918,337 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     ),
   );
 }
+}
+
+class _UnitSpinDialog extends StatefulWidget {
+  final String initialUnit;
+  final List<String> availableUnits;
+
+  const _UnitSpinDialog({
+    required this.initialUnit,
+    required this.availableUnits,
+  });
+
+  @override
+  State<_UnitSpinDialog> createState() => _UnitSpinDialogState();
+}
+
+class _UnitSpinDialogState extends State<_UnitSpinDialog> {
+  late List<String> _units;
+  late int _selectedIndex;
+  late FixedExtentScrollController _scrollController;
+  final TextEditingController _customUnitController = TextEditingController();
+  final FocusNode _customUnitFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _units = List<String>.from(widget.availableUnits);
+    final initial = widget.initialUnit.trim();
+    if (initial.isNotEmpty && !_units.contains(initial)) {
+      _units.insert(0, initial);
+    }
+    _selectedIndex = _units.indexOf(initial);
+    if (_selectedIndex < 0) {
+      _selectedIndex = 0;
+    }
+    _scrollController = FixedExtentScrollController(initialItem: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _customUnitController.dispose();
+    _customUnitFocus.dispose();
+    super.dispose();
+  }
+
+  void _addCustomUnit() {
+    final text = _customUnitController.text.trim();
+    if (text.isEmpty) return;
+
+    final existingIndex = _units.indexOf(text);
+    if (existingIndex >= 0) {
+      setState(() {
+        _selectedIndex = existingIndex;
+      });
+      _scrollController.animateToItem(
+        existingIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      setState(() {
+        _units.insert(0, text);
+        _selectedIndex = 0;
+      });
+      _scrollController.jumpToItem(0);
+    }
+    _customUnitController.clear();
+    _customUnitFocus.unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      backgroundColor: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header with top-left close button (in RTL, close button is at the left)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'دیاریکردنی یەکە',
+                    style: AppTextStyles.h3.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'داخستن',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Top input for custom unit
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customUnitController,
+                      focusNode: _customUnitFocus,
+                      contextMenuBuilder: (context, editableTextState) {
+                        return KurdishContextMenu.build(context, editableTextState);
+                      },
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _addCustomUnit(),
+                      decoration: InputDecoration(
+                        hintText: 'دانانی یەکەی تر ئەگەر لەم لیستەدا نییە...',
+                        hintStyle: AppTextStyles.caption.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                        prefixIcon: const Icon(Icons.edit_note_rounded, size: 22),
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AppButton(
+                    text: 'زیادکردن',
+                    icon: Icons.add,
+                    type: AppButtonType.secondary,
+                    onPressed: _addCustomUnit,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Helper caption
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.swipe_vertical_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'سپینەکە بەرز و نزم بکە بۆ دیاریکردنی یەکە',
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Vertical Spin Wheel
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Selection highlight bar in the center
+                      Container(
+                        height: 48,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.primary,
+                            width: 2.0,
+                          ),
+                        ),
+                      ),
+
+                      // List wheel scroll view
+                      ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.trackpad,
+                            PointerDeviceKind.stylus,
+                          },
+                        ),
+                        child: ListWheelScrollView.useDelegate(
+                          controller: _scrollController,
+                          itemExtent: 48.0,
+                          perspective: 0.003,
+                          diameterRatio: 1.5,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setState(() {
+                              _selectedIndex = index;
+                            });
+                          },
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            childCount: _units.length,
+                            builder: (context, index) {
+                              final isSelected = index == _selectedIndex;
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  _scrollController.animateToItem(
+                                    index,
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeOutCubic,
+                                  );
+                                },
+                                child: Center(
+                                  child: AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 150),
+                                    style: TextStyle(
+                                      fontSize: isSelected ? 21 : 15,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                                      fontFamily: isSelected ? 'rudawbold' : 'rudawregular2',
+                                    ),
+                                    child: Text(_units[index]),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                      // Gradient fade on top
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 52,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  theme.colorScheme.surface,
+                                  theme.colorScheme.surface.withValues(alpha: 0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Gradient fade on bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 52,
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  theme.colorScheme.surface,
+                                  theme.colorScheme.surface.withValues(alpha: 0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Confirmation button (strictly primary action, no cancel at bottom)
+              AppButton(
+                text: 'تەئکیدکردنەوە',
+                type: AppButtonType.primary,
+                onPressed: () {
+                  final customText = _customUnitController.text.trim();
+                  if (customText.isNotEmpty) {
+                    Navigator.pop(context, customText);
+                  } else if (_selectedIndex >= 0 && _selectedIndex < _units.length) {
+                    Navigator.pop(context, _units[_selectedIndex]);
+                  } else {
+                    Navigator.pop(context, 'ج');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
