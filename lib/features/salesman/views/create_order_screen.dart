@@ -55,7 +55,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  double? _searchFieldWidth;
   final GlobalKey _searchKey = GlobalKey();
 
   int? _serverOrderId;
@@ -894,10 +893,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   ),
                                   selected: reasonController.text == r,
                                   onSelected: (sel) {
-                                    if (sel)
+                                    if (sel) {
                                       setDialogState(
                                         () => reasonController.text = r,
                                       );
+                                    }
                                   },
                                 );
                               }).toList(),
@@ -1233,8 +1233,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final warehouses = rawWarehouses.where((w) => w.canSell).toList();
     if (warehouses.isEmpty) return;
     if (_selectedCustomer == null) return;
-    if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty)
+    if (widget.existingOrder == null && _cart.isEmpty && _returnedItems.isEmpty) {
       return;
+    }
 
     final warehouseId =
         _selectedWarehouseId ??
@@ -2372,51 +2373,45 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             FocusNode focusNode,
             VoidCallback onFieldSubmitted,
           ) {
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                _searchFieldWidth = constraints.maxWidth;
-
-                return Container(
-                  key: _searchKey,
-                  child: AppTextField(
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    borderRadius: BorderRadius.circular(8),
-                    hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
-                    prefixIcon: AppIcons.search,
-                    suffixIcon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (textEditingController.text.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.close, size: 18),
-                            tooltip: 'سڕینەوەی دەق',
-                            onPressed: () {
-                              textEditingController.clear();
-                              focusNode.requestFocus();
-                              setState(() {});
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(AppIcons.scan),
-                          tooltip: 'سکانی باڕکۆد',
-                          onPressed: () => _scanBarcode(allProducts),
-                        ),
-                      ],
+            return Container(
+              key: _searchKey,
+              child: AppTextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                borderRadius: BorderRadius.circular(8),
+                hintText: 'گەڕان بەپێی ناوی کاڵا یان باڕکۆد...',
+                prefixIcon: AppIcons.search,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (textEditingController.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'سڕینەوەی دەق',
+                        onPressed: () {
+                          textEditingController.clear();
+                          focusNode.requestFocus();
+                          setState(() {});
+                        },
+                      ),
+                    IconButton(
+                      icon: const Icon(AppIcons.scan),
+                      tooltip: 'سکانی باڕکۆد',
+                      onPressed: () => _scanBarcode(allProducts),
                     ),
-                    onChanged: (_) {
-                      setState(() {});
-                    },
-                    onFieldSubmitted: (_) {
-                      _handleBarcodeOrSearchSubmit(
-                        textEditingController,
-                        focusNode,
-                        allProducts,
-                      );
-                    },
-                  ),
-                );
-              },
+                  ],
+                ),
+                onChanged: (_) {
+                  setState(() {});
+                },
+                onFieldSubmitted: (_) {
+                  _handleBarcodeOrSearchSubmit(
+                    textEditingController,
+                    focusNode,
+                    allProducts,
+                  );
+                },
+              ),
             );
           },
       optionsViewBuilder:
