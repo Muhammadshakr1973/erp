@@ -285,6 +285,8 @@ class DeliveryTripController extends Controller
             \Illuminate\Support\Facades\Log::error("Failed sending driver collection WhatsApp notification: " . $e->getMessage());
         }
 
+        \Illuminate\Support\Facades\Cache::forget('admin_dashboard_kpis_v5');
+
         event(new \App\Events\DeliveryTripUpdated(null, 'driver_collection'));
 
         return response()->json([

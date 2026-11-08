@@ -97,6 +97,8 @@ class DriverCollectionActions {
       if (response.statusCode != null && response.statusCode! >= 400) {
         throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
       }
+
+      // Refresh driver cash summary, collections history, and main admin dashboard
       ref.invalidate(driverCashSummaryProvider);
       ref.invalidate(driverCollectionsHistoryProvider);
       ref.invalidate(dashboardProvider);

@@ -375,6 +375,13 @@ class _AdminDriverCollectionsScreenState
             return AlertDialog(
               title: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: isSaving ? null : () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
                   Icon(
                     Icons.monetization_on,
                     color: AppColors.getAdaptiveColor(context, AppColors.success),
@@ -431,10 +438,6 @@ class _AdminDriverCollectionsScreenState
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.pop(context),
-                  child: const Text('پەشیمانبوونەوە'),
-                ),
                 ElevatedButton(
                   onPressed: isSaving
                       ? null

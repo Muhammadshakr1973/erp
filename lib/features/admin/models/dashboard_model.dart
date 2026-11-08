@@ -62,6 +62,38 @@ class DashboardModel {
       todaySalesmenPlan: parsedPlan,
     );
   }
+
+  DashboardModel copyWith({
+    double? monthlySales,
+    double? monthlyProfit,
+    double? totalReceivables,
+    double? totalCustomerDebts,
+    double? totalPayables,
+    double? monthlyCollected,
+    double? deliveredToOffice,
+    double? lastMonthSales,
+    double? lastMonthProfit,
+    double? driversRemainingCash,
+    double? lastCollectionAmount,
+    String? lastCollectionDriver,
+    List<TodaySalesmanPlanItem>? todaySalesmenPlan,
+  }) {
+    return DashboardModel(
+      monthlySales: monthlySales ?? this.monthlySales,
+      monthlyProfit: monthlyProfit ?? this.monthlyProfit,
+      totalReceivables: totalReceivables ?? this.totalReceivables,
+      totalCustomerDebts: totalCustomerDebts ?? this.totalCustomerDebts,
+      totalPayables: totalPayables ?? this.totalPayables,
+      monthlyCollected: monthlyCollected ?? this.monthlyCollected,
+      deliveredToOffice: deliveredToOffice ?? this.deliveredToOffice,
+      lastMonthSales: lastMonthSales ?? this.lastMonthSales,
+      lastMonthProfit: lastMonthProfit ?? this.lastMonthProfit,
+      driversRemainingCash: driversRemainingCash ?? this.driversRemainingCash,
+      lastCollectionAmount: lastCollectionAmount ?? this.lastCollectionAmount,
+      lastCollectionDriver: lastCollectionDriver ?? this.lastCollectionDriver,
+      todaySalesmenPlan: todaySalesmenPlan ?? this.todaySalesmenPlan,
+    );
+  }
 }
 
 class TodaySalesmanPlanItem {
