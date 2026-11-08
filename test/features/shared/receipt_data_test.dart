@@ -127,7 +127,7 @@ void main() {
       final receipt = ReceiptData.fromPurchaseOrder(po);
       expect(receipt.title, isEmpty);
       expect(receipt.employeeLabel, 'بەکارهێنەر');
-      expect(receipt.items.single.quantityDisplay, 'کارتۆن ( 1 کارتۆن = 10 ج )');
+      expect(receipt.items.single.quantityDisplay, '10 ج (1 ج = 10 دانە)');
     });
   });
 }

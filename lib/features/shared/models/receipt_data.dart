@@ -137,21 +137,13 @@ class ReceiptData {
                   : 'دانە';
               final upc = item.unitsPerCarton;
               final qty = item.quantity;
+              final qtyStr = Formatters.cleanNumberString(qty);
 
               String qtyDisplay;
-              if (upc > 1) {
-                if (qty >= upc && qty % upc == 0) {
-                  final cartons = qty ~/ upc;
-                  qtyDisplay = 'کارتۆن ( $cartons کارتۆن = $qty $unitName )';
-                } else if (qty >= upc) {
-                  final cartons = qty ~/ upc;
-                  final rem = qty % upc;
-                  qtyDisplay = 'کارتۆن ( $cartons کارتۆن و $rem $unitName = $qty $unitName )';
-                } else {
-                  qtyDisplay = '$qty $unitName ( ١ کارتۆن = $upc $unitName )';
-                }
+              if (upc > 1 && unitName != 'دانە') {
+                qtyDisplay = '$qtyStr $unitName (1 $unitName = $upc دانە)';
               } else {
-                qtyDisplay = '$qty $unitName';
+                qtyDisplay = '$qtyStr $unitName';
               }
 
               return ReceiptItem(
