@@ -385,6 +385,29 @@ class ProductsListNotifier
     }
   }
 
+  void updateCategoryNameLocally(int categoryId, String newName) {
+    state.whenData((currentList) {
+      bool anyUpdated = false;
+      final updatedList = currentList.map((p) {
+        if (p.categoryId == categoryId) {
+          anyUpdated = true;
+          final updatedCategory = p.category is Map
+              ? {
+                  ...Map<String, dynamic>.from(p.category as Map),
+                  'name': newName,
+                }
+              : {'id': categoryId, 'name': newName};
+          return p.copyWith(category: updatedCategory);
+        }
+        return p;
+      }).toList();
+
+      if (anyUpdated) {
+        state = AsyncValue.data(updatedList);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _pusher.unsubscribeFromChannel('private-products');

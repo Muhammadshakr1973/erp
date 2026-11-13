@@ -9,6 +9,7 @@ import '../../../core/components/kurdish_context_menu.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../models/supplier_model.dart';
 import '../providers/products_provider.dart';
@@ -16,6 +17,7 @@ import '../providers/categories_provider.dart';
 import '../providers/suppliers_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../admin/views/category_form_dialog.dart';
 import 'barcode_generator_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
@@ -789,6 +791,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
+  Future<void> _showEditCategoryDialog(CategoryModel category) async {
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CategoryFormDialog(category: category),
+    );
+  }
+
   Future<void> _showAddSupplierDialog() async {
     String newSupplierName = '';
     final result = await showDialog<String>(
@@ -1184,42 +1194,125 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             )
                                             ? _selectedCategoryId
                                             : null;
-                                        return DropdownButtonHideUnderline(
-                                          child: DropdownButtonFormField<int>(
-                                            initialValue: validValue,
-                                            isExpanded: true,
-                                            hint: const Text('جۆر هەڵبژێرە'),
-                                            decoration: const InputDecoration(
-                                              labelText: 'جۆری کاڵا',
-                                              border: InputBorder.none,
-                                              enabledBorder: InputBorder.none,
-                                              focusedBorder: InputBorder.none,
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            items: [
-                                              ...categories.map(
-                                                (c) => DropdownMenuItem(
-                                                  value: c.id,
+                                          return DropdownButtonHideUnderline(
+                                            child: DropdownButtonFormField<int>(
+                                              initialValue: validValue,
+                                              isExpanded: true,
+                                              hint: const Text('جۆر هەڵبژێرە'),
+                                              decoration: const InputDecoration(
+                                                labelText: 'جۆری کاڵا',
+                                                border: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                contentPadding: EdgeInsets.zero,
+                                              ),
+                                              selectedItemBuilder: (context) {
+                                                return [
+                                                  ...categories.map(
+                                                    (c) => Align(
+                                                      alignment:
+                                                          AlignmentDirectional
+                                                              .centerStart,
+                                                      child: Text(
+                                                        c.name,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Align(
+                                                    alignment:
+                                                        AlignmentDirectional
+                                                            .centerStart,
+                                                    child: Text(
+                                                      '+ زیادکردنی نوێ',
+                                                      style: TextStyle(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ];
+                                              },
+                                              items: [
+                                                ...categories.map(
+                                                  (c) => DropdownMenuItem<int>(
+                                                    value: c.id,
+                                                    child: Builder(
+                                                      builder: (menuContext) {
+                                                        return GestureDetector(
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onLongPress: () {
+                                                            final dialogRoute =
+                                                                ModalRoute.of(
+                                                                  context,
+                                                                );
+                                                            final menuRoute =
+                                                                ModalRoute.of(
+                                                                  menuContext,
+                                                                );
+                                                            if (menuRoute !=
+                                                                    null &&
+                                                                menuRoute !=
+                                                                    dialogRoute &&
+                                                                menuRoute
+                                                                    .isActive) {
+                                                              Navigator.of(
+                                                                menuContext,
+                                                              ).pop();
+                                                            }
+                                                            Future.microtask(
+                                                              () {
+                                                                if (mounted) {
+                                                                  _showEditCategoryDialog(
+                                                                    c,
+                                                                  );
+                                                                }
+                                                              },
+                                                            );
+                                                          },
+                                                          child: Container(
+                                                            width:
+                                                                double.infinity,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minHeight:
+                                                                      kMinInteractiveDimension,
+                                                                ),
+                                                            alignment:
+                                                                AlignmentDirectional
+                                                                    .centerStart,
+                                                            child: Text(
+                                                              c.name,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: -1,
                                                   child: Text(
-                                                    c.name,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
+                                                    '+ زیادکردنی نوێ',
+                                                    style: TextStyle(
+                                                      color: theme
+                                                          .colorScheme
+                                                          .primary,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                              DropdownMenuItem(
-                                                value: -1,
-                                                child: Text(
-                                                  '+ زیادکردنی نوێ',
-                                                  style: TextStyle(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                              ],
                                             onChanged: (v) {
                                               if (v == -1) {
                                                 _showAddCategoryDialog();

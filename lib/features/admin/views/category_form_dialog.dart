@@ -36,16 +36,21 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final trimmedName = _nameController.text.trim();
+    if (widget.category != null && trimmedName == widget.category!.name.trim()) {
+      Navigator.of(context).pop(false);
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       if (widget.category == null) {
         await ref
             .read(categoryActionsProvider)
-            .addCategory(_nameController.text.trim());
+            .addCategory(trimmedName);
       } else {
         await ref
             .read(categoryActionsProvider)
-            .updateCategory(widget.category!.id, _nameController.text.trim());
+            .updateCategory(widget.category!.id, trimmedName);
       }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -85,7 +90,11 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
         child: AppTextField(
           labelText: 'ناوی جۆر',
           controller: _nameController,
-          validator: (v) => v == null || v.isEmpty ? 'ناوی جۆر پێویستە' : null,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _submit(),
+          validator: (v) =>
+              v == null || v.trim().isEmpty ? 'ناوی جۆر پێویستە' : null,
         ),
       ),
       actions: [
