@@ -413,8 +413,25 @@ final productSearchProvider =
   return ProductSearchNotifier();
 });
 
+enum StockFilterMode { all, lessThan, greaterThan }
+
+class StockQuantityFilter {
+  final StockFilterMode mode;
+  final double? threshold;
+
+  const StockQuantityFilter({
+    this.mode = StockFilterMode.all,
+    this.threshold,
+  });
+
+  bool get isActive => mode != StockFilterMode.all && threshold != null;
+}
+
 final selectedCategoryFilterProvider = StateProvider<int?>((ref) => null);
 final productStatusFilterProvider = StateProvider<String>((ref) => 'all');
+final productStockFilterProvider = StateProvider<StockQuantityFilter>(
+  (ref) => const StockQuantityFilter(),
+);
 
 final filteredProductsProvider =
     Provider<AsyncValue<List<ProductModel>>>((ref) {
@@ -422,6 +439,7 @@ final filteredProductsProvider =
   final searchQuery = ref.watch(productSearchProvider).toLowerCase();
   final selectedCategory = ref.watch(selectedCategoryFilterProvider);
   final statusFilter = ref.watch(productStatusFilterProvider);
+  final stockFilter = ref.watch(productStockFilterProvider);
 
   return productsAsync.whenData((products) {
     return products.where((p) {
@@ -456,7 +474,16 @@ final filteredProductsProvider =
         matchesStatus = p.unit == null || p.unit!.trim().isEmpty;
       }
 
-      return matchesQuery && matchesCategory && matchesStatus;
+      bool matchesStock = true;
+      if (stockFilter.mode == StockFilterMode.lessThan &&
+          stockFilter.threshold != null) {
+        matchesStock = p.totalStock < stockFilter.threshold!;
+      } else if (stockFilter.mode == StockFilterMode.greaterThan &&
+          stockFilter.threshold != null) {
+        matchesStock = p.totalStock > stockFilter.threshold!;
+      }
+
+      return matchesQuery && matchesCategory && matchesStatus && matchesStock;
     }).toList();
   });
 });

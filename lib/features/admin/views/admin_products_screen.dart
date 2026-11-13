@@ -128,12 +128,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final int countNoCategory =
         allProducts.where((p) => p.categoryId == null).length;
 
+    final bool hasValidSelection = selectedCategory == null ||
+        selectedCategory == -1 ||
+        categories.any((c) => c.id == selectedCategory);
+    final int? effectiveValue = hasValidSelection ? selectedCategory : null;
+    final bool isFiltered = effectiveValue != null;
+
     DropdownMenuItem<int?> buildCatItem(
       int? val,
       String label,
       int count,
     ) {
-      final isSelected = selectedCategory == val;
+      final isSelected = effectiveValue == val;
       return DropdownMenuItem<int?>(
         value: val,
         child: Row(
@@ -175,44 +181,50 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       );
     }
 
+    final List<String> closedLabels = [
+      'هەموو جۆرەکان',
+      'بێ جۆر',
+      ...categories.map((c) => c.name),
+    ];
+
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: selectedCategory != null
-            ? theme.colorScheme.primary.withValues(alpha: 0.15)
-            : theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selectedCategory != null
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outline.withValues(alpha: 0.5),
-        ),
-      ),
+      color: isFiltered
+          ? theme.colorScheme.primary.withValues(alpha: 0.14)
+          : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int?>(
-          value: selectedCategory,
+          value: effectiveValue,
+          isExpanded: true,
           isDense: true,
           dropdownColor: theme.colorScheme.surface,
-          icon: Padding(
-            padding: const EdgeInsets.only(right: 4.0),
-            child: Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 18,
-              color: selectedCategory != null
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight:
-                selectedCategory != null ? FontWeight.bold : FontWeight.w500,
-            color: selectedCategory != null
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
+            color: isFiltered
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface,
-            fontFamily: 'KJino',
+                : theme.colorScheme.onSurfaceVariant,
           ),
+          selectedItemBuilder: (context) => closedLabels
+              .map(
+                (label) => Center(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isFiltered ? FontWeight.bold : FontWeight.w500,
+                      color: isFiltered
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                      fontFamily: 'KJino',
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
           items: [
             buildCatItem(null, 'هەموو جۆرەکان', 0),
             buildCatItem(-1, 'بێ جۆر', countNoCategory),
@@ -326,43 +338,53 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       );
     }
 
+    const List<String> statusLabels = [
+      'هەموو کاڵاکان',
+      'بێ وێنە',
+      'نرخەکان',
+      'بێ کۆمپانیا',
+      'بێ بارکۆد',
+      'بێ یەکە',
+    ];
+
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: isFiltered
-            ? theme.colorScheme.primary.withValues(alpha: 0.15)
-            : theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isFiltered
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outline.withValues(alpha: 0.5),
-        ),
-      ),
+      color: isFiltered
+          ? theme.colorScheme.primary.withValues(alpha: 0.14)
+          : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selectedStatusFilter,
+          isExpanded: true,
           isDense: true,
           dropdownColor: theme.colorScheme.surface,
-          icon: Padding(
-            padding: const EdgeInsets.only(right: 4.0),
-            child: Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 18,
-              color: isFiltered
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: isFiltered ? FontWeight.bold : FontWeight.w500,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
             color: isFiltered
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface,
-            fontFamily: 'KJino',
+                : theme.colorScheme.onSurfaceVariant,
           ),
+          selectedItemBuilder: (context) => statusLabels
+              .map(
+                (label) => Center(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isFiltered ? FontWeight.bold : FontWeight.w500,
+                      color: isFiltered
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                      fontFamily: 'KJino',
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
           items: [
             buildMenuItem(
               'all',
@@ -411,6 +433,159 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
+  Widget _buildStockFilterDropdown(
+    BuildContext context,
+    ThemeData theme,
+    StockQuantityFilter stockFilter,
+  ) {
+    final bool isFiltered = stockFilter.isActive;
+    String closedLabel = 'بڕی ستۆک';
+    if (isFiltered) {
+      final numStr = Formatters.cleanNumberString(stockFilter.threshold);
+      closedLabel = stockFilter.mode == StockFilterMode.lessThan
+          ? 'کەمتر لە $numStr'
+          : 'زیاتر لە $numStr';
+    }
+
+    PopupMenuItem<String> buildStockMenuItem({
+      required String value,
+      required String label,
+      required IconData icon,
+      required bool isSelected,
+    }) {
+      return PopupMenuItem<String>(
+        value: value,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 18,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+                fontFamily: 'KJino',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return PopupMenuButton<String>(
+      color: theme.colorScheme.surface,
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) {
+        if (value == 'all') {
+          ref.read(productStockFilterProvider.notifier).state =
+              const StockQuantityFilter();
+        } else if (value == 'less_than') {
+          _showStockFilterDialog(context, StockFilterMode.lessThan);
+        } else if (value == 'greater_than') {
+          _showStockFilterDialog(context, StockFilterMode.greaterThan);
+        }
+      },
+      itemBuilder: (context) => [
+        buildStockMenuItem(
+          value: 'all',
+          label: 'هەموو ستۆکەکان',
+          icon: Icons.inventory_outlined,
+          isSelected: !isFiltered,
+        ),
+        buildStockMenuItem(
+          value: 'less_than',
+          label: stockFilter.mode == StockFilterMode.lessThan && isFiltered
+              ? 'کەمتر لە ${Formatters.cleanNumberString(stockFilter.threshold)}'
+              : 'کەمتر لە بڕێک',
+          icon: Icons.trending_down_rounded,
+          isSelected:
+              stockFilter.mode == StockFilterMode.lessThan && isFiltered,
+        ),
+        buildStockMenuItem(
+          value: 'greater_than',
+          label: stockFilter.mode == StockFilterMode.greaterThan && isFiltered
+              ? 'زیاتر لە ${Formatters.cleanNumberString(stockFilter.threshold)}'
+              : 'زیاتر لە بڕێک',
+          icon: Icons.trending_up_rounded,
+          isSelected:
+              stockFilter.mode == StockFilterMode.greaterThan && isFiltered,
+        ),
+      ],
+      child: Container(
+        height: 38,
+        color: isFiltered
+            ? theme.colorScheme.primary.withValues(alpha: 0.14)
+            : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Center(
+                child: Text(
+                  closedLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: isFiltered ? FontWeight.bold : FontWeight.w500,
+                    color: isFiltered
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                    fontFamily: 'KJino',
+                  ),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isFiltered
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStockFilterDialog(BuildContext context, StockFilterMode initialMode) {
+    final currentFilter = ref.read(productStockFilterProvider);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _StockFilterInputDialog(
+        initialMode: initialMode,
+        initialThreshold: currentFilter.threshold,
+        onApply: (mode, threshold) {
+          ref.read(productStockFilterProvider.notifier).state =
+              StockQuantityFilter(mode: mode, threshold: threshold);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -419,6 +594,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     final categoriesAsync = ref.watch(categoriesListProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
     final statusFilter = ref.watch(productStatusFilterProvider);
+    final stockFilter = ref.watch(productStockFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -512,47 +688,83 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 38,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenHorizontal,
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
+            child: Container(
+              height: 38,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: (selectedCategory != null ||
+                          statusFilter != 'all' ||
+                          stockFilter.isActive)
+                      ? theme.colorScheme.primary.withValues(alpha: 0.7)
+                      : theme.colorScheme.outline.withValues(alpha: 0.5),
+                ),
               ),
-              children: [
-                // 1. Dropdown for Category filter (includes "هەموو جۆرەکان" and "بێ جۆر")
-                categoriesAsync.when(
-                  data: (categories) => _buildCategoryDropdown(
-                    context,
-                    theme,
-                    selectedCategory,
-                    categories,
-                    allProducts,
-                  ),
-                  loading: () => _buildCategoryDropdown(
-                    context,
-                    theme,
-                    selectedCategory,
-                    [],
-                    allProducts,
-                  ),
-                  error: (_, _) => _buildCategoryDropdown(
-                    context,
-                    theme,
-                    selectedCategory,
-                    [],
-                    allProducts,
-                  ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(19),
+                child: Row(
+                  children: [
+                    // 1. Dropdown for Category filter
+                    Expanded(
+                      child: categoriesAsync.when(
+                        data: (categories) => _buildCategoryDropdown(
+                          context,
+                          theme,
+                          selectedCategory,
+                          categories,
+                          allProducts,
+                        ),
+                        loading: () => _buildCategoryDropdown(
+                          context,
+                          theme,
+                          selectedCategory,
+                          [],
+                          allProducts,
+                        ),
+                        error: (_, _) => _buildCategoryDropdown(
+                          context,
+                          theme,
+                          selectedCategory,
+                          [],
+                          allProducts,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.35),
+                    ),
+                    // 2. Dropdown for Status filters
+                    Expanded(
+                      child: _buildStatusFilterDropdown(
+                        context,
+                        theme,
+                        statusFilter,
+                        allProducts,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.35),
+                    ),
+                    // 3. Dropdown for Stock quantity filter (less than / greater than input)
+                    Expanded(
+                      child: _buildStockFilterDropdown(
+                        context,
+                        theme,
+                        stockFilter,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                // 2. Dropdown for Status filters ("بێ وێنە", "نرخەکان", "بێ کۆمپانیا", "بێ بارکۆد", "بێ یەکە") with Radio Buttons
-                _buildStatusFilterDropdown(
-                  context,
-                  theme,
-                  statusFilter,
-                  allProducts,
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -907,6 +1119,192 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StockFilterInputDialog extends StatefulWidget {
+  final StockFilterMode initialMode;
+  final double? initialThreshold;
+  final void Function(StockFilterMode mode, double threshold) onApply;
+
+  const _StockFilterInputDialog({
+    required this.initialMode,
+    this.initialThreshold,
+    required this.onApply,
+  });
+
+  @override
+  State<_StockFilterInputDialog> createState() =>
+      _StockFilterInputDialogState();
+}
+
+class _StockFilterInputDialogState extends State<_StockFilterInputDialog> {
+  late StockFilterMode _mode;
+  late TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = widget.initialMode == StockFilterMode.all
+        ? StockFilterMode.lessThan
+        : widget.initialMode;
+    _controller = TextEditingController(
+      text: widget.initialThreshold != null
+          ? Formatters.cleanNumberString(widget.initialThreshold)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _normalizeDigits(String input) {
+    const easternArabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    var result = input.trim();
+    for (int i = 0; i < 10; i++) {
+      result = result.replaceAll(easternArabic[i], '$i');
+      result = result.replaceAll(persian[i], '$i');
+    }
+    return result;
+  }
+
+  void _submit() {
+    final normalized = _normalizeDigits(_controller.text);
+    final parsed = double.tryParse(normalized);
+    if (parsed == null) {
+      setState(() {
+        _errorText = 'تکایە ژمارەیەکی دروست بنووسە';
+      });
+      return;
+    }
+    widget.onApply(_mode, parsed);
+    Navigator.pop(context);
+  }
+
+  Widget _buildModeOption(
+    ThemeData theme,
+    StockFilterMode mode,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = _mode == mode;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => setState(() => _mode = mode),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.14)
+                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outline.withValues(alpha: 0.4),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface,
+                  fontFamily: 'KJino',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Expanded(
+            child: Text('فلتەری بڕی ستۆک', style: AppTextStyles.h3),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              _buildModeOption(
+                theme,
+                StockFilterMode.lessThan,
+                'کەمتر لە',
+                Icons.trending_down_rounded,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _buildModeOption(
+                theme,
+                StockFilterMode.greaterThan,
+                'زیاتر لە',
+                Icons.trending_up_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: _controller,
+            labelText: _mode == StockFilterMode.lessThan
+                ? 'ستۆک کەمتر بێت لە'
+                : 'ستۆک زیاتر بێت لە',
+            hintText: 'بۆ نموونە: 10',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            errorText: _errorText,
+            onChanged: (_) {
+              if (_errorText != null) {
+                setState(() => _errorText = null);
+              }
+            },
+          ),
+        ],
+      ),
+      actions: [
+        AppButton(
+          text: 'جێبەجێکردن',
+          onPressed: _submit,
+        ),
+      ],
     );
   }
 }
