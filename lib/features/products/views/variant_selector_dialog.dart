@@ -399,6 +399,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                 // Stepper Controls (- [input] +)
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
+                                  textDirection: TextDirection.ltr,
                                   children: [
                                     _StepperIconButton(
                                       icon: Icons.remove,
