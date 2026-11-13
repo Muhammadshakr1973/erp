@@ -780,8 +780,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         }
       } catch (e) {
         if (mounted) {
+          final message = e.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('کێشە لە زیادکردنی کاتیگۆری: $e')),
+            SnackBar(content: Text('کێشە لە زیادکردنی کاتیگۆری: $message')),
           );
         }
       }

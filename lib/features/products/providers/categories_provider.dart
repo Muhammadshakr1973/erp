@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
@@ -13,7 +14,7 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData is! Map || resData['data'] is! List) {
-          throw FormatException(
+          throw const FormatException(
             'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed categories response payload)',
           );
         }
@@ -21,9 +22,13 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
         return data.map((json) => CategoryModel.fromJson(json)).toList();
       }
       throw Exception(
-        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        api.extractErrorMessage(
+          response.data,
+          defaultMsg:
+              'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+        ),
       );
-    } catch (e) {
+    } on DioException catch (e) {
       throw Exception(api.parseError(e));
     }
   }
@@ -84,11 +89,21 @@ class CategoryActions {
     try {
       final response = await api.client.post(
         '/categories',
-        data: {'name': name},
+        data: {'name': name.trim()},
       );
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        throw Exception(
+          api.extractErrorMessage(
+            response.data,
+            defaultMsg: 'نەتوانرا جۆری کاڵا زیاد بکرێت',
+          ),
+        );
+      }
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {
-        throw FormatException(
+        throw const FormatException(
           'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed category response payload)',
         );
       }
@@ -97,7 +112,7 @@ class CategoryActions {
       );
       ref.read(categoriesListProvider.notifier).addLocally(category);
       return category;
-    } catch (e) {
+    } on DioException catch (e) {
       throw Exception(api.parseError(e));
     }
   }
@@ -106,11 +121,21 @@ class CategoryActions {
     try {
       final response = await api.client.put(
         '/categories/$id',
-        data: {'name': name},
+        data: {'name': name.trim()},
       );
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        throw Exception(
+          api.extractErrorMessage(
+            response.data,
+            defaultMsg: 'نەتوانرا ناوی جۆر نوێ بکرێتەوە',
+          ),
+        );
+      }
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {
-        throw FormatException(
+        throw const FormatException(
           'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed category response payload)',
         );
       }
@@ -122,16 +147,26 @@ class CategoryActions {
           .read(productsListProvider.notifier)
           .updateCategoryNameLocally(updatedCategory.id, updatedCategory.name);
       return updatedCategory;
-    } catch (e) {
+    } on DioException catch (e) {
       throw Exception(api.parseError(e));
     }
   }
 
   Future<void> deleteCategory(int id) async {
     try {
-      await api.client.delete('/categories/$id');
+      final response = await api.client.delete('/categories/$id');
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
+        throw Exception(
+          api.extractErrorMessage(
+            response.data,
+            defaultMsg: 'نەتوانرا جۆرەکە بسڕدرێتەوە',
+          ),
+        );
+      }
       ref.read(categoriesListProvider.notifier).removeLocally(id);
-    } catch (e) {
+    } on DioException catch (e) {
       throw Exception(api.parseError(e));
     }
   }
