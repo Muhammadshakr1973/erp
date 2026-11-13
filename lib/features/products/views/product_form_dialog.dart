@@ -18,6 +18,7 @@ import '../providers/suppliers_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../admin/views/category_form_dialog.dart';
+import '../utils/category_similarity.dart';
 import 'barcode_generator_dialog.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
@@ -36,6 +37,7 @@ class ProductFormDialog extends ConsumerStatefulWidget {
 
 class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _categoryFieldKey = GlobalKey<FormFieldState<int>>();
   bool _isLoading = false;
 
   late TextEditingController _nameController;
@@ -731,64 +733,22 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   }
 
   Future<void> _showAddCategoryDialog() async {
-    String newCategoryName = '';
-    final result = await showDialog<String>(
+    final selectedCategory = await showDialog<CategoryModel>(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(child: Text('زیادکردنی کاتیگۆری نوێ')),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          content: TextField(
-            autofocus: true,
-            contextMenuBuilder: (context, editableTextState) {
-              return KurdishContextMenu.build(context, editableTextState);
-            },
-            decoration: const InputDecoration(hintText: 'ناوی کاتیگۆری'),
-            onChanged: (val) => newCategoryName = val,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, newCategoryName),
-              child: const Text('زیادکردن'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => const _AddCategoryDialog(),
     );
 
-    if (result != null && result.trim().isNotEmpty) {
-      try {
-        final newCategory = await ref
-            .read(categoryActionsProvider)
-            .addCategory(result.trim());
-        // چاوەڕێ دەکەین تا لیستەکە نوێ دەبێتەوە
-        await ref.read(categoriesListProvider.future);
+    if (!mounted) return;
 
-        if (mounted) {
-          setState(() {
-            _selectedCategoryId = newCategory.id;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          final message = e.toString().replaceFirst('Exception: ', '');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('کێشە لە زیادکردنی کاتیگۆری: $message')),
-          );
-        }
-      }
+    if (selectedCategory != null) {
+      setState(() {
+        _selectedCategoryId = selectedCategory.id;
+      });
+      _categoryFieldKey.currentState?.didChange(selectedCategory.id);
     } else {
-      // Reset dropdown if cancelled
       setState(() {});
+      _categoryFieldKey.currentState?.didChange(_selectedCategoryId);
     }
   }
 
@@ -1197,6 +1157,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                             : null;
                                           return DropdownButtonHideUnderline(
                                             child: DropdownButtonFormField<int>(
+                                              key: _categoryFieldKey,
                                               initialValue: validValue,
                                               isExpanded: true,
                                               hint: const Text('جۆر هەڵبژێرە'),
@@ -2337,6 +2298,186 @@ class _UnitSpinDialogState extends State<_UnitSpinDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AddCategoryDialog extends ConsumerStatefulWidget {
+  const _AddCategoryDialog();
+
+  @override
+  ConsumerState<_AddCategoryDialog> createState() => _AddCategoryDialogState();
+}
+
+class _AddCategoryDialogState extends ConsumerState<_AddCategoryDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isSaving = false;
+  String? _confirmedSimilarName;
+  String? _inlineError;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (!mounted) return;
+    setState(() {
+      _inlineError = null;
+      if (_confirmedSimilarName != _controller.text.trim()) {
+        _confirmedSimilarName = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onTextChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(List<CategoryModel> categories) async {
+    final trimmed = _controller.text.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _inlineError = 'ناوی کاتیگۆری پێویستە';
+      });
+      return;
+    }
+
+    final exactMatch = CategorySimilarityHelper.findExactMatch(
+      trimmed,
+      categories,
+    );
+    if (exactMatch != null) {
+      setState(() {
+        _inlineError =
+            'ئەم کاتیگۆرییە پێشتر بە ناوی «${exactMatch.category.name}» بوونی هەیە!';
+      });
+      return;
+    }
+
+    final matches = CategorySimilarityHelper.findMatches(trimmed, categories);
+    if (matches.isNotEmpty && _confirmedSimilarName != trimmed) {
+      setState(() {
+        _confirmedSimilarName = trimmed;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _inlineError = null;
+    });
+
+    try {
+      final newCategory = await ref
+          .read(categoryActionsProvider)
+          .addCategory(trimmed);
+      if (mounted) {
+        Navigator.pop(context, newCategory);
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e.toString().replaceFirst('Exception: ', '');
+        setState(() {
+          _isSaving = false;
+          _inlineError = 'کێشە لە زیادکردنی کاتیگۆری: $message';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories =
+        ref.watch(categoriesListProvider).valueOrNull ?? const <CategoryModel>[];
+    final allProducts = ref.watch(productsListProvider).valueOrNull;
+    final Map<int, int>? liveCounts = allProducts == null
+        ? null
+        : allProducts.fold<Map<int, int>>({}, (map, p) {
+            final cid = p.categoryId;
+            if (cid != null) {
+              map[cid] = (map[cid] ?? 0) + 1;
+            }
+            return map;
+          });
+
+    final trimmed = _controller.text.trim();
+    final matches = CategorySimilarityHelper.findMatches(trimmed, categories);
+    final hasExact = matches.any((m) => m.isExact);
+    final needsConfirmation =
+        !hasExact && matches.isNotEmpty && _confirmedSimilarName == trimmed;
+
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Expanded(child: Text('زیادکردنی کاتیگۆری نوێ')),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _isSaving ? null : () => Navigator.pop(context),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                enabled: !_isSaving,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(categories),
+                contextMenuBuilder: (context, editableTextState) {
+                  return KurdishContextMenu.build(context, editableTextState);
+                },
+                decoration: InputDecoration(
+                  hintText: 'ناوی کاتیگۆری',
+                  errorText: matches.isEmpty ? _inlineError : null,
+                ),
+              ),
+              CategorySimilarityBanner(
+                matches: matches,
+                liveCounts: liveCounts,
+                needsConfirmation: needsConfirmation,
+                inlineError: matches.isNotEmpty ? _inlineError : null,
+                onSelectCategory: _isSaving
+                    ? null
+                    : (category) => Navigator.pop(context, category),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => _submit(categories),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  needsConfirmation ? 'دڵنیام، زیادی بکە' : 'زیادکردن',
+                  style: needsConfirmation
+                      ? TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.warningDark
+                              : AppColors.warning,
+                          fontWeight: FontWeight.bold,
+                        )
+                      : null,
+                ),
+        ),
+      ],
     );
   }
 }
