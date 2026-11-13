@@ -1,10 +1,13 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_button.dart';
+import '../../../core/components/global_numeric_keyboard.dart';
+import '../../../core/components/numeric_keyboard_manager.dart';
 import '../../../core/components/kurdish_context_menu.dart';
 import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -48,6 +51,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _priceN2Controller;
   late TextEditingController _priceN3Controller;
   late TextEditingController _unitsPerCartonController;
+  late FocusNode _unitsPerCartonFocusNode;
   late TextEditingController _unitController;
   late FocusNode _unitFocusNode;
   late TextEditingController _stockController;
@@ -108,6 +112,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _unitsPerCartonController = TextEditingController(
       text: p != null ? Formatters.cleanNumberString(p.unitsPerCarton) : '12',
     );
+    _unitsPerCartonFocusNode = FocusNode();
     _unitFocusNode = FocusNode();
     _unitController = TextEditingController(
       text: (p?.unit != null && p!.unit!.isNotEmpty) ? p.unit : 'ج',
@@ -590,7 +595,15 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceN1Controller.dispose();
     _priceN2Controller.dispose();
     _priceN3Controller.dispose();
+    try {
+      final keyboardNotifier = ref.read(numericKeyboardProvider.notifier);
+      final keyboardState = ref.read(numericKeyboardProvider);
+      if (keyboardState.controller == _unitsPerCartonController) {
+        keyboardNotifier.hideKeyboardOnly();
+      }
+    } catch (_) {}
     _unitsPerCartonController.dispose();
+    _unitsPerCartonFocusNode.dispose();
     _unitController.dispose();
     _unitFocusNode.dispose();
     _stockController.dispose();
@@ -677,6 +690,111 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                 size: 20,
                 color: theme.colorScheme.primary,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openUnitsPerCartonKeyboard(String currentUnit) {
+    final rawText = _unitsPerCartonController.text;
+    final cleaned = Formatters.cleanNumberString(rawText);
+    if (cleaned != rawText &&
+        (rawText.endsWith('.0') ||
+            rawText.endsWith('.00') ||
+            rawText.endsWith('.000'))) {
+      _unitsPerCartonController.text = cleaned;
+    }
+
+    ref.read(numericKeyboardProvider.notifier).register(
+          controller: _unitsPerCartonController,
+          focusNode: _unitsPerCartonFocusNode,
+          decimal: false,
+          signed: false,
+        );
+
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) {
+        return NumericKeyboardDialog(
+          controller: _unitsPerCartonController,
+          labelText: '$currentUnit : دانە',
+          hintText: '12',
+        );
+      },
+    ).then((_) {
+      if (mounted) {
+        _unitsPerCartonFocusNode.unfocus();
+        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
+      }
+    });
+  }
+
+  Widget _buildUnitsPerCartonField(ThemeData theme) {
+    final currentUnit =
+        _unitController.text.trim().isEmpty ? 'ج' : _unitController.text.trim();
+
+    return InkWell(
+      onTap: () => _openUnitsPerCartonKeyboard(currentUnit),
+      borderRadius: BorderRadius.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$currentUnit :',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _unitsPerCartonController,
+              builder: (context, value, _) {
+                final raw = value.text.trim();
+                final isPlaceholder = raw.isEmpty;
+                final displayValue = isPlaceholder ? '12' : raw;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        displayValue,
+                        textDirection: TextDirection.ltr,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isPlaceholder
+                              ? theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.5)
+                              : theme.colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'دانە',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -1701,28 +1819,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   child: Row(
                                     children: [
                                       Expanded(
-                                        child: AppTextField(
-                                          controller: _unitsPerCartonController,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'کارتۆن',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'کارتۆن',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                        ),
+                                        child: _buildUnitsPerCartonField(theme),
                                       ),
                                       VerticalDivider(
                                         width: 1,
@@ -1824,30 +1921,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             child: IntrinsicHeight(
                               child: Row(
                                 children: [
-                                  // Carton
+                                  // Units per unit container
                                   Expanded(
-                                    child: AppTextField(
-                                      controller: _unitsPerCartonController,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'کارتۆن',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'کارتۆن',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                      ),
-                                    ),
+                                    child: _buildUnitsPerCartonField(theme),
                                   ),
                                   VerticalDivider(
                                     width: 1,
