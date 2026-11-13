@@ -2257,12 +2257,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    (product.imagePath != null && product.imagePath!.isNotEmpty)
-                        ? Image.network(
-                            product.imagePath!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildPlaceholderImage(),
+                    (product.imagePath != null &&
+                            product.imagePath!.trim().isNotEmpty)
+                        ? MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _showProductImageFullScreen(
+                                context,
+                                product,
+                              ),
+                              child: Image.network(
+                                product.imagePath!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _buildPlaceholderImage(),
+                              ),
+                            ),
                           )
                         : _buildPlaceholderImage(),
 
@@ -2572,6 +2583,113 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showProductImageFullScreen(
+    BuildContext context,
+    ProductModel product,
+  ) {
+    final imagePath = product.imagePath?.trim();
+    if (imagePath == null || imagePath.isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.92),
+      builder: (dialogContext) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black.withValues(alpha: 0.95),
+          child: SafeArea(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(dialogContext).pop(),
+              child: Stack(
+                children: [
+                  Center(
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        imagePath,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image_outlined,
+                                size: 72,
+                                color: Colors.white54,
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'وێنەکە بارنەبوو',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontFamily: 'KJino',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      tooltip: 'داخستن',
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: IgnorePointer(
+                      child: Text(
+                        product.name,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'KJino',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
