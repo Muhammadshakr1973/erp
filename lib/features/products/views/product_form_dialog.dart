@@ -66,7 +66,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     super.initState();
     final p = widget.product;
     double currentStock = 0;
-    int currentMinStock = 5;
+    int currentMinStock = 0;
     if (p != null) {
       num foundMin = 0;
       bool hasMin = false;
@@ -112,7 +112,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       text: p != null ? Formatters.cleanNumberString(currentStock) : '0',
     );
     _minStockController = TextEditingController(
-      text: p != null ? Formatters.cleanNumberString(currentMinStock) : '5',
+      text: p != null ? Formatters.cleanNumberString(currentMinStock) : '0',
     );
     _imageUrlController = TextEditingController(text: p?.imagePath ?? '');
     _selectedCategoryId = p?.categoryId;
