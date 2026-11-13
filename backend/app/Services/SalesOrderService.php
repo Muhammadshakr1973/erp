@@ -131,6 +131,11 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
 
                 // قفڵکردنی ڕیزی ستۆکی پەیوەندیدار بۆ پێشگرتن لە کێبڕکێ و دڵنیابوونەوە لە بەردەستبوونی ستۆک
                 $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
@@ -301,6 +306,11 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
 
                 // قفڵکردن و پشکنینی ستۆکی فیزیکی کۆگا بۆ کاڵای نوێ
                 $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
@@ -885,7 +895,7 @@ class SalesOrderService
 
             $keepProductIds[] = $productId;
             $product = Product::find($productId);
-            if (!$product) continue;
+            if (!$product || $product->is_parent) continue;
 
             if (isset($retItem['unit_price']) && (float)$retItem['unit_price'] > 0) {
                 $unitPrice = (int)$retItem['unit_price'];
@@ -1127,6 +1137,11 @@ class SalesOrderService
                 }
 
                 $product = Product::findOrFail($item['product_id']);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
 
                 // قفڵکردن و پشکنینی ستۆکی فیزیکی کۆگا بۆ کاڵای نوێ
                 $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(

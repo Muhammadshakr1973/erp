@@ -58,9 +58,7 @@ class ProductsListNotifier
 
     state.whenData((currentList) {
       if (eventType == 'delete') {
-        state = AsyncValue.data(
-          currentList.where((p) => p.id != productId).toList(),
-        );
+        removeProductLocally(productId);
         return;
       }
 
@@ -70,7 +68,30 @@ class ProductsListNotifier
         final index = currentList.indexWhere((p) => p.id == productId);
         if (index != -1) {
           final existing = currentList[index];
+          final hasParentIdKey = pMap.containsKey('parent_id');
+          final parsedParentId = hasParentIdKey
+              ? (pMap['parent_id'] != null
+                  ? int.tryParse(pMap['parent_id'].toString())
+                  : null)
+              : existing.parentId;
+          final hasVariantNameKey = pMap.containsKey('variant_name');
           final updated = existing.copyWith(
+            parentId: parsedParentId,
+            clearParentId: hasParentIdKey && parsedParentId == null,
+            isParent: pMap['is_parent'] != null
+                ? (pMap['is_parent'] == 1 || pMap['is_parent'] == true)
+                : existing.isParent,
+            name: pMap['name']?.toString() ?? existing.name,
+            variantName: pMap['variant_name']?.toString(),
+            clearVariantName: hasVariantNameKey && pMap['variant_name'] == null,
+            sku: pMap['sku']?.toString() ?? existing.sku,
+            barcode: pMap['barcode']?.toString() ?? existing.barcode,
+            useParentPrice: pMap['use_parent_price'] != null
+                ? (pMap['use_parent_price'] == 1 || pMap['use_parent_price'] == true)
+                : existing.useParentPrice,
+            isActive: pMap['is_active'] != null
+                ? (pMap['is_active'] == 1 || pMap['is_active'] == true)
+                : existing.isActive,
             costPrice: pMap['cost_price'] != null
                 ? (double.tryParse(pMap['cost_price'].toString()) ??
                     existing.costPrice)
@@ -291,7 +312,10 @@ class ProductsListNotifier
 
   bool _sameProductData(ProductModel current, ProductModel fresh) {
     return current.id == fresh.id &&
+        current.parentId == fresh.parentId &&
+        current.isParent == fresh.isParent &&
         current.name == fresh.name &&
+        current.variantName == fresh.variantName &&
         current.sku == fresh.sku &&
         current.barcode == fresh.barcode &&
         current.categoryId == fresh.categoryId &&
@@ -303,6 +327,7 @@ class ProductsListNotifier
         current.priceN1 == fresh.priceN1 &&
         current.priceN2 == fresh.priceN2 &&
         current.priceN3 == fresh.priceN3 &&
+        current.useParentPrice == fresh.useParentPrice &&
         current.unitsPerCarton == fresh.unitsPerCarton &&
         current.imagePath == fresh.imagePath &&
         current.isActive == fresh.isActive &&
@@ -361,26 +386,44 @@ class ProductsListNotifier
     });
   }
 
-  void addProductLocally(ProductModel newProduct) {
+  void upsertProductsLocally(List<ProductModel> products) {
+    if (products.isEmpty) return;
     final currentList = state.valueOrNull;
-    if (currentList != null) {
-      if (!currentList.any((p) => p.id == newProduct.id)) {
-        state = AsyncValue.data([newProduct, ...currentList]);
-      } else {
-        final index = currentList.indexWhere((p) => p.id == newProduct.id);
-        final updatedList = List<ProductModel>.from(currentList);
-        updatedList[index] = newProduct;
-        state = AsyncValue.data(updatedList);
-      }
-    } else {
-      state = AsyncValue.data([newProduct]);
+    if (currentList == null) {
+      state = AsyncValue.data(products);
+      return;
     }
+    final updatedList = List<ProductModel>.from(currentList);
+    for (final item in products) {
+      final index = updatedList.indexWhere((p) => p.id == item.id);
+      if (index != -1) {
+        updatedList[index] = item;
+      } else {
+        updatedList.insert(0, item);
+      }
+    }
+    state = AsyncValue.data(updatedList);
+  }
+
+  void addProductLocally(ProductModel newProduct) {
+    upsertProductsLocally([newProduct]);
   }
 
   void removeProductLocally(int id) {
     final currentList = state.valueOrNull;
     if (currentList != null) {
-      final updatedList = currentList.where((p) => p.id != id).toList();
+      final updatedList = currentList
+          .where((p) => p.id != id)
+          .map(
+            (p) => p.parentId == id
+                ? p.copyWith(
+                    clearParentId: true,
+                    clearVariantName: true,
+                    useParentPrice: true,
+                  )
+                : p,
+          )
+          .toList();
       state = AsyncValue.data(updatedList);
     }
   }
@@ -465,11 +508,27 @@ final filteredProductsProvider =
   final stockFilter = ref.watch(productStockFilterProvider);
 
   return productsAsync.whenData((products) {
+    final Map<int, List<ProductModel>> variantsByParent = {};
+    for (final p in products) {
+      if (p.parentId != null) {
+        variantsByParent.putIfAbsent(p.parentId!, () => []).add(p);
+      }
+    }
+
     return products.where((p) {
+      if (p.isVariant) return false;
+      final children = p.isParent ? (variantsByParent[p.id] ?? const []) : const <ProductModel>[];
+
+      bool matchesSingleQuery(ProductModel item) {
+        return item.name.toLowerCase().contains(searchQuery) ||
+            (item.variantName != null && item.variantName!.toLowerCase().contains(searchQuery)) ||
+            item.barcode.toLowerCase().contains(searchQuery) ||
+            (item.sku != null && item.sku!.toLowerCase().contains(searchQuery));
+      }
+
       final matchesQuery = searchQuery.isEmpty ||
-          p.name.toLowerCase().contains(searchQuery) ||
-          p.barcode.toLowerCase().contains(searchQuery) ||
-          (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
+          matchesSingleQuery(p) ||
+          children.any(matchesSingleQuery);
 
       bool matchesCategory = true;
       if (selectedCategory != null) {
@@ -485,25 +544,37 @@ final filteredProductsProvider =
       if (statusFilter == 'no_image') {
         matchesStatus = p.imagePath == null || p.imagePath!.trim().isEmpty;
       } else if (statusFilter == 'missing_price') {
-        matchesStatus = p.costPrice <= 0 ||
-            p.priceN1 <= 0 ||
-            p.priceN2 <= 0 ||
-            p.priceN3 <= 0;
+        if (p.isParent && children.isNotEmpty) {
+          matchesStatus = children.any((c) =>
+              c.costPrice <= 0 || c.priceN1 <= 0 || c.priceN2 <= 0 || c.priceN3 <= 0);
+        } else {
+          matchesStatus = p.costPrice <= 0 ||
+              p.priceN1 <= 0 ||
+              p.priceN2 <= 0 ||
+              p.priceN3 <= 0;
+        }
       } else if (statusFilter == 'no_supplier') {
         matchesStatus = p.supplierId == null;
       } else if (statusFilter == 'no_barcode') {
-        matchesStatus = p.barcode.trim().isEmpty;
+        if (p.isParent && children.isNotEmpty) {
+          matchesStatus = children.any((c) => c.barcode.trim().isEmpty);
+        } else {
+          matchesStatus = p.barcode.trim().isEmpty;
+        }
       } else if (statusFilter == 'no_unit') {
         matchesStatus = p.unit == null || p.unit!.trim().isEmpty;
       }
 
       bool matchesStock = true;
+      final effectiveStock = p.isParent
+          ? children.fold<double>(0.0, (sum, c) => sum + c.totalStock)
+          : p.totalStock;
       if (stockFilter.mode == StockFilterMode.lessThan &&
           stockFilter.threshold != null) {
-        matchesStock = p.totalStock < stockFilter.threshold!;
+        matchesStock = effectiveStock < stockFilter.threshold!;
       } else if (stockFilter.mode == StockFilterMode.greaterThan &&
           stockFilter.threshold != null) {
-        matchesStock = p.totalStock > stockFilter.threshold!;
+        matchesStock = effectiveStock > stockFilter.threshold!;
       }
 
       return matchesQuery && matchesCategory && matchesStatus && matchesStock;
@@ -529,7 +600,15 @@ class ProductActions {
       final newProduct = ProductModel.fromJson(
         Map<String, dynamic>.from(rawData as Map),
       );
-      ref.read(productsListProvider.notifier).addProductLocally(newProduct);
+      final toUpsert = <ProductModel>[newProduct];
+      if (response.data is Map && response.data['variants'] is List) {
+        for (final v in response.data['variants'] as List) {
+          if (v is Map) {
+            toUpsert.add(ProductModel.fromJson(Map<String, dynamic>.from(v)));
+          }
+        }
+      }
+      ref.read(productsListProvider.notifier).upsertProductsLocally(toUpsert);
       return newProduct;
     } catch (e) {
       throw Exception(api.parseError(e));
@@ -543,8 +622,39 @@ class ProductActions {
       final updatedProduct = ProductModel.fromJson(
         Map<String, dynamic>.from(rawData as Map),
       );
-      ref.read(productsListProvider.notifier).addProductLocally(updatedProduct);
+      final toUpsert = <ProductModel>[updatedProduct];
+      if (response.data is Map) {
+        if (response.data['variants'] is List) {
+          for (final v in response.data['variants'] as List) {
+            if (v is Map) {
+              toUpsert.add(ProductModel.fromJson(Map<String, dynamic>.from(v)));
+            }
+          }
+        }
+        if (response.data['detached_variants'] is List) {
+          for (final v in response.data['detached_variants'] as List) {
+            if (v is Map) {
+              toUpsert.add(ProductModel.fromJson(Map<String, dynamic>.from(v)));
+            }
+          }
+        }
+      }
+      ref.read(productsListProvider.notifier).upsertProductsLocally(toUpsert);
       return updatedProduct;
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<ProductModel> detachVariant(int id) async {
+    try {
+      final response = await api.client.post('/products/$id/detach-variant');
+      final rawData = response.data['data'] ?? response.data;
+      final detached = ProductModel.fromJson(
+        Map<String, dynamic>.from(rawData as Map),
+      );
+      ref.read(productsListProvider.notifier).addProductLocally(detached);
+      return detached;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -552,8 +662,20 @@ class ProductActions {
 
   Future<void> deleteProduct(int id) async {
     try {
-      await api.client.delete('/products/$id');
-      ref.read(productsListProvider.notifier).removeProductLocally(id);
+      final response = await api.client.delete('/products/$id');
+      final notifier = ref.read(productsListProvider.notifier);
+      notifier.removeProductLocally(id);
+      if (response.data is Map && response.data['detached_variants'] is List) {
+        final detached = <ProductModel>[];
+        for (final v in response.data['detached_variants'] as List) {
+          if (v is Map) {
+            detached.add(ProductModel.fromJson(Map<String, dynamic>.from(v)));
+          }
+        }
+        if (detached.isNotEmpty) {
+          notifier.upsertProductsLocally(detached);
+        }
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }

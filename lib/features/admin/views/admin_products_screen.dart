@@ -771,6 +771,8 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     crossAxisCount = 2;
                   }
 
+                  final allProducts = ref.watch(productsListProvider).valueOrNull ?? [];
+
                   return GridView.builder(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.screenHorizontal,
@@ -785,9 +787,18 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      final double totalStock = product.totalStock;
-                      final double minStock = product.minStockLevel;
-                      final bool isLowStock = product.isLowStock;
+                      final List<ProductModel> childVariants = product.isParent
+                          ? allProducts.where((p) => p.parentId == product.id).toList()
+                          : const [];
+                      final double totalStock = product.isParent
+                          ? childVariants.fold<double>(0.0, (s, c) => s + c.totalStock)
+                          : product.totalStock;
+                      final double minStock = product.isParent
+                          ? childVariants.fold<double>(0.0, (s, c) => s + c.minStockLevel)
+                          : product.minStockLevel;
+                      final bool isLowStock = product.isParent
+                          ? (childVariants.isNotEmpty && childVariants.any((c) => c.isLowStock))
+                          : product.isLowStock;
 
                       return AppCard(
                         padding: const EdgeInsets.symmetric(
@@ -902,16 +913,28 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    'بارکۆد: ${product.barcode}',
-                                    style: AppTextStyles.caption.copyWith(
-                                      fontSize: 11,
-                                      color: theme
-                                          .colorScheme.onSurfaceVariant,
+                                  if (product.isParent)
+                                    Text(
+                                      '${childVariants.length} جۆر: ${childVariants.take(3).map((v) => v.displayVariantLabel).join('، ')}${childVariants.length > 3 ? '...' : ''}',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  else
+                                    Text(
+                                      'بارکۆد: ${product.barcode}',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 11,
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
                                   if (product.unit != null &&
                                       product.unit != 'دانە') ...[
                                     const SizedBox(height: 2),

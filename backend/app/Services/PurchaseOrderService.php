@@ -55,6 +55,12 @@ class PurchaseOrderService
             // ئایتمەکانی پسوڵەی کڕین
             $itemsList = $data['items'] ?? [];
             foreach ($itemsList as $item) {
+                $product = \App\Models\Product::find($item['product_id']);
+                if ($product && $product->is_parent) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە جۆرە دیاریکراوەکەی هەڵبژێرە بۆ کڕین."
+                    ]);
+                }
                 $qty = (float) $item['quantity'];
                 $unitCost = (float) $item['unit_cost'];
                 $lineTotal = round($qty * $unitCost, 2);
@@ -567,6 +573,12 @@ class PurchaseOrderService
                 $lockedOrder->items()->delete();
 
                 foreach ($data['items'] as $item) {
+                    $product = \App\Models\Product::find($item['product_id']);
+                    if ($product && $product->is_parent) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە جۆرە دیاریکراوەکەی هەڵبژێرە بۆ کڕین."
+                        ]);
+                    }
                     $qty = (float) $item['quantity'];
                     $unitCost = (float) $item['unit_cost'];
                     $lineTotal = round($qty * $unitCost, 2);

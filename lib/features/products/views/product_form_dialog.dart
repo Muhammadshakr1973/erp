@@ -63,6 +63,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   bool _isActive = true;
   String _dismissedSimilarityQuery = '';
 
+  bool _isParentMode = false;
+  bool _isEditingVariant = false;
+  late TextEditingController _variantNameController;
+  bool _variantUseParentPrice = true;
+  final List<_VariantDraftRow> _variants = [];
+  final List<int> _detachedVariantIds = [];
+
   void _onNameChanged() {
     if (mounted) {
       setState(() {});
@@ -127,6 +134,22 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _selectedCategoryId = p?.categoryId;
     _selectedSupplierId = p?.supplierId ?? widget.initialSupplierId;
     _isActive = p?.isActive ?? true;
+
+    _isParentMode = p?.isParent ?? false;
+    _isEditingVariant = p?.isVariant ?? false;
+    _variantNameController = TextEditingController(
+      text: p != null && p.isVariant ? p.displayVariantLabel : '',
+    );
+    _variantUseParentPrice = p?.useParentPrice ?? true;
+
+    if (p != null && p.isParent) {
+      final allProducts = ref.read(productsListProvider).valueOrNull ?? [];
+      final existingChildren = allProducts.where((c) => c.parentId == p.id).toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
+      for (final child in existingChildren) {
+        _variants.add(_VariantDraftRow.fromProduct(child));
+      }
+    }
   }
 
   bool _isValidImageUrl(String url) {
@@ -589,6 +612,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   void dispose() {
     _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
+    _variantNameController.dispose();
+    for (final v in _variants) {
+      v.dispose();
+    }
     _barcodeController.dispose();
     _skuController.dispose();
     _costPriceController.dispose();
@@ -805,12 +832,35 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_isParentMode) {
+      if (_variants.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('بۆ کاڵای فرە-جۆر، تکایە لانی کەم یەک جۆر زیاد بکە'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+      for (final v in _variants) {
+        if (v.variantNameCtrl.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تکایە ناوی هەموو جۆرەکان پڕبکەرەوە'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+          return;
+        }
+      }
+    }
+
     setState(() => _isLoading = true);
 
-    final data = {
-      'name': _nameController.text,
-      'barcode': _barcodeController.text,
-      'sku': _skuController.text,
+    final Map<String, dynamic> data = {
+      'name': _nameController.text.trim(),
+      'barcode': _isParentMode ? '' : _barcodeController.text.trim(),
+      'sku': _skuController.text.trim(),
       'cost_price': double.tryParse(_costPriceController.text) ?? 0,
       'price_n1': double.tryParse(_priceN1Controller.text) ?? 0,
       'price_n2': double.tryParse(_priceN2Controller.text) ?? 0,
@@ -820,10 +870,23 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'category_id': _selectedCategoryId,
       'supplier_id': _selectedSupplierId,
       'is_active': _isActive ? 1 : 0,
-      'initial_stock': double.tryParse(_stockController.text.trim()) ?? 0,
-      'min_stock_level': int.tryParse(_minStockController.text.trim()) ?? 0,
-      'image_path': _imageUrlController.text,
+      'is_parent': _isParentMode,
+      'image_path': _imageUrlController.text.trim(),
     };
+
+    if (_isParentMode) {
+      data['variants'] = _variants.map((v) => v.toPayload()).toList();
+      if (widget.product != null && _detachedVariantIds.isNotEmpty) {
+        data['detached_variant_ids'] = _detachedVariantIds;
+      }
+    } else {
+      data['initial_stock'] = double.tryParse(_stockController.text.trim()) ?? 0;
+      data['min_stock_level'] = int.tryParse(_minStockController.text.trim()) ?? 0;
+      if (_isEditingVariant) {
+        data['variant_name'] = _variantNameController.text.trim();
+        data['use_parent_price'] = _variantUseParentPrice;
+      }
+    }
 
     try {
       if (widget.product == null) {
@@ -1041,6 +1104,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
+                        // Parent / Variant mode banner or switch
+                        if (_isEditingVariant && widget.product != null)
+                          _buildEditingVariantBanner(theme, allProducts)
+                        else if (widget.product == null ||
+                            widget.product!.isParent ||
+                            widget.product!.totalStock <= 0)
+                          _buildMultiVariantModeToggle(theme),
+
                         // Basic Info
                         if (isMobile) ...[
                           Row(
@@ -1049,8 +1120,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               Expanded(
                                 child: AppTextField(
                                   controller: _nameController,
-                                  labelText: 'ناوی کاڵا',
-                                  hintText: 'ناوی کاڵا',
+                                  labelText: _isParentMode
+                                      ? 'ناوی سەرەکی کاڵا (نموونە: کێبڵ گلۆپ)'
+                                      : 'ناوی کاڵا',
+                                  hintText: _isParentMode
+                                      ? 'ناوی گشتی کاڵا'
+                                      : 'ناوی کاڵا',
                                   validator: (v) =>
                                       v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
                                 ),
@@ -1067,23 +1142,126 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                           ] else ...[
                             const SizedBox(height: AppSpacing.md),
                           ],
-                          Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: Row(
-                              children: [
-                                // Right input (first child in RTL: Barcode col-8)
+                          if (!_isParentMode)
+                            Directionality(
+                              textDirection: TextDirection.rtl,
+                              child: Row(
+                                children: [
+                                  // Right input (first child in RTL: Barcode col-8)
+                                  Expanded(
+                                    flex: 8,
+                                    child: AppTextField(
+                                      controller: _barcodeController,
+                                      labelText: 'بارکۆد',
+                                      hintText: 'بارکۆد',
+                                      borderRadius: const BorderRadius.only(
+                                        topRight: Radius.circular(24),
+                                        bottomRight: Radius.circular(24),
+                                        topLeft: Radius.zero,
+                                        bottomLeft: Radius.zero,
+                                      ),
+                                      suffixIcon: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                            icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 19),
+                                            tooltip: 'سکانکردنی بارکۆد بە کامێرا',
+                                            onPressed: () {
+                                              CameraBarcodeScanner.show(
+                                                context,
+                                                (scanned) {
+                                                  setState(() {
+                                                    _barcodeController.text = scanned;
+                                                  });
+                                                },
+                                                closeOnScan: true,
+                                              );
+                                            },
+                                          ),
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                            icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 20),
+                                            tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
+                                            onPressed: () {
+                                              setState(() {
+                                                _barcodeController.text = _generateRandomBarcode();
+                                              });
+                                            },
+                                          ),
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                            icon: const Icon(Icons.print_outlined, color: AppColors.primary, size: 19),
+                                            tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder: (context) => BarcodeGeneratorDialog(
+                                                  product: widget.product,
+                                                  initialBarcode: _barcodeController.text,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(width: 4),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Left input (second child in RTL: SKU col-4)
+                                  Expanded(
+                                    flex: 4,
+                                    child: AppTextField(
+                                      controller: _skuController,
+                                      labelText: 'SKU',
+                                      hintText: 'SKU',
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(24),
+                                        bottomLeft: Radius.circular(24),
+                                        topRight: Radius.zero,
+                                        bottomRight: Radius.zero,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            AppTextField(
+                              controller: _skuController,
+                              labelText: 'کۆدی گروپ (SKU)',
+                              hintText: 'ئۆتۆماتیکی دروست دەکرێت ئەگەر بەتاڵ بێت',
+                            ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: _isParentMode ? 6 : 2,
+                                child: AppTextField(
+                                  controller: _nameController,
+                                  labelText: _isParentMode
+                                      ? 'ناوی سەرەکی کاڵا (نموونە: کێبڵ گلۆپ)'
+                                      : 'ناوی کاڵا',
+                                  hintText: _isParentMode
+                                      ? 'ناوی گشتی کاڵا'
+                                      : 'ناوی کاڵا',
+                                  validator: (v) =>
+                                      v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
+                                ),
+                              ),
+                              if (!_isParentMode) ...[
+                                const SizedBox(width: AppSpacing.sm),
                                 Expanded(
                                   flex: 8,
                                   child: AppTextField(
                                     controller: _barcodeController,
                                     labelText: 'بارکۆد',
                                     hintText: 'بارکۆد',
-                                    borderRadius: const BorderRadius.only(
-                                      topRight: Radius.circular(24),
-                                      bottomRight: Radius.circular(24),
-                                      topLeft: Radius.zero,
-                                      bottomLeft: Radius.zero,
-                                    ),
                                     suffixIcon: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       mainAxisAlignment: MainAxisAlignment.end,
@@ -1137,103 +1315,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     ),
                                   ),
                                 ),
-                                // Left input (second child in RTL: SKU col-4)
-                                Expanded(
-                                  flex: 4,
-                                  child: AppTextField(
-                                    controller: _skuController,
-                                    labelText: 'SKU',
-                                    hintText: 'SKU',
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(24),
-                                      bottomLeft: Radius.circular(24),
-                                      topRight: Radius.zero,
-                                      bottomRight: Radius.zero,
-                                    ),
-                                  ),
-                                ),
                               ],
-                            ),
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: AppTextField(
-                                  controller: _nameController,
-                                  labelText: 'ناوی کاڵا',
-                                  hintText: 'ناوی کاڵا',
-                                  validator: (v) =>
-                                      v!.isEmpty ? 'ناوی کاڵا پێویستە' : null,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                flex: 8,
-                                child: AppTextField(
-                                  controller: _barcodeController,
-                                  labelText: 'بارکۆد',
-                                  hintText: 'بارکۆد',
-                                  suffixIcon: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                        icon: const Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 19),
-                                        tooltip: 'سکانکردنی بارکۆد بە کامێرا',
-                                        onPressed: () {
-                                          CameraBarcodeScanner.show(
-                                            context,
-                                            (scanned) {
-                                              setState(() {
-                                                _barcodeController.text = scanned;
-                                              });
-                                            },
-                                            closeOnScan: true,
-                                          );
-                                        },
-                                      ),
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                        icon: const Icon(Icons.qr_code_2, color: AppColors.primary, size: 20),
-                                        tooltip: 'دروستکردنی بارکۆدی ئۆتۆماتیکی',
-                                        onPressed: () {
-                                          setState(() {
-                                            _barcodeController.text = _generateRandomBarcode();
-                                          });
-                                        },
-                                      ),
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                        icon: const Icon(Icons.print_outlined, color: AppColors.primary, size: 19),
-                                        tooltip: 'پرێنتکردن و داگرتنی بارکۆد',
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (context) => BarcodeGeneratorDialog(
-                                              product: widget.product,
-                                              initialBarcode: _barcodeController.text,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                  ),
-                                ),
-                              ),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 flex: 4,
                                 child: AppTextField(
                                   controller: _skuController,
-                                  labelText: 'SKU',
+                                  labelText: _isParentMode ? 'کۆدی گروپ (SKU)' : 'SKU',
                                   hintText: 'SKU',
                                 ),
                               ),
@@ -1836,74 +1924,76 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     ],
                                   ),
                                 ),
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(
-                                    alpha: 0.4,
+                                // Second row: Stock and Min Stock (hidden on parent container since each variant has its own stock)
+                                if (!_isParentMode) ...[
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.4,
+                                    ),
                                   ),
-                                ),
-                                // Second row: Stock and Min Stock
-                                IntrinsicHeight(
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _stockController,
-                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          customDecoration: InputDecoration(
-                                            labelText: 'ستۆک',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'ستۆک',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
+                                  IntrinsicHeight(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: AppTextField(
+                                            controller: _stockController,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            customDecoration: InputDecoration(
+                                              labelText: 'ستۆک',
+                                              labelStyle: AppTextStyles.bodyMedium
+                                                  .copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                              hintText: 'ستۆک',
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 12,
+                                                  ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      VerticalDivider(
-                                        width: 1,
-                                        thickness: 1,
-                                        color: theme.colorScheme.outline
-                                            .withValues(alpha: 0.4),
-                                      ),
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _minStockController,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'کەمترین بڕ',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'ئاستی ئاگادارکردنەوە',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
+                                        VerticalDivider(
+                                          width: 1,
+                                          thickness: 1,
+                                          color: theme.colorScheme.outline
+                                              .withValues(alpha: 0.4),
+                                        ),
+                                        Expanded(
+                                          child: AppTextField(
+                                            controller: _minStockController,
+                                            keyboardType: TextInputType.number,
+                                            customDecoration: InputDecoration(
+                                              labelText: 'کەمترین بڕ',
+                                              labelStyle: AppTextStyles.bodyMedium
+                                                  .copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                              hintText: 'ئاستی ئاگادارکردنەوە',
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 12,
+                                                  ),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           )
@@ -1939,74 +2029,80 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       isUnified: true,
                                     ),
                                   ),
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                  // Stock
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _stockController,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      customDecoration: InputDecoration(
-                                        labelText: 'ستۆک',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'ستۆک',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
+                                  if (!_isParentMode) ...[
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      color: theme.colorScheme.outline.withValues(
+                                        alpha: 0.4,
                                       ),
                                     ),
-                                  ),
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                  // Min Stock
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _minStockController,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'کەمترین بڕ',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'ئاستی ئاگادارکردنەوە',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
+                                    // Stock
+                                    Expanded(
+                                      child: AppTextField(
+                                        controller: _stockController,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        customDecoration: InputDecoration(
+                                          labelText: 'ستۆک',
+                                          labelStyle: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          hintText: 'ستۆک',
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 12,
+                                              ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      color: theme.colorScheme.outline.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                    // Min Stock
+                                    Expanded(
+                                      child: AppTextField(
+                                        controller: _minStockController,
+                                        keyboardType: TextInputType.number,
+                                        customDecoration: InputDecoration(
+                                          labelText: 'کەمترین بڕ',
+                                          labelStyle: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          hintText: 'ئاستی ئاگادارکردنەوە',
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 12,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                           ),
+                        if (_isParentMode) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _buildVariantsSection(theme, allProducts, isMobile),
+                        ],
                         if (!isMobile) ...[
                           const SizedBox(height: AppSpacing.md),
                           Row(
@@ -2043,6 +2139,833 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     ),
   );
 }
+
+  Widget _buildMultiVariantModeToggle(ThemeData theme) {
+    final bool lockedAsParent =
+        widget.product != null && widget.product!.isParent && _variants.isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: _isParentMode
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.28)
+            : theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _isParentMode
+              ? theme.colorScheme.primary.withValues(alpha: 0.45)
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.style_outlined,
+            color: _isParentMode
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'کاڵای فرە-جۆر / ڕەنگ (چەند جۆرێک لەژێر یەک ناو)',
+                  style: AppTextStyles.bodyBold.copyWith(fontSize: 13),
+                ),
+                Text(
+                  'نموونە: کێبڵ گلۆپ ← ئایفۆن، تایپسی، گالاکسی',
+                  style: AppTextStyles.caption.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isParentMode,
+            onChanged: lockedAsParent
+                ? null
+                : (val) {
+                    setState(() {
+                      _isParentMode = val;
+                      if (val && _variants.isEmpty) {
+                        _variants.add(_VariantDraftRow.empty());
+                      }
+                    });
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditingVariantBanner(
+    ThemeData theme,
+    List<ProductModel> allProducts,
+  ) {
+    final parent = allProducts
+        .where((p) => p.id == widget.product?.parentId)
+        .firstOrNull;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_tree_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ئەم کاڵایە جۆرێکە لە: ${parent?.name ?? "کاڵای سەرەکی"}',
+                  style: AppTextStyles.bodyBold.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        setState(() => _isLoading = true);
+                        try {
+                          final detached = await ref
+                              .read(productActionsProvider)
+                              .detachVariant(widget.product!.id);
+                          if (mounted) {
+                            Navigator.pop(context, detached);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => _isLoading = false);
+                        }
+                      },
+                icon: const Icon(Icons.link_off, size: 16),
+                label: const Text('جیاکردنەوە'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: AppTextField(
+                  controller: _variantNameController,
+                  labelText: 'ناوی جۆر / ڕەنگ',
+                  hintText: 'نموونە: ئایفۆن، سوور',
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'ناوی جۆر پێویستە' : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                children: [
+                  Text('نرخی سەرەکی', style: AppTextStyles.caption),
+                  Switch(
+                    value: _variantUseParentPrice,
+                    onChanged: (val) => setState(() {
+                      _variantUseParentPrice = val;
+                      if (val && parent != null) {
+                        _costPriceController.text =
+                            Formatters.cleanNumberString(parent.costPrice);
+                        _priceN1Controller.text =
+                            Formatters.cleanNumberString(parent.priceN1);
+                        _priceN2Controller.text =
+                            Formatters.cleanNumberString(parent.priceN2);
+                        _priceN3Controller.text =
+                            Formatters.cleanNumberString(parent.priceN3);
+                      }
+                    }),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVariantsSection(
+    ThemeData theme,
+    List<ProductModel> allProducts,
+    bool isMobile,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.layers_outlined, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'جۆرەکان / ڕەنگەکان (${_variants.length})',
+                    style: AppTextStyles.h3.copyWith(fontSize: 15),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showAttachExistingProductDialog(allProducts),
+                    icon: const Icon(Icons.link, size: 17),
+                    label: const Text('لکاندنی کاڵای کۆن'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _variants.add(_VariantDraftRow.empty());
+                      });
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('جۆری نوێ'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_variants.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'هیچ جۆرێک زیاد نەکراوە. بەتنی "جۆری نوێ" یان "لکاندنی کاڵای کۆن" دابگرە.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _variants.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final row = _variants[index];
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: AppTextStyles.caption.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppTextField(
+                              controller: row.variantNameCtrl,
+                              labelText: 'ناوی جۆر / ڕەنگ *',
+                              hintText: 'نموونە: ئایفۆن / سوور / ١ لیتر',
+                              validator: (val) => (val == null || val.trim().isEmpty)
+                                  ? 'ناوی جۆر پێویستە'
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          if (row.existingProductId != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.info.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'لکێنراو',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppColors.info,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          IconButton(
+                            icon: Icon(
+                              row.id != null ? Icons.link_off : Icons.delete_outline,
+                              color: row.id != null ? AppColors.warning : AppColors.danger,
+                              size: 20,
+                            ),
+                            tooltip: row.id != null
+                                ? 'جیاکردنەوە و کردن بە کاڵای سەربەخۆ'
+                                : 'لابردنی جۆر',
+                            onPressed: () {
+                              setState(() {
+                                if (row.id != null) {
+                                  _detachedVariantIds.add(row.id!);
+                                }
+                                final removed = _variants.removeAt(index);
+                                removed.dispose();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (isMobile) ...[
+                        AppTextField(
+                          controller: row.barcodeCtrl,
+                          labelText: 'بارکۆد',
+                          hintText: 'بارکۆد',
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.camera_alt_outlined, size: 18, color: AppColors.primary),
+                                onPressed: () {
+                                  CameraBarcodeScanner.show(context, (scanned) {
+                                    setState(() => row.barcodeCtrl.text = scanned);
+                                  }, closeOnScan: true);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.qr_code_2, size: 19, color: AppColors.primary),
+                                onPressed: () {
+                                  setState(() => row.barcodeCtrl.text = _generateRandomBarcode());
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.stockCtrl,
+                                labelText: row.isExistingOrAttached ? 'ستۆکی سەرەکی' : 'ستۆک',
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.minStockCtrl,
+                                labelText: 'کەمترین بڕ',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 5,
+                              child: AppTextField(
+                                controller: row.barcodeCtrl,
+                                labelText: 'بارکۆد',
+                                hintText: 'بارکۆد',
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      icon: const Icon(Icons.camera_alt_outlined, size: 18, color: AppColors.primary),
+                                      onPressed: () {
+                                        CameraBarcodeScanner.show(context, (scanned) {
+                                          setState(() => row.barcodeCtrl.text = scanned);
+                                        }, closeOnScan: true);
+                                      },
+                                    ),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      icon: const Icon(Icons.qr_code_2, size: 19, color: AppColors.primary),
+                                      onPressed: () {
+                                        setState(() => row.barcodeCtrl.text = _generateRandomBarcode());
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: AppTextField(
+                                controller: row.skuCtrl,
+                                labelText: 'SKU',
+                                hintText: 'SKU',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: AppTextField(
+                                controller: row.stockCtrl,
+                                labelText: row.isExistingOrAttached ? 'ستۆکی سەرەکی' : 'ستۆک',
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: AppTextField(
+                                controller: row.minStockCtrl,
+                                labelText: 'کەمترین',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          ChoiceChip(
+                            label: const Text('نرخی سەرەکی'),
+                            selected: row.useParentPrice,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => row.useParentPrice = true);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('نرخی تایبەت'),
+                            selected: !row.useParentPrice,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  row.useParentPrice = false;
+                                  if (row.costPriceCtrl.text.isEmpty) {
+                                    row.costPriceCtrl.text = _costPriceController.text;
+                                  }
+                                  if (row.priceN1Ctrl.text.isEmpty) {
+                                    row.priceN1Ctrl.text = _priceN1Controller.text;
+                                  }
+                                  if (row.priceN2Ctrl.text.isEmpty) {
+                                    row.priceN2Ctrl.text = _priceN2Controller.text;
+                                  }
+                                  if (row.priceN3Ctrl.text.isEmpty) {
+                                    row.priceN3Ctrl.text = _priceN3Controller.text;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      if (!row.useParentPrice) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.costPriceCtrl,
+                                labelText: 'کۆست',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.priceN1Ctrl,
+                                labelText: 'N1',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.priceN2Ctrl,
+                                labelText: 'N2',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: AppTextField(
+                                controller: row.priceN3Ctrl,
+                                labelText: 'N3',
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAttachExistingProductDialog(List<ProductModel> allProducts) async {
+    final alreadyAddedIds = {
+      for (final v in _variants)
+        if (v.id != null) v.id! else if (v.existingProductId != null) v.existingProductId!,
+    };
+    final candidates = allProducts
+        .where((p) =>
+            !p.isParent &&
+            !p.isVariant &&
+            p.id != widget.product?.id &&
+            !alreadyAddedIds.contains(p.id))
+        .toList();
+
+    String search = '';
+    final picked = await showDialog<ProductModel>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final filtered = search.isEmpty
+                ? candidates
+                : candidates.where((p) {
+                    return p.name.toLowerCase().contains(search) ||
+                        p.barcode.toLowerCase().contains(search) ||
+                        (p.sku != null && p.sku!.toLowerCase().contains(search));
+                  }).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500, maxHeight: 540),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'لکاندنی کاڵایەکی کۆن وەک جۆر',
+                              style: AppTextStyles.h3,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        onChanged: (v) => setDialogState(() {
+                          search = v.trim().toLowerCase();
+                        }),
+                        decoration: InputDecoration(
+                          hintText: 'گەڕان بە ناو یان بارکۆد...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Flexible(
+                        child: filtered.isEmpty
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24),
+                                  child: Text('هیچ کاڵایەکی سەربەخۆ نەدۆزرایەوە'),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, _) => const Divider(height: 1),
+                                itemBuilder: (ctx, i) {
+                                  final item = filtered[i];
+                                  return ListTile(
+                                    title: Text(item.name, style: AppTextStyles.bodyBold),
+                                    subtitle: Text(
+                                      'ستۆک: ${Formatters.cleanNumberString(item.totalStock)} • N1: ${Formatters.currency(item.priceN1)}',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                    trailing: const Icon(Icons.add_link, color: AppColors.primary),
+                                    onTap: () => Navigator.pop(ctx, item),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (picked == null || !mounted) return;
+
+    // Suggest variant label by stripping parent name prefix if user already typed parent name
+    final parentName = _nameController.text.trim();
+    String suggestedVariantName = picked.name;
+    if (parentName.isNotEmpty &&
+        picked.name.toLowerCase().startsWith(parentName.toLowerCase())) {
+      final remainder = picked.name.substring(parentName.length).trim();
+      final cleaned = remainder.replaceFirst(RegExp(r'^[-–—:\s]+'), '').trim();
+      if (cleaned.isNotEmpty) {
+        suggestedVariantName = cleaned;
+      }
+    }
+
+    final double parentCost = double.tryParse(_costPriceController.text) ?? 0;
+    final double parentN1 = double.tryParse(_priceN1Controller.text) ?? 0;
+    final bool sameAsParentPrice = parentN1 <= 0 ||
+        (picked.costPrice == parentCost && picked.priceN1 == parentN1);
+
+    setState(() {
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = picked.name;
+      }
+      _selectedCategoryId ??= picked.categoryId;
+      _selectedSupplierId ??= picked.supplierId;
+      _variants.add(
+        _VariantDraftRow.fromExistingProduct(
+          picked,
+          suggestedVariantName: suggestedVariantName,
+          useParentPrice: sameAsParentPrice,
+        ),
+      );
+    });
+  }
+}
+
+class _VariantDraftRow {
+  final int? id;
+  final int? existingProductId;
+  final TextEditingController variantNameCtrl;
+  final TextEditingController barcodeCtrl;
+  final TextEditingController skuCtrl;
+  final TextEditingController stockCtrl;
+  final TextEditingController minStockCtrl;
+  bool useParentPrice;
+  final TextEditingController costPriceCtrl;
+  final TextEditingController priceN1Ctrl;
+  final TextEditingController priceN2Ctrl;
+  final TextEditingController priceN3Ctrl;
+  bool isActive;
+
+  _VariantDraftRow({
+    this.id,
+    this.existingProductId,
+    required this.variantNameCtrl,
+    required this.barcodeCtrl,
+    required this.skuCtrl,
+    required this.stockCtrl,
+    required this.minStockCtrl,
+    this.useParentPrice = true,
+    required this.costPriceCtrl,
+    required this.priceN1Ctrl,
+    required this.priceN2Ctrl,
+    required this.priceN3Ctrl,
+    this.isActive = true,
+  });
+
+  bool get isExistingOrAttached => id != null || existingProductId != null;
+
+  factory _VariantDraftRow.empty() {
+    return _VariantDraftRow(
+      variantNameCtrl: TextEditingController(),
+      barcodeCtrl: TextEditingController(),
+      skuCtrl: TextEditingController(),
+      stockCtrl: TextEditingController(text: '0'),
+      minStockCtrl: TextEditingController(text: '0'),
+      useParentPrice: true,
+      costPriceCtrl: TextEditingController(),
+      priceN1Ctrl: TextEditingController(),
+      priceN2Ctrl: TextEditingController(),
+      priceN3Ctrl: TextEditingController(),
+      isActive: true,
+    );
+  }
+
+  factory _VariantDraftRow.fromProduct(ProductModel child) {
+    double mainStock = 0;
+    int minStock = 0;
+    for (final s in child.stocks) {
+      if (s is Map) {
+        mainStock += Formatters.parseDouble(s['quantity']);
+        if (s['min_stock_level'] != null && minStock == 0) {
+          minStock = Formatters.parseInt(s['min_stock_level']);
+        }
+      }
+    }
+    return _VariantDraftRow(
+      id: child.id,
+      variantNameCtrl: TextEditingController(text: child.displayVariantLabel),
+      barcodeCtrl: TextEditingController(text: child.barcode),
+      skuCtrl: TextEditingController(text: child.sku ?? ''),
+      stockCtrl: TextEditingController(
+        text: Formatters.cleanNumberString(mainStock),
+      ),
+      minStockCtrl: TextEditingController(text: '$minStock'),
+      useParentPrice: child.useParentPrice,
+      costPriceCtrl: TextEditingController(
+        text: Formatters.cleanNumberString(child.costPrice),
+      ),
+      priceN1Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(child.priceN1),
+      ),
+      priceN2Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(child.priceN2),
+      ),
+      priceN3Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(child.priceN3),
+      ),
+      isActive: child.isActive,
+    );
+  }
+
+  factory _VariantDraftRow.fromExistingProduct(
+    ProductModel existing, {
+    required String suggestedVariantName,
+    required bool useParentPrice,
+  }) {
+    double mainStock = 0;
+    int minStock = 0;
+    for (final s in existing.stocks) {
+      if (s is Map) {
+        mainStock += Formatters.parseDouble(s['quantity']);
+        if (s['min_stock_level'] != null && minStock == 0) {
+          minStock = Formatters.parseInt(s['min_stock_level']);
+        }
+      }
+    }
+    return _VariantDraftRow(
+      existingProductId: existing.id,
+      variantNameCtrl: TextEditingController(text: suggestedVariantName),
+      barcodeCtrl: TextEditingController(text: existing.barcode),
+      skuCtrl: TextEditingController(text: existing.sku ?? ''),
+      stockCtrl: TextEditingController(
+        text: Formatters.cleanNumberString(mainStock),
+      ),
+      minStockCtrl: TextEditingController(text: '$minStock'),
+      useParentPrice: useParentPrice,
+      costPriceCtrl: TextEditingController(
+        text: Formatters.cleanNumberString(existing.costPrice),
+      ),
+      priceN1Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(existing.priceN1),
+      ),
+      priceN2Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(existing.priceN2),
+      ),
+      priceN3Ctrl: TextEditingController(
+        text: Formatters.cleanNumberString(existing.priceN3),
+      ),
+      isActive: existing.isActive,
+    );
+  }
+
+  Map<String, dynamic> toPayload() {
+    final map = <String, dynamic>{
+      if (id != null) 'id': id,
+      if (existingProductId != null) 'existing_product_id': existingProductId,
+      'variant_name': variantNameCtrl.text.trim(),
+      'barcode': barcodeCtrl.text.trim(),
+      'sku': skuCtrl.text.trim(),
+      'use_parent_price': useParentPrice,
+      'is_active': isActive,
+      'min_stock_level': int.tryParse(minStockCtrl.text.trim()) ?? 0,
+    };
+    if (!isExistingOrAttached || stockCtrl.text.trim().isNotEmpty) {
+      map['initial_stock'] = double.tryParse(stockCtrl.text.trim()) ?? 0;
+    }
+    if (!useParentPrice) {
+      map['cost_price'] = double.tryParse(costPriceCtrl.text.trim()) ?? 0;
+      map['price_n1'] = double.tryParse(priceN1Ctrl.text.trim()) ?? 0;
+      map['price_n2'] = double.tryParse(priceN2Ctrl.text.trim()) ?? 0;
+      map['price_n3'] = double.tryParse(priceN3Ctrl.text.trim()) ?? 0;
+    }
+    return map;
+  }
+
+  void dispose() {
+    variantNameCtrl.dispose();
+    barcodeCtrl.dispose();
+    skuCtrl.dispose();
+    stockCtrl.dispose();
+    minStockCtrl.dispose();
+    costPriceCtrl.dispose();
+    priceN1Ctrl.dispose();
+    priceN2Ctrl.dispose();
+    priceN3Ctrl.dispose();
+  }
 }
 
 class _UnitSpinDialog extends StatefulWidget {

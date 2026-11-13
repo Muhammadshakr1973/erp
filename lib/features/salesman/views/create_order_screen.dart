@@ -16,6 +16,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
+import '../../products/views/variant_selector_dialog.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
@@ -491,6 +492,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       );
       return false;
     }
+    if (product.isParent) {
+      _openVariantSelectorDialog(product, products);
+      return false;
+    }
 
     final maxStock = _getProductAvailableStock(product);
     final currentQty = _cart[productId] ?? 0;
@@ -701,9 +706,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         return StatefulBuilder(
           builder: (modalCtx, setDialogState) {
             final theme = Theme.of(context);
+            final sellableProducts = allProducts.where((p) => !p.isParent).toList();
             final filteredProducts = searchProductController.text.trim().isEmpty
-                ? allProducts.take(20).toList()
-                : allProducts
+                ? sellableProducts.take(20).toList()
+                : sellableProducts
                       .where((p) {
                         final q = searchProductController.text
                             .trim()
@@ -1305,7 +1311,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void _scanBarcode(List<ProductModel> products) {
     CameraBarcodeScanner.show(context, (scannedBarcode) {
       final matched = products
-          .where((p) => p.barcode == scannedBarcode || p.sku == scannedBarcode)
+          .where((p) => !p.isParent && (p.barcode == scannedBarcode || p.sku == scannedBarcode))
           .firstOrNull;
       if (matched != null) {
         final added = _addToCart(matched.id);
@@ -2510,26 +2516,41 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           return const Iterable<ProductModel>.empty();
         }
 
-        final matches = allProducts.where((p) {
-          final nameMatches = p.name.toLowerCase().contains(query);
-          final barcodeMatches = p.barcode.toLowerCase().contains(query);
-          final skuMatches =
-              p.sku != null && p.sku!.toLowerCase().contains(query);
-          return nameMatches || barcodeMatches || skuMatches;
+        final Map<int, List<ProductModel>> variantsByParent = {};
+        for (final p in allProducts) {
+          if (p.isActive && p.parentId != null) {
+            variantsByParent.putIfAbsent(p.parentId!, () => []).add(p);
+          }
+        }
+
+        // 1. Exact barcode or SKU match on a concrete sellable product goes first
+        final exactConcreteMatches = allProducts.where((p) {
+          if (!p.isActive || p.isParent) return false;
+          return p.barcode.toLowerCase() == query ||
+              (p.sku != null && p.sku!.toLowerCase() == query);
         }).toList();
 
-        // Sort: exact barcode first, startsWith barcode/name next, then alphabetical
-        matches.sort((a, b) {
-          final aExactBarcode = a.barcode.toLowerCase() == query;
-          final bExactBarcode = b.barcode.toLowerCase() == query;
-          if (aExactBarcode && !bExactBarcode) return -1;
-          if (!aExactBarcode && bExactBarcode) return 1;
+        // 2. Top-level items (parents + standalone) matching parent OR any child variant
+        bool matchesQuery(ProductModel item) {
+          return item.name.toLowerCase().contains(query) ||
+              (item.variantName != null &&
+                  item.variantName!.toLowerCase().contains(query)) ||
+              item.barcode.toLowerCase().contains(query) ||
+              (item.sku != null && item.sku!.toLowerCase().contains(query));
+        }
 
-          final aBarcodeStarts = a.barcode.toLowerCase().startsWith(query);
-          final bBarcodeStarts = b.barcode.toLowerCase().startsWith(query);
-          if (aBarcodeStarts && !bBarcodeStarts) return -1;
-          if (!aBarcodeStarts && bBarcodeStarts) return 1;
+        final topLevelMatches = allProducts.where((p) {
+          if (!p.isActive || p.isVariant) return false;
+          if (exactConcreteMatches.any((e) => e.id == p.id)) return false;
+          final children = p.isParent
+              ? (variantsByParent[p.id] ?? const <ProductModel>[])
+              : const <ProductModel>[];
+          if (p.isParent && children.isEmpty) return false;
+          return matchesQuery(p) || children.any(matchesQuery);
+        }).toList();
 
+        // Sort topLevelMatches: startsWith name/barcode first, then alphabetical
+        topLevelMatches.sort((a, b) {
           final aNameStarts = a.name.toLowerCase().startsWith(query);
           final bNameStarts = b.name.toLowerCase().startsWith(query);
           if (aNameStarts && !bNameStarts) return -1;
@@ -2538,7 +2559,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           return a.name.compareTo(b.name);
         });
 
-        return matches;
+        return [...exactConcreteMatches, ...topLevelMatches];
       },
       onSelected: (ProductModel selection) {
         _handleProductSelected(selection);
@@ -2732,15 +2753,33 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                       const Divider(height: 1),
                                   itemBuilder: (context, index) {
                                     final product = options.elementAt(index);
-                                    final unitPrice = _getProductUnitPrice(
-                                      product,
-                                    );
-                                    final qtyInCart = _cart[product.id] ?? 0;
+                                    final childVariants = product.isParent
+                                        ? allProducts
+                                            .where((v) => v.isActive && v.parentId == product.id)
+                                            .toList()
+                                        : const <ProductModel>[];
+                                    final double unitPrice = product.isParent && childVariants.isNotEmpty
+                                        ? (childVariants.map(_getProductUnitPrice).toList()..sort()).first
+                                        : _getProductUnitPrice(product);
+                                    final int qtyInCart = product.isParent
+                                        ? childVariants.fold<int>(0, (s, v) => s + (_cart[v.id] ?? 0))
+                                        : (_cart[product.id] ?? 0);
 
                                     return Material(
                                       color: Colors.transparent,
                                       child: InkWell(
                                         onTap: () {
+                                          if (product.isParent) {
+                                            final queryText = _searchController.text.trim();
+                                            _searchController.clear();
+                                            _searchFocusNode.unfocus();
+                                            _openVariantSelectorDialog(
+                                              product,
+                                              allProducts,
+                                              initialQuery: queryText,
+                                            );
+                                            return;
+                                          }
                                           final added = _addToCart(product.id);
                                           if (!added) return;
                                           _searchController.clear();
@@ -2770,6 +2809,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           );
                                         },
                                         onLongPress: () {
+                                          if (product.isParent) {
+                                            final queryText = _searchController.text.trim();
+                                            _searchController.clear();
+                                            _searchFocusNode.unfocus();
+                                            _openVariantSelectorDialog(
+                                              product,
+                                              allProducts,
+                                              initialQuery: queryText,
+                                            );
+                                            return;
+                                          }
                                           final added = _addToCart(product.id);
                                           if (!added) return;
                                           ScaffoldMessenger.of(context)
@@ -2857,19 +2907,47 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                   mainAxisSize:
                                                       MainAxisSize.min,
                                                   children: [
-                                                    Text(
-                                                      product.name,
-                                                      style: AppTextStyles
-                                                          .bodyBold,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                                    Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: Text(
+                                                            product.name,
+                                                            style: AppTextStyles
+                                                                .bodyBold,
+                                                            overflow:
+                                                                TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        if (product.isParent) ...[
+                                                          const SizedBox(width: 6),
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 6,
+                                                              vertical: 2,
+                                                            ),
+                                                            decoration: BoxDecoration(
+                                                              color: AppColors.primary.withValues(alpha: 0.14),
+                                                              borderRadius: BorderRadius.circular(6),
+                                                            ),
+                                                            child: Text(
+                                                              '${childVariants.length} جۆر',
+                                                              style: const TextStyle(
+                                                                fontSize: 10,
+                                                                fontWeight: FontWeight.bold,
+                                                                color: AppColors.primary,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Row(
                                                       children: [
-                                                        if (product
-                                                            .barcode
-                                                            .isNotEmpty) ...[
+                                                        if (!product.isParent &&
+                                                            product
+                                                                .barcode
+                                                                .isNotEmpty) ...[
                                                           const Icon(
                                                             Icons.qr_code,
                                                             size: 14,
@@ -2924,10 +3002,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                         ),
                                                         Builder(
                                                           builder: (context) {
-                                                            final availStock =
-                                                                _getProductAvailableStock(
-                                                                  product,
-                                                                );
+                                                            final availStock = product.isParent
+                                                                ? childVariants.fold<double>(
+                                                                    0.0,
+                                                                    (s, v) => s + _getProductAvailableStock(v),
+                                                                  )
+                                                                : _getProductAvailableStock(
+                                                                    product,
+                                                                  );
                                                             final isOut =
                                                                 availStock <= 0;
                                                             return Container(
@@ -3368,8 +3450,65 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
+  Future<void> _openVariantSelectorDialog(
+    ProductModel parentProduct,
+    List<ProductModel> allProducts, {
+    String? initialQuery,
+  }) async {
+    final variants = allProducts
+        .where((p) => p.isActive && p.parentId == parentProduct.id)
+        .toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+
+    if (variants.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'هیچ جۆرێکی چالاک بۆ ئەم کاڵایە بەردەست نییە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    final initialQuantities = <int, int>{
+      for (final v in variants) v.id: _cart[v.id] ?? 0,
+    };
+
+    final updated = await VariantSelectorDialog.show(
+      context,
+      parentProduct: parentProduct,
+      variants: variants,
+      initialQuantities: initialQuantities,
+      getPrice: _getProductUnitPrice,
+      getAvailableStock: _getProductAvailableStock,
+      enforceStockLimit: true,
+      initialQuery: initialQuery,
+    );
+
+    if (updated == null || !mounted) return;
+
+    _lastChangedField = 'product_qty_${parentProduct.id}';
+    setState(() {
+      for (final v in variants) {
+        final qty = updated[v.id] ?? 0;
+        if (qty > 0) {
+          _cart[v.id] = qty;
+        } else {
+          _cart.remove(v.id);
+          _cartNotes.remove(v.id);
+        }
+      }
+    });
+    _triggerDebouncedAutoSave();
+  }
+
   void _handleProductSelected(ProductModel selection) {
-    _addToCart(selection.id);
+    if (selection.isParent) {
+      final allProducts = ref.read(productsListProvider).asData?.value ?? [];
+      _openVariantSelectorDialog(selection, allProducts);
+      return;
+    }
+    final added = _addToCart(selection.id);
+    if (!added) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -3390,14 +3529,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final lowerQuery = query.toLowerCase();
 
-    // 1. Exact barcode match
+    // 1. Exact barcode match (concrete products only)
     ProductModel? match = allProducts
-        .where((p) => p.barcode.toLowerCase() == lowerQuery)
+        .where((p) => !p.isParent && p.barcode.toLowerCase() == lowerQuery)
         .firstOrNull;
 
-    // 2. Exact SKU match
+    // 2. Exact SKU match (concrete products only)
     match ??= allProducts
-        .where((p) => p.sku != null && p.sku!.toLowerCase() == lowerQuery)
+        .where((p) => !p.isParent && p.sku != null && p.sku!.toLowerCase() == lowerQuery)
         .firstOrNull;
 
     // 3. Exact name match
@@ -3405,9 +3544,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         .where((p) => p.name.toLowerCase() == lowerQuery)
         .firstOrNull;
 
-    // 4. Barcode starts with query
+    // 4. Barcode starts with query (concrete products only)
     match ??= allProducts
-        .where((p) => p.barcode.toLowerCase().startsWith(lowerQuery))
+        .where((p) => !p.isParent && p.barcode.toLowerCase().startsWith(lowerQuery))
         .firstOrNull;
 
     // 5. Name contains query
@@ -3416,6 +3555,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         .firstOrNull;
 
     if (match != null) {
+      if (match.isParent) {
+        controller.clear();
+        focusNode.unfocus();
+        _openVariantSelectorDialog(match, allProducts, initialQuery: query);
+        return;
+      }
       _addToCart(match.id);
       try {
         NotificationSoundService.playSuccessSound();

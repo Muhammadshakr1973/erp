@@ -1430,7 +1430,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       context,
       (barcode) {
         final trimmed = barcode.trim();
-        final matches = allProducts.where((p) => p.barcode == trimmed).toList();
+        final matches = allProducts
+            .where((p) => !p.isParent && p.barcode == trimmed)
+            .toList();
         if (_selectedSupplierId != null) {
           matches.sort((a, b) {
             final aIsSupplier = a.supplierId == _selectedSupplierId ? 0 : 1;
@@ -1855,6 +1857,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             final cartProductIds = _purchaseCart.map((item) => item.product.id).toSet();
 
             var filtered = allProducts.where((p) {
+              if (p.isParent) return false;
               if (cartProductIds.contains(p.id)) return false;
               final matchSupplier = currentSupplierFilter == null || p.supplierId == currentSupplierFilter;
               final matchStock = p.totalStock < threshold;
@@ -2072,6 +2075,27 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
 
     if (createdProduct != null && mounted) {
+      if (createdProduct.isParent) {
+        final variants = (ref.read(productsListProvider).valueOrNull ?? [])
+            .where((p) => p.parentId == createdProduct!.id)
+            .toList();
+        if (_selectedSupplierId == null && createdProduct.supplierId != null) {
+          _selectedSupplierId = createdProduct.supplierId;
+        }
+        if (variants.length == 1) {
+          _addProductToCart(variants.first);
+        } else {
+          _productSearchController.text = createdProduct.name;
+          _updatePurchaseViewState(() {});
+          AppSnackbar.show(
+            context,
+            message: 'کاڵای فرە-جۆر دروستکرا؛ تکایە جۆری دڵخواز لە لیستەکە هەڵبژێرە',
+            type: SnackbarType.info,
+          );
+        }
+        return;
+      }
+
       ref.read(productsListProvider.notifier).addProductLocally(createdProduct);
       if (_selectedSupplierId == null && createdProduct.supplierId != null) {
         _selectedSupplierId = createdProduct.supplierId;
@@ -2317,6 +2341,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
         final cartProductIds = _purchaseCart.map((item) => item.product.id).toSet();
         final lowStockProducts = allProducts.where((p) {
+          if (p.isParent) {
+            return false;
+          }
           if (cartProductIds.contains(p.id)) {
             return false;
           }
@@ -2691,6 +2718,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   }
                   final query = textEditingValue.text.toLowerCase().trim();
                   final matched = allProducts.where((p) {
+                    if (p.isParent) return false;
                     return p.name.toLowerCase().contains(query) ||
                         p.barcode.toLowerCase().contains(query) ||
                         (p.sku != null && p.sku!.toLowerCase().contains(query));
@@ -3255,6 +3283,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               }
 
               final lowStockNotInDrafts = allProducts.where((p) {
+                if (p.isParent) {
+                  return false;
+                }
                 if (draftOrderProductIds.contains(p.id)) {
                   return false;
                 }

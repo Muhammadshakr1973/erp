@@ -67,13 +67,18 @@ class ProductStockUpdated implements ShouldBroadcast
         if ($this->product) {
             $payload['product'] = [
                 'id' => $this->product->id,
+                'parent_id' => $this->product->parent_id,
+                'is_parent' => (bool) $this->product->is_parent,
                 'name' => $this->product->name,
+                'variant_name' => $this->product->variant_name,
                 'sku' => $this->product->sku,
                 'barcode' => $this->product->barcode,
                 'cost_price' => $this->product->cost_price,
                 'price_n1' => $this->product->price_n1,
                 'price_n2' => $this->product->price_n2,
                 'price_n3' => $this->product->price_n3,
+                'use_parent_price' => (bool) $this->product->use_parent_price,
+                'is_active' => (bool) $this->product->is_active,
                 'stocks' => $this->product->relationLoaded('stocks')
                     ? $this->product->stocks->map(fn($s) => [
                         'warehouse_id' => $s->warehouse_id,

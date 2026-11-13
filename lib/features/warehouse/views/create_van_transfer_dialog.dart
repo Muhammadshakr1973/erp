@@ -114,6 +114,7 @@ class _CreateVanTransferDialogState
           builder: (context, setModalState) {
             final theme = Theme.of(context);
             final filtered = allProducts.where((p) {
+              if (p.isParent) return false;
               if (selectedCategoryId != 0 &&
                   p.categoryId != selectedCategoryId) {
                 return false;

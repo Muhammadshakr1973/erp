@@ -137,6 +137,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/products/{product}', [ProductController::class, 'show']);
         Route::post('/products', [ProductController::class, 'store'])->middleware('permission:products.manage');
         Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:products.manage');
+        Route::post('/products/{product}/detach-variant', [ProductController::class, 'detachVariant'])->middleware('permission:products.manage');
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->middleware('permission:products.manage');
         
         Route::get('/categories', [CategoryController::class, 'index']);

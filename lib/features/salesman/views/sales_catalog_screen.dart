@@ -17,6 +17,7 @@ import '../../products/models/category_model.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/categories_provider.dart';
 import '../../products/providers/products_provider.dart';
+import '../../products/views/variant_selector_dialog.dart';
 import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
@@ -285,6 +286,60 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     _startOrRestart10SecondDebounce(
       actionDesc: 'زیادکردنی ${product.name} بۆ $_selectedOrderCustomerName',
+    );
+  }
+
+  /// Opens variant selector modal when salesman interacts with a parent product card
+  Future<void> _openVariantSelector(
+    ProductModel parentProduct,
+    List<ProductModel> variants,
+  ) async {
+    if (_selectedOrder == null) {
+      _showNoOrderWarning();
+      return;
+    }
+
+    if (variants.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'هیچ جۆرێکی چالاک بۆ ئەم کاڵایە بەردەست نییە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    final initialQuantities = <int, int>{
+      for (final v in variants) v.id: _orderCart[v.id] ?? 0,
+    };
+
+    final updated = await VariantSelectorDialog.show(
+      context,
+      parentProduct: parentProduct,
+      variants: variants,
+      initialQuantities: initialQuantities,
+      getPrice: _getProductPrice,
+      getAvailableStock: _getProductAvailableStock,
+      enforceStockLimit: true,
+      initialQuery: _searchQuery,
+    );
+
+    if (updated == null || !mounted) return;
+
+    setState(() {
+      for (final v in variants) {
+        final qty = updated[v.id] ?? 0;
+        if (qty > 0) {
+          _orderCart[v.id] = qty;
+        } else {
+          _orderCart.remove(v.id);
+          _orderCartNotes.remove(v.id);
+        }
+      }
+    });
+
+    _startOrRestart10SecondDebounce(
+      actionDesc:
+          'نوێکردنەوەی جۆرەکانی ${parentProduct.name} بۆ $_selectedOrderCustomerName',
     );
   }
 
@@ -1168,24 +1223,38 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     ),
                   ),
                   data: (allProducts) {
-                    // Filter products by category & search query (do not filter out 0 stock)
+                    final Map<int, List<ProductModel>> variantsByParent = {};
+                    for (final p in allProducts) {
+                      if (p.isActive && p.parentId != null) {
+                        variantsByParent.putIfAbsent(p.parentId!, () => []).add(p);
+                      }
+                    }
+                    for (final list in variantsByParent.values) {
+                      list.sort((a, b) => a.id.compareTo(b.id));
+                    }
+
+                    // Filter top-level products by category & search query (including child variant match)
                     final filteredProducts = allProducts.where((p) {
-                      if (!p.isActive) return false;
+                      if (!p.isActive || p.isVariant) return false;
+                      final children = p.isParent
+                          ? (variantsByParent[p.id] ?? const <ProductModel>[])
+                          : const <ProductModel>[];
+                      if (p.isParent && children.isEmpty) return false;
+
                       if (_selectedCategoryId != null &&
                           p.categoryId != _selectedCategoryId) {
                         return false;
                       }
                       if (_searchQuery.isNotEmpty) {
-                        final matchName = p.name.toLowerCase().contains(
-                          _searchQuery,
-                        );
-                        final matchBarcode = p.barcode.toLowerCase().contains(
-                          _searchQuery,
-                        );
-                        final matchSku = (p.sku ?? '').toLowerCase().contains(
-                          _searchQuery,
-                        );
-                        return matchName || matchBarcode || matchSku;
+                        bool matchesItem(ProductModel item) {
+                          return item.name.toLowerCase().contains(_searchQuery) ||
+                              (item.variantName != null &&
+                                  item.variantName!.toLowerCase().contains(_searchQuery)) ||
+                              item.barcode.toLowerCase().contains(_searchQuery) ||
+                              (item.sku ?? '').toLowerCase().contains(_searchQuery);
+                        }
+
+                        return matchesItem(p) || children.any(matchesItem);
                       }
                       return true;
                     }).toList();
@@ -1384,12 +1453,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                       itemCount: productsInGroup.length,
                                       itemBuilder: (context, index) {
                                         final product = productsInGroup[index];
-                                        final qtyInCart =
-                                            _orderCart[product.id] ?? 0;
+                                        final variants = product.isParent
+                                            ? (variantsByParent[product.id] ?? const <ProductModel>[])
+                                            : const <ProductModel>[];
+                                        final qtyInCart = product.isParent
+                                            ? variants.fold<int>(0, (sum, v) => sum + (_orderCart[v.id] ?? 0))
+                                            : (_orderCart[product.id] ?? 0);
                                         return _buildProductCard(
                                           context,
                                           key: ValueKey(product.id),
                                           product: product,
+                                          variants: variants,
                                           quantity: qtyInCart,
                                           user: authUser,
                                           warehouseId: salesWarehouseId,
@@ -1699,8 +1773,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final categories = categoriesAsync.asData?.value ?? [];
     final allProducts = productsAsync.asData?.value ?? [];
 
+    final topLevelActive = allProducts.where((p) => p.isActive && !p.isVariant).toList();
     String currentCategoryName = 'هەموو کاڵاکان';
-    int itemCount = allProducts.length;
+    int itemCount = topLevelActive.length;
 
     if (_selectedCategoryId != null) {
       final selectedCat = categories
@@ -1708,7 +1783,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .firstOrNull;
       if (selectedCat != null) {
         currentCategoryName = selectedCat.name;
-        itemCount = allProducts
+        itemCount = topLevelActive
             .where((p) => p.categoryId == _selectedCategoryId)
             .length;
       }
@@ -1889,17 +1964,33 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     BuildContext context, {
     required Key key,
     required ProductModel product,
+    List<ProductModel> variants = const [],
     required int quantity,
     required dynamic user,
     required int? warehouseId,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final unitPrice = _getProductPrice(product);
+    final bool isParentCard = product.isParent && variants.isNotEmpty;
+
+    double unitPrice = _getProductPrice(product);
+    double? minVariantPrice;
+    double? maxVariantPrice;
+    if (isParentCard) {
+      final prices = variants.map(_getProductPrice).toList();
+      prices.sort();
+      minVariantPrice = prices.first;
+      maxVariantPrice = prices.last;
+      unitPrice = minVariantPrice;
+    }
 
     // Stock calculation
-    final totalAvailable = _getProductAvailableStock(product);
-    final remainingStock = _getProductRemainingStock(product);
+    final double totalAvailable = isParentCard
+        ? variants.fold<double>(0.0, (s, v) => s + _getProductAvailableStock(v))
+        : _getProductAvailableStock(product);
+    final double remainingStock = isParentCard
+        ? variants.fold<double>(0.0, (s, v) => s + _getProductRemainingStock(v))
+        : _getProductRemainingStock(product);
     final bool isOutOfStock = totalAvailable <= 0;
     final bool isLimitReached = remainingStock <= 0;
     final bool canIncrement = remainingStock > 0;
@@ -2020,6 +2111,43 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         ),
                       ),
 
+                    // Variant count badge at bottom-right
+                    if (isParentCard)
+                      Positioned(
+                        bottom: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.layers_outlined,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${variants.length} جۆر',
+                                style: const TextStyle(
+                                  fontFamily: 'KJino',
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                     // Stock badge at top-right
                     Positioned(
                       top: 6,
@@ -2039,7 +2167,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                               : null,
                         ),
                         child: Text(
-                          'ستۆک: $remainingStock',
+                          'ستۆک: ${remainingStock.toInt()}',
                           style: const TextStyle(
                             fontFamily: 'KJino',
                             color: Colors.white,
@@ -2075,18 +2203,28 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        Formatters.currency(unitPrice),
-                        style: TextStyle(
-                          fontFamily: 'KJino',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? const Color(0xFF60A5FA)
-                              : AppColors.primary,
+                      Flexible(
+                        child: Text(
+                          (isParentCard &&
+                                  minVariantPrice != null &&
+                                  maxVariantPrice != null &&
+                                  minVariantPrice != maxVariantPrice)
+                              ? '${Formatters.currency(minVariantPrice)} - ${Formatters.currency(maxVariantPrice)}'
+                              : Formatters.currency(unitPrice),
+                          style: TextStyle(
+                            fontFamily: 'KJino',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? const Color(0xFF60A5FA)
+                                : AppColors.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (!_isManualPriceTierOverride &&
+                      if (!isParentCard &&
+                          !_isManualPriceTierOverride &&
                           _customerSpecialPrices.containsKey(product.id)) ...[
                         const SizedBox(width: 4),
                         Container(
@@ -2150,7 +2288,11 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         ),
                         elevation: 0,
                       ),
-                      onPressed: canDecrement ? () => _decrementProduct(product) : null,
+                      onPressed: canDecrement
+                          ? () => isParentCard
+                              ? _openVariantSelector(product, variants)
+                              : _decrementProduct(product)
+                          : null,
                       child: const Icon(Icons.remove, size: 20),
                     ),
                   ),
@@ -2159,15 +2301,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   // Center Quantity Box (Tap to type custom number)
                   Expanded(
                     child: InkWell(
-                      onTap: isOutOfStock
-                          ? () {
-                              AppSnackbar.show(
-                                context,
-                                message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
-                                type: SnackbarType.warning,
-                              );
-                            }
-                          : () => _editQuantityDirectly(product),
+                      onTap: isParentCard
+                          ? () => _openVariantSelector(product, variants)
+                          : (isOutOfStock
+                              ? () {
+                                  AppSnackbar.show(
+                                    context,
+                                    message: 'ئەم کاڵایە لە ستۆک بەردەست نییە',
+                                    type: SnackbarType.warning,
+                                  );
+                                }
+                              : () => _editQuantityDirectly(product)),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         height: 36,
@@ -2217,7 +2361,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         ),
                         elevation: 0,
                       ),
-                      onPressed: canIncrement ? () => _incrementProduct(product) : null,
+                      onPressed: canIncrement
+                          ? () => isParentCard
+                              ? _openVariantSelector(product, variants)
+                              : _incrementProduct(product)
+                          : (isParentCard && quantity > 0
+                              ? () => _openVariantSelector(product, variants)
+                              : null),
                       child: const Icon(Icons.add, size: 20),
                     ),
                   ),

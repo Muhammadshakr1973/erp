@@ -61,6 +61,11 @@ class StockTransferService
                         'items' => "کاڵای دیاریکراو بە ناسنامەی {$pId} بوونی نییە.",
                     ]);
                 }
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە و ناگوازرێتەوە؛ تکایە جۆرە دیاریکراوەکەی هەڵبژێرە.",
+                    ]);
+                }
 
                 if (isset($normalizedItems[$pId])) {
                     $normalizedItems[$pId]['quantity'] += $qty;

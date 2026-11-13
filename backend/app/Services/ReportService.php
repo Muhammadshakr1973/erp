@@ -786,6 +786,7 @@ class ReportService
     {
         $query = WarehouseStock::query()
             ->with(['product:id,name,sku,barcode,unit,cost_price,supplier_id,category_id', 'product.category:id,name', 'product.supplier:id,name', 'warehouse:id,name'])
+            ->whereHas('product', fn($p) => $p->where('is_parent', false))
             ->lowStock();
 
         if (!empty($filters['warehouse_id'])) {

@@ -176,6 +176,33 @@ class _PurchaseOrderBuilderDialogState
     }
 
     if (createdProduct != null && mounted) {
+      if (createdProduct.isParent) {
+        final variants = (ref.read(productsListProvider).valueOrNull ?? [])
+            .where((p) => p.parentId == createdProduct!.id)
+            .toList();
+        if (variants.length == 1) {
+          setState(() {
+            _productToAdd = variants.first;
+          });
+          _addProduct(warehouses);
+          AppSnackbar.show(
+            context,
+            message: '«${variants.first.name}» زیادکرا بۆ پسوڵەی کڕین',
+            type: SnackbarType.success,
+          );
+        } else {
+          setState(() {
+            _productToAdd = null;
+            _productSearchController.text = createdProduct!.name;
+          });
+          AppSnackbar.show(
+            context,
+            message: 'کاڵای فرە-جۆر دروستکرا؛ تکایە جۆری دڵخواز هەڵبژێرە',
+            type: SnackbarType.info,
+          );
+        }
+        return;
+      }
       setState(() {
         _productToAdd = createdProduct;
       });
@@ -222,7 +249,9 @@ class _PurchaseOrderBuilderDialogState
           error: (error, stack) => _errorDialog(error.toString()),
           data: (warehouses) => _buildDialog(
             suppliers,
-            products.where((product) => product.isActive).toList(),
+            products
+                .where((product) => product.isActive && !product.isParent)
+                .toList(),
             _availableWarehouses(warehouses),
           ),
         ),

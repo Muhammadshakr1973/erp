@@ -10,8 +10,32 @@ use App\Models\Traits\Auditable;
 class Product extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
-    protected $fillable = ['name', 'sku', 'barcode', 'category_id', 'supplier_id', 'unit', 'units_per_carton', 'cost_price', 'price_n1', 'price_n2', 'price_n3', 'image_path', 'is_active'];
-    protected $casts = ['is_active' => 'boolean', 'units_per_carton' => 'integer'];
+    protected $fillable = [
+        'parent_id',
+        'is_parent',
+        'name',
+        'variant_name',
+        'sku',
+        'barcode',
+        'category_id',
+        'supplier_id',
+        'unit',
+        'units_per_carton',
+        'cost_price',
+        'price_n1',
+        'price_n2',
+        'price_n3',
+        'use_parent_price',
+        'image_path',
+        'is_active',
+    ];
+    protected $casts = [
+        'parent_id' => 'integer',
+        'is_parent' => 'boolean',
+        'use_parent_price' => 'boolean',
+        'is_active' => 'boolean',
+        'units_per_carton' => 'integer',
+    ];
 
     protected static function booted()
     {
@@ -32,6 +56,14 @@ class Product extends Model
                 $product->price_n3 = $product->price_n1;
             }
         });
+    }
+    public function parent()
+    {
+        return $this->belongsTo(Product::class, 'parent_id');
+    }
+    public function variants()
+    {
+        return $this->hasMany(Product::class, 'parent_id');
     }
     public function category()
     {
@@ -62,5 +94,13 @@ class Product extends Model
     public function scopeActive($q)
     {
         return $q->where('is_active', true);
+    }
+    public function scopeSellable($q)
+    {
+        return $q->where('is_parent', false);
+    }
+    public function scopeTopLevel($q)
+    {
+        return $q->whereNull('parent_id');
     }
 }

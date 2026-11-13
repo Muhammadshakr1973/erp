@@ -60,9 +60,21 @@ class ProductDetailsDialog extends ConsumerWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
 
-    final double totalStock = product.totalStock;
-    final double minStockLevel = product.minStockLevel;
-    final bool isLowStock = product.isLowStock;
+    final allProducts = ref.watch(productsListProvider).valueOrNull ?? [];
+    final List<ProductModel> childVariants = product.isParent
+        ? (allProducts.where((p) => p.parentId == product.id).toList()
+          ..sort((a, b) => a.id.compareTo(b.id)))
+        : const [];
+
+    final double totalStock = product.isParent
+        ? childVariants.fold<double>(0.0, (s, c) => s + c.totalStock)
+        : product.totalStock;
+    final double minStockLevel = product.isParent
+        ? childVariants.fold<double>(0.0, (s, c) => s + c.minStockLevel)
+        : product.minStockLevel;
+    final bool isLowStock = product.isParent
+        ? childVariants.any((c) => c.isLowStock)
+        : product.isLowStock;
 
     return Dialog(
       backgroundColor: theme.colorScheme.surface,
@@ -355,7 +367,85 @@ class ProductDetailsDialog extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+
+            if (product.isParent) ...[
+              Text(
+                'جۆرەکان / ڕەنگەکان (${childVariants.length})',
+                style: AppTextStyles.bodyBold.copyWith(fontSize: 15),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: childVariants.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text('هیچ جۆرێک نییە', textAlign: TextAlign.center),
+                        )
+                      : Column(
+                          children: childVariants.map((v) {
+                            return ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              title: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      v.displayVariantLabel,
+                                      style: AppTextStyles.bodyBold,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (!v.useParentPrice) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.info.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'نرخی تایبەت',
+                                        style: TextStyle(fontSize: 10, color: AppColors.info, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              subtitle: Text(
+                                'ستۆک: ${Formatters.cleanNumberString(v.totalStock)} • N1: ${Formatters.currency(v.priceN1)}${v.barcode.isNotEmpty ? " • ${v.barcode}" : ""}',
+                                style: AppTextStyles.caption,
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                tooltip: 'دەستکاریکردنی جۆر',
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => ProductFormDialog(product: v),
+                                  );
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
+            const SizedBox(height: AppSpacing.sm),
 
             // Actions footer
             Row(

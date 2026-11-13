@@ -76,7 +76,8 @@ class WarehouseController extends Controller
         $readyTodayCount = $readyQuery->count();
 
         // 3. Low stock count (warehouse stock where quantity <= min_stock_level)
-        $stockQuery = WarehouseStock::query();
+        $stockQuery = WarehouseStock::query()
+            ->whereHas('product', fn($q) => $q->where('is_parent', false));
         if ($warehouseId) {
             $stockQuery->where('warehouse_id', $warehouseId);
         }
@@ -92,6 +93,7 @@ class WarehouseController extends Controller
 
         // 5. Low stock items (up to 5)
         $lowStockItemsQuery = WarehouseStock::with(['warehouse', 'product'])
+            ->whereHas('product', fn($q) => $q->where('is_parent', false))
             ->whereRaw('quantity <= min_stock_level');
         if ($warehouseId) {
             $lowStockItemsQuery->where('warehouse_id', $warehouseId);
@@ -482,6 +484,13 @@ class WarehouseController extends Controller
             }
         }
 
+        $targetProduct = \App\Models\Product::find($productId);
+        if (!$targetProduct || $targetProduct->is_parent) {
+            return response()->json([
+                'message' => 'ناتوانرێت ستۆک بۆ کاڵایەکی سەرەکی فرە-جۆر دەستکاری بکرێت.'
+            ], 422);
+        }
+
         $stock = WarehouseStock::where('warehouse_id', $warehouseId)
             ->where('product_id', $productId)
             ->first();
@@ -779,7 +788,8 @@ class WarehouseController extends Controller
     public function stockList(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = WarehouseStock::with(['warehouse', 'product']);
+        $query = WarehouseStock::with(['warehouse', 'product'])
+            ->whereHas('product', fn($q) => $q->where('is_parent', false));
 
         $requestedWarehouseId = $request->query('warehouse_id');
         if ($requestedWarehouseId) {
