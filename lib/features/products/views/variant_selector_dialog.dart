@@ -479,7 +479,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
               AppButton(
                 text: 'پاشەکەوتکردن لە سەبەتە',
                 icon: Icons.check_circle_outline,
-                isFullWidth: true,
+                width: double.infinity,
                 onPressed: () => Navigator.pop(context, Map<int, int>.from(_quantities)),
               ),
             ],
