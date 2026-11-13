@@ -433,7 +433,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
     );
   }
 
-  Widget _buildStockFilterDropdown(
+  Widget _buildStockFilterButton(
     BuildContext context,
     ThemeData theme,
     StockQuantityFilter stockFilter,
@@ -447,91 +447,11 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           : 'زیاتر لە $numStr';
     }
 
-    PopupMenuItem<String> buildStockMenuItem({
-      required String value,
-      required String label,
-      required IconData icon,
-      required bool isSelected,
-    }) {
-      return PopupMenuItem<String>(
-        value: value,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              size: 18,
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface,
-                fontFamily: 'KJino',
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return PopupMenuButton<String>(
-      color: theme.colorScheme.surface,
-      position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) {
-        if (value == 'all') {
-          ref.read(productStockFilterProvider.notifier).state =
-              const StockQuantityFilter();
-        } else if (value == 'less_than') {
-          _showStockFilterDialog(context, StockFilterMode.lessThan);
-        } else if (value == 'greater_than') {
-          _showStockFilterDialog(context, StockFilterMode.greaterThan);
-        }
-      },
-      itemBuilder: (context) => [
-        buildStockMenuItem(
-          value: 'all',
-          label: 'هەموو ستۆکەکان',
-          icon: Icons.inventory_outlined,
-          isSelected: !isFiltered,
-        ),
-        buildStockMenuItem(
-          value: 'less_than',
-          label: stockFilter.mode == StockFilterMode.lessThan && isFiltered
-              ? 'کەمتر لە ${Formatters.cleanNumberString(stockFilter.threshold)}'
-              : 'کەمتر لە بڕێک',
-          icon: Icons.trending_down_rounded,
-          isSelected:
-              stockFilter.mode == StockFilterMode.lessThan && isFiltered,
-        ),
-        buildStockMenuItem(
-          value: 'greater_than',
-          label: stockFilter.mode == StockFilterMode.greaterThan && isFiltered
-              ? 'زیاتر لە ${Formatters.cleanNumberString(stockFilter.threshold)}'
-              : 'زیاتر لە بڕێک',
-          icon: Icons.trending_up_rounded,
-          isSelected:
-              stockFilter.mode == StockFilterMode.greaterThan && isFiltered,
-        ),
-      ],
+    return InkWell(
+      onTap: () => _showStockFilterDialog(
+        context,
+        isFiltered ? stockFilter.mode : StockFilterMode.lessThan,
+      ),
       child: Container(
         height: 38,
         color: isFiltered
@@ -578,9 +498,14 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       builder: (context) => _StockFilterInputDialog(
         initialMode: initialMode,
         initialThreshold: currentFilter.threshold,
+        isFiltered: currentFilter.isActive,
         onApply: (mode, threshold) {
           ref.read(productStockFilterProvider.notifier).state =
               StockQuantityFilter(mode: mode, threshold: threshold);
+        },
+        onClear: () {
+          ref.read(productStockFilterProvider.notifier).state =
+              const StockQuantityFilter();
         },
       ),
     );
@@ -754,9 +679,9 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       height: 20,
                       color: theme.colorScheme.outline.withValues(alpha: 0.35),
                     ),
-                    // 3. Dropdown for Stock quantity filter (less than / greater than input)
+                    // 3. Button for Stock quantity filter (opens input dialog directly)
                     Expanded(
-                      child: _buildStockFilterDropdown(
+                      child: _buildStockFilterButton(
                         context,
                         theme,
                         stockFilter,
@@ -1126,12 +1051,16 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
 class _StockFilterInputDialog extends StatefulWidget {
   final StockFilterMode initialMode;
   final double? initialThreshold;
+  final bool isFiltered;
   final void Function(StockFilterMode mode, double threshold) onApply;
+  final VoidCallback onClear;
 
   const _StockFilterInputDialog({
     required this.initialMode,
     this.initialThreshold,
+    this.isFiltered = false,
     required this.onApply,
+    required this.onClear,
   });
 
   @override
@@ -1176,6 +1105,11 @@ class _StockFilterInputDialogState extends State<_StockFilterInputDialog> {
 
   void _submit() {
     final normalized = _normalizeDigits(_controller.text);
+    if (normalized.isEmpty && widget.isFiltered) {
+      widget.onClear();
+      Navigator.pop(context);
+      return;
+    }
     final parsed = double.tryParse(normalized);
     if (parsed == null) {
       setState(() {
@@ -1297,6 +1231,49 @@ class _StockFilterInputDialogState extends State<_StockFilterInputDialog> {
               }
             },
           ),
+          if (widget.isFiltered) ...[
+            const SizedBox(height: AppSpacing.md),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                widget.onClear();
+                Navigator.pop(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 9,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.filter_alt_off_outlined,
+                      size: 16,
+                      color: AppColors.danger,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'هەموو ستۆکەکان (لابردنی فلتەر)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.danger,
+                        fontFamily: 'KJino',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
       actions: [
