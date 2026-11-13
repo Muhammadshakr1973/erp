@@ -724,7 +724,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       builder: (context) {
         return NumericKeyboardDialog(
           controller: _unitsPerCartonController,
-          labelText: '$currentUnit : دانە',
+          labelText: '$currentUnit دانە',
           hintText: '12',
         );
       },
@@ -750,7 +750,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '$currentUnit :',
+              currentUnit,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 12,
