@@ -1374,7 +1374,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             final hasStock = categoryHasStockMap[_categoryKey(catId)] ?? true;
 
                             return AnimatedOpacity(
-                              opacity: hasStock ? 1.0 : 0.25,
+                              opacity: hasStock ? 1.0 : 0.50,
                               duration: const Duration(milliseconds: 200),
                               child: Container(
                                 margin: const EdgeInsets.symmetric(
