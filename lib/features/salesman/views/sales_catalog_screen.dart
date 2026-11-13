@@ -37,7 +37,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   String _selectedPriceTier = 'N3'; // Default 'N3' ('ن٣') as requested
   bool _isManualPriceTierOverride = false;
   Map<int, double> _customerSpecialPrices = {};
-  final Set<int> _collapsedCategoryKeys = {}; // empty = all categories checked & expanded
+  // null override -> defaults to whether category has any product in stock
+  final Map<int, bool> _categoryExpandedOverrides = {};
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -75,6 +76,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   /// Sets or switches the currently active order
   void _setActiveOrder(OrderModel? order, {bool isManualOverride = false}) {
     final previousOrderId = _selectedOrder?.id;
+    final previousWarehouseId = _selectedOrder?.warehouseId;
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
 
@@ -97,6 +99,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     setState(() {
       _selectedOrder = order;
+      if (order?.warehouseId != previousWarehouseId) {
+        _categoryExpandedOverrides.clear();
+      }
       _secondsRemaining = 0;
       _orderCart.clear();
       _orderCartNotes.clear();
@@ -1154,6 +1159,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
     });
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
+    ref.watch(warehouseListProvider);
     final salesWarehouseId =
         authUser?.warehouseId ?? myVanWarehouse?.id;
 
@@ -1256,6 +1262,29 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         return nameA.compareTo(nameB);
       });
 
+    // Determine whether each category has at least one product available in stock
+    final Map<int, bool> categoryHasStockMap = {};
+    for (final catId in sortedCatKeys) {
+      final productsInGroup = groupedByCat[catId]!;
+      bool hasStock = false;
+      for (final product in productsInGroup) {
+        if (product.isParent) {
+          final variants =
+              variantsByParent[product.id] ?? const <ProductModel>[];
+          if (variants.any((v) => _getProductAvailableStock(v) > 0)) {
+            hasStock = true;
+            break;
+          }
+        } else {
+          if (_getProductAvailableStock(product) > 0) {
+            hasStock = true;
+            break;
+          }
+        }
+      }
+      categoryHasStockMap[_categoryKey(catId)] = hasStock;
+    }
+
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
@@ -1278,6 +1307,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 categoryMap: categoryMap,
                 groupedByCat: groupedByCat,
                 sortedCatKeys: sortedCatKeys,
+                categoryHasStockMap: categoryHasStockMap,
               ),
 
               // 4. PRODUCT CARDS GRID (Grouped by Category & Collapsible like Dropdowns)
@@ -1340,7 +1370,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                 ? categoryMap[catId]!
                                 : 'بێ جۆر';
                             final frameColor = _getCategoryColor(catId, catIndex, isDark);
-                            final isExpanded = _isCategoryExpanded(catId);
+                            final isExpanded = _isCategoryExpanded(catId, categoryHasStockMap);
 
                             return Container(
                               margin: const EdgeInsets.symmetric(
@@ -1377,7 +1407,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                     Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        onTap: () => _toggleCategoryExpanded(catId),
+                                        onTap: () => _toggleCategoryExpanded(
+                                          catId,
+                                          categoryHasStockMap,
+                                        ),
                                         borderRadius: isExpanded
                                             ? const BorderRadius.vertical(
                                                 top: Radius.circular(14),
@@ -1811,17 +1844,22 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   int _categoryKey(int? categoryId) =>
       (categoryId != null && categoryId > 0) ? categoryId : -1;
 
-  bool _isCategoryExpanded(int? categoryId) =>
-      !_collapsedCategoryKeys.contains(_categoryKey(categoryId));
-
-  void _toggleCategoryExpanded(int? categoryId) {
+  bool _isCategoryExpanded(
+    int? categoryId,
+    Map<int, bool> categoryHasStockMap,
+  ) {
     final key = _categoryKey(categoryId);
+    return _categoryExpandedOverrides[key] ?? (categoryHasStockMap[key] ?? true);
+  }
+
+  void _toggleCategoryExpanded(
+    int? categoryId,
+    Map<int, bool> categoryHasStockMap,
+  ) {
+    final key = _categoryKey(categoryId);
+    final currentExpanded = _isCategoryExpanded(categoryId, categoryHasStockMap);
     setState(() {
-      if (_collapsedCategoryKeys.contains(key)) {
-        _collapsedCategoryKeys.remove(key);
-      } else {
-        _collapsedCategoryKeys.add(key);
-      }
+      _categoryExpandedOverrides[key] = !currentExpanded;
     });
   }
 
@@ -1832,6 +1870,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     required Map<int, String> categoryMap,
     required Map<int?, List<ProductModel>> groupedByCat,
     required List<int?> sortedCatKeys,
+    required Map<int, bool> categoryHasStockMap,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -1844,13 +1883,18 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     final visibleCategoryKeys = sortedCatKeys.map(_categoryKey).toList();
     final bool allChecked = visibleCategoryKeys.isNotEmpty &&
-        visibleCategoryKeys.every((k) => !_collapsedCategoryKeys.contains(k));
-    final int checkedCatCount =
-        visibleCategoryKeys.where((k) => !_collapsedCategoryKeys.contains(k)).length;
+        visibleCategoryKeys.every(
+          (k) => _categoryExpandedOverrides[k] ?? (categoryHasStockMap[k] ?? true),
+        );
+    final int checkedCatCount = visibleCategoryKeys
+        .where(
+          (k) => _categoryExpandedOverrides[k] ?? (categoryHasStockMap[k] ?? true),
+        )
+        .length;
 
     int itemCount = 0;
     for (final catId in sortedCatKeys) {
-      if (_isCategoryExpanded(catId)) {
+      if (_isCategoryExpanded(catId, categoryHasStockMap)) {
         itemCount += groupedByCat[catId]?.length ?? 0;
       }
     }
@@ -1861,7 +1905,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         currentCategoryName = 'هیچ کاتیگۆریەک دیاری نەکراوە';
       } else if (checkedCatCount == 1) {
         final activeCatId = sortedCatKeys.firstWhere(
-          (catId) => _isCategoryExpanded(catId),
+          (catId) => _isCategoryExpanded(catId, categoryHasStockMap),
           orElse: () => null,
         );
         currentCategoryName =
@@ -2000,10 +2044,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     isChecked: allChecked,
                     onTap: () {
                       setState(() {
-                        if (allChecked) {
-                          _collapsedCategoryKeys.addAll(visibleCategoryKeys);
-                        } else {
-                          _collapsedCategoryKeys.removeAll(visibleCategoryKeys);
+                        final targetValue = !allChecked;
+                        for (final k in visibleCategoryKeys) {
+                          _categoryExpandedOverrides[k] = targetValue;
                         }
                       });
                     },
@@ -2012,16 +2055,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   return _buildCategoryCheckboxChip(
                     context,
                     label: cat.name,
-                    isChecked: _isCategoryExpanded(cat.id),
-                    onTap: () => _toggleCategoryExpanded(cat.id),
+                    isChecked: _isCategoryExpanded(cat.id, categoryHasStockMap),
+                    onTap: () => _toggleCategoryExpanded(cat.id, categoryHasStockMap),
                   );
                 }),
                 if (hasUncategorized)
                   _buildCategoryCheckboxChip(
                     context,
                     label: 'بێ جۆر',
-                    isChecked: _isCategoryExpanded(null),
-                    onTap: () => _toggleCategoryExpanded(null),
+                    isChecked: _isCategoryExpanded(null, categoryHasStockMap),
+                    onTap: () => _toggleCategoryExpanded(null, categoryHasStockMap),
                   ),
               ],
             ),
