@@ -178,6 +178,7 @@ class PurchaseActions {
   Future<PurchaseOrderModel> updatePurchaseOrder({
     required int orderId,
     int? supplierId,
+    bool includeNullSupplierId = false,
     int? warehouseId,
     List<Map<String, dynamic>>? items,
     num? paidAmount,
@@ -188,7 +189,8 @@ class PurchaseActions {
     final apiClient = _ref.read(apiClientProvider);
     try {
       final payload = <String, dynamic>{
-        if (supplierId != null) 'supplier_id': supplierId,
+        if (supplierId != null || includeNullSupplierId)
+          'supplier_id': supplierId,
         if (warehouseId != null) 'warehouse_id': warehouseId,
         if (items != null) 'items': items,
         if (paidAmount != null) 'paid_amount': paidAmount,

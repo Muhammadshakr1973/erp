@@ -22,19 +22,8 @@ class PurchaseOrderService
     public function createOrder(array $data, $user): PurchaseOrder
     {
         return DB::transaction(function () use ($data, $user) {
-            // ئەگەر دابینکەر دیاری نەکرابوو، دابینکەری گشتی/بێناو بەکاردەهێنرێت
-            $supplierId = !empty($data['supplier_id']) ? (int) $data['supplier_id'] : null;
-            if (!$supplierId) {
-                $defaultSupplier = Supplier::firstOrCreate(
-                    ['name' => 'دابینکەری گشتی (بێناو)'],
-                    [
-                        'phone' => null,
-                        'current_balance' => 0,
-                        'created_by' => $user->id,
-                    ]
-                );
-                $supplierId = $defaultSupplier->id;
-            }
+            // ئەگەر دابینکەر دیاری نەکرابوو، دابینکەری نوێ (بێناو) بەکاردەهێنرێت
+            $supplierId = $this->resolveSupplierId($data['supplier_id'] ?? null, $user);
 
             $supplier = Supplier::lockForUpdate()->findOrFail($supplierId);
 
@@ -564,7 +553,9 @@ class PurchaseOrderService
             $previousPaid = (float) $lockedOrder->paid_amount;
             $wasFullyPaid = ($previousPaid == $previousTotal || $previousPaid == 0);
 
-            $supplierId = array_key_exists('supplier_id', $data) ? $data['supplier_id'] : $lockedOrder->supplier_id;
+            $supplierId = array_key_exists('supplier_id', $data)
+                ? $this->resolveSupplierId($data['supplier_id'], $user)
+                : $lockedOrder->supplier_id;
             $warehouseId = array_key_exists('warehouse_id', $data) ? (int)$data['warehouse_id'] : $lockedOrder->warehouse_id;
             $notes = array_key_exists('notes', $data) ? $data['notes'] : $lockedOrder->notes;
             $hasExplicitPaid = array_key_exists('paid_amount', $data);
@@ -763,5 +754,34 @@ class PurchaseOrderService
                 'user'        => $user,
             ]);
         });
+    }
+
+    /**
+     * دیاریکردنی ناسنامەی دابینکەر؛ ئەگەر دیاری نەکرابوو «دابینکەری نوێ (بێناو)» بەکاردەهێنرێت
+     */
+    private function resolveSupplierId($supplierId, $user): int
+    {
+        $resolvedId = !empty($supplierId) ? (int) $supplierId : null;
+        if ($resolvedId) {
+            return $resolvedId;
+        }
+
+        $defaultSupplier = Supplier::where('name', 'دابینکەری نوێ (بێناو)')->first();
+        if (!$defaultSupplier) {
+            $legacySupplier = Supplier::where('name', 'دابینکەری گشتی (بێناو)')->first();
+            if ($legacySupplier) {
+                $legacySupplier->update(['name' => 'دابینکەری نوێ (بێناو)']);
+                $defaultSupplier = $legacySupplier;
+            } else {
+                $defaultSupplier = Supplier::create([
+                    'name' => 'دابینکەری نوێ (بێناو)',
+                    'phone' => null,
+                    'current_balance' => 0,
+                    'created_by' => $user->id,
+                ]);
+            }
+        }
+
+        return $defaultSupplier->id;
     }
 }

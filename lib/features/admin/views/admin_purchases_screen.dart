@@ -170,6 +170,14 @@ class AdminPurchasesScreen extends ConsumerStatefulWidget {
 class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     with SingleTickerProviderStateMixin {
   static const String _kPurchaseCartDraftKey = 'admin_purchase_cart_draft';
+  static const String _kAnonymousSupplierName = 'دابینکەری نوێ (بێناو)';
+  static const String _kLegacyAnonymousSupplierName = 'دابینکەری گشتی (بێناو)';
+
+  bool _isAnonymousSupplierName(String name) {
+    final trimmed = name.trim();
+    return trimmed == _kAnonymousSupplierName ||
+        trimmed == _kLegacyAnonymousSupplierName;
+  }
 
   late TabController _tabController;
 
@@ -260,7 +268,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _loadDraftOrderData(PurchaseOrderModel draft, List<ProductModel> allProducts) {
-    _selectedSupplierId = draft.supplierId > 0 ? draft.supplierId : null;
+    _selectedSupplierId = (draft.supplierId > 0 &&
+            !_isAnonymousSupplierName(draft.supplierName))
+        ? draft.supplierId
+        : null;
     _selectedWarehouseId = draft.warehouseId;
     _poNotesController.text = draft.notes ?? '';
     _poPaidAmountController.text = draft.paidAmount.toInt().toString();
@@ -559,6 +570,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
               .updatePurchaseOrder(
                 orderId: _activeDraftOrderId!,
                 supplierId: _selectedSupplierId,
+                includeNullSupplierId: true,
                 warehouseId: warehouseId,
                 items: itemsPayload,
                 paidAmount: paidAmount,
@@ -1512,6 +1524,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         order = await ref.read(purchaseActionsProvider).updatePurchaseOrder(
               orderId: _activeDraftOrderId!,
               supplierId: _selectedSupplierId,
+              includeNullSupplierId: true,
               warehouseId: warehouseId,
               items: itemsPayload,
               paidAmount: paidAmount,
@@ -2332,6 +2345,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
 
         final suppliers = suppliersAsync.asData?.value ?? [];
+        final dropdownSuppliers = suppliers
+            .where((s) => !_isAnonymousSupplierName(s.name))
+            .toList();
+        final int? effectiveSelectedSupplierId =
+            (_selectedSupplierId != null &&
+                    dropdownSuppliers.any((s) => s.id == _selectedSupplierId))
+                ? _selectedSupplierId
+                : null;
         final warehouses = warehousesAsync.asData?.value ?? [];
         final selectedWarehouseId = _resolveWarehouseId(warehouses);
 
@@ -2540,7 +2561,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int?>(
-                              value: _selectedSupplierId,
+                              value: effectiveSelectedSupplierId,
                               isExpanded: true,
                               hint: const Text('دابینکەری نوێ (بێناو)'),
                               items: [
@@ -2558,7 +2579,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                     ],
                                   ),
                                 ),
-                                ...suppliers.map(
+                                ...dropdownSuppliers.map(
                                   (supplier) => DropdownMenuItem<int?>(
                                     value: supplier.id,
                                     child: Row(
