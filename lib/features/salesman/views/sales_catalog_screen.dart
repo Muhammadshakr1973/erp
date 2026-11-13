@@ -1372,30 +1372,28 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             final frameColor = _getCategoryColor(catId, catIndex, isDark);
                             final isExpanded = _isCategoryExpanded(catId, categoryHasStockMap);
                             final hasStock = categoryHasStockMap[_categoryKey(catId)] ?? true;
+                            final double categoryOpacity = hasStock ? 1.0 : 0.75;
 
-                            return AnimatedOpacity(
-                              opacity: hasStock ? 1.0 : 0.75,
-                              duration: const Duration(milliseconds: 200),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 8,
-                                ),
+                            return Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: frameColor.withValues(
-                                  alpha: isDark ? 0.08 : 0.04,
+                                  alpha: (isDark ? 0.08 : 0.04) * categoryOpacity,
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: frameColor.withValues(
-                                    alpha: isDark ? 0.85 : 0.75,
+                                    alpha: (isDark ? 0.85 : 0.75) * categoryOpacity,
                                   ),
                                   width: 2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: frameColor.withValues(
-                                      alpha: isDark ? 0.18 : 0.1,
+                                      alpha: (isDark ? 0.18 : 0.1) * categoryOpacity,
                                     ),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
@@ -1407,108 +1405,112 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    // Collapsible Category Frame Header
-                                    Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () => _toggleCategoryExpanded(
-                                          catId,
-                                          categoryHasStockMap,
-                                        ),
-                                        borderRadius: isExpanded
-                                            ? const BorderRadius.vertical(
-                                                top: Radius.circular(14),
-                                              )
-                                            : BorderRadius.circular(14),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 10,
+                                    // Collapsible Category Frame Header (dimmed to 75% when category has no stock)
+                                    AnimatedOpacity(
+                                      opacity: categoryOpacity,
+                                      duration: const Duration(milliseconds: 200),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _toggleCategoryExpanded(
+                                            catId,
+                                            categoryHasStockMap,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: frameColor.withValues(
-                                              alpha: isExpanded
-                                                  ? (isDark ? 0.24 : 0.14)
-                                                  : (isDark ? 0.16 : 0.09),
+                                          borderRadius: isExpanded
+                                              ? const BorderRadius.vertical(
+                                                  top: Radius.circular(14),
+                                                )
+                                              : BorderRadius.circular(14),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 10,
                                             ),
-                                            border: isExpanded
-                                                ? Border(
-                                                    bottom: BorderSide(
-                                                      color: frameColor.withValues(
-                                                        alpha: isDark ? 0.45 : 0.35,
-                                                      ),
-                                                      width: 1.5,
-                                                    ),
-                                                  )
-                                                : null,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(6),
-                                                decoration: BoxDecoration(
-                                                  color: frameColor.withValues(alpha: 0.2),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.category_rounded,
-                                                  size: 18,
-                                                  color: frameColor,
-                                                ),
+                                            decoration: BoxDecoration(
+                                              color: frameColor.withValues(
+                                                alpha: isExpanded
+                                                    ? (isDark ? 0.24 : 0.14)
+                                                    : (isDark ? 0.16 : 0.09),
                                               ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Text(
-                                                  catName,
-                                                  style: TextStyle(
-                                                    fontFamily: 'KJino',
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
+                                              border: isExpanded
+                                                  ? Border(
+                                                      bottom: BorderSide(
+                                                        color: frameColor.withValues(
+                                                          alpha: isDark ? 0.45 : 0.35,
+                                                        ),
+                                                        width: 1.5,
+                                                      ),
+                                                    )
+                                                  : null,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(6),
+                                                  decoration: BoxDecoration(
+                                                    color: frameColor.withValues(alpha: 0.2),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.category_rounded,
+                                                    size: 18,
+                                                    color: frameColor,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                    catName,
+                                                    style: TextStyle(
+                                                      fontFamily: 'KJino',
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark
+                                                          ? Colors.white
+                                                          : Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: frameColor,
+                                                    borderRadius: BorderRadius.circular(20),
+                                                  ),
+                                                  child: Text(
+                                                    '${productsInGroup.length} کاڵا',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'KJino',
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                AnimatedRotation(
+                                                  turns: isExpanded ? 0.5 : 0.0,
+                                                  duration: const Duration(milliseconds: 220),
+                                                  curve: Curves.easeInOut,
+                                                  child: Icon(
+                                                    Icons.keyboard_arrow_down_rounded,
+                                                    size: 22,
                                                     color: isDark
-                                                        ? Colors.white
+                                                        ? Colors.white70
                                                         : Colors.black87,
                                                   ),
                                                 ),
-                                              ),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: frameColor,
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                child: Text(
-                                                  '${productsInGroup.length} کاڵا',
-                                                  style: const TextStyle(
-                                                    fontFamily: 'KJino',
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              AnimatedRotation(
-                                                turns: isExpanded ? 0.5 : 0.0,
-                                                duration: const Duration(milliseconds: 220),
-                                                curve: Curves.easeInOut,
-                                                child: Icon(
-                                                  Icons.keyboard_arrow_down_rounded,
-                                                  size: 22,
-                                                  color: isDark
-                                                      ? Colors.white70
-                                                      : Colors.black87,
-                                                ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
 
-                                    // Product Grid inside category frame (collapses when unchecked/closed)
+                                    // Product Grid inside category frame (always 100% opacity)
                                     AnimatedSize(
                                       duration: const Duration(milliseconds: 220),
                                       curve: Curves.easeInOut,
@@ -1555,7 +1557,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
                               ),
                             );
                           },
@@ -2192,11 +2193,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final bool canDecrement = quantity > 0;
     final bool isInSelectedOrder = _selectedOrder != null && quantity > 0;
 
-    // Visual inactive look when in selected order or out of stock, while remaining interactive
+    // Keep product cards and product images at full 100% opacity
     final bool isStockDepleted = isOutOfStock || isLimitReached;
-    final double cardOpacity = isStockDepleted
-        ? 0.50
-        : (isInSelectedOrder ? 0.60 : 1.0);
+    const double cardOpacity = 1.0;
 
     final Color borderColor = isStockDepleted
         ? (isDark ? const Color(0xFFFE3F30) : const Color(0xFFE53935))
