@@ -99,13 +99,14 @@ class ProductController extends Controller
             'price_n3' => 'nullable|numeric|min:0',
             'image_path' => 'nullable|string',
             'is_active' => 'boolean',
+            'initial_stock' => 'nullable|numeric|min:0',
             'min_stock_level' => 'nullable|integer|min:0'
         ]);
 
-        $productData = collect($validated)->except(['min_stock_level'])->all();
+        $productData = collect($validated)->except(['initial_stock', 'min_stock_level'])->all();
         $product = Product::create($productData);
         
-        $initial_stock = $request->input('initial_stock', 0);
+        $initial_stock = (float) $request->input('initial_stock', 0);
         $min_stock_level = (int) $request->input('min_stock_level', 0);
         $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
         
@@ -162,10 +163,11 @@ class ProductController extends Controller
             'price_n3' => 'nullable|numeric|min:0',
             'image_path' => 'nullable|string',
             'is_active' => 'boolean',
+            'initial_stock' => 'nullable|numeric|min:0',
             'min_stock_level' => 'nullable|integer|min:0'
         ]);
 
-        $productData = collect($validated)->except(['min_stock_level'])->all();
+        $productData = collect($validated)->except(['initial_stock', 'min_stock_level'])->all();
         $product->update($productData);
 
         if ($request->has('min_stock_level')) {
@@ -188,7 +190,7 @@ class ProductController extends Controller
         }
 
         if ($request->has('initial_stock')) {
-            $initial_stock = (int)$request->input('initial_stock');
+            $initial_stock = (float) $request->input('initial_stock');
             $warehouse = Warehouse::firstOrCreate(['name' => 'کۆگای سەرەکی'], ['is_main' => true, 'is_active' => true]);
             $stock = WarehouseStock::firstOrCreate([
                 'product_id' => $product->id,
@@ -198,8 +200,8 @@ class ProductController extends Controller
                 'reserved_quantity' => 0
             ]);
             
-            $diff = $initial_stock - $stock->quantity;
-            if ($diff != 0) {
+            $diff = round($initial_stock - (float) $stock->quantity, 3);
+            if ($diff != 0.0) {
                 $stock->adjustStock(
                     $diff,
                     'ADJUSTMENT',

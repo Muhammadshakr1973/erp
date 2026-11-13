@@ -65,22 +65,22 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   void initState() {
     super.initState();
     final p = widget.product;
-    int currentStock = 0;
+    double currentStock = 0;
     int currentMinStock = 5;
     if (p != null) {
       num foundMin = 0;
       bool hasMin = false;
-      num foundStock = 0;
+      double foundStock = 0;
       for (var s in p.stocks) {
         if (s is Map) {
-          foundStock += num.tryParse(s['quantity']?.toString() ?? '0') ?? 0;
+          foundStock += Formatters.parseDouble(s['quantity']);
           if (s['min_stock_level'] != null) {
             foundMin += num.tryParse(s['min_stock_level']?.toString() ?? '0') ?? 0;
             hasMin = true;
           }
         }
       }
-      currentStock = foundStock.toInt();
+      currentStock = double.parse(foundStock.toStringAsFixed(3));
       if (hasMin) {
         currentMinStock = foundMin.toInt();
       }
@@ -698,8 +698,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       'category_id': _selectedCategoryId,
       'supplier_id': _selectedSupplierId,
       'is_active': _isActive ? 1 : 0,
-      'initial_stock': int.tryParse(_stockController.text) ?? 0,
-      'min_stock_level': int.tryParse(_minStockController.text) ?? 0,
+      'initial_stock': double.tryParse(_stockController.text.trim()) ?? 0,
+      'min_stock_level': int.tryParse(_minStockController.text.trim()) ?? 0,
       'image_path': _imageUrlController.text,
     };
 
@@ -1698,7 +1698,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                       Expanded(
                                         child: AppTextField(
                                           controller: _stockController,
-                                          keyboardType: TextInputType.number,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                           customDecoration: InputDecoration(
                                             labelText: 'ستۆک',
                                             labelStyle: AppTextStyles.bodyMedium
@@ -1819,7 +1819,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                   Expanded(
                                     child: AppTextField(
                                       controller: _stockController,
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       customDecoration: InputDecoration(
                                         labelText: 'ستۆک',
                                         labelStyle: AppTextStyles.bodyMedium
