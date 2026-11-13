@@ -1600,291 +1600,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         // Prices Unified Cohesive Group
-                        if (isMobile)
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: theme.colorScheme.outline.withValues(
-                                  alpha: 0.4,
-                                ),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // First row: Cost and Price N1
-                                IntrinsicHeight(
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _costPriceController,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'کۆست',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'کۆست',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                      VerticalDivider(
-                                        width: 1,
-                                        thickness: 1,
-                                        color: theme.colorScheme.outline
-                                            .withValues(alpha: 0.4),
-                                      ),
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _priceN1Controller,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'نرخی ١',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'N1',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: theme.colorScheme.outline.withValues(
-                                    alpha: 0.4,
-                                  ),
-                                ),
-                                // Second row: Price N2 and Price N3
-                                IntrinsicHeight(
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _priceN2Controller,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'نرخی ٢',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'N2',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                      VerticalDivider(
-                                        width: 1,
-                                        thickness: 1,
-                                        color: theme.colorScheme.outline
-                                            .withValues(alpha: 0.4),
-                                      ),
-                                      Expanded(
-                                        child: AppTextField(
-                                          controller: _priceN3Controller,
-                                          keyboardType: TextInputType.number,
-                                          customDecoration: InputDecoration(
-                                            labelText: 'نرخی ٣',
-                                            labelStyle: AppTextStyles.bodyMedium
-                                                .copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                            hintText: 'N3',
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: theme.colorScheme.outline.withValues(
-                                  alpha: 0.4,
-                                ),
-                                width: 1,
-                              ),
-                            ),
-                            child: IntrinsicHeight(
-                              child: Row(
-                                children: [
-                                  // Cost Price
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _costPriceController,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'کۆست',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'کۆست',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                  // Price N1
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _priceN1Controller,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'نرخی ١',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'N1',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                  // Price N2
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _priceN2Controller,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'نرخی ٢',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'N2',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                  VerticalDivider(
-                                    width: 1,
-                                    thickness: 1,
-                                    color: theme.colorScheme.outline.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                  // Price N3
-                                  Expanded(
-                                    child: AppTextField(
-                                      controller: _priceN3Controller,
-                                      keyboardType: TextInputType.number,
-                                      customDecoration: InputDecoration(
-                                        labelText: 'نرخی ٣',
-                                        labelStyle: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                        hintText: 'N3',
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        _buildUnifiedPricesGroup(
+                          theme,
+                          isMobile,
+                          costController: _costPriceController,
+                          priceN1Controller: _priceN1Controller,
+                          priceN2Controller: _priceN2Controller,
+                          priceN3Controller: _priceN3Controller,
+                        ),
                         const SizedBox(height: AppSpacing.md),
 
                         // Quantities & Stock Unified Cohesive Group
@@ -2139,6 +1862,133 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     ),
   );
 }
+
+  Widget _buildUnifiedPricesGroup(
+    ThemeData theme,
+    bool isMobile, {
+    required TextEditingController costController,
+    required TextEditingController priceN1Controller,
+    required TextEditingController priceN2Controller,
+    required TextEditingController priceN3Controller,
+  }) {
+    InputDecoration fieldDecoration(String label, String hint) => InputDecoration(
+          labelText: label,
+          labelStyle: AppTextStyles.bodyMedium.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          hintText: hint,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        );
+
+    final borderColor = theme.colorScheme.outline.withValues(alpha: 0.4);
+
+    if (isMobile) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      controller: costController,
+                      keyboardType: TextInputType.number,
+                      customDecoration: fieldDecoration('کۆست', 'کۆست'),
+                    ),
+                  ),
+                  VerticalDivider(width: 1, thickness: 1, color: borderColor),
+                  Expanded(
+                    child: AppTextField(
+                      controller: priceN1Controller,
+                      keyboardType: TextInputType.number,
+                      customDecoration: fieldDecoration('نرخی ١', 'N1'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, thickness: 1, color: borderColor),
+            IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      controller: priceN2Controller,
+                      keyboardType: TextInputType.number,
+                      customDecoration: fieldDecoration('نرخی ٢', 'N2'),
+                    ),
+                  ),
+                  VerticalDivider(width: 1, thickness: 1, color: borderColor),
+                  Expanded(
+                    child: AppTextField(
+                      controller: priceN3Controller,
+                      keyboardType: TextInputType.number,
+                      customDecoration: fieldDecoration('نرخی ٣', 'N3'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: costController,
+                keyboardType: TextInputType.number,
+                customDecoration: fieldDecoration('کۆست', 'کۆست'),
+              ),
+            ),
+            VerticalDivider(width: 1, thickness: 1, color: borderColor),
+            Expanded(
+              child: AppTextField(
+                controller: priceN1Controller,
+                keyboardType: TextInputType.number,
+                customDecoration: fieldDecoration('نرخی ١', 'N1'),
+              ),
+            ),
+            VerticalDivider(width: 1, thickness: 1, color: borderColor),
+            Expanded(
+              child: AppTextField(
+                controller: priceN2Controller,
+                keyboardType: TextInputType.number,
+                customDecoration: fieldDecoration('نرخی ٢', 'N2'),
+              ),
+            ),
+            VerticalDivider(width: 1, thickness: 1, color: borderColor),
+            Expanded(
+              child: AppTextField(
+                controller: priceN3Controller,
+                keyboardType: TextInputType.number,
+                customDecoration: fieldDecoration('نرخی ٣', 'N3'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildMultiVariantModeToggle(ThemeData theme) {
     final bool lockedAsParent =
@@ -2620,40 +2470,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       ),
                       if (!row.useParentPrice) ...[
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                controller: row.costPriceCtrl,
-                                labelText: 'کۆست',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: AppTextField(
-                                controller: row.priceN1Ctrl,
-                                labelText: 'N1',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: AppTextField(
-                                controller: row.priceN2Ctrl,
-                                labelText: 'N2',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: AppTextField(
-                                controller: row.priceN3Ctrl,
-                                labelText: 'N3',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                          ],
+                        _buildUnifiedPricesGroup(
+                          theme,
+                          isMobile,
+                          costController: row.costPriceCtrl,
+                          priceN1Controller: row.priceN1Ctrl,
+                          priceN2Controller: row.priceN2Ctrl,
+                          priceN3Controller: row.priceN3Ctrl,
                         ),
                       ],
                     ],
