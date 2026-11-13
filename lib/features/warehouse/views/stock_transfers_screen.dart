@@ -6,6 +6,7 @@ import '../../../core/components/app_text_field.dart';
 import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/formatters.dart';
@@ -33,265 +34,331 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
     super.dispose();
   }
 
+  Widget _buildMetaRow(String label, String value, {TextStyle? valueStyle}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.caption),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: valueStyle ?? AppTextStyles.caption,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showTransferReceiptDialog(StockTransferModel transfer) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         final theme = Theme.of(ctx);
+        final screenSize = MediaQuery.sizeOf(ctx);
+        final isMobile = screenSize.shortestSide < AppBreakpoints.tabletMin ||
+            AppBreakpoints.isMobile(screenSize.width);
+
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 550),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Receipt Header
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: 'داخستن',
-                        onPressed: () => Navigator.pop(ctx),
+          insetPadding: isMobile
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isMobile ? 0 : 16),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            width: isMobile ? double.infinity : 550,
+            height: isMobile ? double.infinity : null,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 550,
+                maxHeight:
+                    isMobile ? double.infinity : screenSize.height * 0.9,
+              ),
+              child: SafeArea(
+                top: isMobile,
+                bottom: isMobile,
+                left: isMobile,
+                right: isMobile,
+                child: Column(
+                  mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Receipt Header
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isMobile ? 16 : 24,
+                        isMobile ? 14 : 24,
+                        isMobile ? 16 : 24,
+                        12,
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.receipt_long,
-                            color: Colors.orange, size: 28),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'پسوڵەی بارکردنی کاشڤان / گواستنەوە',
-                              style: AppTextStyles.h3,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'داخستن',
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
                             ),
-                            Text(
-                              'ژمارەی پسوڵە: ${transfer.transferNumber}',
-                              style: AppTextStyles.caption.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      StatusBadge(
-                        label: transfer.isCompleted
-                            ? 'تەواوکراو'
-                            : (transfer.isCancelled ? 'هەڵوەشاوە' : 'چاوەڕوانکراو'),
-                        type: transfer.isCompleted
-                            ? StatusBadgeType.success
-                            : (transfer.isCancelled
-                                ? StatusBadgeType.danger
-                                : StatusBadgeType.warning),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 28),
-
-                  // Metadata Box
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('کۆگای نێرەر:',
-                                style: AppTextStyles.caption),
-                            Text(transfer.fromWarehouseName,
-                                style: AppTextStyles.bodyBold),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('کۆگای وەرگر (کاشڤان):',
-                                style: AppTextStyles.caption),
-                            Text(transfer.toWarehouseName,
-                                style: AppTextStyles.bodyBold.copyWith(
-                                  color: Colors.orange,
-                                )),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('بەروار و کات:',
-                                style: AppTextStyles.caption),
-                            Text(
-                              transfer.createdAt != null
-                                  ? Formatters.dateTime(transfer.createdAt!)
-                                  : 'دیاری نەکراوە',
-                              style: AppTextStyles.caption,
-                            ),
-                          ],
-                        ),
-                        if (transfer.creatorName != null) ...[
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('کارمەندی بەڕێکەر:',
-                                  style: AppTextStyles.caption),
-                              Text(transfer.creatorName!,
-                                  style: AppTextStyles.caption),
-                            ],
+                            child: const Icon(Icons.receipt_long,
+                                color: Colors.orange, size: 28),
                           ),
-                        ],
-                        if (transfer.notes != null &&
-                            transfer.notes!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('تێبینی:',
-                                  style: AppTextStyles.caption),
-                              Text(transfer.notes!,
-                                  style: AppTextStyles.caption),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Items List Table
-                  const Text('لیستی کاڵا دراوەکان بە کاشڤان:',
-                      style: AppTextStyles.bodyBold),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: theme.dividerColor.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(8)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text('ناوی کاڵا',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text('باڕکۆد',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              Expanded(
-                                flex: 1,
-                                child: Text('بڕ',
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...transfer.items.map((item) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            child: Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(item.productName,
-                                      style: AppTextStyles.bodyMedium),
+                                const Text(
+                                  'پسوڵەی بارکردنی کاشڤان / گواستنەوە',
+                                  style: AppTextStyles.h3,
                                 ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    item.productBarcode ?? '-',
-                                    style: AppTextStyles.caption,
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    '${item.quantity} ${item.productUnit ?? "دانە"}',
-                                    textAlign: TextAlign.end,
-                                    style: AppTextStyles.bodyBold.copyWith(
-                                      color: Colors.orange,
-                                    ),
+                                Text(
+                                  'ژمارەی پسوڵە: ${transfer.transferNumber}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
                                   ),
                                 ),
                               ],
                             ),
-                          );
-                        }),
-                      ],
+                          ),
+                          const SizedBox(width: 8),
+                          StatusBadge(
+                            label: transfer.isCompleted
+                                ? 'تەواوکراو'
+                                : (transfer.isCancelled
+                                    ? 'هەڵوەشاوە'
+                                    : 'چاوەڕوانکراو'),
+                            type: transfer.isCompleted
+                                ? StatusBadgeType.success
+                                : (transfer.isCancelled
+                                    ? StatusBadgeType.danger
+                                    : StatusBadgeType.warning),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                    const Divider(height: 1),
 
-                  // Signature Blocks
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
-                        children: [
-                          const Text('واژووی کارمەندی کۆگا',
-                              style: AppTextStyles.caption),
-                          const SizedBox(height: 24),
-                          Container(
-                            width: 120,
-                            height: 1,
-                            color: Colors.grey.withValues(alpha: 0.5),
-                          ),
-                        ],
+                    // Scrollable Receipt Body
+                    Flexible(
+                      fit: isMobile ? FlexFit.tight : FlexFit.loose,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(isMobile ? 16 : 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Metadata Box
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildMetaRow(
+                                    'کۆگای نێرەر:',
+                                    transfer.fromWarehouseName,
+                                    valueStyle: AppTextStyles.bodyBold,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildMetaRow(
+                                    'کۆگای وەرگر (کاشڤان):',
+                                    transfer.toWarehouseName,
+                                    valueStyle: AppTextStyles.bodyBold.copyWith(
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildMetaRow(
+                                    'بەروار و کات:',
+                                    transfer.createdAt != null
+                                        ? Formatters.dateTime(
+                                            transfer.createdAt!)
+                                        : 'دیاری نەکراوە',
+                                  ),
+                                  if (transfer.creatorName != null) ...[
+                                    const SizedBox(height: 6),
+                                    _buildMetaRow(
+                                      'کارمەندی بەڕێکەر:',
+                                      transfer.creatorName!,
+                                    ),
+                                  ],
+                                  if (transfer.notes != null &&
+                                      transfer.notes!.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    _buildMetaRow(
+                                      'تێبینی:',
+                                      transfer.notes!,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+
+                            // Items List Table
+                            const Text('لیستی کاڵا دراوەکان بە کاشڤان:',
+                                style: AppTextStyles.bodyBold),
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color:
+                                      theme.dividerColor.withValues(alpha: 0.3),
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: theme
+                                          .colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5),
+                                      borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(8)),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text('ناوی کاڵا',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                        SizedBox(width: 6),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text('باڕکۆد',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                        SizedBox(width: 6),
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text('بڕ',
+                                              textAlign: TextAlign.end,
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  ...transfer.items.map((item) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(item.productName,
+                                                style:
+                                                    AppTextStyles.bodyMedium),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              item.productBarcode ?? '-',
+                                              style: AppTextStyles.caption,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Text(
+                                              '${item.quantity} ${item.productUnit ?? "دانە"}',
+                                              textAlign: TextAlign.end,
+                                              style: AppTextStyles.bodyBold
+                                                  .copyWith(
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+
+                            // Signature Blocks
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'واژووی کارمەندی کۆگا',
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.caption,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      ConstrainedBox(
+                                        constraints:
+                                            const BoxConstraints(maxWidth: 120),
+                                        child: Container(
+                                          width: double.infinity,
+                                          height: 1,
+                                          color: Colors.grey
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'واژووی وەرگری کاشڤان',
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.caption,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      ConstrainedBox(
+                                        constraints:
+                                            const BoxConstraints(maxWidth: 120),
+                                        child: Container(
+                                          width: double.infinity,
+                                          height: 1,
+                                          color: Colors.grey
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      Column(
-                        children: [
-                          const Text('واژووی وەرگری کاشڤان',
-                              style: AppTextStyles.caption),
-                          const SizedBox(height: 24),
-                          Container(
-                            width: 120,
-                            height: 1,
-                            color: Colors.grey.withValues(alpha: 0.5),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
