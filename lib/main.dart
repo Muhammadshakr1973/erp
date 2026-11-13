@@ -26,7 +26,7 @@ bool _shouldIgnoreWebTextInputError(Object error, StackTrace? stack) {
       text.contains('assertion') && text.contains('delta');
 
   return kIsWeb && (isKnownTextInputIssue || isKnownDeltaAssertion);
-}
+}   
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
