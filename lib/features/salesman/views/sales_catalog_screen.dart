@@ -37,7 +37,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   String _selectedPriceTier = 'N3'; // Default 'N3' ('ن٣') as requested
   bool _isManualPriceTierOverride = false;
   Map<int, double> _customerSpecialPrices = {};
-  int? _selectedCategoryId; // null = all categories
+  final Set<int> _collapsedCategoryKeys = {}; // empty = all categories checked & expanded
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -1192,6 +1192,69 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     final availableOrders = orderMap.values.toList();
+    final allProducts = productsAsync.asData?.value ?? [];
+    final categories = categoriesAsync.asData?.value ?? [];
+    final categoryMap = {for (final c in categories) c.id: c.name};
+
+    final Map<int, List<ProductModel>> variantsByParent = {};
+    for (final p in allProducts) {
+      if (p.isActive && p.parentId != null) {
+        variantsByParent.putIfAbsent(p.parentId!, () => []).add(p);
+      }
+    }
+    for (final list in variantsByParent.values) {
+      list.sort((a, b) => a.id.compareTo(b.id));
+    }
+
+    // Active top-level products matching search query (including child variant match)
+    final displayableProducts = allProducts.where((p) {
+      if (!p.isActive || p.isVariant) return false;
+      final children = p.isParent
+          ? (variantsByParent[p.id] ?? const <ProductModel>[])
+          : const <ProductModel>[];
+      if (p.isParent && children.isEmpty) return false;
+
+      if (_searchQuery.isNotEmpty) {
+        bool matchesItem(ProductModel item) {
+          return item.name.toLowerCase().contains(_searchQuery) ||
+              (item.variantName != null &&
+                  item.variantName!.toLowerCase().contains(_searchQuery)) ||
+              item.barcode.toLowerCase().contains(_searchQuery) ||
+              (item.sku ?? '').toLowerCase().contains(_searchQuery);
+        }
+
+        return matchesItem(p) || children.any(matchesItem);
+      }
+      return true;
+    }).toList();
+
+    // Group products by Category ID
+    final Map<int?, List<ProductModel>> groupedByCat = {};
+    for (final p in displayableProducts) {
+      final normalizedCatId = (p.categoryId != null &&
+              p.categoryId! > 0 &&
+              (categories.isEmpty || categoryMap.containsKey(p.categoryId)))
+          ? p.categoryId
+          : null;
+      groupedByCat.putIfAbsent(normalizedCatId, () => []).add(p);
+    }
+
+    // Sort items within each category alphabetically by Product Name (ناوی کاڵا)
+    for (final catId in groupedByCat.keys) {
+      groupedByCat[catId]!.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+    }
+
+    // Sort category groups by category name (with uncategorized last)
+    final sortedCatKeys = groupedByCat.keys.toList()
+      ..sort((a, b) {
+        if (a == null || a <= 0) return 1;
+        if (b == null || b <= 0) return -1;
+        final nameA = categoryMap[a] ?? '';
+        final nameB = categoryMap[b] ?? '';
+        return nameA.compareTo(nameB);
+      });
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -1208,10 +1271,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               // 2. 10-SECOND BATCH COUNTDOWN & PERSISTENT FAILURE BAR
               _buildSyncCountdownBanner(context),
 
-              // 3. CATEGORY HEADER & HORIZONTAL SELECTOR (Matching image 8.png)
-              _buildCategoryBar(context, categoriesAsync, productsAsync),
+              // 3. CATEGORY HEADER & MULTI-SELECT CHECKBOX FILTER BAR
+              _buildCategoryBar(
+                context,
+                categories: categories,
+                categoryMap: categoryMap,
+                groupedByCat: groupedByCat,
+                sortedCatKeys: sortedCatKeys,
+              ),
 
-              // 4. PRODUCT CARDS GRID (Grouped by Category & Sorted by Product Name)
+              // 4. PRODUCT CARDS GRID (Grouped by Category & Collapsible like Dropdowns)
               Expanded(
                 child: productsAsync.when(
                   loading: () =>
@@ -1222,44 +1291,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       style: AppTextStyles.bodyMedium,
                     ),
                   ),
-                  data: (allProducts) {
-                    final Map<int, List<ProductModel>> variantsByParent = {};
-                    for (final p in allProducts) {
-                      if (p.isActive && p.parentId != null) {
-                        variantsByParent.putIfAbsent(p.parentId!, () => []).add(p);
-                      }
-                    }
-                    for (final list in variantsByParent.values) {
-                      list.sort((a, b) => a.id.compareTo(b.id));
-                    }
-
-                    // Filter top-level products by category & search query (including child variant match)
-                    final filteredProducts = allProducts.where((p) {
-                      if (!p.isActive || p.isVariant) return false;
-                      final children = p.isParent
-                          ? (variantsByParent[p.id] ?? const <ProductModel>[])
-                          : const <ProductModel>[];
-                      if (p.isParent && children.isEmpty) return false;
-
-                      if (_selectedCategoryId != null &&
-                          p.categoryId != _selectedCategoryId) {
-                        return false;
-                      }
-                      if (_searchQuery.isNotEmpty) {
-                        bool matchesItem(ProductModel item) {
-                          return item.name.toLowerCase().contains(_searchQuery) ||
-                              (item.variantName != null &&
-                                  item.variantName!.toLowerCase().contains(_searchQuery)) ||
-                              item.barcode.toLowerCase().contains(_searchQuery) ||
-                              (item.sku ?? '').toLowerCase().contains(_searchQuery);
-                        }
-
-                        return matchesItem(p) || children.any(matchesItem);
-                      }
-                      return true;
-                    }).toList();
-
-                    if (filteredProducts.isEmpty) {
+                  data: (_) {
+                    if (displayableProducts.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1289,32 +1322,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       );
                     }
 
-                    final categories = categoriesAsync.asData?.value ?? [];
-                    final categoryMap = {for (final c in categories) c.id: c.name};
-
-                    // Group products by Category ID
-                    final Map<int?, List<ProductModel>> groupedByCat = {};
-                    for (final p in filteredProducts) {
-                      groupedByCat.putIfAbsent(p.categoryId, () => []).add(p);
-                    }
-
-                    // Sort items within each category alphabetically by Product Name (ناوی کاڵا)
-                    for (final catId in groupedByCat.keys) {
-                      groupedByCat[catId]!.sort(
-                        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-                      );
-                    }
-
-                    // Sort category groups by category list order / name (with uncategorized last)
-                    final sortedCatKeys = groupedByCat.keys.toList()
-                      ..sort((a, b) {
-                        if (a == null || a <= 0) return 1;
-                        if (b == null || b <= 0) return -1;
-                        final nameA = categoryMap[a] ?? '';
-                        final nameB = categoryMap[b] ?? '';
-                        return nameA.compareTo(nameB);
-                      });
-
                     return LayoutBuilder(
                       builder: (context, constraints) {
                         final crossAxisCount = constraints.maxWidth < 600
@@ -1333,6 +1340,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                 ? categoryMap[catId]!
                                 : 'بێ جۆر';
                             final frameColor = _getCategoryColor(catId, catIndex, isDark);
+                            final isExpanded = _isCategoryExpanded(catId);
 
                             return Container(
                               margin: const EdgeInsets.symmetric(
@@ -1360,118 +1368,156 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                   ),
                                 ],
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Distinct Category Frame Header
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: frameColor.withValues(
-                                        alpha: isDark ? 0.24 : 0.14,
-                                      ),
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(14),
-                                      ),
-                                      border: Border(
-                                        bottom: BorderSide(
-                                          color: frameColor.withValues(
-                                            alpha: isDark ? 0.45 : 0.35,
-                                          ),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: frameColor.withValues(alpha: 0.2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.category_rounded,
-                                            size: 18,
-                                            color: frameColor,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            catName,
-                                            style: TextStyle(
-                                              fontFamily: 'KJino',
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Collapsible Category Frame Header
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _toggleCategoryExpanded(catId),
+                                        borderRadius: isExpanded
+                                            ? const BorderRadius.vertical(
+                                                top: Radius.circular(14),
+                                              )
+                                            : BorderRadius.circular(14),
+                                        child: Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
+                                            horizontal: 14,
+                                            vertical: 10,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: frameColor,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            '${productsInGroup.length} کاڵا',
-                                            style: const TextStyle(
-                                              fontFamily: 'KJino',
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                                            color: frameColor.withValues(
+                                              alpha: isExpanded
+                                                  ? (isDark ? 0.24 : 0.14)
+                                                  : (isDark ? 0.16 : 0.09),
                                             ),
+                                            border: isExpanded
+                                                ? Border(
+                                                    bottom: BorderSide(
+                                                      color: frameColor.withValues(
+                                                        alpha: isDark ? 0.45 : 0.35,
+                                                      ),
+                                                      width: 1.5,
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(6),
+                                                decoration: BoxDecoration(
+                                                  color: frameColor.withValues(alpha: 0.2),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.category_rounded,
+                                                  size: 18,
+                                                  color: frameColor,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Text(
+                                                  catName,
+                                                  style: TextStyle(
+                                                    fontFamily: 'KJino',
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDark
+                                                        ? Colors.white
+                                                        : Colors.black87,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: frameColor,
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  '${productsInGroup.length} کاڵا',
+                                                  style: const TextStyle(
+                                                    fontFamily: 'KJino',
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              AnimatedRotation(
+                                                turns: isExpanded ? 0.5 : 0.0,
+                                                duration: const Duration(milliseconds: 220),
+                                                curve: Curves.easeInOut,
+                                                child: Icon(
+                                                  Icons.keyboard_arrow_down_rounded,
+                                                  size: 22,
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : Colors.black87,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Product Grid inside category frame
-                                  Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: GridView.builder(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: crossAxisCount,
-                                        childAspectRatio: 0.68,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
                                       ),
-                                      itemCount: productsInGroup.length,
-                                      itemBuilder: (context, index) {
-                                        final product = productsInGroup[index];
-                                        final variants = product.isParent
-                                            ? (variantsByParent[product.id] ?? const <ProductModel>[])
-                                            : const <ProductModel>[];
-                                        final qtyInCart = product.isParent
-                                            ? variants.fold<int>(0, (sum, v) => sum + (_orderCart[v.id] ?? 0))
-                                            : (_orderCart[product.id] ?? 0);
-                                        return _buildProductCard(
-                                          context,
-                                          key: ValueKey(product.id),
-                                          product: product,
-                                          variants: variants,
-                                          quantity: qtyInCart,
-                                          user: authUser,
-                                          warehouseId: salesWarehouseId,
-                                        );
-                                      },
                                     ),
-                                  ),
-                                ],
+
+                                    // Product Grid inside category frame (collapses when unchecked/closed)
+                                    AnimatedSize(
+                                      duration: const Duration(milliseconds: 220),
+                                      curve: Curves.easeInOut,
+                                      alignment: Alignment.topCenter,
+                                      child: isExpanded
+                                          ? Padding(
+                                              padding: const EdgeInsets.all(10),
+                                              child: GridView.builder(
+                                                shrinkWrap: true,
+                                                physics:
+                                                    const NeverScrollableScrollPhysics(),
+                                                gridDelegate:
+                                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: crossAxisCount,
+                                                  childAspectRatio: 0.68,
+                                                  crossAxisSpacing: 10,
+                                                  mainAxisSpacing: 10,
+                                                ),
+                                                itemCount: productsInGroup.length,
+                                                itemBuilder: (context, index) {
+                                                  final product = productsInGroup[index];
+                                                  final variants = product.isParent
+                                                      ? (variantsByParent[product.id] ?? const <ProductModel>[])
+                                                      : const <ProductModel>[];
+                                                  final qtyInCart = product.isParent
+                                                      ? variants.fold<int>(0, (sum, v) => sum + (_orderCart[v.id] ?? 0))
+                                                      : (_orderCart[product.id] ?? 0);
+                                                  return _buildProductCard(
+                                                    context,
+                                                    key: ValueKey(product.id),
+                                                    product: product,
+                                                    variants: variants,
+                                                    quantity: qtyInCart,
+                                                    user: authUser,
+                                                    warehouseId: salesWarehouseId,
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : const SizedBox(
+                                              width: double.infinity,
+                                              height: 0,
+                                            ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -1762,30 +1808,68 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     return const SizedBox.shrink();
   }
 
-  /// Category Header & Filter Chips
+  int _categoryKey(int? categoryId) =>
+      (categoryId != null && categoryId > 0) ? categoryId : -1;
+
+  bool _isCategoryExpanded(int? categoryId) =>
+      !_collapsedCategoryKeys.contains(_categoryKey(categoryId));
+
+  void _toggleCategoryExpanded(int? categoryId) {
+    final key = _categoryKey(categoryId);
+    setState(() {
+      if (_collapsedCategoryKeys.contains(key)) {
+        _collapsedCategoryKeys.remove(key);
+      } else {
+        _collapsedCategoryKeys.add(key);
+      }
+    });
+  }
+
+  /// Category Header & Multi-Select Checkbox Filters (excluding empty categories)
   Widget _buildCategoryBar(
-    BuildContext context,
-    AsyncValue<List<CategoryModel>> categoriesAsync,
-    AsyncValue<List<ProductModel>> productsAsync,
-  ) {
+    BuildContext context, {
+    required List<CategoryModel> categories,
+    required Map<int, String> categoryMap,
+    required Map<int?, List<ProductModel>> groupedByCat,
+    required List<int?> sortedCatKeys,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final categories = categoriesAsync.asData?.value ?? [];
-    final allProducts = productsAsync.asData?.value ?? [];
 
-    final topLevelActive = allProducts.where((p) => p.isActive && !p.isVariant).toList();
+    // Only include categories that have at least one product
+    final nonEmptyCategories = categories
+        .where((cat) => (groupedByCat[cat.id]?.isNotEmpty ?? false))
+        .toList();
+    final bool hasUncategorized = groupedByCat[null]?.isNotEmpty ?? false;
+
+    final visibleCategoryKeys = sortedCatKeys.map(_categoryKey).toList();
+    final bool allChecked = visibleCategoryKeys.isNotEmpty &&
+        visibleCategoryKeys.every((k) => !_collapsedCategoryKeys.contains(k));
+    final int checkedCatCount =
+        visibleCategoryKeys.where((k) => !_collapsedCategoryKeys.contains(k)).length;
+
+    int itemCount = 0;
+    for (final catId in sortedCatKeys) {
+      if (_isCategoryExpanded(catId)) {
+        itemCount += groupedByCat[catId]?.length ?? 0;
+      }
+    }
+
     String currentCategoryName = 'هەموو کاڵاکان';
-    int itemCount = topLevelActive.length;
-
-    if (_selectedCategoryId != null) {
-      final selectedCat = categories
-          .where((c) => c.id == _selectedCategoryId)
-          .firstOrNull;
-      if (selectedCat != null) {
-        currentCategoryName = selectedCat.name;
-        itemCount = topLevelActive
-            .where((p) => p.categoryId == _selectedCategoryId)
-            .length;
+    if (sortedCatKeys.isNotEmpty && !allChecked) {
+      if (checkedCatCount == 0) {
+        currentCategoryName = 'هیچ کاتیگۆریەک دیاری نەکراوە';
+      } else if (checkedCatCount == 1) {
+        final activeCatId = sortedCatKeys.firstWhere(
+          (catId) => _isCategoryExpanded(catId),
+          orElse: () => null,
+        );
+        currentCategoryName =
+            (activeCatId != null && categoryMap.containsKey(activeCatId))
+                ? categoryMap[activeCatId]!
+                : 'بێ جۆر';
+      } else {
+        currentCategoryName = '$checkedCatCount کاتیگۆری دیاریکراو';
       }
     }
 
@@ -1888,43 +1972,57 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                   ],
                 )
               else
-                Text(
-                  currentCategoryName,
-                  style: AppTextStyles.h3.copyWith(
-                    fontSize: 16,
-                    color: isDark ? Colors.white : Colors.black87,
+                Flexible(
+                  child: Text(
+                    currentCategoryName,
+                    style: AppTextStyles.h3.copyWith(
+                      fontSize: 16,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 6),
 
-          // Horizontal category chips
+          // Horizontal category checkbox filters (non-empty categories only)
           SizedBox(
-            height: 32,
+            height: 34,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildCategoryChip(
-                  label: 'هەموو',
-                  isSelected: _selectedCategoryId == null,
-                  onTap: () {
-                    setState(() {
-                      _selectedCategoryId = null;
-                    });
-                  },
-                ),
-                ...categories.map((cat) {
-                  return _buildCategoryChip(
-                    label: cat.name,
-                    isSelected: _selectedCategoryId == cat.id,
+                if (visibleCategoryKeys.isNotEmpty)
+                  _buildCategoryCheckboxChip(
+                    context,
+                    label: 'هەموو',
+                    isChecked: allChecked,
                     onTap: () {
                       setState(() {
-                        _selectedCategoryId = cat.id;
+                        if (allChecked) {
+                          _collapsedCategoryKeys.addAll(visibleCategoryKeys);
+                        } else {
+                          _collapsedCategoryKeys.removeAll(visibleCategoryKeys);
+                        }
                       });
                     },
+                  ),
+                ...nonEmptyCategories.map((cat) {
+                  return _buildCategoryCheckboxChip(
+                    context,
+                    label: cat.name,
+                    isChecked: _isCategoryExpanded(cat.id),
+                    onTap: () => _toggleCategoryExpanded(cat.id),
                   );
                 }),
+                if (hasUncategorized)
+                  _buildCategoryCheckboxChip(
+                    context,
+                    label: 'بێ جۆر',
+                    isChecked: _isCategoryExpanded(null),
+                    onTap: () => _toggleCategoryExpanded(null),
+                  ),
               ],
             ),
           ),
@@ -1933,28 +2031,77 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     );
   }
 
-  Widget _buildCategoryChip({
+  Widget _buildCategoryCheckboxChip(
+    BuildContext context, {
     required String label,
-    required bool isSelected,
+    required bool isChecked,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(left: 6),
-      child: ChoiceChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'KJino',
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: isChecked
+                  ? AppColors.primary
+                  : (isDark ? const Color(0xFF242C38) : Colors.white),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isChecked
+                    ? AppColors.primary
+                    : (isDark ? const Color(0xFF3A4659) : Colors.grey.shade300),
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: isChecked ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isChecked
+                          ? Colors.white
+                          : (isDark ? Colors.white54 : Colors.grey.shade500),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: isChecked
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 13,
+                          color: AppColors.primary,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'KJino',
+                    fontSize: 11,
+                    fontWeight: isChecked ? FontWeight.bold : FontWeight.w500,
+                    color: isChecked
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        selected: isSelected,
-        onSelected: (_) => onTap(),
-        selectedColor: AppColors.primary,
-        labelStyle: TextStyle(color: isSelected ? Colors.white : null),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        visualDensity: VisualDensity.compact,
       ),
     );
   }
