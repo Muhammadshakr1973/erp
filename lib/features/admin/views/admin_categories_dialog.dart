@@ -7,6 +7,7 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../products/models/category_model.dart';
 import '../../products/providers/categories_provider.dart';
+import '../../products/providers/products_provider.dart';
 import 'category_form_dialog.dart';
 
 class AdminCategoriesDialog extends ConsumerWidget {
@@ -14,7 +15,18 @@ class AdminCategoriesDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final categoriesAsync = ref.watch(categoriesListProvider);
+    final allProducts = ref.watch(productsListProvider).valueOrNull;
+    final Map<int, int>? liveCounts = allProducts == null
+        ? null
+        : allProducts.fold<Map<int, int>>({}, (map, p) {
+            final cid = p.categoryId;
+            if (cid != null) {
+              map[cid] = (map[cid] ?? 0) + 1;
+            }
+            return map;
+          });
 
     return Dialog(
       child: ConstrainedBox(
@@ -59,11 +71,48 @@ class AdminCategoriesDialog extends ConsumerWidget {
                       itemCount: categories.length,
                       itemBuilder: (context, index) {
                         final cat = categories[index];
+                        final int productCount = liveCounts != null
+                            ? (liveCounts[cat.id] ?? 0)
+                            : cat.productsCount;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: AppCard(
                             child: ListTile(
-                              title: Text(cat.name),
+                              title: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      cat.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: productCount > 0
+                                          ? theme.colorScheme.primary
+                                              .withValues(alpha: 0.14)
+                                          : theme.colorScheme.onSurfaceVariant
+                                              .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '$productCount کاڵا',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: productCount > 0
+                                            ? theme.colorScheme.primary
+                                            : theme
+                                                .colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

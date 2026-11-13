@@ -57,6 +57,8 @@ class CategoryController extends Controller
             return [$created, 201, 'جۆرەکە زیادکرا'];
         });
 
+        $category->loadCount('products');
+
         return response()->json([
             'message' => $message,
             'data' => $category,
@@ -65,7 +67,7 @@ class CategoryController extends Controller
 
     public function index(): JsonResponse
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::withCount('products')->orderBy('name')->get();
         return response()->json([
             'message' => 'لیستی جۆرەکان',
             'data' => $categories
@@ -74,6 +76,7 @@ class CategoryController extends Controller
 
     public function show(Category $category): JsonResponse
     {
+        $category->loadCount('products');
         return response()->json([
             'message' => 'وردەکاری جۆر',
             'data' => $category
@@ -122,7 +125,7 @@ class CategoryController extends Controller
 
             return [
                 'error' => false,
-                'data' => $category->fresh(),
+                'data' => $category->fresh()->loadCount('products'),
             ];
         });
 
