@@ -1371,12 +1371,16 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                 : 'بێ جۆر';
                             final frameColor = _getCategoryColor(catId, catIndex, isDark);
                             final isExpanded = _isCategoryExpanded(catId, categoryHasStockMap);
+                            final hasStock = categoryHasStockMap[_categoryKey(catId)] ?? true;
 
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
+                            return AnimatedOpacity(
+                              opacity: hasStock ? 1.0 : 0.25,
+                              duration: const Duration(milliseconds: 200),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
                               decoration: BoxDecoration(
                                 color: frameColor.withValues(
                                   alpha: isDark ? 0.08 : 0.04,
@@ -1551,6 +1555,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                     ),
                                   ],
                                 ),
+                              ),
                               ),
                             );
                           },
