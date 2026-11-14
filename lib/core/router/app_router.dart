@@ -22,6 +22,7 @@ import '../../features/admin/views/admin_audit_logs_screen.dart';
 import '../../features/admin/views/admin_delivery_trips_screen.dart';
 import '../../features/admin/views/admin_driver_collections_screen.dart';
 import '../../features/admin/views/admin_warehouses_screen.dart';
+import '../../features/admin/views/admin_settings_screen.dart';
 import '../../features/warehouse/views/pack_order_screen.dart';
 import '../../features/warehouse/views/orders_to_pack_screen.dart';
 import '../../features/warehouse/views/stock_transfers_screen.dart';
@@ -122,6 +123,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (location.startsWith('/admin-warehouses') &&
           !(role == 'admin' || role == 'owner')) {
+        return _getDashboardForRole(role);
+      }
+      if (location.startsWith('/admin-settings') && role != 'owner') {
         return _getDashboardForRole(role);
       }
       if (location.startsWith('/stock-transfers') &&
@@ -265,6 +269,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin-warehouses',
         name: 'adminWarehouses',
         builder: (context, state) => const AdminWarehousesScreen(),
+      ),
+      GoRoute(
+        path: '/admin-settings',
+        name: 'adminSettings',
+        builder: (context, state) => const AdminSettingsScreen(),
       ),
       GoRoute(
         path: '/stock-transfers',

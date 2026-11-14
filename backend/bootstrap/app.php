@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'permission' => \App\Http\Middleware\EnsureHasPermission::class,
+            'owner' => \App\Http\Middleware\EnsureOwner::class,
             'active' => \App\Http\Middleware\CheckActiveUser::class,
             'idempotent' => \App\Http\Middleware\Idempotency::class,
         ]);

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\WarehouseController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\SalesReturnController;
+use App\Http\Controllers\Api\V1\SettingController;
 
 Route::prefix('v1')->group(function () {
     Route::options('/{any?}', function (Request $request) {
@@ -287,5 +288,12 @@ Route::prefix('v1')->group(function () {
         Route::delete('/device-token', [NotificationController::class, 'removeDeviceToken']);
         Route::get('/notifications/whatsapp-logs', [NotificationController::class, 'whatsAppLogs'])->middleware('permission:users.manage');
         Route::post('/notifications/whatsapp/{id}/retry', [NotificationController::class, 'retryWhatsApp'])->middleware('permission:users.manage');
+
+        // System Settings (Owner only)
+        Route::middleware('owner')->group(function () {
+            Route::get('/settings', [SettingController::class, 'index']);
+            Route::put('/settings', [SettingController::class, 'update']);
+            Route::post('/settings/clear-cache', [SettingController::class, 'clearCache']);
+        });
     });
 });
