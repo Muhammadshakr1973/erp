@@ -771,7 +771,6 @@ class SalesmanDashboardScreen extends ConsumerWidget {
     final ext = theme.extension<AppThemeExtension>();
     final successColor = ext?.success ?? AppColors.success;
     final warningColor = ext?.warning ?? AppColors.warning;
-    final purpleColor = ext?.purple ?? AppColors.purple;
 
     final vanWhId = myVan?.id ?? user?.warehouseId;
     final stocksAsync = ref.watch(warehouseStocksProvider);
@@ -838,14 +837,6 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                   );
                 },
               ),
-            // 2. یەکەکانی هەفتە
-            _buildStatCard(
-              context,
-              title: 'یەکەکانی هەفتە',
-              value: '${dashboard.last7DaysUnits} یەکە',
-              icon: Icons.analytics_rounded,
-              iconColor: purpleColor,
-            ),
             // 3. یەکەکانی مانگ
             _buildStatCard(
               context,
