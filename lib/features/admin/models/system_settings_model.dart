@@ -3,11 +3,6 @@ class SystemSettingsModel {
   final String companyPhone;
   final String companyAddress;
   final String receiptFooterText;
-  final bool whatsappEnabled;
-  final bool whatsappEnvEnabled;
-  final String whatsappProvider;
-  final String whatsappApiUrl;
-  final bool whatsappApiTokenConfigured;
   final bool fcmServerKeyConfigured;
   final double defaultCommissionRate;
   final int defaultCreditLimit;
@@ -19,11 +14,6 @@ class SystemSettingsModel {
     required this.companyPhone,
     required this.companyAddress,
     required this.receiptFooterText,
-    required this.whatsappEnabled,
-    required this.whatsappEnvEnabled,
-    required this.whatsappProvider,
-    required this.whatsappApiUrl,
-    required this.whatsappApiTokenConfigured,
     required this.fcmServerKeyConfigured,
     required this.defaultCommissionRate,
     required this.defaultCreditLimit,
@@ -39,13 +29,6 @@ class SystemSettingsModel {
       companyAddress: json['company_address']?.toString() ?? '',
       receiptFooterText:
           json['receipt_footer_text']?.toString() ?? 'سوپاس بۆ مامەڵەکردنتان',
-      whatsappEnabled: _parseBool(json['whatsapp_enabled']),
-      whatsappEnvEnabled: _parseBool(json['whatsapp_env_enabled']),
-      whatsappProvider:
-          json['whatsapp_provider']?.toString() ?? 'unconfigured',
-      whatsappApiUrl: json['whatsapp_api_url']?.toString() ?? '',
-      whatsappApiTokenConfigured:
-          _parseBool(json['whatsapp_api_token_configured']),
       fcmServerKeyConfigured: _parseBool(json['fcm_server_key_configured']),
       defaultCommissionRate:
           double.tryParse(json['default_commission_rate']?.toString() ?? '') ??

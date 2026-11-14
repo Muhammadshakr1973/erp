@@ -232,21 +232,6 @@ class SupplierController extends Controller
             ];
         });
 
-        // WhatsApp notification AFTER commit per BR-F07
-        try {
-            app(\App\Services\WhatsAppService::class)->sendSupplierPaymentNotification(
-                $result['supplier'],
-                $result['payment_amount'],
-                $result['previous_balance'],
-                $result['new_balance'],
-                $result['user'],
-                'supplier_payment',
-                $result['payment']->id
-            );
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("WhatsApp supplier payment notification failed: " . $e->getMessage());
-        }
-
         return response()->json([
             'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا',
             'data' => $result['supplier']->append('debt')

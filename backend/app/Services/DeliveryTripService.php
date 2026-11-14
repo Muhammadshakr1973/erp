@@ -221,15 +221,6 @@ class DeliveryTripService
             app(NotificationService::class)->notifyPaymentReceived($result['payment'], $user);
         }
 
-        // WhatsApp Debt/Delivery notification to customer per BR-F05
-        app(WhatsAppService::class)->sendDeliveryDebtNotification(
-            $order,
-            $result['previous_balance'],
-            $result['received_amount'],
-            $result['new_balance'],
-            $user
-        );
-
         \Illuminate\Support\Facades\Cache::forget('admin_dashboard_kpis_v5');
         event(new \App\Events\DeliveryTripUpdated($result['trip_order']->trip, 'deliver_order'));
         if ($result['payment']) {

@@ -60,69 +60,6 @@ Route::prefix('v1')->group(function () {
             ], 500);
         }
     });
-    Route::get('/whatsapp-debug', function () {
-        try {
-            $logs = \App\Models\WhatsAppNotificationLog::latest('id')
-                ->take(10)
-                ->get()
-                ->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'recipient' => $log->recipient_name . ' (' . $log->recipient_phone . ')',
-                        'type' => $log->notification_type,
-                        'status' => $log->status,
-                        'provider' => $log->provider,
-                        'error' => $log->error_message,
-                        'created_at' => $log->created_at?->toDateTimeString(),
-                        'sent_at' => $log->sent_at?->toDateTimeString(),
-                        'response' => $log->response,
-                        'env_provider' => config('services.whatsapp.provider'),
-                        'env_url' => substr(config('services.whatsapp.api_url'), 0, 30) . '...',
-                    ];
-                });
-
-            return response()->json([
-                'status' => 'success',
-                'logs' => $logs
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    });
-    Route::get('/whatsapp-test-send', function () {
-        try {
-            $commission = \App\Models\SalesmanCommission::latest('id')->first();
-            if (!$commission) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'No commission found in database'
-                ]);
-            }
-
-            $service = app(\App\Services\WhatsAppService::class);
-            $log = $service->sendCommissionPaidNotification($commission);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Test executed successfully!',
-                'log_id' => $log->id,
-                'log_status' => $log->status,
-                'log_error' => $log->error_message,
-                'recipient' => $log->recipient_name . ' (' . $log->recipient_phone . ')',
-                'response' => $log->response
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'status' => 'error',
-                'class' => get_class($e),
-                'message' => $e->getMessage(),
-                'trace' => substr($e->getTraceAsString(), 0, 1500)
-            ], 500);
-        }
-    });
 
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
@@ -286,8 +223,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
         Route::post('/device-token', [NotificationController::class, 'registerDeviceToken']);
         Route::delete('/device-token', [NotificationController::class, 'removeDeviceToken']);
-        Route::get('/notifications/whatsapp-logs', [NotificationController::class, 'whatsAppLogs'])->middleware('permission:users.manage');
-        Route::post('/notifications/whatsapp/{id}/retry', [NotificationController::class, 'retryWhatsApp'])->middleware('permission:users.manage');
 
         // System Settings (Owner only)
         Route::middleware('owner')->group(function () {

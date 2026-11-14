@@ -24,7 +24,6 @@ class ApiConstants {
   static const String notificationsUnreadCount = '/notifications/unread-count';
   static const String notificationsMarkAllRead = '/notifications/read';
   static const String deviceToken = '/device-token';
-  static const String whatsAppLogs = '/notifications/whatsapp-logs';
   static const String settings = '/settings';
   static const String settingsClearCache = '/settings/clear-cache';
 }

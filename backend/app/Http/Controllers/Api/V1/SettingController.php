@@ -53,11 +53,6 @@ class SettingController extends Controller
             'company_phone' => 'nullable|string|max:30',
             'company_address' => 'nullable|string|max:255',
             'receipt_footer_text' => 'nullable|string|max:255',
-            'whatsapp_enabled' => 'nullable|boolean',
-            'whatsapp_provider' => 'nullable|string|in:unconfigured,ultramsg,custom',
-            'whatsapp_api_url' => 'nullable|string|max:500',
-            'whatsapp_api_token' => 'nullable|string|max:500',
-            'clear_whatsapp_api_token' => 'nullable|boolean',
             'fcm_server_key' => 'nullable|string|max:500',
             'clear_fcm_server_key' => 'nullable|boolean',
             'default_commission_rate' => 'nullable|numeric|min:0|max:100',
@@ -93,32 +88,6 @@ class SettingController extends Controller
                     $footer !== '' ? $footer : 'سوپاس بۆ مامەڵەکردنتان',
                     $user->id
                 );
-            }
-
-            if (array_key_exists('whatsapp_enabled', $validated)) {
-                Setting::setValue(
-                    'whatsapp_enabled',
-                    !empty($validated['whatsapp_enabled']) ? '1' : '0',
-                    $user->id
-                );
-            }
-
-            if (array_key_exists('whatsapp_provider', $validated)) {
-                Setting::setValue(
-                    'whatsapp_provider',
-                    $validated['whatsapp_provider'] ?: 'unconfigured',
-                    $user->id
-                );
-            }
-
-            if (array_key_exists('whatsapp_api_url', $validated)) {
-                Setting::setValue('whatsapp_api_url', trim((string) ($validated['whatsapp_api_url'] ?? '')), $user->id);
-            }
-
-            if (!empty($validated['clear_whatsapp_api_token'])) {
-                Setting::setValue('whatsapp_api_token', null, $user->id);
-            } elseif (!empty($validated['whatsapp_api_token'])) {
-                Setting::setValue('whatsapp_api_token', trim((string) $validated['whatsapp_api_token']), $user->id);
             }
 
             if (!empty($validated['clear_fcm_server_key'])) {
@@ -211,7 +180,6 @@ class SettingController extends Controller
 
     private function buildSettingsPayload(): array
     {
-        $whatsappEnabledRaw = Setting::getValue('whatsapp_enabled', '0');
         $requireOrderNotesRaw = Setting::getValue('require_order_notes', '0');
 
         return [
@@ -219,11 +187,6 @@ class SettingController extends Controller
             'company_phone' => (string) Setting::getValue('company_phone', ''),
             'company_address' => (string) Setting::getValue('company_address', ''),
             'receipt_footer_text' => (string) Setting::getValue('receipt_footer_text', 'سوپاس بۆ مامەڵەکردنتان'),
-            'whatsapp_enabled' => $whatsappEnabledRaw === '1' || $whatsappEnabledRaw === true || $whatsappEnabledRaw === 1,
-            'whatsapp_env_enabled' => (bool) config('services.whatsapp.enabled', false),
-            'whatsapp_provider' => (string) Setting::getValue('whatsapp_provider', 'unconfigured'),
-            'whatsapp_api_url' => (string) Setting::getValue('whatsapp_api_url', ''),
-            'whatsapp_api_token_configured' => !empty(Setting::getValue('whatsapp_api_token')),
             'fcm_server_key_configured' => !empty(Setting::getValue('fcm_server_key')),
             'default_commission_rate' => (float) Setting::getValue('default_commission_rate', 0),
             'default_credit_limit' => (int) Setting::getValue('default_credit_limit', 0),

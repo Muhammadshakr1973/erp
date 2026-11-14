@@ -293,13 +293,6 @@ class NotificationService
 
         // Notify Admins and Owner (drivers notified only when assigned to a trip)
         $this->notifyRole(['admin', 'owner'], Notification::TYPE_ORDER, $title, $body, $data);
-
-        // Send WhatsApp notification to the customer
-        try {
-            app(WhatsAppService::class)->sendOrderReadyNotification($order, $actor);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to send order ready WhatsApp notification: " . $e->getMessage());
-        }
     }
 
     /**
@@ -460,13 +453,6 @@ class NotificationService
             $this->notifyUser($salesman->id, Notification::TYPE_COMMISSION, $title, $body, $data);
         }
         $this->notifyRole(['owner', 'admin'], Notification::TYPE_COMMISSION, $title, "کۆمسیۆنی {$salesman?->name}: {$amountStr}", $data);
-
-        // Send WhatsApp notification
-        try {
-            app(WhatsAppService::class)->sendCommissionCalculatedNotification($commission);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to send commission calculated WhatsApp notification: " . $e->getMessage());
-        }
     }
 
     /**
@@ -488,13 +474,6 @@ class NotificationService
         if ($commission->salesman_id) {
             $this->notifyUser($commission->salesman_id, Notification::TYPE_COMMISSION, $title, $body, $data);
         }
-
-        // Send WhatsApp notification
-        try {
-            app(WhatsAppService::class)->sendCommissionPaidNotification($commission);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to send commission paid WhatsApp notification: " . $e->getMessage());
-        }
     }
 
     /**
@@ -514,13 +493,6 @@ class NotificationService
 
         if ($trip->driver_id) {
             $this->notifyUser($trip->driver_id, Notification::TYPE_ORDER, $title, $body, $data);
-        }
-
-        // Send WhatsApp notification to the driver
-        try {
-            app(WhatsAppService::class)->sendDriverDeliveryTripNotification($trip);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to send driver delivery trip WhatsApp notification: " . $e->getMessage());
         }
     }
 

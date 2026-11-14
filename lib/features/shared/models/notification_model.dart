@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/components/status_badge.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 
@@ -156,93 +155,6 @@ class AppNotification {
       case 'system':
       default:
         return isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    }
-  }
-}
-
-class WhatsAppLog {
-  final int id;
-  final int? customerId;
-  final int? supplierId;
-  final String recipientPhone;
-  final String? recipientName;
-  final String notificationType;
-  final String? referenceType;
-  final int? referenceId;
-  final String message;
-  final String status;
-  final String? provider;
-  final String? errorMessage;
-  final DateTime? sentAt;
-  final DateTime createdAt;
-
-  const WhatsAppLog({
-    required this.id,
-    this.customerId,
-    this.supplierId,
-    required this.recipientPhone,
-    this.recipientName,
-    required this.notificationType,
-    this.referenceType,
-    this.referenceId,
-    required this.message,
-    required this.status,
-    this.provider,
-    this.errorMessage,
-    this.sentAt,
-    required this.createdAt,
-  });
-
-  factory WhatsAppLog.fromJson(Map<String, dynamic> json) {
-    return WhatsAppLog(
-      id: json['id'] as int? ?? 0,
-      customerId: json['customer_id'] as int?,
-      supplierId: json['supplier_id'] as int?,
-      recipientPhone: json['recipient_phone'] as String? ?? '',
-      recipientName: json['recipient_name'] as String?,
-      notificationType: json['notification_type'] as String? ?? 'GENERAL',
-      referenceType: json['reference_type'] as String?,
-      referenceId: json['reference_id'] as int?,
-      message: json['message'] as String? ?? '',
-      status: json['status'] as String? ?? 'PENDING',
-      provider: json['provider'] as String?,
-      errorMessage: json['error_message'] as String?,
-      sentAt: json['sent_at'] != null
-          ? DateTime.tryParse(json['sent_at'].toString())
-          : null,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-    );
-  }
-
-  String get statusLabelKurdish {
-    switch (status.toUpperCase()) {
-      case 'SENT':
-        return 'نێردرا';
-      case 'SIMULATED':
-        return 'تۆمارکرا (ئامادەکاری)';
-      case 'PENDING':
-        return 'لە چاوەڕوانی';
-      case 'FAILED':
-        return 'سەرکەوتوو نەبوو';
-      default:
-        return status;
-    }
-  }
-
-  StatusBadgeType get statusBadgeType {
-    switch (status.toUpperCase()) {
-      case 'SENT':
-        return StatusBadgeType.success;
-      case 'SIMULATED':
-        return StatusBadgeType.info;
-      case 'PENDING':
-        return StatusBadgeType.warning;
-      case 'FAILED':
-        return StatusBadgeType.danger;
-      default:
-        return StatusBadgeType.neutral;
     }
   }
 }

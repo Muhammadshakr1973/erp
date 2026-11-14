@@ -352,42 +352,6 @@ class NotificationsNotifier
   }
 }
 
-// WhatsApp Logs Provider (BR-R04)
-final whatsAppLogsProvider =
-    FutureProvider.family<List<WhatsAppLog>, String?>((
-      ref,
-      statusFilter,
-    ) async {
-      final api = ref.watch(apiClientProvider);
-      try {
-        final queryParams = <String, dynamic>{};
-        if (statusFilter != null && statusFilter.isNotEmpty) {
-          queryParams['status'] = statusFilter;
-        }
-
-        final response = await api.client.get(
-          ApiConstants.whatsAppLogs,
-          queryParameters: queryParams,
-        );
-
-        if (response.statusCode == 200) {
-          final resData = response.data;
-          if (resData is! Map || resData['data'] is! List) {
-            throw FormatException(
-              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed WhatsApp logs response payload)',
-            );
-          }
-          final List list = resData['data'] as List;
-          return list
-              .map((json) => WhatsAppLog.fromJson(Map<String, dynamic>.from(json)))
-              .toList();
-        }
-        throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
-      } catch (e) {
-        throw Exception(api.parseError(e));
-      }
-    });
-
 // General notification actions
 final notificationActionsProvider = Provider<NotificationActions>((ref) {
   final api = ref.watch(apiClientProvider);
@@ -438,22 +402,5 @@ class NotificationActions {
         data: {'token': token, 'device_token': token},
       );
     } catch (_) {}
-  }
-
-  Future<WhatsAppLog> retryWhatsApp(int logId) async {
-    try {
-      final res = await _api.client.post(
-        '${ApiConstants.notifications}/whatsapp/$logId/retry',
-      );
-      final resData = res.data;
-      if (resData is! Map || resData['data'] is! Map) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed WhatsApp retry log payload)',
-        );
-      }
-      return WhatsAppLog.fromJson(Map<String, dynamic>.from(resData['data']));
-    } catch (e) {
-      throw Exception(_api.parseError(e));
-    }
   }
 }

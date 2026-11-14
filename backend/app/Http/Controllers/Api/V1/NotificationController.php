@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\NotificationService;
-use App\Services\WhatsAppService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,14 +11,10 @@ use Illuminate\Validation\Rule;
 class NotificationController extends Controller
 {
     protected NotificationService $notificationService;
-    protected WhatsAppService $whatsAppService;
 
-    public function __construct(
-        NotificationService $notificationService,
-        WhatsAppService $whatsAppService
-    ) {
+    public function __construct(NotificationService $notificationService)
+    {
         $this->notificationService = $notificationService;
-        $this->whatsAppService = $whatsAppService;
     }
 
     /**
@@ -143,54 +138,6 @@ class NotificationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تۆکنی ئامێر ناچالاک کرا',
-        ]);
-    }
-
-    /**
-     * GET /api/v1/notifications/whatsapp-logs
-     * WhatsApp notification audit & delivery report (BR-R04)
-     */
-    public function whatsAppLogs(Request $request): JsonResponse
-    {
-        $user = $request->user();
-        if (!$user->hasPermission('users.manage') && !in_array($user->role, ['admin', 'owner'])) {
-            return response()->json(['message' => 'ڕێگەپێدراو نیت بۆ بینینی مێژووی وەتسئاپ'], 403);
-        }
-
-        $perPage = (int) $request->input('per_page', 20);
-        $logs = $this->whatsAppService->getLogs(
-            $request->only(['status', 'notification_type', 'customer_id', 'search']),
-            $perPage
-        );
-
-        return response()->json([
-            'data' => $logs->items(),
-            'meta' => [
-                'current_page' => $logs->currentPage(),
-                'last_page' => $logs->lastPage(),
-                'per_page' => $logs->perPage(),
-                'total' => $logs->total(),
-            ],
-        ]);
-    }
-
-    /**
-     * POST /api/v1/notifications/whatsapp/{id}/retry
-     * Retry sending failed WhatsApp message
-     */
-    public function retryWhatsApp(int $id, Request $request): JsonResponse
-    {
-        $user = $request->user();
-        if (!$user->hasPermission('users.manage') && !in_array($user->role, ['admin', 'owner'])) {
-            return response()->json(['message' => 'ڕێگەپێدراو نیت بۆ دووبارە ناردنەوە'], 403);
-        }
-
-        $log = $this->whatsAppService->retryNotification($id, $user);
-
-        return response()->json([
-            'success' => true,
-            'data' => $log,
-            'message' => 'هەوڵی ناردنەوەی پەیامی وەتسئاپ ئەنجامدرا',
         ]);
     }
 }

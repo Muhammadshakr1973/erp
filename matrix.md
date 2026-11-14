@@ -100,5 +100,3 @@
 | POST | /notifications/{id}/read | NotificationController@markRead | UNVERIFIED |
 | POST | /device-token | NotificationController@registerDeviceToken | UNVERIFIED |
 | DELETE | /device-token | NotificationController@removeDeviceToken | UNVERIFIED |
-| GET | /notifications/whatsapp-logs | NotificationController@whatsAppLogs | UNVERIFIED |
-| POST | /notifications/whatsapp/{id}/retry | NotificationController@retryWhatsApp | UNVERIFIED |

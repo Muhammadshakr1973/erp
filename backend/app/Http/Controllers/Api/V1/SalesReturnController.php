@@ -6,9 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SalesReturn\StoreSalesReturnRequest;
 use App\Services\SalesReturnService;
 use App\Services\NotificationService;
-use App\Services\WhatsAppService;
 use App\Models\SalesReturn;
-use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,16 +14,13 @@ class SalesReturnController extends Controller
 {
     protected SalesReturnService $salesReturnService;
     protected NotificationService $notificationService;
-    protected WhatsAppService $whatsAppService;
 
     public function __construct(
         SalesReturnService $salesReturnService,
-        NotificationService $notificationService,
-        WhatsAppService $whatsAppService
+        NotificationService $notificationService
     ) {
         $this->salesReturnService = $salesReturnService;
         $this->notificationService = $notificationService;
-        $this->whatsAppService = $whatsAppService;
     }
 
     public function index(Request $request): JsonResponse
@@ -88,28 +83,11 @@ class SalesReturnController extends Controller
             ], 403);
         }
 
-        // Get previous customer balance before transaction
-        $customer = Customer::findOrFail($order->customer_id);
-        $previousBalance = $customer->current_balance;
-
         // Create the return in a safe database transaction
         $salesReturn = $this->salesReturnService->createReturn($request->validated(), $user);
 
-        // Reload customer for new balance
-        $customer->refresh();
-        $newBalance = $customer->current_balance;
-
         // Post-commit Notifications
         $this->notificationService->notifyOrderReturned($order, $salesReturn->total_return_amount, $user);
-
-        // Send WhatsApp notification to customer about the return and their new balance
-        $this->whatsAppService->sendReturnDebtNotification(
-            $order,
-            $previousBalance,
-            $salesReturn->total_return_amount,
-            $newBalance,
-            $user
-        );
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی گەڕێندرایەوە و باڵانسی کڕیار نوێکرایەوە',

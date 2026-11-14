@@ -132,12 +132,6 @@ class PaymentService
 
         // Trigger Notifications ONLY AFTER financial transaction is committed
         app(NotificationService::class)->notifyPaymentReceived($result['payment'], $user);
-        app(WhatsAppService::class)->sendCustomerPaymentNotification(
-            $result['payment'],
-            $result['previous_balance'],
-            $result['new_balance'],
-            $user
-        );
 
         event(new \App\Events\CustomerAccountUpdated(null, 'payment_received', $result['payment']->customer_id));
 

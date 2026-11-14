@@ -26,7 +26,7 @@
 | **DELIVERY** | `DeliveryTripTest`, `FulfillmentAndDeliveryLifecycleTest` | Re-dispatching to different drivers. | Driver marking delivered while salesman cancels the order. |
 | **RETURNS** | `SalesReturnTest` (Happy paths, Partial returns, Validation checks, Concurrency, Rollbacks, Idempotency), `InventoryStockEngineTest` | - | Refunding a payment for a returned order before ledger sync (guarded by state machine). |
 | **COMMISSIONS** | `CommissionLifecycleTest` (Calculate, Snapshots, Returns) | Modifying historic commission rates. | Regenerating commissions for a period already paid. |
-| **NOTIFICATIONS** | `NotificationAndWhatsAppTest` (Dispatch, Unread count) | Notification queuing bottlenecks. | - |
+| **NOTIFICATIONS** | `NotificationTest` (Dispatch, Unread count) | Notification queuing bottlenecks. | - |
 | **AUDIT LOGS** | `AuditTrailTest` (Creation, Immutability, Redaction) | Auditing large batch operations. | - |
 | **IDEMPOTENCY** | `IdempotencyConcurrencyTest` (Keys, Duplicate blocks) | Idempotency key collision across tenants. | - |
 | **OFFLINE SYNC** | `SalesOrderTest` (Dual Entry, Stale Data conflict), `sync_service_test.dart` | Large payload batch synchronization. | Offline clients syncing conflicting final states. |

@@ -30,19 +30,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _companyPhoneController = TextEditingController();
   final _companyAddressController = TextEditingController();
   final _receiptFooterController = TextEditingController();
-  final _whatsappApiUrlController = TextEditingController();
-  final _whatsappApiTokenController = TextEditingController();
   final _fcmServerKeyController = TextEditingController();
   final _defaultCommissionRateController = TextEditingController();
   final _defaultCreditLimitController = TextEditingController();
   final _lowStockThresholdController = TextEditingController();
 
-  bool _whatsappEnabled = false;
-  String _whatsappProvider = 'unconfigured';
   bool _requireOrderNotes = false;
-  bool _clearWhatsappToken = false;
   bool _clearFcmKey = false;
-  bool _obscureWhatsappToken = true;
   bool _obscureFcmKey = true;
 
   bool _isSaving = false;
@@ -55,8 +49,6 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _companyPhoneController.dispose();
     _companyAddressController.dispose();
     _receiptFooterController.dispose();
-    _whatsappApiUrlController.dispose();
-    _whatsappApiTokenController.dispose();
     _fcmServerKeyController.dispose();
     _defaultCommissionRateController.dispose();
     _defaultCreditLimitController.dispose();
@@ -71,15 +63,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _companyPhoneController.text = model.companyPhone;
     _companyAddressController.text = model.companyAddress;
     _receiptFooterController.text = model.receiptFooterText;
-    _whatsappEnabled = model.whatsappEnabled;
-    _whatsappProvider = const ['unconfigured', 'ultramsg', 'custom']
-            .contains(model.whatsappProvider)
-        ? model.whatsappProvider
-        : 'unconfigured';
-    _whatsappApiUrlController.text = model.whatsappApiUrl;
-    _whatsappApiTokenController.clear();
     _fcmServerKeyController.clear();
-    _clearWhatsappToken = false;
     _clearFcmKey = false;
     _defaultCommissionRateController.text =
         Formatters.cleanNumberString(model.defaultCommissionRate);
@@ -141,20 +125,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       'company_phone': _companyPhoneController.text.trim(),
       'company_address': _companyAddressController.text.trim(),
       'receipt_footer_text': _receiptFooterController.text.trim(),
-      'whatsapp_enabled': _whatsappEnabled,
-      'whatsapp_provider': _whatsappProvider,
-      'whatsapp_api_url': _whatsappApiUrlController.text.trim(),
       'default_commission_rate': commissionRate,
       'default_credit_limit': creditLimit,
       'low_stock_default_threshold': lowStockThreshold,
       'require_order_notes': _requireOrderNotes,
     };
-
-    if (_clearWhatsappToken) {
-      payload['clear_whatsapp_api_token'] = true;
-    } else if (_whatsappApiTokenController.text.trim().isNotEmpty) {
-      payload['whatsapp_api_token'] = _whatsappApiTokenController.text.trim();
-    }
 
     if (_clearFcmKey) {
       payload['clear_fcm_server_key'] = true;
@@ -464,105 +439,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
 
-                      // Section 3: WhatsApp & Push Notifications
+                      // Section 3: Push Notifications
                       _buildSectionCard(
                         context,
-                        title: 'وەتسئاپ و ئاگادارکردنەوەکان',
-                        icon: Icons.chat_outlined,
+                        title: 'ئاگادارکردنەوەکان',
+                        icon: Icons.notifications_outlined,
                         color:
                             isDark ? AppColors.successDark : AppColors.success,
                         children: [
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text(
-                              'چالاککردنی ناردنی پەیامی وەتسئاپ',
-                              style: AppTextStyles.bodyBold,
-                            ),
-                            subtitle: Text(
-                              settings.whatsappEnvEnabled
-                                  ? 'سیستەمی وەتسئاپ لە سێرڤەردا ئامادەیە'
-                                  : 'ئاگاداری: گۆڕاوی WHATSAPP_ENABLED لە .env ی سێرڤەر ناچالاکە',
-                              style: AppTextStyles.caption.copyWith(
-                                color: settings.whatsappEnvEnabled
-                                    ? (isDark
-                                        ? AppColors.successDark
-                                        : AppColors.success)
-                                    : (isDark
-                                        ? AppColors.warningDark
-                                        : AppColors.warning),
-                              ),
-                            ),
-                            value: _whatsappEnabled,
-                            onChanged: (val) {
-                              setState(() => _whatsappEnabled = val);
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          DropdownButtonFormField<String>(
-                            initialValue: _whatsappProvider,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: 'دابینکەری وەتسئاپ (Provider)',
-                              prefixIcon: const Icon(Icons.hub_outlined),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'unconfigured',
-                                child: Text('دیارینەکراو (Unconfigured)'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'ultramsg',
-                                child: Text('UltraMsg'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'custom',
-                                child: Text('Custom API (Bearer Token)'),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _whatsappProvider = val);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          AppTextField(
-                            controller: _whatsappApiUrlController,
-                            labelText: 'بەستەری API ی وەتسئاپ (API URL)',
-                            hintText:
-                                'https://api.ultramsg.com/instanceXXXX/messages/chat',
-                            prefixIcon: Icons.link_rounded,
-                            keyboardType: TextInputType.url,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          _buildSecretFieldRow(
-                            context: context,
-                            controller: _whatsappApiTokenController,
-                            label: 'تۆکنی API ی وەتسئاپ',
-                            isConfigured: settings.whatsappApiTokenConfigured &&
-                                !_clearWhatsappToken,
-                            obscure: _obscureWhatsappToken,
-                            onToggleObscure: () {
-                              setState(() => _obscureWhatsappToken =
-                                  !_obscureWhatsappToken);
-                            },
-                            onClearSecret: settings.whatsappApiTokenConfigured
-                                ? () {
-                                    setState(() {
-                                      _clearWhatsappToken =
-                                          !_clearWhatsappToken;
-                                      if (_clearWhatsappToken) {
-                                        _whatsappApiTokenController.clear();
-                                      }
-                                    });
-                                  }
-                                : null,
-                            isMarkedForClear: _clearWhatsappToken,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
                           _buildSecretFieldRow(
                             context: context,
                             controller: _fcmServerKeyController,

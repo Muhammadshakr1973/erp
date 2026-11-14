@@ -19,16 +19,13 @@ class SalesReturnService
 {
     protected AuditService $auditService;
     protected NotificationService $notificationService;
-    protected WhatsAppService $whatsAppService;
 
     public function __construct(
         AuditService $auditService,
-        NotificationService $notificationService,
-        WhatsAppService $whatsAppService
+        NotificationService $notificationService
     ) {
         $this->auditService = $auditService;
         $this->notificationService = $notificationService;
-        $this->whatsAppService = $whatsAppService;
     }
 
     /**
