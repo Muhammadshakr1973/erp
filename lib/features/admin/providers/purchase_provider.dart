@@ -14,6 +14,14 @@ final purchaseRequirementsProvider =
       try {
         final response = await apiClient.client.get('/purchase-requirements');
         final resData = response.data;
+        if (!_isSuccessStatus(response.statusCode)) {
+          throw Exception(
+            apiClient.extractErrorMessage(
+              resData,
+              defaultMsg: 'کێشە لە بارکردنی داواکارییەکانی کڕین',
+            ),
+          );
+        }
         if (resData is! Map || resData['data'] is! List) {
           throw FormatException(
             'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase requirements response payload)',
@@ -21,7 +29,8 @@ final purchaseRequirementsProvider =
         }
         final List<dynamic> data = resData['data'] as List;
         return data
-            .map((json) => PurchaseRequirementModel.fromJson(json))
+            .whereType<Map>()
+            .map((json) => PurchaseRequirementModel.fromJson(Map<String, dynamic>.from(json)))
             .toList();
       } catch (e) {
         throw Exception(apiClient.parseError(e));
@@ -34,6 +43,14 @@ final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) as
   try {
     final response = await apiClient.client.get('/purchase-requirements/group');
     final resData = response.data;
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw Exception(
+        apiClient.extractErrorMessage(
+          resData,
+          defaultMsg: 'کێشە لە بارکردنی داواکارییە گرووپکراوەکان',
+        ),
+      );
+    }
     if (resData is! Map || resData['data'] is! List) {
       throw FormatException(
         'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed grouped purchase requirements response payload)',
@@ -55,6 +72,14 @@ class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
     try {
       final response = await apiClient.client.get('/purchase-orders');
       final resData = response.data;
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            resData,
+            defaultMsg: 'کێشە لە بارکردنی پسوڵەکانی کڕین',
+          ),
+        );
+      }
       if (resData is! Map || resData['data'] is! List) {
         throw FormatException(
           'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase orders response payload)',
@@ -62,7 +87,8 @@ class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
       }
       final List<dynamic> data = resData['data'] as List;
       final orders = data
-          .map((json) => PurchaseOrderModel.fromJson(json))
+          .whereType<Map>()
+          .map((json) => PurchaseOrderModel.fromJson(Map<String, dynamic>.from(json)))
           .toList();
       final fetchedIds = orders.map((order) => order.id).toSet();
       _removedOrderIds.removeWhere((id) => !fetchedIds.contains(id));
@@ -157,9 +183,11 @@ class PurchaseActions {
         data: payload,
       );
 
-      final resData = response.data;
-      final poData = resData['data'];
-      final order = PurchaseOrderModel.fromJson(poData);
+      final order = _purchaseOrderFromApiResponse(
+        response,
+        apiClient,
+        defaultError: 'کێشە لە دروستکردنی پسوڵەی کڕین',
+      );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
       if (refreshRelatedProviders) {
@@ -203,9 +231,11 @@ class PurchaseActions {
         data: payload,
       );
 
-      final resData = response.data;
-      final poData = resData['data'];
-      final order = PurchaseOrderModel.fromJson(poData);
+      final order = _purchaseOrderFromApiResponse(
+        response,
+        apiClient,
+        defaultError: 'کێشە لە نوێکردنەوەی پسوڵەی کڕین',
+      );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
       if (refreshRelatedProviders) {
@@ -224,7 +254,15 @@ class PurchaseActions {
   Future<void> deletePurchaseOrder(int orderId) async {
     final apiClient = _ref.read(apiClientProvider);
     try {
-      await apiClient.client.delete('/purchase-orders/$orderId');
+      final response = await apiClient.client.delete('/purchase-orders/$orderId');
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            response.data,
+            defaultMsg: 'کێشە لە سڕینەوەی پسوڵەی کڕین',
+          ),
+        );
+      }
       _ref.read(purchaseOrdersProvider.notifier).removeOrderLocally(orderId);
       _ref.invalidate(purchaseRequirementsProvider);
     } catch (e) {
@@ -264,6 +302,14 @@ class PurchaseActions {
         ),
       );
       final resData = response.data;
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            resData,
+            defaultMsg: 'کێشە لە گۆڕینی داواکارییەکان بۆ پسوڵەی کڕین',
+          ),
+        );
+      }
       if (resData is! Map || resData['data'] is! List) {
         throw FormatException(
           'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed created purchase orders response payload)',
@@ -302,7 +348,11 @@ class PurchaseActions {
           },
         ),
       );
-      final order = _purchaseOrderFromResponse(response.data);
+      final order = _purchaseOrderFromApiResponse(
+        response,
+        apiClient,
+        defaultError: 'کێشە لە پەسەندکردنی پسوڵەی کڕین',
+      );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
@@ -326,7 +376,11 @@ class PurchaseActions {
           },
         ),
       );
-      final order = _purchaseOrderFromResponse(response.data);
+      final order = _purchaseOrderFromApiResponse(
+        response,
+        apiClient,
+        defaultError: 'کێشە لە وەرگرتنی کاڵاکانی پسوڵەی کڕین',
+      );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
@@ -337,7 +391,7 @@ class PurchaseActions {
     final apiClient = _ref.read(apiClientProvider);
     try {
       final key = idempotencyKey ?? 'cancel_po_$orderId';
-      await apiClient.client.post(
+      final cancelResponse = await apiClient.client.post(
         '/purchase-orders/$orderId/cancel',
         options: Options(
           headers: {
@@ -345,10 +399,22 @@ class PurchaseActions {
           },
         ),
       );
+      if (!_isSuccessStatus(cancelResponse.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            cancelResponse.data,
+            defaultMsg: 'کێشە لە هەڵوەشاندنەوەی پسوڵەی کڕین',
+          ),
+        );
+      }
       final response = await apiClient.client.get(
         '/purchase-orders/$orderId',
       );
-      final order = _purchaseOrderFromResponse(response.data);
+      final order = _purchaseOrderFromApiResponse(
+        response,
+        apiClient,
+        defaultError: 'کێشە لە خوێندنەوەی پسوڵەی هەڵوەشاوە',
+      );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
       _ref.invalidate(purchaseRequirementsProvider);
     } catch (e) {
@@ -357,14 +423,37 @@ class PurchaseActions {
   }
 }
 
-PurchaseOrderModel _purchaseOrderFromResponse(dynamic responseData) {
+bool _isSuccessStatus(int? statusCode) {
+  return statusCode != null && statusCode >= 200 && statusCode < 300;
+}
+
+PurchaseOrderModel _purchaseOrderFromApiResponse(
+  Response<dynamic> response,
+  ApiClient apiClient, {
+  required String defaultError,
+}) {
+  final responseData = response.data;
+  if (!_isSuccessStatus(response.statusCode)) {
+    throw Exception(
+      apiClient.extractErrorMessage(
+        responseData,
+        defaultMsg: defaultError,
+      ),
+    );
+  }
   if (responseData is! Map || responseData['data'] is! Map) {
+    final extracted = apiClient.extractErrorMessage(
+      responseData,
+      defaultMsg: '',
+    );
     throw FormatException(
-      'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase order response payload)',
+      extracted.isNotEmpty
+          ? extracted
+          : 'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase order response payload)',
     );
   }
   return PurchaseOrderModel.fromJson(
-    Map<String, dynamic>.from(responseData['data']),
+    Map<String, dynamic>.from(responseData['data'] as Map),
   );
 }
 

@@ -207,6 +207,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   bool _userModifiedPaidAmount = false;
 
   bool _hasRestoredDraft = false;
+  bool _isLoadingDraftData = false;
   Timer? _draftDebounceTimer;
 
   void _notifyCartAndDialogChanged() {
@@ -228,7 +229,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   @override
   void initState() {
     super.initState();
+    _isLoadingDraftData = true;
     _poPaidAmountController.text = '0';
+    _isLoadingDraftData = false;
     final int selectedTab = widget.initialTabIndex ?? ref.read(adminPurchasesSubTabIndexProvider);
     final int safeInitialIndex = (selectedTab >= 0 && selectedTab < 3) ? selectedTab : 0;
     _tabController = TabController(
@@ -249,6 +252,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _onCartDataChanged() {
+    if (_isLoadingDraftData) return;
     _draftDebounceTimer?.cancel();
     _draftDebounceTimer = Timer(const Duration(milliseconds: 350), () {
       _saveCartDraft();
@@ -268,14 +272,19 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _loadDraftOrderData(PurchaseOrderModel draft, List<ProductModel> allProducts) {
-    _selectedSupplierId = (draft.supplierId > 0 &&
-            !_isAnonymousSupplierName(draft.supplierName))
-        ? draft.supplierId
-        : null;
-    _selectedWarehouseId = draft.warehouseId;
-    _poNotesController.text = draft.notes ?? '';
-    _poPaidAmountController.text = draft.paidAmount.toInt().toString();
-    _userModifiedPaidAmount = draft.paidAmount != draft.totalAmount;
+    _isLoadingDraftData = true;
+    try {
+      _selectedSupplierId = (draft.supplierId > 0 &&
+              !_isAnonymousSupplierName(draft.supplierName))
+          ? draft.supplierId
+          : null;
+      _selectedWarehouseId = draft.warehouseId;
+      _poNotesController.text = draft.notes ?? '';
+      _poPaidAmountController.text = draft.paidAmount.round().toString();
+      _userModifiedPaidAmount = draft.paidAmount != draft.totalAmount;
+    } finally {
+      _isLoadingDraftData = false;
+    }
 
     _purchaseCart.clear();
     for (final it in draft.items) {
@@ -345,20 +354,25 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       );
 
       setState(() {
-        _activeDraftOrderId = newOrder.id;
-        _purchaseOrderOverrides[newOrder.id] = newOrder;
-        _isEditingPurchaseDraft = true;
-        _purchaseCart.clear();
-        _poNotesController.clear();
-        _poPaidAmountController.text = '0';
-        _userModifiedPaidAmount = false;
-        _lastSavedDraftSignature = _draftSignature(
-          supplierId: supplierId,
-          warehouseId: defaultWhId,
-          items: const [],
-          paidAmount: 0.0,
-          notes: null,
-        );
+        _isLoadingDraftData = true;
+        try {
+          _activeDraftOrderId = newOrder.id;
+          _purchaseOrderOverrides[newOrder.id] = newOrder;
+          _isEditingPurchaseDraft = true;
+          _purchaseCart.clear();
+          _poNotesController.clear();
+          _poPaidAmountController.text = '0';
+          _userModifiedPaidAmount = false;
+          _lastSavedDraftSignature = _draftSignature(
+            supplierId: supplierId,
+            warehouseId: defaultWhId,
+            items: const [],
+            paidAmount: 0.0,
+            notes: null,
+          );
+        } finally {
+          _isLoadingDraftData = false;
+        }
       });
       _showPurchaseDraftDialog();
     } catch (e) {
@@ -374,11 +388,27 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
   Future<void> _closePurchaseDraftEditor() async {
     _draftDebounceTimer?.cancel();
-    await _saveCartDraft(forceSaveToBackend: true);
+    String? saveError;
+    try {
+      await _saveCartDraft(forceSaveToBackend: true, rethrowOnError: true);
+    } catch (e) {
+      saveError = e.toString().replaceAll('Exception: ', '');
+    }
     if (!mounted) return;
-    setState(() => _isEditingPurchaseDraft = false);
+    setState(() {
+      _isEditingPurchaseDraft = false;
+      _activeDraftOrderId = null;
+      _lastSavedDraftSignature = null;
+    });
     if (_isPurchaseDraftDialogOpen) {
       Navigator.of(context, rootNavigator: true).pop();
+    }
+    if (saveError != null && saveError.isNotEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'گۆڕانکارییەکان لە سێرڤەر پاشەکەوت نەکران: $saveError',
+        type: SnackbarType.error,
+      );
     }
   }
 
@@ -500,18 +530,30 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     List<PurchaseOrderModel> draftOrders,
     List<ProductModel> allProducts,
   ) async {
-    if (_activeDraftOrderId == draftId) {
-      setState(() => _isEditingPurchaseDraft = true);
+    if (_isEditingPurchaseDraft && _activeDraftOrderId == draftId) {
       _showPurchaseDraftDialog();
       return;
     }
 
-    if (_activeDraftOrderId != null && _purchaseCart.isNotEmpty) {
+    if (_isEditingPurchaseDraft &&
+        _activeDraftOrderId != null &&
+        _purchaseCart.isNotEmpty) {
       _draftDebounceTimer?.cancel();
-      await _saveCartDraft(forceSaveToBackend: true);
+      try {
+        await _saveCartDraft(forceSaveToBackend: true, rethrowOnError: true);
+      } catch (e) {
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            message: e.toString().replaceAll('Exception: ', ''),
+            type: SnackbarType.error,
+          );
+        }
+      }
     }
 
     final draft = draftOrders.firstWhere((d) => d.id == draftId);
+    if (!mounted) return;
     setState(() {
       _activeDraftOrderId = draftId;
       _loadDraftOrderData(draft, allProducts);
@@ -520,7 +562,10 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     _showPurchaseDraftDialog();
   }
 
-  Future<void> _saveCartDraft({bool forceSaveToBackend = false}) async {
+  Future<void> _saveCartDraft({
+    bool forceSaveToBackend = false,
+    bool rethrowOnError = false,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (_purchaseCart.isEmpty && _activeDraftOrderId == null) {
@@ -578,8 +623,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                 notes: notes,
                 refreshRelatedProviders: false,
               );
-          _purchaseOrderOverrides[updatedOrder.id] = updatedOrder;
-          _lastSavedDraftSignature = signature;
+          if (mounted) {
+            setState(() {
+              _purchaseOrderOverrides[updatedOrder.id] = updatedOrder;
+              _lastSavedDraftSignature = signature;
+            });
+            _draftDialogSetState?.call(() {});
+          } else {
+            _purchaseOrderOverrides[updatedOrder.id] = updatedOrder;
+            _lastSavedDraftSignature = signature;
+          }
         }
       } else if (_purchaseCart.isNotEmpty && forceSaveToBackend) {
         final newOrder = await ref.read(purchaseActionsProvider).createPurchaseOrder(
@@ -597,11 +650,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
             _purchaseOrderOverrides[newOrder.id] = newOrder;
             _lastSavedDraftSignature = signature;
           });
+          _draftDialogSetState?.call(() {});
         }
       }
 
     } catch (e) {
       debugPrint('Error saving purchase cart draft: $e');
+      if (rethrowOnError) rethrow;
     }
   }
 
@@ -677,24 +732,29 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
 
       if (restoredItems.isNotEmpty && mounted) {
         setState(() {
-          _purchaseCart.clear();
-          _purchaseCart.addAll(restoredItems);
-          if (decoded['supplier_id'] != null) {
-            _selectedSupplierId = decoded['supplier_id'] as int?;
-          }
-          if (decoded['warehouse_id'] != null) {
-            _selectedWarehouseId = decoded['warehouse_id'] as int?;
-          }
-          final savedNotes = decoded['notes'] as String?;
-          if (savedNotes != null && savedNotes.isNotEmpty) {
-            _poNotesController.text = savedNotes;
-          }
-          final savedPaid = decoded['paid_amount'] as String?;
-          if (savedPaid != null && savedPaid.isNotEmpty) {
-            _poPaidAmountController.text = savedPaid;
-            _userModifiedPaidAmount = true;
-          } else {
-            _updatePaidAmountToTotal(force: true);
+          _isLoadingDraftData = true;
+          try {
+            _purchaseCart.clear();
+            _purchaseCart.addAll(restoredItems);
+            if (decoded['supplier_id'] != null) {
+              _selectedSupplierId = decoded['supplier_id'] as int?;
+            }
+            if (decoded['warehouse_id'] != null) {
+              _selectedWarehouseId = decoded['warehouse_id'] as int?;
+            }
+            final savedNotes = decoded['notes'] as String?;
+            if (savedNotes != null && savedNotes.isNotEmpty) {
+              _poNotesController.text = savedNotes;
+            }
+            final savedPaid = decoded['paid_amount'] as String?;
+            if (savedPaid != null && savedPaid.isNotEmpty) {
+              _poPaidAmountController.text = savedPaid;
+              _userModifiedPaidAmount = true;
+            } else {
+              _updatePaidAmountToTotal(force: true);
+            }
+          } finally {
+            _isLoadingDraftData = false;
           }
         });
       }
@@ -714,10 +774,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
 
     if (confirmed == true && mounted) {
-      _purchaseCart.clear();
-      _poNotesController.clear();
-      _poPaidAmountController.text = '0';
-      _userModifiedPaidAmount = false;
+      _isLoadingDraftData = true;
+      try {
+        _purchaseCart.clear();
+        _poNotesController.clear();
+        _poPaidAmountController.text = '0';
+        _userModifiedPaidAmount = false;
+      } finally {
+        _isLoadingDraftData = false;
+      }
       _notifyCartAndDialogChanged();
       _clearCartDraft();
       if (mounted) {
@@ -1135,12 +1200,17 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   void _updatePaidAmountToTotal({bool force = false}) {
-    _userModifiedPaidAmount = false;
-    final total = _calculateCartTotal();
-    final formatted = total > 0
-        ? (total % 1 == 0 ? total.toInt().toString() : total.toStringAsFixed(2))
-        : '0';
-    _poPaidAmountController.text = formatted;
+    _isLoadingDraftData = true;
+    try {
+      _userModifiedPaidAmount = false;
+      final total = _calculateCartTotal();
+      final formatted = total > 0
+          ? (total % 1 == 0 ? total.toInt().toString() : total.toStringAsFixed(2))
+          : '0';
+      _poPaidAmountController.text = formatted;
+    } finally {
+      _isLoadingDraftData = false;
+    }
     _notifyCartAndDialogChanged();
     _saveCartDraft();
   }
@@ -1612,6 +1682,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
       };
     }).toList();
 
+    _draftDebounceTimer?.cancel();
     setState(() => _isSubmittingPO = true);
     try {
       PurchaseOrderModel order;
@@ -1643,16 +1714,22 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
 
         setState(() {
-          _activeDraftOrderId = null;
-          _isEditingPurchaseDraft = false;
-          _purchaseCart.clear();
-          _poNotesController.clear();
-          _poPaidAmountController.text = '0';
-          _checkedProductIds.clear();
-          _userModifiedPaidAmount = false;
+          _isLoadingDraftData = true;
+          try {
+            _purchaseOrderOverrides.remove(order.id);
+            _activeDraftOrderId = null;
+            _lastSavedDraftSignature = null;
+            _isEditingPurchaseDraft = false;
+            _purchaseCart.clear();
+            _poNotesController.clear();
+            _poPaidAmountController.text = '0';
+            _checkedProductIds.clear();
+            _userModifiedPaidAmount = false;
+          } finally {
+            _isLoadingDraftData = false;
+          }
         });
         _clearCartDraft();
-        _refreshPurchaseOrders();
 
         final remainingDebt = order.remainingDebt;
         final debtMsg = remainingDebt > 0
@@ -2310,11 +2387,15 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                   onPressed: () {
                     if (mounted) {
                       setState(() {
-                        final existingIndex = _purchaseCart.indexWhere((it) =>
-                            it.product.id == product.id &&
-                            it.unitCost == safeCost);
+                        final existingIndex = _purchaseCart.indexWhere(
+                          (it) => it.product.id == product.id,
+                        );
                         if (existingIndex >= 0) {
-                          _purchaseCart[existingIndex].quantity += safeQty;
+                          final existingItem = _purchaseCart[existingIndex];
+                          existingItem.unitType = PurchaseUnitType.baseUnit;
+                          existingItem.cartonCost = null;
+                          existingItem.unitCost = safeCost;
+                          existingItem.quantity += safeQty;
                         } else {
                           _purchaseCart.add(PurchaseCartItem(
                             product: product,
@@ -2397,16 +2478,7 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         }
         if (!_hasRestoredDraft) {
           _hasRestoredDraft = true;
-          if (_activeDraftOrderId == null && draftOrders.isNotEmpty) {
-            final firstDraft = draftOrders.first;
-            _activeDraftOrderId = firstDraft.id;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _loadDraftOrderData(firstDraft, allProducts);
-                setState(() {});
-              }
-            });
-          } else {
+          if (draftOrders.isEmpty && _activeDraftOrderId == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 _restoreCartDraft(allProducts);
