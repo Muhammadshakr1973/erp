@@ -47,7 +47,7 @@ class StockTransferService
             $normalizedItems = [];
             foreach ($data['items'] as $item) {
                 $pId = (int)($item['product_id'] ?? 0);
-                $qty = (int)($item['quantity'] ?? 0);
+                $qty = (float)($item['quantity'] ?? 0);
 
                 if ($qty <= 0) {
                     throw ValidationException::withMessages([
@@ -142,7 +142,7 @@ class StockTransferService
                 ->map(function ($items, $productId) {
                     return [
                         'product_id' => (int)$productId,
-                        'quantity'   => (int)$items->sum('quantity'),
+                        'quantity'   => (float)$items->sum('quantity'),
                     ];
                 })
                 ->sortBy('product_id');
@@ -266,4 +266,3 @@ class StockTransferService
         });
     }
 }
-

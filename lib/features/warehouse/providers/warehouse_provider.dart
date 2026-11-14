@@ -5,6 +5,7 @@ import '../../../core/api_client.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../models/warehouse_order_model.dart';
 import '../models/warehouse_stock_model.dart';
@@ -257,6 +258,9 @@ class WarehouseActions {
       ref.invalidate(readyOrdersForDeliveryProvider);
       ref.invalidate(singleOrderProvider(orderId.toString()));
       ref.invalidate(warehouseDashboardProvider);
+      ref
+          .read(salesmanDashboardProvider.notifier)
+          .refreshSilently();
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -462,4 +466,3 @@ class VanTransferDraft {
 
 final vanTransferDraftStateProvider =
     StateProvider<VanTransferDraft>((ref) => const VanTransferDraft());
-

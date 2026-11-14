@@ -44,9 +44,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Customer? _selectedCustomer;
   int? _selectedWarehouseId;
   String? _overridePriceType;
-  final Map<int, int> _cart = {}; // product_id -> quantity
+  final Map<int, double> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
-  final Map<int, int> _serverSavedQuantities = {}; // product_id -> quantity saved on server
+  final Map<int, double> _serverSavedQuantities = {}; // product_id -> quantity saved on server
   final List<Map<String, dynamic>> _returnedItems =
       []; // returned items in this order
   Timer? _debounceTimer;
@@ -178,8 +178,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _cartNotes.clear();
       _serverSavedQuantities.clear();
       for (var item in order.items) {
-        _cart[item.productId] = item.quantity.toInt();
-        _serverSavedQuantities[item.productId] = item.quantity.toInt();
+        _cart[item.productId] = item.quantity;
+        _serverSavedQuantities[item.productId] = item.quantity;
         if (item.notes != null) {
           _cartNotes[item.productId] = item.notes!;
         }
@@ -189,7 +189,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _returnedItems.add({
           'product_id': ret.productId,
           'product_name': ret.productName,
-          'quantity': ret.quantity.toInt(),
+          'quantity': ret.quantity,
           'unit_price': ret.unitPrice,
           'subtotal': ret.subtotal,
           'reason': ret.reason,
@@ -476,7 +476,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         : product.totalStock;
 
     final double savedInThisOrder =
-        (_serverSavedQuantities[product.id] ?? 0).toDouble();
+        _serverSavedQuantities[product.id] ?? 0.0;
 
     return warehouseStock + savedInThisOrder;
   }
@@ -498,7 +498,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     final maxStock = _getProductAvailableStock(product);
-    final currentQty = _cart[productId] ?? 0;
+    final currentQty = _cart[productId] ?? 0.0;
 
     if (maxStock <= 0) {
       AppSnackbar.show(
@@ -513,7 +513,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       AppSnackbar.show(
         context,
         message:
-            'تەنها ${maxStock.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
+            'تەنها ${Formatters.cleanNumberString(maxStock)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
         type: SnackbarType.warning,
       );
       return false;
@@ -521,7 +521,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     _lastChangedField = 'product_qty_$productId';
     setState(() {
-      _cart[productId] = currentQty + 1;
+      _cart[productId] = currentQty + 1.0;
     });
     _triggerDebouncedAutoSave();
     return true;
@@ -531,8 +531,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _lastChangedField = 'product_qty_$productId';
     setState(() {
       if (_cart.containsKey(productId)) {
-        if (_cart[productId]! > 1) {
-          _cart[productId] = _cart[productId]! - 1;
+        if (_cart[productId]! > 1.0) {
+          _cart[productId] = _cart[productId]! - 1.0;
         } else {
           _cart.remove(productId);
           _cartNotes.remove(productId);
@@ -594,7 +594,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Future<void> _editQuantityDialog(
     int productId,
-    int currentQty,
+    double currentQty,
     String productName,
   ) async {
     final products = ref.read(productsListProvider).asData?.value ?? [];
@@ -602,7 +602,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final maxStock = product != null ? _getProductAvailableStock(product) : 0.0;
 
     final controller = TextEditingController(text: currentQty.toString());
-    final newQty = await showDialog<int>(
+    final newQty = await showDialog<double>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -626,7 +626,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           children: [
             AppTextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               autofocus: true,
               labelText: 'بڕ (دانە)',
             ),
@@ -634,7 +636,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             Text(
               maxStock <= 0
                   ? 'ئەم کاڵایە لە ستۆک تەواو بووە'
-                  : 'ستۆکی بەردەست: ${maxStock.toInt()} دانە',
+                  : 'ستۆکی بەردەست: ${Formatters.cleanNumberString(maxStock)} دانە',
               style: AppTextStyles.caption.copyWith(
                 color: maxStock > 0 ? AppColors.textSecondary : AppColors.danger,
                 fontWeight: FontWeight.bold,
@@ -649,7 +651,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              final parsed = int.tryParse(controller.text.trim());
+              final parsed = double.tryParse(controller.text.trim());
               if (parsed != null && parsed > 0) {
                 if (maxStock <= 0) {
                   AppSnackbar.show(
@@ -663,7 +665,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   AppSnackbar.show(
                     context,
                     message:
-                        'تەنها ${maxStock.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر دیاری بکەیت',
+                        'تەنها ${Formatters.cleanNumberString(maxStock)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر دیاری بکەیت',
                     type: SnackbarType.warning,
                   );
                   return;
@@ -1518,7 +1520,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             final theme = Theme.of(context);
             int? retryingProductId;
 
-            Future<void> retrySingleItem(int prodId, int qty) async {
+            Future<void> retrySingleItem(int prodId, double qty) async {
               setDialogState(() {
                 retryingProductId = prodId;
               });
@@ -1840,7 +1842,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             itemBuilder: (context, index) {
                               final item = localItems[index];
                               final prodId = item['product_id'] as int;
-                              final qty = item['quantity'] as int;
+                              final qty = (item['quantity'] as num).toDouble();
                               final product = allProducts
                                   .where((p) => p.id == prodId)
                                   .firstOrNull;
@@ -1987,7 +1989,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   .firstOrNull;
                               if (prod != null) {
                                 final maxStock =
-                                    _getProductAvailableStock(prod).toInt();
+                                    _getProductAvailableStock(prod);
                                 if (maxStock <= 0) {
                                   _cart.remove(entry.key);
                                   _cartNotes.remove(entry.key);
@@ -2355,8 +2357,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 .where((prod) => prod.id == pid)
                                 .firstOrNull;
                             if (p != null) {
-                              final maxStock = p.getStockForWarehouse(val).toInt();
-                              final currentQty = _cart[pid] ?? 0;
+                              final maxStock = p.getStockForWarehouse(val);
+                              final currentQty = _cart[pid] ?? 0.0;
                               if (maxStock <= 0) {
                                 _cart.remove(pid);
                                 _cartNotes.remove(pid);
@@ -2365,7 +2367,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               } else if (currentQty > maxStock) {
                                 _cart[pid] = maxStock;
                                 adjusted.add(
-                                    '${p.name} (بڕەکەی کەمکرایەوە بۆ $maxStock دانە)');
+                                    '${p.name} (بڕەکەی کەمکرایەوە بۆ ${Formatters.cleanNumberString(maxStock)} دانە)');
                               }
                             }
                           });
@@ -2761,9 +2763,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                     final double unitPrice = product.isParent && childVariants.isNotEmpty
                                         ? (childVariants.map(_getProductUnitPrice).toList()..sort()).first
                                         : _getProductUnitPrice(product);
-                                    final int qtyInCart = product.isParent
-                                        ? childVariants.fold<int>(0, (s, v) => s + (_cart[v.id] ?? 0))
-                                        : (_cart[product.id] ?? 0);
+                                    final double qtyInCart = product.isParent
+                                        ? childVariants.fold<double>(0, (s, v) => s + (_cart[v.id] ?? 0.0))
+                                        : (_cart[product.id] ?? 0.0);
 
                                     return Material(
                                       color: Colors.transparent,
@@ -3051,7 +3053,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                               child: Text(
                                                                 isOut
                                                                     ? 'لە ستۆک تەواو بووە'
-                                                                    : 'ستۆک: ${availStock.toInt()}',
+                                                                    : 'ستۆک: ${Formatters.cleanNumberString(availStock)}',
                                                                 style:
                                                                     TextStyle(
                                                                       fontSize:
@@ -3099,7 +3101,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                     ),
                                                   ),
                                                   child: Text(
-                                                    '$qtyInCart دانە',
+                                                    '${Formatters.cleanNumberString(qtyInCart)} دانە',
                                                     style: AppTextStyles.caption
                                                         .copyWith(
                                                           color: theme
@@ -3469,8 +3471,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return;
     }
 
-    final initialQuantities = <int, int>{
-      for (final v in variants) v.id: _cart[v.id] ?? 0,
+    final initialQuantities = <int, double>{
+      for (final v in variants) v.id: _cart[v.id] ?? 0.0,
     };
 
     final updated = await VariantSelectorDialog.show(
@@ -3611,7 +3613,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           sum +
           (double.tryParse(item['subtotal']?.toString() ?? '0') ??
               ((double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0) *
-                  (int.tryParse(item['quantity']?.toString() ?? '0') ?? 0))),
+                  (double.tryParse(item['quantity']?.toString() ?? '0') ?? 0))),
     );
 
     return Container(
@@ -3901,7 +3903,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                             MainAxisSize.min,
                                                         children: [
                                                           Text(
-                                                            '$qty',
+                                                            Formatters.cleanNumberString(qty),
                                                             style: AppTextStyles
                                                                 .bodyBold
                                                                 .copyWith(

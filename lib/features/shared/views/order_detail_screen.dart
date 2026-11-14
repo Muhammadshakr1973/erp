@@ -454,7 +454,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        'ئاگاداری: ئەم پسوڵەیە کاڵای گەڕاوەی لەگەڵدایە! (${order.returnedItems.length} جۆر - ${order.totalReturnQuantity} دانە)',
+                        'ئاگاداری: ئەم پسوڵەیە کاڵای گەڕاوەی لەگەڵدایە! (${order.returnedItems.length} جۆر - ${Formatters.cleanNumberString(order.totalReturnQuantity)} دانە)',
                         style: AppTextStyles.bodyBold.copyWith(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.amber.shade300
@@ -538,7 +538,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         style: AppTextStyles.bodyBold,
                       ),
                       subtitle: Text(
-                        '${item.quantity.toInt()} ${item.productUnit ?? 'دانە'}   •   ${Formatters.currency(item.unitPrice)}${item.reason != null && item.reason!.isNotEmpty ? "   •   هۆکار: ${item.reason}" : ""}',
+                        '${Formatters.cleanNumberString(item.quantity)} ${item.productUnit ?? 'دانە'}   •   ${Formatters.currency(item.unitPrice)}${item.reason != null && item.reason!.isNotEmpty ? "   •   هۆکار: ${item.reason}" : ""}',
                         style: AppTextStyles.caption.copyWith(
                           fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -684,7 +684,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${item.quantity.toInt()} ${item.productUnit ?? 'دانە'}',
+                            '${Formatters.cleanNumberString(item.quantity)} ${item.productUnit ?? 'دانە'}',
                             style: AppTextStyles.caption.copyWith(
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurfaceVariant,

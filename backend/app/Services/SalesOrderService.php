@@ -123,10 +123,10 @@ class SalesOrderService
             $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
 
             foreach ($sortedItemsData as $item) {
-                $quantity = (int) $item['quantity'];
+                $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
-                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                        'items' => 'بڕی کاڵا دەبێت لە ٠ زیاتر بێت.'
                     ]);
                 }
 
@@ -143,7 +143,7 @@ class SalesOrderService
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $availQty = (int) $warehouseStock->quantity;
+                $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
                     throw ValidationException::withMessages([
                         'items' => "بڕی پێویست لە ستۆکی کۆگا بەردەست نییە بۆ کاڵای '{$product->name}'. بەردەست لە کۆگا: {$availQty}، داواکراو: {$quantity}."
@@ -298,10 +298,10 @@ class SalesOrderService
             $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
 
             foreach ($sortedItemsData as $item) {
-                $quantity = (int) $item['quantity'];
+                $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
-                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                        'items' => 'بڕی کاڵا دەبێت لە ٠ زیاتر بێت.'
                     ]);
                 }
 
@@ -318,7 +318,7 @@ class SalesOrderService
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $availQty = (int) $warehouseStock->quantity;
+                $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
                     throw ValidationException::withMessages([
                         'items' => "بڕی پێویست لە ستۆکی کۆگا بەردەست نییە بۆ کاڵای '{$product->name}'. ستۆکی بەردەست: {$availQty}، داواکراو: {$quantity}."
@@ -582,7 +582,7 @@ class SalesOrderService
 
                         if ($warehouseStock) {
                             $warehouseStock->adjustStock(
-                                (int) $item->quantity,
+                                (float) $item->quantity,
                                 StockTransaction::TYPE_RETURN,
                                 $user->id,
                                 'sales_order_item',
@@ -693,7 +693,7 @@ class SalesOrderService
         $items = $order->items()->orderBy('product_id', 'asc')->get();
         foreach ($items as $item) {
             // هەژمارکردنی بڕی کەمکراوەی ڕاستەقینە لە ڕێگەی تراکنشنی فرۆشتن
-            $deductedSales = (int) StockTransaction::where('warehouse_id', $order->warehouse_id)
+            $deductedSales = (float) StockTransaction::where('warehouse_id', $order->warehouse_id)
                 ->where('product_id', $item->product_id)
                 ->where(function ($q) use ($item, $order) {
                     $q->where(function ($sq) use ($item) {
@@ -707,7 +707,7 @@ class SalesOrderService
                 ->whereIn('type', [StockTransaction::TYPE_DELIVERY, StockTransaction::TYPE_SALE, StockTransaction::TYPE_PACKED, 'out'])
                 ->sum('quantity_change');
 
-            $alreadyReturned = (int) StockTransaction::where('warehouse_id', $order->warehouse_id)
+            $alreadyReturned = (float) StockTransaction::where('warehouse_id', $order->warehouse_id)
                 ->where('product_id', $item->product_id)
                 ->where('reference_type', 'sales_order_item')
                 ->where('reference_id', $item->id)
@@ -715,7 +715,7 @@ class SalesOrderService
                 ->sum('quantity_change');
 
             $netDeducted = abs($deductedSales) - $alreadyReturned;
-            $qtyToRestore = $netDeducted > 0 ? $netDeducted : ($deductedSales < 0 ? 0 : (int) $item->quantity);
+            $qtyToRestore = $netDeducted > 0 ? $netDeducted : ($deductedSales < 0 ? 0 : (float) $item->quantity);
 
             $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
                 ['warehouse_id' => $order->warehouse_id, 'product_id' => $item->product_id],
@@ -735,7 +735,7 @@ class SalesOrderService
 
             // ئازادکردنی هەر بڕێکی کۆنی حجزکراو ئەگەر هەبووبێت
             if ($warehouseStock->reserved_quantity > 0) {
-                $warehouseStock->releaseStock(min((int) $item->quantity, (int) $warehouseStock->reserved_quantity), $user->id, 'sales_order', $order->id, 'Legacy reservation release');
+                $warehouseStock->releaseStock(min((float) $item->quantity, (float) $warehouseStock->reserved_quantity), $user->id, 'sales_order', $order->id, 'Legacy reservation release');
             }
         }
     }
@@ -890,7 +890,7 @@ class SalesOrderService
 
         foreach ($returnedItems as $retItem) {
             $productId = (int)$retItem['product_id'];
-            $qty = (int)$retItem['quantity'];
+            $qty = (float)$retItem['quantity'];
             if ($qty <= 0) continue;
 
             $keepProductIds[] = $productId;
@@ -1129,10 +1129,10 @@ class SalesOrderService
             $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
 
             foreach ($sortedItemsData as $item) {
-                $quantity = (int) $item['quantity'];
+                $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
-                        'items' => 'بڕی کاڵا دەبێت لە ١ کەمتر نەبێت.'
+                        'items' => 'بڕی کاڵا دەبێت لە ٠ زیاتر بێت.'
                     ]);
                 }
 
@@ -1149,7 +1149,7 @@ class SalesOrderService
                     ['quantity' => 0, 'reserved_quantity' => 0]
                 );
 
-                $availQty = (int) $warehouseStock->quantity;
+                $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
                     throw ValidationException::withMessages([
                         'items' => "بڕی پێویست لە ستۆکی کۆگا بەردەست نییە بۆ کاڵای '{$product->name}'. ستۆکی بەردەست: {$availQty}، داواکراو: {$quantity}."

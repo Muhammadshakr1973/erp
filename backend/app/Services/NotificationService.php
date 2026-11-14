@@ -183,7 +183,7 @@ class NotificationService
 
         $salesmanName = $actor ? $actor->name : ($order->salesman ? $order->salesman->name : 'مەندوب');
         $itemsCount = $order->items ? $order->items->count() : 0;
-        $totalQty = $order->items ? (int) $order->items->sum('quantity') : 0;
+        $totalQty = $order->items ? (float) $order->items->sum('quantity') : 0;
 
         $title = 'پسوڵەی فرۆشتنی نوێ دروستکرا';
         $body = "پسوڵە بۆ کڕیار '{$customerName}' لەلایەن '{$salesmanName}' دروستکرا.";

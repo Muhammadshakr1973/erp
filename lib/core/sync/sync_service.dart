@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import '../api_client.dart';
 import 'sync_queue_entry.dart';
+import '../../features/salesman/providers/salesman_dashboard_provider.dart';
 
 enum SyncStatus {
   synced,
@@ -124,6 +125,14 @@ class SyncService {
                 await entry.save();
               }
             } catch (_) {}
+            if (entry.operationType == 'CREATE_ORDER' ||
+                entry.operationType == 'UPDATE_ORDER') {
+              unawaited(
+                ref
+                    .read(salesmanDashboardProvider.notifier)
+                    .refreshSilently(),
+              );
+            }
           } else {
             entry.status = 'PENDING';
             entry.retryCount += 1;

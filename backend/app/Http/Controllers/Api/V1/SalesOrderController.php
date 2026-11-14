@@ -431,23 +431,18 @@ class SalesOrderController extends Controller
             }
         }
 
-        // 2. Today's Sales Amount & Profit Units (1 Unit = 1,000 IQD profit, ONLY DELIVERED orders)
-        $getDeliveredQuery = function () use ($user) {
-            return \App\Models\SalesOrder::where('salesman_id', $user->id)
-                ->where('status', \App\Models\SalesOrder::STATUS_DELIVERED);
-        };
-
-        $todayOrders = $getDeliveredQuery()
-            ->where(function ($q) use ($today) {
-                $q->whereDate('delivered_at', $today)
-                  ->orWhere(function ($q2) use ($today) {
-                      $q2->whereNull('delivered_at')->whereDate('created_at', $today);
-                  });
-            });
+        // 2. Today's sales and profit units include every order created today.
+        $todayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->whereDate('created_at', $today);
 
         $todaySalesAmount = (int) $todayOrders->sum('total_amount');
         $todayProfitSum = (int) $todayOrders->sum('total_profit');
         $todayUnits = (int) round($todayProfitSum / 1000);
+
+        $getDeliveredQuery = function () use ($user) {
+            return \App\Models\SalesOrder::where('salesman_id', $user->id)
+                ->where('status', \App\Models\SalesOrder::STATUS_DELIVERED);
+        };
 
         // 3. Last 7 Days Sales Amount & Profit Units (ONLY DELIVERED orders)
         $last7DaysOrders = $getDeliveredQuery()

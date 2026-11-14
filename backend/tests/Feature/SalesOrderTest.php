@@ -1359,6 +1359,36 @@ class SalesOrderTest extends TestCase
             'created_at' => now()->subMonthNoOverflow()->startOfMonth()->addDays(5),
         ]);
 
+        SalesOrder::create([
+            'order_number' => 'ORD-TODAY-PACKING',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'subtotal' => 40000,
+            'total_amount' => 40000,
+            'discount_amount' => 0,
+            'discount_percent' => 0,
+            'discount_type' => 'PERCENT',
+            'total_profit' => 20000,
+            'status' => SalesOrder::STATUS_PACKING,
+            'created_at' => now(),
+        ]);
+
+        SalesOrder::create([
+            'order_number' => 'ORD-TODAY-CANCELLED',
+            'customer_id' => $this->customer->id,
+            'salesman_id' => $this->salesman->id,
+            'warehouse_id' => $this->warehouse->id,
+            'subtotal' => 10000,
+            'total_amount' => 10000,
+            'discount_amount' => 0,
+            'discount_percent' => 0,
+            'discount_type' => 'PERCENT',
+            'total_profit' => 5000,
+            'status' => SalesOrder::STATUS_CANCELLED,
+            'created_at' => now(),
+        ]);
+
         // 3. Call salesman dashboard endpoint
         $response = $this->actingAs($this->salesman)->getJson('/api/v1/salesman/dashboard');
         $response->assertStatus(200);
@@ -1380,6 +1410,6 @@ class SalesOrderTest extends TestCase
 
         $this->assertEquals(50, $response->json('data.month_units'));
         $this->assertEquals(30, $response->json('data.last_month_units'));
+        $this->assertEquals(25, $response->json('data.today_units'));
     }
 }
-

@@ -172,8 +172,8 @@ class OrdersToPackScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final order = orders[index];
-                final int totalItems = order.items.fold(
-                  0,
+                final double totalItems = order.items.fold(
+                  0.0,
                   (sum, item) => sum + item.quantity,
                 );
                 final int packedItems = order.items
@@ -295,7 +295,7 @@ class OrdersToPackScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'مەندوب: ${order.salesmanName} • $totalItems دانە • $packedItems/${order.items.length} پاکەتکراو',
+                              'مەندوب: ${order.salesmanName} • ${Formatters.cleanNumberString(totalItems)} دانە • $packedItems/${order.items.length} پاکەتکراو',
                               style: AppTextStyles.caption,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,

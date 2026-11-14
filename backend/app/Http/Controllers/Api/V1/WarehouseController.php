@@ -450,7 +450,7 @@ class WarehouseController extends Controller
         }
 
         $validated = $request->validate([
-            'quantity_change' => 'required|integer',
+            'quantity_change' => 'required|numeric',
             'type' => 'nullable|string|in:ADJUSTMENT,adjustment',
             'notes' => 'nullable|string|max:255',
         ]);

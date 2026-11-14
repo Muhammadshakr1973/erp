@@ -811,6 +811,13 @@ class SalesmanDashboardScreen extends ConsumerWidget {
           crossAxisSpacing: AppSpacing.md,
           childAspectRatio: 1.15,
           children: [
+            _buildStatCard(
+              context,
+              title: 'یەکەی ئەمڕۆ',
+              value: '${dashboard.todayUnits} یەکە',
+              icon: Icons.today_rounded,
+              iconColor: successColor,
+            ),
             if (user?.isCashVan == true)
               _buildStatCard(
                 context,

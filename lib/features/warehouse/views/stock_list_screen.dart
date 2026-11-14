@@ -57,9 +57,22 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(
-                'دەستکاریکردنی ستۆک: ${stock.productName}',
-                style: AppTextStyles.bodyBold,
+              title: Row(
+                textDirection: TextDirection.ltr,
+                children: [
+                  IconButton(
+                    tooltip: 'داخستن',
+                    icon: const Icon(Icons.close),
+                    onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'دەستکاریکردنی ستۆک: ${stock.productName}',
+                      style: AppTextStyles.bodyBold,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -98,7 +111,10 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                     AppTextField(
                       controller: amountController,
                       labelText: 'بڕی گۆڕانکاری (بۆ نمونە: ١٠ یان -٥)',
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: true,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
@@ -109,15 +125,13 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                  child: const Text('پاشگەزبوونەوە'),
-                ),
                 isSubmitting
                     ? const CircularProgressIndicator()
                     : TextButton(
                         onPressed: () async {
-                          final change = int.tryParse(amountController.text);
+                          final change = double.tryParse(
+                            amountController.text.trim(),
+                          );
                           if (change == null || change == 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -649,8 +663,8 @@ class _StockListScreenState extends ConsumerState<StockListScreen> {
                               children: [
                                 StatusBadge(
                                   label: isLow
-                                      ? 'ستۆک: ${stock.quantity} (کەمترین: ${stock.minStockLevel})'
-                                      : 'ستۆک: ${stock.quantity}',
+                                      ? 'ستۆک: ${Formatters.cleanNumberString(stock.quantity)} (کەمترین: ${Formatters.cleanNumberString(stock.minStockLevel)})'
+                                      : 'ستۆک: ${Formatters.cleanNumberString(stock.quantity)}',
                                   type: isLow
                                       ? StatusBadgeType.danger
                                       : StatusBadgeType.info,

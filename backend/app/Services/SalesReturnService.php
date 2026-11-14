@@ -56,7 +56,7 @@ class SalesReturnService
             $groupedQuantities = [];
             foreach ($data['items'] as $itemInput) {
                 $orderItemId = $itemInput['sales_order_item_id'];
-                $returnedQty = (int)$itemInput['quantity'];
+                $returnedQty = (float)$itemInput['quantity'];
 
                 if ($returnedQty <= 0) {
                     throw ValidationException::withMessages([
@@ -129,7 +129,7 @@ class SalesReturnService
                 $itemInput = $resolved['input'];
                 $orderItem = $resolved['order_item'];
                 $orderItemId = $itemInput['sales_order_item_id'];
-                $returnedQty = (int)$itemInput['quantity'];
+                $returnedQty = (float)$itemInput['quantity'];
 
                 $unitPrice = (int)$orderItem->unit_price;
                 $itemTotalAmount = $returnedQty * $unitPrice;

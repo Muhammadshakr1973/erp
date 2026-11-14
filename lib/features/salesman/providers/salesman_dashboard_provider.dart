@@ -191,11 +191,13 @@ class SalesmanDashboardNotifier extends AsyncNotifier<SalesmanDashboardData> {
     }
 
     pusher.subscribeToChannel('private-orders', onSalesmanDashboardEvent);
+    pusher.subscribeToChannel('private-products', onSalesmanDashboardEvent);
     pusher.subscribeToChannel('private-customers', onSalesmanDashboardEvent);
     pusher.subscribeToChannel('private-delivery-trips', onSalesmanDashboardEvent);
 
     ref.onDispose(() {
       pusher.unsubscribeFromChannel('private-orders', onSalesmanDashboardEvent);
+      pusher.unsubscribeFromChannel('private-products', onSalesmanDashboardEvent);
       pusher.unsubscribeFromChannel('private-customers', onSalesmanDashboardEvent);
       pusher.unsubscribeFromChannel('private-delivery-trips', onSalesmanDashboardEvent);
     });

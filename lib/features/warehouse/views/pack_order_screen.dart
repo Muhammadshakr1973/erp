@@ -582,7 +582,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'بڕ: ${item.quantity} ${item.productUnit ?? 'دانە'}',
+                                        'بڕ: ${Formatters.cleanNumberString(item.quantity)} ${item.productUnit ?? 'دانە'}',
                                         style: AppTextStyles.caption.copyWith(
                                           color: isPacked
                                               ? Colors.grey

@@ -43,7 +43,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   // Local cart map: productId -> quantity in active order
-  final Map<int, int> _orderCart = {};
+  final Map<int, double> _orderCart = {};
   final Map<int, String> _orderCartNotes = {};
 
   // 10-second countdown batch sync engine
@@ -115,7 +115,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       if (order != null) {
         // Load items from this order
         for (final item in order.items) {
-          _orderCart[item.productId] = item.quantity.toInt();
+          _orderCart[item.productId] = item.quantity;
           if (item.notes != null) {
             _orderCartNotes[item.productId] = item.notes!;
           }
@@ -251,7 +251,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   /// Calculates remaining stock after deducting currently selected quantity in this order
   double _getProductRemainingStock(ProductModel product) {
     final totalAvailable = _getProductAvailableStock(product);
-    final currentQty = _orderCart[product.id] ?? 0;
+    final currentQty = _orderCart[product.id] ?? 0.0;
     final remaining = totalAvailable - currentQty;
     return remaining < 0 ? 0.0 : remaining;
   }
@@ -264,7 +264,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     final totalAvailable = _getProductAvailableStock(product);
-    final currentQty = _orderCart[product.id] ?? 0;
+    final currentQty = _orderCart[product.id] ?? 0.0;
 
     if (totalAvailable <= 0) {
       AppSnackbar.show(
@@ -279,14 +279,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       AppSnackbar.show(
         context,
         message:
-            'تەنها ${totalAvailable.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
+            'تەنها ${Formatters.cleanNumberString(totalAvailable)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر زیاد بکەیت',
         type: SnackbarType.warning,
       );
       return;
     }
 
     setState(() {
-      _orderCart[product.id] = currentQty + 1;
+      _orderCart[product.id] = currentQty + 1.0;
     });
 
     _startOrRestart10SecondDebounce(
@@ -313,8 +313,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
-    final initialQuantities = <int, int>{
-      for (final v in variants) v.id: _orderCart[v.id] ?? 0,
+    final initialQuantities = <int, double>{
+      for (final v in variants) v.id: _orderCart[v.id] ?? 0.0,
     };
 
     final updated = await VariantSelectorDialog.show(
@@ -332,7 +332,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     setState(() {
       for (final v in variants) {
-        final qty = updated[v.id] ?? 0;
+        final qty = updated[v.id] ?? 0.0;
         if (qty > 0) {
           _orderCart[v.id] = qty;
         } else {
@@ -355,12 +355,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
-    final currentQty = _orderCart[product.id] ?? 0;
+    final currentQty = _orderCart[product.id] ?? 0.0;
     if (currentQty <= 0) return;
 
     setState(() {
-      if (currentQty > 1) {
-        _orderCart[product.id] = currentQty - 1;
+      if (currentQty > 1.0) {
+        _orderCart[product.id] = currentQty - 1.0;
       } else {
         _orderCart.remove(product.id);
         _orderCartNotes.remove(product.id);
@@ -389,10 +389,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
-    final currentQty = _orderCart[product.id] ?? 0;
+    final currentQty = _orderCart[product.id] ?? 0.0;
     final controller = TextEditingController(text: currentQty.toString());
 
-    final newQty = await showDialog<int>(
+    final newQty = await showDialog<double>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
@@ -436,7 +436,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 const SizedBox(height: AppSpacing.md),
                 AppTextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   autofocus: true,
                   labelText: 'بڕ (دانە)',
                 ),
@@ -451,13 +453,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     ),
                   ),
                   onPressed: () {
-                    final parsed = int.tryParse(controller.text.trim());
+                    final parsed = double.tryParse(controller.text.trim());
                     if (parsed != null && parsed >= 0) {
                       if (parsed > totalAvailable) {
                         AppSnackbar.show(
                           ctx,
                           message:
-                              'تەنها ${totalAvailable.toInt()} دانە لە ستۆک بەردەستە و ناتوانی زیاتر بنووسیت',
+                              'تەنها ${Formatters.cleanNumberString(totalAvailable)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر بنووسیت',
                           type: SnackbarType.warning,
                         );
                         return;
@@ -635,7 +637,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               'actionDesc': actionDesc,
               'error': errorMsg,
               'payload': payload,
-              'cart': Map<int, int>.from(_orderCart),
+              'cart': Map<int, double>.from(_orderCart),
             };
           }
         });
@@ -1536,8 +1538,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                                                       ? (variantsByParent[product.id] ?? const <ProductModel>[])
                                                       : const <ProductModel>[];
                                                   final qtyInCart = product.isParent
-                                                      ? variants.fold<int>(0, (sum, v) => sum + (_orderCart[v.id] ?? 0))
-                                                      : (_orderCart[product.id] ?? 0);
+                                                      ? variants.fold<double>(0, (sum, v) => sum + (_orderCart[v.id] ?? 0.0))
+                                                      : (_orderCart[product.id] ?? 0.0);
                                                   return _buildProductCard(
                                                     context,
                                                     key: ValueKey(product.id),
@@ -2161,7 +2163,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     required Key key,
     required ProductModel product,
     List<ProductModel> variants = const [],
-    required int quantity,
+    required double quantity,
     required dynamic user,
     required int? warehouseId,
   }) {
@@ -2372,7 +2374,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                               : null,
                         ),
                         child: Text(
-                          'ستۆک: ${remainingStock.toInt()}',
+                          'ستۆک: ${Formatters.cleanNumberString(remainingStock)}',
                           style: const TextStyle(
                             fontFamily: 'KJino',
                             color: Colors.white,
@@ -2533,7 +2535,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          '$quantity',
+                          Formatters.cleanNumberString(quantity),
                           style: TextStyle(
                             fontFamily: 'KJino',
                             fontWeight: FontWeight.bold,

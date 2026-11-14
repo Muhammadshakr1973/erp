@@ -184,7 +184,7 @@ class ReportService
         $totalRevenue = (int) ($summaryData->total_revenue ?? 0);
         $totalCost = (int) ($summaryData->total_cost ?? 0);
         $totalProfit = (int) ($summaryData->total_profit ?? 0);
-        $totalUnitsSold = (int) ($summaryData->total_units_sold ?? 0);
+        $totalUnitsSold = (float) ($summaryData->total_units_sold ?? 0);
         $profitMargin = $totalRevenue > 0 ? round(($totalProfit / $totalRevenue) * 100, 2) : 0.0;
 
         // Top Profitable Products (Direct SQL Group By with joins)
@@ -215,7 +215,7 @@ class ReportService
                     'product_name'   => $row->product_name ?? 'نەزانراو',
                     'sku'            => $row->sku ?? '',
                     'category_name'  => $row->category_name,
-                    'units_sold'     => (int) $row->units_sold,
+                    'units_sold'     => (float) $row->units_sold,
                     'total_revenue'  => $revenue,
                     'total_cost'     => (int) $row->total_cost,
                     'total_profit'   => $profit,
@@ -245,7 +245,7 @@ class ReportService
                 return [
                     'category_id'    => $row->category_id,
                     'category_name'  => $row->category_name,
-                    'units_sold'     => (int) $row->units_sold,
+                    'units_sold'     => (float) $row->units_sold,
                     'total_revenue'  => $revenue,
                     'total_profit'   => $profit,
                     'margin_percent' => $margin,
@@ -803,8 +803,8 @@ class ReportService
 
         $stocks = $query->get()->map(function ($ws) {
             $product = $ws->product;
-            $quantity = (int) $ws->quantity;
-            $reserved = (int) $ws->reserved_quantity;
+            $quantity = (float) $ws->quantity;
+            $reserved = (float) $ws->reserved_quantity;
             $available = max(0, $quantity - $reserved);
             $minLevel = (int) $ws->min_stock_level;
             $defaultReorderFallback = config('app.default_reorder_quantity', 0);

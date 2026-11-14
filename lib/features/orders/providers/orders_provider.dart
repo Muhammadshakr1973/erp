@@ -203,6 +203,12 @@ class OrderActions {
 
   OrderActions(this.api, this.ref);
 
+  void _refreshSalesmanDashboard() {
+    unawaited(
+      ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
+    );
+  }
+
   Future<OrderModel> createOrder(Map<String, dynamic> data) async {
     try {
       final idempotencyKey =
@@ -225,6 +231,8 @@ class OrderActions {
         throw Exception(errorMsg);
       }
 
+      _refreshSalesmanDashboard();
+
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
           ? resData['data']
@@ -238,7 +246,6 @@ class OrderActions {
         );
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
         ref.read(ordersListProvider.notifier).refreshSilently();
-        ref.invalidate(salesmanDashboardProvider);
         ref.invalidate(customerListProvider);
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(dashboardProvider);
@@ -273,6 +280,7 @@ class OrderActions {
         throw Exception(errorMsg);
       }
 
+      _refreshSalesmanDashboard();
       ref.invalidate(singleOrderProvider(orderId.toString()));
 
       final resData = response.data;
@@ -336,7 +344,7 @@ class OrderActions {
       unawaited(
         ref.read(productsListProvider.notifier).refreshProductsSilently(),
       );
-      ref.invalidate(salesmanDashboardProvider);
+      _refreshSalesmanDashboard();
       ref.invalidate(customerListProvider);
       ref.invalidate(filteredCustomerListProvider);
     } catch (e) {
@@ -367,7 +375,7 @@ class OrderActions {
 
       // 3. Silently update providers in background without resetting UI state
       ref.read(ordersListProvider.notifier).refreshSilently();
-      ref.invalidate(salesmanDashboardProvider);
+      _refreshSalesmanDashboard();
       ref.invalidate(customerListProvider);
       ref.invalidate(filteredCustomerListProvider);
       ref.invalidate(dashboardProvider);

@@ -51,7 +51,7 @@ class WarehouseOrderItemModel {
   final int id;
   final int productId;
   final String productName;
-  final int quantity;
+  final double quantity;
   final bool isPacked;
   final String? packedAt;
   final String? productUnit;
@@ -94,7 +94,7 @@ class WarehouseOrderItemModel {
       id: Formatters.parseInt(json['id']),
       productId: Formatters.parseInt(json['product_id']),
       productName: pName,
-      quantity: Formatters.parseInt(json['quantity']),
+      quantity: Formatters.parseDouble(json['quantity']),
       isPacked: isPacked,
       packedAt: json['packed_at']?.toString(),
       productUnit: productObj != null ? (productObj['unit']?.toString() ?? 'دانە') : (json['product_unit']?.toString() ?? 'دانە'),

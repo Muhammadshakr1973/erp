@@ -9,6 +9,7 @@ import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../../shared/providers/warehouse_provider.dart';
@@ -219,7 +220,7 @@ class _CreateVanTransferDialogState
                               title: Text(p.name,
                                   style: AppTextStyles.bodyBold),
                               subtitle: Text(
-                                'باڕکۆد: ${p.barcode} • بەردەست لە کۆگای نێرەر: $availableInSource دانە',
+                                'باڕکۆد: ${p.barcode} • بەردەست لە کۆگای نێرەر: ${Formatters.cleanNumberString(availableInSource)} دانە',
                                 style: AppTextStyles.caption.copyWith(
                                   color: availableInSource > 0
                                       ? AppColors.success
@@ -253,7 +254,7 @@ class _CreateVanTransferDialogState
                                               BorderRadius.circular(8),
                                         ),
                                         child: Text(
-                                          '$currentQtyInCart دانە',
+                                          '${Formatters.cleanNumberString(currentQtyInCart)} دانە',
                                           style: TextStyle(
                                             color: theme.colorScheme.primary,
                                             fontWeight: FontWeight.bold,
@@ -307,8 +308,11 @@ class _CreateVanTransferDialogState
     double available, {
     VoidCallback? onQuantityChanged,
   }) async {
-    final isAlreadyInCart = _items.containsKey(product.id);
-    num currentQty = _items[product.id] ?? 1;
+    double currentQty = (_items[product.id] ?? (available < 1 ? available : 1))
+        .toDouble();
+    final quantityController = TextEditingController(
+      text: Formatters.cleanNumberString(currentQty),
+    );
     Timer? repeatTimer;
 
     void stopTimer() {
@@ -322,13 +326,15 @@ class _CreateVanTransferDialogState
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final canDecrement = isAlreadyInCart ? currentQty > 0 : currentQty > 1;
+            final canDecrement = currentQty > 0;
             final canIncrement = currentQty < available;
 
             void incrementBy(int amount) {
               if (currentQty >= available) return;
               setDialogState(() {
-                currentQty = (currentQty + amount).clamp(1, available);
+                currentQty = (currentQty + amount).clamp(0, available).toDouble();
+                quantityController.text =
+                    Formatters.cleanNumberString(currentQty);
               });
               if (currentQty >= available) {
                 stopTimer();
@@ -357,7 +363,7 @@ class _CreateVanTransferDialogState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'بڕی بەردەست لە کۆگای نێرەر: $available دانە',
+                    'بڕی بەردەست لە کۆگای نێرەر: ${Formatters.cleanNumberString(available)} دانە',
                     style: AppTextStyles.caption,
                     textAlign: TextAlign.center,
                   ),
@@ -430,17 +436,39 @@ class _CreateVanTransferDialogState
                             ),
                           ),
                         ),
-                        // Center: Read-only quantity display
+                        // Center: Editable quantity
                         Expanded(
-                          child: Center(
-                            child: Text(
-                              '$currentQty',
+                          child: SizedBox(
+                            width: 90,
+                            child: TextField(
+                              controller: quantityController,
+                              textAlign: TextAlign.center,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
                               style: AppTextStyles.h2.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).brightness == Brightness.dark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight,
+                                color:
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimaryLight,
                               ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                              ),
+                              onChanged: (value) {
+                                final parsed = double.tryParse(value);
+                                if (parsed != null &&
+                                    parsed >= 0 &&
+                                    parsed <= available) {
+                                  setDialogState(() {
+                                    currentQty = parsed;
+                                  });
+                                }
+                              },
                             ),
                           ),
                         ),
@@ -458,7 +486,10 @@ class _CreateVanTransferDialogState
                                 ? () {
                                     stopTimer();
                                     setDialogState(() {
-                                      currentQty--;
+                                      currentQty =
+                                          (currentQty - 1).clamp(0, available).toDouble();
+                                      quantityController.text =
+                                          Formatters.cleanNumberString(currentQty);
                                     });
                                   }
                                 : null,
@@ -500,6 +531,23 @@ class _CreateVanTransferDialogState
                   ),
                   onPressed: () {
                     stopTimer();
+                    final parsedQty = double.tryParse(
+                      quantityController.text.trim(),
+                    );
+                    if (parsedQty == null ||
+                        parsedQty < 0 ||
+                        parsedQty > available) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'بڕی دیاریکراو دەبێت لە ٠ تا ${Formatters.cleanNumberString(available)} بێت.',
+                          ),
+                          backgroundColor: AppColors.danger,
+                        ),
+                      );
+                      return;
+                    }
+                    currentQty = parsedQty;
                     if (currentQty < 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('تکایە ژمارەیەکی دروست بنووسە')),
@@ -510,7 +558,7 @@ class _CreateVanTransferDialogState
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'بڕی داواکراو ($currentQty) لە بەردەستی کۆگا ($available) زیاترە!',
+                            'بڕی داواکراو (${Formatters.cleanNumberString(currentQty)}) لە بەردەستی کۆگا (${Formatters.cleanNumberString(available)}) زیاترە!',
                           ),
                           backgroundColor: AppColors.danger,
                         ),
@@ -537,6 +585,7 @@ class _CreateVanTransferDialogState
       },
     );
     stopTimer();
+    quantityController.dispose();
   }
 
   @override
@@ -895,7 +944,7 @@ class _CreateVanTransferDialogState
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(name, style: AppTextStyles.bodyBold),
-                                    Text('بەردەست لە نێرەر: $available دانە',
+                                    Text('بەردەست لە نێرەر: ${Formatters.cleanNumberString(available)} دانە',
                                         style: AppTextStyles.caption),
                                   ],
                                 ),

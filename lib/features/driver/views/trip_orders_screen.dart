@@ -368,7 +368,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                       const SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
-                                          'ئاگاداری: کاڵای گەڕاوە لەم پسوڵەیەدا هەیە (${order.returnedItems.length} جۆر - ${order.totalReturnQuantity} دانە)',
+                                          'ئاگاداری: کاڵای گەڕاوە لەم پسوڵەیەدا هەیە (${order.returnedItems.length} جۆر - ${Formatters.cleanNumberString(order.totalReturnQuantity)} دانە)',
                                           style: AppTextStyles.caption.copyWith(
                                             color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
                                             fontWeight: FontWeight.bold,
@@ -393,7 +393,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            '↩ ${rItem.productName} (${rItem.quantity.toInt()} ${rItem.productUnit ?? "دانە"})${rItem.reason != null && rItem.reason!.isNotEmpty ? " - ${rItem.reason}" : ""}',
+                                            '↩ ${rItem.productName} (${Formatters.cleanNumberString(rItem.quantity)} ${rItem.productUnit ?? "دانە"})${rItem.reason != null && rItem.reason!.isNotEmpty ? " - ${rItem.reason}" : ""}',
                                             style: AppTextStyles.caption.copyWith(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 12,
@@ -670,7 +670,7 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'ئاگاداربە: ئەم کڕیارە (${tripOrder.order!.totalReturnQuantity}) دانە کاڵای گەڕاوەی هەیە. دڵنیابە لە وەرگرتنەوەیان.',
+                              'ئاگاداربە: ئەم کڕیارە (${Formatters.cleanNumberString(tripOrder.order!.totalReturnQuantity)}) دانە کاڵای گەڕاوەی هەیە. دڵنیابە لە وەرگرتنەوەیان.',
                               style: AppTextStyles.caption.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.amber.shade900,

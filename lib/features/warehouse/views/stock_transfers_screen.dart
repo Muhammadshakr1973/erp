@@ -286,7 +286,7 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
                                           Expanded(
                                             flex: 1,
                                             child: Text(
-                                              '${item.quantity} ${item.productUnit ?? "دانە"}',
+                                              '${Formatters.cleanNumberString(item.quantity)} ${item.productUnit ?? "دانە"}',
                                               textAlign: TextAlign.end,
                                               style: AppTextStyles.bodyBold
                                                   .copyWith(
@@ -665,7 +665,7 @@ class _StockTransfersScreenState extends ConsumerState<StockTransfersScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'کۆی کاڵاکان: ${transfer.totalItemsCount} دانە (${transfer.items.length} جۆر) • ${transfer.createdAt != null ? Formatters.dateTime(transfer.createdAt!) : ""}',
+                                    'کۆی کاڵاکان: ${Formatters.cleanNumberString(transfer.totalItemsCount)} دانە (${transfer.items.length} جۆر) • ${transfer.createdAt != null ? Formatters.dateTime(transfer.createdAt!) : ""}',
                                     style: AppTextStyles.caption,
                                   ),
                                 ],

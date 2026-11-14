@@ -11,7 +11,7 @@ import '../models/product_model.dart';
 class VariantSelectorDialog extends StatefulWidget {
   final ProductModel parentProduct;
   final List<ProductModel> variants;
-  final Map<int, int> initialQuantities;
+  final Map<int, double> initialQuantities;
   final double Function(ProductModel variant) getPrice;
   final double Function(ProductModel variant) getAvailableStock;
   final bool enforceStockLimit;
@@ -28,17 +28,17 @@ class VariantSelectorDialog extends StatefulWidget {
     this.initialQuery,
   });
 
-  static Future<Map<int, int>?> show(
+  static Future<Map<int, double>?> show(
     BuildContext context, {
     required ProductModel parentProduct,
     required List<ProductModel> variants,
-    required Map<int, int> initialQuantities,
+    required Map<int, double> initialQuantities,
     required double Function(ProductModel variant) getPrice,
     required double Function(ProductModel variant) getAvailableStock,
     bool enforceStockLimit = true,
     String? initialQuery,
   }) {
-    return showDialog<Map<int, int>>(
+    return showDialog<Map<int, double>>(
       context: context,
       barrierDismissible: false,
       builder: (_) => VariantSelectorDialog(
@@ -58,7 +58,7 @@ class VariantSelectorDialog extends StatefulWidget {
 }
 
 class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
-  late final Map<int, int> _quantities;
+  late final Map<int, double> _quantities;
   late final Map<int, TextEditingController> _controllers;
   String _filterQuery = '';
 
@@ -68,9 +68,11 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
     _quantities = {};
     _controllers = {};
     for (final v in widget.variants) {
-      final qty = widget.initialQuantities[v.id] ?? 0;
+      final qty = widget.initialQuantities[v.id] ?? 0.0;
       _quantities[v.id] = qty;
-      _controllers[v.id] = TextEditingController(text: qty > 0 ? '$qty' : '0');
+      _controllers[v.id] = TextEditingController(
+        text: qty > 0 ? Formatters.cleanNumberString(qty) : '0',
+      );
     }
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
       final q = widget.initialQuery!.trim().toLowerCase();
@@ -94,16 +96,16 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
     super.dispose();
   }
 
-  void _setQty(ProductModel variant, int targetQty) {
-    final avail = widget.getAvailableStock(variant).toInt();
-    int clamped = targetQty < 0 ? 0 : targetQty;
+  void _setQty(ProductModel variant, double targetQty) {
+    final avail = widget.getAvailableStock(variant);
+    double clamped = targetQty < 0 ? 0 : targetQty;
     if (widget.enforceStockLimit && clamped > avail) {
       clamped = avail < 0 ? 0 : avail;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'تەنها $avail دانە لە جۆری "${variant.displayVariantLabel}" لە ستۆکدا هەیە',
+            'تەنها ${Formatters.cleanNumberString(avail)} دانە لە جۆری "${variant.displayVariantLabel}" لە ستۆکدا هەیە',
             style: const TextStyle(fontFamily: 'KJino'),
           ),
           backgroundColor: AppColors.warning,
@@ -114,8 +116,9 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
     setState(() {
       _quantities[variant.id] = clamped;
       final ctrl = _controllers[variant.id];
-      if (ctrl != null && ctrl.text != '$clamped') {
-        ctrl.text = '$clamped';
+      final clampedText = Formatters.cleanNumberString(clamped);
+      if (ctrl != null && ctrl.text != clampedText) {
+        ctrl.text = clampedText;
         ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
       }
     });
@@ -137,10 +140,10 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                 (v.sku != null && v.sku!.toLowerCase().contains(_filterQuery));
           }).toList();
 
-    int totalSelectedCount = 0;
+    double totalSelectedCount = 0;
     double totalSelectedAmount = 0;
     for (final v in widget.variants) {
-      final q = _quantities[v.id] ?? 0;
+      final q = _quantities[v.id] ?? 0.0;
       if (q > 0) {
         totalSelectedCount += q;
         totalSelectedAmount += q * widget.getPrice(v);
@@ -270,10 +273,9 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                         itemBuilder: (context, index) {
                           final variant = filteredVariants[index];
                           final avail = widget.getAvailableStock(variant);
-                          final availInt = avail.toInt();
                           final price = widget.getPrice(variant);
-                          final qty = _quantities[variant.id] ?? 0;
-                          final isOut = widget.enforceStockLimit && availInt <= 0;
+                          final qty = _quantities[variant.id] ?? 0.0;
+                          final isOut = widget.enforceStockLimit && avail <= 0;
                           final isSelected = qty > 0;
 
                           return Container(
@@ -359,7 +361,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                             decoration: BoxDecoration(
                                               color: (isOut
                                                       ? AppColors.danger
-                                                      : (availInt <= 5
+                                                      : (avail <= 5
                                                           ? AppColors.warning
                                                           : AppColors.success))
                                                   .withValues(alpha: 0.12),
@@ -368,13 +370,13 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                             child: Text(
                                               isOut
                                                   ? 'نەماوە (0)'
-                                                  : 'ستۆک: $availInt',
+                                                  : 'ستۆک: ${Formatters.cleanNumberString(avail)}',
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                                 color: isOut
                                                     ? AppColors.danger
-                                                    : (availInt <= 5
+                                                    : (avail <= 5
                                                         ? AppColors.warning
                                                         : AppColors.success),
                                                 fontFamily: 'KJino',
@@ -415,10 +417,10 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                         controller: _controllers[variant.id],
                                         enabled: !isOut || qty > 0,
                                         textAlign: TextAlign.center,
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.digitsOnly,
-                                        ],
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                         style: AppTextStyles.bodyBold.copyWith(
                                           fontSize: 14,
                                         ),
@@ -434,7 +436,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                           ),
                                         ),
                                         onChanged: (val) {
-                                          final parsed = int.tryParse(val) ?? 0;
+                                          final parsed = double.tryParse(val) ?? 0;
                                           _setQty(variant, parsed);
                                         },
                                       ),
@@ -443,7 +445,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                                     _StepperIconButton(
                                       icon: Icons.add,
                                       color: const Color(0xFF10B981),
-                                      enabled: !widget.enforceStockLimit || qty < availInt,
+                                      enabled: !widget.enforceStockLimit || qty < avail,
                                       onPressed: () => _setQty(variant, qty + 1),
                                     ),
                                   ],
@@ -464,7 +466,7 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'کۆی بڕ: $totalSelectedCount دانە',
+                    'کۆی بڕ: ${Formatters.cleanNumberString(totalSelectedCount)} دانە',
                     style: AppTextStyles.bodyBold,
                   ),
                   Text(
@@ -481,7 +483,8 @@ class _VariantSelectorDialogState extends State<VariantSelectorDialog> {
                 text: 'پاشەکەوتکردن لە سەبەتە',
                 icon: Icons.check_circle_outline,
                 width: double.infinity,
-                onPressed: () => Navigator.pop(context, Map<int, int>.from(_quantities)),
+                onPressed: () =>
+                    Navigator.pop(context, Map<int, double>.from(_quantities)),
               ),
             ],
           ),

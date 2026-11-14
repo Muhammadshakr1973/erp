@@ -329,7 +329,8 @@ class OrderModel {
 
   bool get hasReturns => returnedItems.isNotEmpty;
   double get totalReturnAmount => returnedItems.fold<double>(0.0, (sum, i) => sum + i.subtotal);
-  int get totalReturnQuantity => returnedItems.fold<int>(0, (sum, i) => sum + i.quantity.toInt());
+  double get totalReturnQuantity =>
+      returnedItems.fold<double>(0, (sum, i) => sum + i.quantity);
 
   String get customerName {
     if (customerId == 0) return 'کڕیاری کاتی (بێ ناو)';
