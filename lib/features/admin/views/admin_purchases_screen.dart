@@ -1488,6 +1488,102 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     }
   }
 
+  Widget _buildLowStockBarSegment({
+    required ThemeData theme,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    required int flex,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final activeBg = theme.colorScheme.primary.withValues(
+      alpha: isDark ? 0.28 : 0.14,
+    );
+    final textColor = selected
+        ? (isDark ? theme.colorScheme.primary : theme.colorScheme.primary)
+        : theme.colorScheme.onSurfaceVariant;
+
+    return Expanded(
+      flex: flex,
+      child: Material(
+        color: selected ? activeBg : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLowStockBarActionSegment({
+    required ThemeData theme,
+    required int count,
+    required VoidCallback? onTap,
+    required int flex,
+  }) {
+    final enabled = onTap != null && count > 0;
+    final bgColor = enabled
+        ? theme.colorScheme.primary
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
+    final fgColor = enabled
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45);
+
+    return Expanded(
+      flex: flex,
+      child: Material(
+        color: bgColor,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.add_shopping_cart,
+                      size: 13,
+                      color: fgColor,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      'زیادکردن ($count)',
+                      maxLines: 1,
+                      style: AppTextStyles.caption.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: fgColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitPurchaseInvoice() async {
     if (_isSubmittingPO) return;
     if (_purchaseCart.isEmpty) {
@@ -2446,45 +2542,85 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                         if (_isLowStockExpanded) ...[
                           const Divider(height: 1),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  // Filter Chips
-                                  ChoiceChip(
-                                    label: Text('هەموو (${lowStockProducts.length})', style: const TextStyle(fontSize: 11)),
-                                    selected: _lowStockFilter == 'all',
-                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'all'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: 4,
+                            ),
+                            child: Container(
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface.withValues(
+                                  alpha: 0.85,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: theme.colorScheme.outline.withValues(
+                                    alpha: 0.35,
                                   ),
-                                  const SizedBox(width: 4),
-                                  ChoiceChip(
-                                    label: Text('چێککراو ($activeCheckedCount)', style: const TextStyle(fontSize: 11)),
-                                    selected: _lowStockFilter == 'checked',
-                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'checked'),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  ChoiceChip(
-                                    label: Text('چێکنەکراو (${lowStockProducts.length - activeCheckedCount})', style: const TextStyle(fontSize: 11)),
-                                    selected: _lowStockFilter == 'unchecked',
-                                    onSelected: (_) => _updatePurchaseViewState(() => _lowStockFilter = 'unchecked'),
-                                  ),
-                                  if (activeCheckedCount > 0) ...[
-                                    const SizedBox(width: 8),
-                                    ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        visualDensity: VisualDensity.compact,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildLowStockBarSegment(
+                                      theme: theme,
+                                      label:
+                                          'هەموو (${lowStockProducts.length})',
+                                      selected: _lowStockFilter == 'all',
+                                      onTap: () => _updatePurchaseViewState(
+                                        () => _lowStockFilter = 'all',
                                       ),
-                                      icon: const Icon(Icons.add_shopping_cart, size: 16),
-                                      label: Text(
-                                        'زیادکردن بۆ سەبەتە (${_checkedProductIds.length})',
-                                        style: const TextStyle(fontSize: 12),
+                                      flex: 20,
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      color: theme.colorScheme.outline
+                                          .withValues(alpha: 0.28),
+                                    ),
+                                    _buildLowStockBarSegment(
+                                      theme: theme,
+                                      label: 'چێککراو ($activeCheckedCount)',
+                                      selected: _lowStockFilter == 'checked',
+                                      onTap: () => _updatePurchaseViewState(
+                                        () => _lowStockFilter = 'checked',
                                       ),
-                                      onPressed: () => _addCheckedProductsToCart(lowStockProducts),
+                                      flex: 24,
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      color: theme.colorScheme.outline
+                                          .withValues(alpha: 0.28),
+                                    ),
+                                    _buildLowStockBarSegment(
+                                      theme: theme,
+                                      label:
+                                          'چێکنەکراو (${lowStockProducts.length - activeCheckedCount})',
+                                      selected: _lowStockFilter == 'unchecked',
+                                      onTap: () => _updatePurchaseViewState(
+                                        () => _lowStockFilter = 'unchecked',
+                                      ),
+                                      flex: 28,
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      color: theme.colorScheme.outline
+                                          .withValues(alpha: 0.28),
+                                    ),
+                                    _buildLowStockBarActionSegment(
+                                      theme: theme,
+                                      count: activeCheckedCount,
+                                      onTap: activeCheckedCount > 0
+                                          ? () => _addCheckedProductsToCart(
+                                                lowStockProducts,
+                                              )
+                                          : null,
+                                      flex: 28,
                                     ),
                                   ],
-                                ],
+                                ),
                               ),
                             ),
                           ),
