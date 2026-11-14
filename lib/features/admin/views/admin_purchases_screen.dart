@@ -1460,17 +1460,14 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     for (final prod in products) {
       if (_checkedProductIds.contains(prod.id)) {
         final existingIndex = _purchaseCart.indexWhere((item) => item.product.id == prod.id);
-        final suggestedQty = prod.minStockLevel > prod.totalStock
-            ? (prod.minStockLevel - prod.totalStock)
-            : 10;
-        final qtyToAdd = suggestedQty > 0 ? suggestedQty : 1;
+        const double qtyToAdd = 1.0;
 
         if (existingIndex >= 0) {
           _purchaseCart[existingIndex].quantity += qtyToAdd;
         } else {
           _purchaseCart.add(PurchaseCartItem(
             product: prod,
-            quantity: qtyToAdd.toDouble(),
+            quantity: qtyToAdd,
           ));
         }
         addedCount++;
