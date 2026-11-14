@@ -3583,7 +3583,8 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
                                                 color: theme.colorScheme.primary,
                                               ),
                                             ),
-                                            if (order.paidAmount > 0)
+                                            if (_formatCurrency(order.paidAmount) !=
+                                                _formatCurrency(order.totalAmount))
                                               Text(
                                                 'پارەی دراو: '
                                                 '${_formatCurrency(order.paidAmount)}',
