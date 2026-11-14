@@ -9,6 +9,7 @@ import '../../../core/components/camera_barcode_scanner.dart';
 import '../../../core/components/empty_state.dart';
 import '../../../core/components/error_state.dart';
 import '../../../core/components/permission_guard.dart';
+import '../../../core/network/api_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -870,6 +871,6 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       return path;
     }
     final cleanPath = path.startsWith('/') ? path : '/$path';
-    return 'https://pos.gardi.click$cleanPath';
+    return '${ApiConstants.serverOrigin}$cleanPath';
   }
 }

@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(append: [
+            \App\Http\Middleware\AppendServerDomainHeader::class,
+        ]);
         $middleware->alias([
             'permission' => \App\Http\Middleware\EnsureHasPermission::class,
             'owner' => \App\Http\Middleware\EnsureOwner::class,

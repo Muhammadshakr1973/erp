@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +31,10 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final currentBaseUrl = ApiConstants.baseUrl;
+          options.baseUrl = currentBaseUrl;
+          _dio.options.baseUrl = currentBaseUrl;
+
           // Retrieve token from storage
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString('auth_token');
@@ -49,6 +54,13 @@ class ApiClient {
             );
           }
           return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          final remoteDomain = response.headers.value('x-server-domain');
+          if (remoteDomain != null) {
+            unawaited(ApiConstants.syncFromBackendDomain(remoteDomain));
+          }
+          return handler.next(response);
         },
         onError: (DioException e, handler) async {
           // Handle 401 Unauthorized globally to protect client session

@@ -41,6 +41,7 @@ Route::prefix('v1')->group(function () {
     })->where('any', '.*');
 
     // ئەوانەی پێویستیان بە تۆکن نییە (Public)
+    Route::get('/app-config', [SettingController::class, 'publicConfig']);
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
     Route::get('/proxy-image', [CustomerController::class, 'proxyImage']);
     Route::get('/clear-system-cache', function () {

@@ -8,6 +8,7 @@ class SystemSettingsModel {
   final int defaultCreditLimit;
   final int lowStockDefaultThreshold;
   final bool requireOrderNotes;
+  final String serverDomain;
 
   const SystemSettingsModel({
     required this.companyName,
@@ -19,6 +20,7 @@ class SystemSettingsModel {
     required this.defaultCreditLimit,
     required this.lowStockDefaultThreshold,
     required this.requireOrderNotes,
+    this.serverDomain = '',
   });
 
   factory SystemSettingsModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class SystemSettingsModel {
           int.tryParse(json['low_stock_default_threshold']?.toString() ?? '') ??
               10,
       requireOrderNotes: _parseBool(json['require_order_notes']),
+      serverDomain: json['server_domain']?.toString().trim() ?? '',
     );
   }
 

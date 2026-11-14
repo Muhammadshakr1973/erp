@@ -17,6 +17,18 @@ class SettingController extends Controller
     }
 
     /**
+     * GET /api/v1/app-config
+     * Public endpoint returning app identification and active server domain.
+     */
+    public function publicConfig(): JsonResponse
+    {
+        return response()->json([
+            'app' => 'gardi_erp',
+            'server_domain' => (string) (Setting::getValue('server_domain', '') ?? ''),
+        ], 200);
+    }
+
+    /**
      * GET /api/v1/settings
      * Owner-only system settings retrieval.
      */
@@ -59,11 +71,34 @@ class SettingController extends Controller
             'default_credit_limit' => 'nullable|integer|min:0',
             'low_stock_default_threshold' => 'nullable|integer|min:0|max:100000',
             'require_order_notes' => 'nullable|boolean',
+            'server_domain' => 'nullable|string|max:255',
+            'reset_server_domain' => 'nullable|boolean',
         ]);
+
+        $normalizedServerDomain = null;
+        $hasServerDomainInput = false;
+        if (!empty($validated['reset_server_domain'])) {
+            $hasServerDomainInput = true;
+            $normalizedServerDomain = null;
+        } elseif (array_key_exists('server_domain', $validated)) {
+            $hasServerDomainInput = true;
+            $rawDomain = trim((string) ($validated['server_domain'] ?? ''));
+            if ($rawDomain !== '') {
+                $normalizedServerDomain = $this->normalizeServerDomain($rawDomain);
+                if ($normalizedServerDomain === null) {
+                    return response()->json([
+                        'message' => 'تکایە دۆمەینێکی دروست بنووسە (نموونە: https://pos.gardi.click)',
+                        'errors' => [
+                            'server_domain' => ['تکایە دۆمەینێکی دروست بنووسە (نموونە: https://pos.gardi.click)'],
+                        ],
+                    ], 422);
+                }
+            }
+        }
 
         $oldValues = $this->buildSettingsPayload();
 
-        DB::transaction(function () use ($validated, $user) {
+        DB::transaction(function () use ($validated, $user, $hasServerDomainInput, $normalizedServerDomain) {
             if (array_key_exists('company_name', $validated)) {
                 $name = trim((string) ($validated['company_name'] ?? ''));
                 Setting::setValue(
@@ -126,6 +161,10 @@ class SettingController extends Controller
                     !empty($validated['require_order_notes']) ? '1' : '0',
                     $user->id
                 );
+            }
+
+            if ($hasServerDomainInput) {
+                Setting::setValue('server_domain', $normalizedServerDomain, $user->id);
             }
         });
 
@@ -192,6 +231,53 @@ class SettingController extends Controller
             'default_credit_limit' => (int) Setting::getValue('default_credit_limit', 0),
             'low_stock_default_threshold' => (int) Setting::getValue('low_stock_default_threshold', 10),
             'require_order_notes' => $requireOrderNotesRaw === '1' || $requireOrderNotesRaw === true || $requireOrderNotesRaw === 1,
+            'server_domain' => (string) (Setting::getValue('server_domain', '') ?? ''),
         ];
+    }
+
+    private function normalizeServerDomain(string $rawInput): ?string
+    {
+        $value = trim($rawInput);
+        if ($value === '' || preg_match('/\s/', $value)) {
+            return null;
+        }
+
+        if (!str_starts_with($value, 'http://') && !str_starts_with($value, 'https://')) {
+            $isLocalOrIp = str_starts_with($value, 'localhost') ||
+                preg_match('/^(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/.*)?$/', $value) === 1;
+            $value = ($isLocalOrIp ? 'http://' : 'https://') . $value;
+        }
+
+        $parsed = parse_url($value);
+        if (!is_array($parsed)) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parsed['scheme'] ?? ''));
+        $host = (string) ($parsed['host'] ?? '');
+        if (($scheme !== 'http' && $scheme !== 'https') || $host === '') {
+            return null;
+        }
+
+        $isIpOrLocal = $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP) !== false;
+        if (!$isIpOrLocal && !str_contains($host, '.')) {
+            return null;
+        }
+
+        $authority = $host;
+        if (isset($parsed['port'])) {
+            $authority .= ':' . $parsed['port'];
+        }
+
+        $path = (string) ($parsed['path'] ?? '');
+        $path = rtrim($path, '/');
+        $lowerPath = strtolower($path);
+        if (str_ends_with($lowerPath, '/api/v1')) {
+            $path = substr($path, 0, -7);
+        } elseif (str_ends_with($lowerPath, '/api')) {
+            $path = substr($path, 0, -4);
+        }
+
+        return $scheme . '://' . $authority . $path;
     }
 }

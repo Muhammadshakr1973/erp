@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'dart:async';
 import 'dart:ui';
 
+import 'core/network/api_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
@@ -59,6 +61,7 @@ void main() async {
 
   await Hive.initFlutter();
   await Hive.openBox('settings');
+  unawaited(ApiConstants.fetchAndSyncAppConfig());
 
   runApp(const ProviderScope(child: PosApp()));
 }

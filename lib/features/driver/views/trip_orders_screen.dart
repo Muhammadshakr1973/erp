@@ -6,6 +6,7 @@ import '../../../core/components/app_button.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/status_badge.dart';
+import '../../../core/network/api_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme_extension.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -1012,6 +1013,6 @@ class _TripOrdersScreenState extends ConsumerState<TripOrdersScreen> {
       return path;
     }
     final cleanPath = path.startsWith('/') ? path : '/$path';
-    return 'https://pos.gardi.click$cleanPath';
+    return '${ApiConstants.serverOrigin}$cleanPath';
   }
 }

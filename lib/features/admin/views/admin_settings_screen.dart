@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_card.dart';
@@ -7,6 +8,7 @@ import '../../../core/components/app_dialog.dart';
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/app_text_field.dart';
 import '../../../core/components/error_state.dart';
+import '../../../core/network/api_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -34,14 +36,22 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _defaultCommissionRateController = TextEditingController();
   final _defaultCreditLimitController = TextEditingController();
   final _lowStockThresholdController = TextEditingController();
+  final _serverDomainController = TextEditingController();
 
   bool _requireOrderNotes = false;
   bool _clearFcmKey = false;
   bool _obscureFcmKey = true;
 
   bool _isSaving = false;
+  bool _isSavingDomain = false;
   bool _isClearingCache = false;
   bool _hasPopulatedForm = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _serverDomainController.text = ApiConstants.serverOrigin;
+  }
 
   @override
   void dispose() {
@@ -53,6 +63,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _defaultCommissionRateController.dispose();
     _defaultCreditLimitController.dispose();
     _lowStockThresholdController.dispose();
+    _serverDomainController.dispose();
     super.dispose();
   }
 
@@ -71,6 +82,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _lowStockThresholdController.text =
         model.lowStockDefaultThreshold.toString();
     _requireOrderNotes = model.requireOrderNotes;
+    _serverDomainController.text = model.serverDomain.isNotEmpty
+        ? model.serverDomain
+        : ApiConstants.serverOrigin;
   }
 
   Future<void> _saveSettings() async {
@@ -118,6 +132,34 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       return;
     }
 
+    final trimmedDomain = _serverDomainController.text.trim();
+    String? normalizedDomain;
+    bool domainReachable = true;
+    if (trimmedDomain.isNotEmpty) {
+      normalizedDomain = ApiConstants.normalizeOrigin(trimmedDomain);
+      if (normalizedDomain == null) {
+        AppSnackbar.error(
+          context,
+          'تکایە دۆمەینێکی دروست بنووسە (نموونە: pos.gardi.click)',
+        );
+        return;
+      }
+      if (normalizedDomain != ApiConstants.serverOrigin) {
+        domainReachable = await ApiConstants.verifyServerDomain(normalizedDomain);
+        if (!mounted) return;
+        if (!domainReachable) {
+          final proceed = await AppDialog.showConfirm(
+            context,
+            title: 'دۆمەینەکە هێشتا وەڵام ناداتەوە',
+            message:
+                'لە ئێستادا پەیوەندی بە ($normalizedDomain) سەرکەوتوو نەبوو. ئایا دڵنیایت دەتەوێت لە باکێند پاشەکەوت بکرێت؟ ئامێرەکانی تر کاتێک دۆمەینە نوێیەکە کارا بوو خۆکار دەگوازرێنەوە سەری.',
+            confirmText: 'بەڵێ، پاشەکەوتی بکە',
+          );
+          if (proceed != true || !mounted) return;
+        }
+      }
+    }
+
     setState(() => _isSaving = true);
 
     final payload = <String, dynamic>{
@@ -131,6 +173,10 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       'require_order_notes': _requireOrderNotes,
     };
 
+    if (normalizedDomain != null) {
+      payload['server_domain'] = normalizedDomain;
+    }
+
     if (_clearFcmKey) {
       payload['clear_fcm_server_key'] = true;
     } else if (_fcmServerKeyController.text.trim().isNotEmpty) {
@@ -139,6 +185,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
     final error =
         await ref.read(systemSettingsProvider.notifier).saveSettings(payload);
+
+    if (error == null &&
+        normalizedDomain != null &&
+        domainReachable &&
+        normalizedDomain != ApiConstants.serverOrigin) {
+      await ApiConstants.setCustomDomain(normalizedDomain, source: 'server');
+      await _clearPusherConfigCache();
+    }
 
     if (!mounted) return;
     setState(() => _isSaving = false);
@@ -183,6 +237,191 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       AppSnackbar.error(context, error);
     } else {
       AppSnackbar.success(context, 'کاشی سیستەم بە سەرکەوتوویی پاککرایەوە');
+    }
+  }
+
+  Future<void> _clearPusherConfigCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pusher_server_key');
+      await prefs.remove('pusher_server_cluster');
+    } catch (_) {}
+  }
+
+  Future<bool> _saveServerDomain({
+    bool showSuccess = true,
+    bool refetchIfChanged = true,
+  }) async {
+    if (_isSavingDomain) return false;
+
+    final normalized = ApiConstants.normalizeOrigin(_serverDomainController.text);
+    if (normalized == null) {
+      AppSnackbar.error(
+        context,
+        'تکایە دۆمەینێکی دروست بنووسە (نموونە: pos.gardi.click)',
+      );
+      return false;
+    }
+
+    final previousOrigin = ApiConstants.serverOrigin;
+    final hasBackendConnection = ref.read(systemSettingsProvider).hasValue;
+
+    setState(() => _isSavingDomain = true);
+
+    bool isReachable = normalized == previousOrigin;
+    if (!isReachable) {
+      isReachable = await ApiConstants.verifyServerDomain(normalized);
+      if (!mounted) return false;
+    }
+
+    if (hasBackendConnection) {
+      if (!isReachable) {
+        setState(() => _isSavingDomain = false);
+        final proceed = await AppDialog.showConfirm(
+          context,
+          title: 'دۆمەینەکە هێشتا وەڵام ناداتەوە',
+          message:
+              'لە ئێستادا پەیوەندی بە ($normalized) سەرکەوتوو نەبوو. ئایا دڵنیایت دەتەوێت لە باکێند پاشەکەوت بکرێت؟ ئامێرەکانی تر کاتێک دۆمەینە نوێیەکە کارا بوو خۆکار دەگوازرێنەوە سەری.',
+          confirmText: 'بەڵێ، پاشەکەوتی بکە',
+        );
+        if (proceed != true || !mounted) return false;
+        setState(() => _isSavingDomain = true);
+      }
+
+      final backendError = await ref
+          .read(systemSettingsProvider.notifier)
+          .saveSettings({'server_domain': normalized});
+
+      if (!mounted) return false;
+      if (backendError != null) {
+        setState(() => _isSavingDomain = false);
+        AppSnackbar.error(context, backendError);
+        return false;
+      }
+
+      if (isReachable && normalized != previousOrigin) {
+        await ApiConstants.setCustomDomain(normalized, source: 'server');
+        await _clearPusherConfigCache();
+      }
+
+      if (!mounted) return true;
+      setState(() {
+        _serverDomainController.text = normalized;
+        _serverDomainController.selection = TextSelection.collapsed(
+          offset: _serverDomainController.text.length,
+        );
+        _isSavingDomain = false;
+      });
+
+      if (showSuccess && mounted) {
+        AppSnackbar.success(
+          context,
+          isReachable
+              ? 'دۆمەینی سێرڤەر بۆ هەموو سیستەمەکە پاشەکەوت کرا'
+              : 'دۆمەینی نوێ لە باکێند پاشەکەوت کرا و کاتێک کارا بوو بۆ هەمووان جێگیر دەبێت',
+        );
+      }
+      return true;
+    }
+
+    // Offline/error recovery mode: update local device origin so Owner can reconnect
+    final error = await ApiConstants.setCustomDomain(normalized, source: 'local');
+    if (error != null) {
+      if (mounted) {
+        setState(() => _isSavingDomain = false);
+        AppSnackbar.error(context, error);
+      }
+      return false;
+    }
+
+    final changed = normalized != previousOrigin;
+    if (changed) {
+      await _clearPusherConfigCache();
+    }
+
+    if (!mounted) return true;
+
+    setState(() {
+      _serverDomainController.text = ApiConstants.serverOrigin;
+      _serverDomainController.selection = TextSelection.collapsed(
+        offset: _serverDomainController.text.length,
+      );
+      _isSavingDomain = false;
+    });
+
+    if (refetchIfChanged && (changed || ref.read(systemSettingsProvider).hasError)) {
+      _hasPopulatedForm = false;
+      await ref.read(systemSettingsProvider.notifier).fetchSettings();
+      if (!mounted) return true;
+      final latest = ref.read(systemSettingsProvider).valueOrNull;
+      if (latest != null) {
+        setState(() {
+          _populateFromModel(latest, force: true);
+        });
+      }
+    }
+
+    if (showSuccess && mounted) {
+      AppSnackbar.success(
+        context,
+        'دۆمەینی سێرڤەر بە سەرکەوتوویی پاشەکەوت کرا',
+      );
+    }
+    return true;
+  }
+
+  Future<void> _resetServerDomain() async {
+    if (_isSavingDomain) return;
+
+    final previousOrigin = ApiConstants.serverOrigin;
+    final hasBackendConnection = ref.read(systemSettingsProvider).hasValue;
+    setState(() => _isSavingDomain = true);
+
+    if (hasBackendConnection) {
+      final backendError = await ref
+          .read(systemSettingsProvider.notifier)
+          .saveSettings({'reset_server_domain': true});
+      if (!mounted) return;
+      if (backendError != null) {
+        setState(() => _isSavingDomain = false);
+        AppSnackbar.error(context, backendError);
+        return;
+      }
+    }
+
+    await ApiConstants.resetCustomDomain();
+    final newOrigin = ApiConstants.serverOrigin;
+    final changed = newOrigin != previousOrigin;
+    if (changed) {
+      await _clearPusherConfigCache();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _serverDomainController.text = newOrigin;
+      _serverDomainController.selection = TextSelection.collapsed(
+        offset: _serverDomainController.text.length,
+      );
+      _isSavingDomain = false;
+    });
+
+    if (changed || ref.read(systemSettingsProvider).hasError) {
+      _hasPopulatedForm = false;
+      await ref.read(systemSettingsProvider.notifier).fetchSettings();
+      if (!mounted) return;
+      final latest = ref.read(systemSettingsProvider).valueOrNull;
+      if (latest != null) {
+        setState(() {
+          _populateFromModel(latest, force: true);
+        });
+      }
+    }
+
+    if (mounted) {
+      AppSnackbar.success(
+        context,
+        'دۆمەینی سێرڤەر گەڕێندرایەوە بۆ دۆخی بنەڕەتی',
+      );
     }
   }
 
@@ -273,15 +512,29 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       ),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: ErrorState(
-            title: 'هەڵە لە بارکردنی ڕێکخستنەکان',
-            message: Formatters.cleanError(error),
-            retryText: 'دووبارە هەوڵبدەرەوە',
-            onRetry: () {
-              _hasPopulatedForm = false;
-              ref.read(systemSettingsProvider.notifier).fetchSettings();
-            },
+        error: (error, _) => SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ErrorState(
+                    title: 'هەڵە لە بارکردنی ڕێکخستنەکان',
+                    message: Formatters.cleanError(error),
+                    retryText: 'دووبارە هەوڵبدەرەوە',
+                    onRetry: () {
+                      _hasPopulatedForm = false;
+                      ref.read(systemSettingsProvider.notifier).fetchSettings();
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildDomainSettingsCard(context, theme, isDark),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            ),
           ),
         ),
         data: (settings) {
@@ -474,7 +727,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
 
-                      // Section 4: Appearance & System Maintenance
+                      // Section 4: Server Domain Settings (Local Device Config)
+                      _buildDomainSettingsCard(context, theme, isDark),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Section 5: Appearance & System Maintenance
                       _buildSectionCard(
                         context,
                         title: 'ڕوکار و چاکسازی سیستەم',
@@ -551,6 +808,120 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDomainSettingsCard(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final normalizedPreview =
+        ApiConstants.normalizeOrigin(_serverDomainController.text);
+    final previewApiUrl = normalizedPreview != null
+        ? '$normalizedPreview/api/v1'
+        : ApiConstants.baseUrl;
+    final settingsModel = ref.read(systemSettingsProvider).valueOrNull;
+    final isCustom = ApiConstants.hasCustomDomain ||
+        (settingsModel != null && settingsModel.serverDomain.isNotEmpty);
+
+    return _buildSectionCard(
+      context,
+      title: 'دۆمەین و ناونیشانی سێرڤەر',
+      icon: Icons.language_rounded,
+      color: isDark ? AppColors.warningDark : AppColors.warning,
+      children: [
+        Text(
+          'لە کاتی گۆڕینی دۆمەینی ساڵانە، دۆمەینی نوێ لێرە دابنێ و پاشەکەوتی بکە؛ بە شێوەیەکی خۆکار لەسەر هەموو ئامێرەکانی سیستەم جێگیر دەبێت بێ پێویستی بە گۆڕینی کۆد یان دەستکاری لەلایەن کارمەندەکانەوە.',
+          style: AppTextStyles.caption.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
+          controller: _serverDomainController,
+          labelText: 'دۆمەینی سێرڤەر (Domain / URL)',
+          hintText: 'https://pos.gardi.click',
+          prefixIcon: Icons.dns_outlined,
+          keyboardType: TextInputType.url,
+          textAlign: TextAlign.left,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.45,
+            ),
+            borderRadius: AppRadius.radiusSm,
+            border: Border.all(
+              color: normalizedPreview == null &&
+                      _serverDomainController.text.trim().isNotEmpty
+                  ? (isDark ? AppColors.dangerDark : AppColors.danger)
+                  : theme.colorScheme.outline.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                'ناونیشانی API:',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    normalizedPreview == null &&
+                            _serverDomainController.text.trim().isNotEmpty
+                        ? 'دۆمەینەکە نادروستە'
+                        : previewApiUrl,
+                    style: AppTextStyles.caption.copyWith(
+                      color: normalizedPreview == null &&
+                              _serverDomainController.text.trim().isNotEmpty
+                          ? (isDark ? AppColors.dangerDark : AppColors.danger)
+                          : theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          alignment: WrapAlignment.start,
+          children: [
+            AppButton(
+              text: 'پاشەکەوتکردنی دۆمەین',
+              icon: Icons.check_circle_outline_rounded,
+              size: AppButtonSize.sm,
+              isLoading: _isSavingDomain,
+              onPressed: () => _saveServerDomain(),
+            ),
+            if (isCustom)
+              AppButton(
+                text: 'گەڕاندنەوە بۆ بنەڕەتی',
+                icon: Icons.restart_alt_rounded,
+                type: AppButtonType.outline,
+                size: AppButtonSize.sm,
+                onPressed: _isSavingDomain ? null : _resetServerDomain,
+              ),
+          ],
+        ),
+      ],
     );
   }
 

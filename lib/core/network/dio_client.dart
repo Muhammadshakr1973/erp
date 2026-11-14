@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,12 +23,23 @@ class DioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final currentBaseUrl = ApiConstants.baseUrl;
+          options.baseUrl = currentBaseUrl;
+          _dio.options.baseUrl = currentBaseUrl;
+
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString('auth_token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          final remoteDomain = response.headers.value('x-server-domain');
+          if (remoteDomain != null) {
+            unawaited(ApiConstants.syncFromBackendDomain(remoteDomain));
+          }
+          return handler.next(response);
         },
         onError: (DioException e, handler) {
           // Handle global errors here if needed
