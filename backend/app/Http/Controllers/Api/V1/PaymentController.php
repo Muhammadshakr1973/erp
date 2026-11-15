@@ -19,6 +19,13 @@ class PaymentController extends Controller
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $user = $request->user();
+        if ($user && $user->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ وەرگرتنی پارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $validated = $request->validated();
 
         if ($user && $user->isSalesman() && !$user->hasCustomerAccess($validated['customer_id'])) {

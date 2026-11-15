@@ -14,6 +14,33 @@ class StoreSalesOrderRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $user = $this->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $customer = $user->customer;
+            $sellableWarehouse = \App\Models\Warehouse::where('is_main', true)
+                ->where('is_active', true)
+                ->where('type', '!=', \App\Models\Warehouse::TYPE_PHYSICAL_RESERVE)
+                ->where('type', '!=', \App\Models\Warehouse::TYPE_VAN)
+                ->first()
+                ?? \App\Models\Warehouse::where('is_active', true)
+                    ->where('type', '!=', \App\Models\Warehouse::TYPE_PHYSICAL_RESERVE)
+                    ->where('type', '!=', \App\Models\Warehouse::TYPE_VAN)
+                    ->first();
+
+            $this->merge([
+                'customer_id' => $customer?->id ?? -1,
+                'warehouse_id' => $sellableWarehouse?->id,
+                'status' => \App\Models\SalesOrder::STATUS_DRAFT,
+                'is_manual_price_type' => false,
+                'price_type' => $customer?->price_type ?? 'N2',
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'discount_type' => 'PERCENT',
+                'shared_key' => null,
+                'returned_items' => null,
+            ]);
+            return;
+        }
+
         if ($user && $user->role?->name === 'salesman' && $user->warehouse_id) {
             if ($user->isCashVan() || !$this->has('warehouse_id')) {
                 $this->merge([

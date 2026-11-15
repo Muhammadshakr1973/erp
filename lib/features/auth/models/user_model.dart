@@ -1,3 +1,5 @@
+import '../../shared/models/customer.dart';
+
 class UserRoutePlan {
   final int id;
   final int routeId;
@@ -29,7 +31,7 @@ class UserModel {
   final int id;
   final String name;
   final String phone;
-  final String role; // owner, admin, salesman, warehouse, driver
+  final String role; // owner, admin, salesman, warehouse, driver, customer
   final int? roleId;
   final double? commissionRate;
   final int? fixedSalary;
@@ -42,6 +44,7 @@ class UserModel {
   final String? imageUrl;
   final String? routingCycle;
   final List<UserRoutePlan> routePlans;
+  final Customer? customer;
 
   UserModel({
     required this.id,
@@ -60,6 +63,7 @@ class UserModel {
     this.imageUrl,
     this.routingCycle,
     this.routePlans = const [],
+    this.customer,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -121,6 +125,9 @@ class UserModel {
       imageUrl: json['image_url'],
       routingCycle: json['routing_cycle']?.toString(),
       routePlans: parsedPlans,
+      customer: json['customer'] is Map
+          ? Customer.fromJson(Map<String, dynamic>.from(json['customer'] as Map))
+          : null,
     );
   }
 
@@ -141,6 +148,7 @@ class UserModel {
       'permissions': permissions,
       'image_url': imageUrl,
       'routing_cycle': routingCycle,
+      if (customer != null) 'customer': customer!.toJson(),
     };
   }
 
@@ -153,6 +161,7 @@ class UserModel {
   bool get isDriver => role.toLowerCase() == 'driver';
   bool get isSalesman => role.toLowerCase() == 'salesman';
   bool get isWarehouse => role.toLowerCase() == 'warehouse';
+  bool get isCustomer => role.toLowerCase() == 'customer';
   bool get isCashVanSalesman =>
       isSalesman &&
       (isCashVan || (warehouseName != null && warehouseName!.contains('کاشڤان')));
@@ -193,6 +202,12 @@ class UserModel {
         'delivery.view',
         'delivery.update',
         'delivery.confirm',
+      ],
+      'customer': [
+        'orders.create',
+        'orders.view',
+        'products.view',
+        'customers.view',
       ],
     };
 

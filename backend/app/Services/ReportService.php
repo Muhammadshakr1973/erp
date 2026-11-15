@@ -329,8 +329,11 @@ class ReportService
      */
     public function getSalesBySalesmanReport(array $filters): array
     {
-        $salesmenQuery = User::whereHas('role', fn($r) => $r->where('name', 'salesman'))
-            ->orWhereHas('salesOrders');
+        $salesmenQuery = User::whereHas('role', fn($r) => $r->where('name', '!=', \App\Models\Role::CUSTOMER))
+            ->where(function ($q) {
+                $q->whereHas('role', fn($r) => $r->where('name', 'salesman'))
+                  ->orWhereHas('salesOrders');
+            });
 
         if (!empty($filters['salesman_id'])) {
             $salesmenQuery->where('id', $filters['salesman_id']);

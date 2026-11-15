@@ -29,6 +29,12 @@ class WarehouseController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $user = $request->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی داشبۆردی کۆگا.'
+            ], 403);
+        }
+
         $requestedWarehouseId = $request->input('warehouse_id');
 
         if ($requestedWarehouseId && $user && !$user->hasWarehouseAccess($requestedWarehouseId)) {
@@ -117,12 +123,17 @@ class WarehouseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $isCustomer = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
         $isAdmin = $user && ($user->isAdmin() || $user->isOwner());
-        $showAll = $request->boolean('all') || $isAdmin;
+        $showAll = !$isCustomer && ($request->boolean('all') || $isAdmin);
 
         $query = Warehouse::withCount('stocks');
 
-        if (!$showAll) {
+        if ($isCustomer) {
+            $query->where('is_active', true)
+                  ->where('type', '!=', Warehouse::TYPE_PHYSICAL_RESERVE)
+                  ->where('type', '!=', Warehouse::TYPE_VAN);
+        } elseif (!$showAll) {
             $query->where('is_active', true);
             if ($user && !$user->isAdmin() && !$user->isOwner()) {
                 $assignedIds = $user->assignedWarehouseIds();
@@ -174,38 +185,40 @@ class WarehouseController extends Controller
             $warehouses = collect([$mainWarehouse]);
         }
 
-        // Attach assigned keepers, salesmen, and cash van user info
-        foreach ($warehouses as $w) {
-            $assignedUsers = collect();
-            if (Schema::hasTable('warehouse_user')) {
-                $assignedUsers = DB::table('warehouse_user')
-                    ->join('users', 'warehouse_user.user_id', '=', 'users.id')
-                    ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
-                    ->where('warehouse_user.warehouse_id', $w->id)
-                    ->select('users.id', 'users.name', 'users.phone', 'users.is_cash_van', 'roles.name as role_name')
-                    ->get();
-            }
+        if (!$isCustomer) {
+            // Attach assigned keepers, salesmen, and cash van user info
+            foreach ($warehouses as $w) {
+                $assignedUsers = collect();
+                if (Schema::hasTable('warehouse_user')) {
+                    $assignedUsers = DB::table('warehouse_user')
+                        ->join('users', 'warehouse_user.user_id', '=', 'users.id')
+                        ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+                        ->where('warehouse_user.warehouse_id', $w->id)
+                        ->select('users.id', 'users.name', 'users.phone', 'users.is_cash_van', 'roles.name as role_name')
+                        ->get();
+                }
 
-            if ($w->isVan()) {
-                $vanSalesman = User::where('warehouse_id', $w->id)->where('is_cash_van', true)->first();
-                if (!$vanSalesman && $assignedUsers->isNotEmpty()) {
-                    $vanSalesmanFromPivot = $assignedUsers->first(fn($u) => (bool) ($u->is_cash_van ?? false) || strtolower($u->role_name ?? '') === 'salesman');
-                    if ($vanSalesmanFromPivot) {
-                        $vanSalesman = User::find($vanSalesmanFromPivot->id);
+                if ($w->isVan()) {
+                    $vanSalesman = User::where('warehouse_id', $w->id)->where('is_cash_van', true)->first();
+                    if (!$vanSalesman && $assignedUsers->isNotEmpty()) {
+                        $vanSalesmanFromPivot = $assignedUsers->first(fn($u) => (bool) ($u->is_cash_van ?? false) || strtolower($u->role_name ?? '') === 'salesman');
+                        if ($vanSalesmanFromPivot) {
+                            $vanSalesman = User::find($vanSalesmanFromPivot->id);
+                        }
+                    }
+                    if ($vanSalesman) {
+                        $w->cash_van_user_id = $vanSalesman->id;
+                        $w->cash_van_user_name = $vanSalesman->name;
                     }
                 }
-                if ($vanSalesman) {
-                    $w->cash_van_user_id = $vanSalesman->id;
-                    $w->cash_van_user_name = $vanSalesman->name;
-                }
-            }
 
-            $w->keepers = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'warehouse')->values();
-            $w->salesmen = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'salesman')->values();
-            $w->keeper_ids = $w->keepers->pluck('id')->all();
-            $w->salesman_ids = $w->salesmen->pluck('id')->all();
-            $w->keeper_names = $w->keepers->pluck('name')->all();
-            $w->salesman_names = $w->salesmen->pluck('name')->all();
+                $w->keepers = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'warehouse')->values();
+                $w->salesmen = $assignedUsers->filter(fn($u) => strtolower($u->role_name ?? '') === 'salesman')->values();
+                $w->keeper_ids = $w->keepers->pluck('id')->all();
+                $w->salesman_ids = $w->salesmen->pluck('id')->all();
+                $w->keeper_names = $w->keepers->pluck('name')->all();
+                $w->salesman_names = $w->salesmen->pluck('name')->all();
+            }
         }
 
         return response()->json([

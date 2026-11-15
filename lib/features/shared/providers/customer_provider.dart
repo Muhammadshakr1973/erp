@@ -158,7 +158,8 @@ final singleCustomerProvider = FutureProvider.family<Customer, int>((
     throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
   }
   final role = user.role.toLowerCase();
-  if (role != 'admin' && role != 'owner' && role != 'salesman') {
+  final isOwnPortalCustomer = role == 'customer' && user.customer?.id == id;
+  if (role != 'admin' && role != 'owner' && role != 'salesman' && !isOwnPortalCustomer) {
     throw Exception('بەکارهێنەر مۆڵەتی بینینی زانیارییەکانی ئەم کڕیارەی نییە');
   }
   final api = ref.watch(apiClientProvider);
@@ -297,6 +298,9 @@ class CustomerActions {
     int? initialDebt,
     double? latitude,
     double? longitude,
+    bool? canLogin,
+    String? loginCode,
+    List<int>? allowedCategoryIds,
   }) async {
     final payload = {
       'name': name,
@@ -309,6 +313,9 @@ class CustomerActions {
       if (initialDebt != null && initialDebt > 0) 'initial_debt': initialDebt,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (canLogin != null) 'can_login': canLogin,
+      if (loginCode != null && loginCode.trim().isNotEmpty) 'login_code': loginCode.trim(),
+      if (allowedCategoryIds != null) 'allowed_category_ids': allowedCategoryIds,
     };
 
     try {
@@ -342,6 +349,9 @@ class CustomerActions {
     bool? isActive,
     double? latitude,
     double? longitude,
+    bool? canLogin,
+    String? loginCode,
+    List<int>? allowedCategoryIds,
   }) async {
     final payload = {
       'name': name,
@@ -354,6 +364,9 @@ class CustomerActions {
       if (isActive != null) 'is_active': isActive,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (canLogin != null) 'can_login': canLogin,
+      if (loginCode != null && loginCode.trim().isNotEmpty) 'login_code': loginCode.trim(),
+      if (allowedCategoryIds != null) 'allowed_category_ids': allowedCategoryIds,
     };
 
     try {

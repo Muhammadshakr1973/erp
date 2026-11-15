@@ -23,6 +23,7 @@ class Role extends Model
     public const SALESMAN = 'salesman';
     public const WAREHOUSE = 'warehouse';
     public const DRIVER = 'driver';
+    public const CUSTOMER = 'customer';
 
     public function getPermissionsAttribute($value)
     {

@@ -16,8 +16,10 @@ class UserController extends Controller
     {
         $users = User::with(['role', 'warehouse', 'routeSalesmen' => function ($query) {
             $query->whereNull('work_date')->with('route');
-        }])->get();
-        $roles = Role::all();
+        }])
+        ->whereDoesntHave('role', fn ($q) => $q->where('name', Role::CUSTOMER))
+        ->get();
+        $roles = Role::where('name', '!=', Role::CUSTOMER)->get();
 
         return response()->json([
             'message' => 'لیستی بەکارهێنەران',

@@ -55,6 +55,11 @@ class CommissionService
     public function previewEligibleOrders(int $salesmanId, string $periodFrom, string $periodTo): array
     {
         $salesman = User::findOrFail($salesmanId);
+        if ($salesman->isCustomer()) {
+            throw ValidationException::withMessages([
+                'salesman_id' => 'ناتوانرێت کۆمسیۆن بۆ هەژماری کڕیار هەژمار بکرێت.',
+            ]);
+        }
 
         if ($periodFrom > $periodTo) {
             throw ValidationException::withMessages([
@@ -160,6 +165,11 @@ class CommissionService
 
         $result = DB::transaction(function () use ($data, $user) {
             $salesman = User::lockForUpdate()->findOrFail($data['salesman_id']);
+            if ($salesman->isCustomer()) {
+                throw ValidationException::withMessages([
+                    'salesman_id' => 'ناتوانرێت کۆمسیۆن بۆ هەژماری کڕیار هەژمار بکرێت.',
+                ]);
+            }
 
             $periodFrom = $data['period_from'];
             $periodTo = $data['period_to'];

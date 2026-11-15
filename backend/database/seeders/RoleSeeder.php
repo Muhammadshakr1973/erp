@@ -14,6 +14,7 @@ class RoleSeeder extends Seeder
             ['name' => 'salesman', 'display_name' => 'Salesman', 'description' => 'Salesman - POS', 'is_system' => true, 'permissions' => ['orders.create', 'orders.view', 'customers.view', 'customers.manage', 'products.view', 'commissions.view', 'suppliers.view']],
             ['name' => 'warehouse', 'display_name' => 'Warehouse', 'description' => 'Warehouse staff', 'is_system' => true, 'permissions' => ['stock.view', 'stock.pack', 'stock.reconcile', 'stock.transfer', 'stock.adjust', 'purchases.receive', 'orders.view']],
             ['name' => 'driver', 'display_name' => 'Driver', 'description' => 'Driver - Delivery', 'is_system' => true, 'permissions' => ['delivery.view', 'delivery.update', 'delivery.confirm', 'orders.view']],
+            ['name' => 'customer', 'display_name' => 'Customer', 'description' => 'Customer - Self Ordering Portal', 'is_system' => true, 'permissions' => ['orders.create', 'orders.view', 'products.view', 'customers.view']],
         ];
 
         foreach ($roles as $role) {

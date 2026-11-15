@@ -60,6 +60,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go('/warehouse');
         } else if (user.role == 'driver') {
           context.go('/driver');
+        } else if (user.role == 'customer') {
+          context.go('/customer-portal');
         } else {
           AppSnackbar.show(
             context,
@@ -95,6 +97,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go('/warehouse');
         } else if (user.role == 'driver') {
           context.go('/driver');
+        } else if (user.role == 'customer') {
+          context.go('/customer-portal');
         } else {
           AppSnackbar.show(
             context,

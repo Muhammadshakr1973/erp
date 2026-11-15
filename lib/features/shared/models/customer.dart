@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'route_model.dart';
 
 class Customer {
@@ -17,6 +19,9 @@ class Customer {
   final double? latitude;
   final double? longitude;
   final int? visitOrder;
+  final bool canLogin;
+  final String? loginCode;
+  final List<int> allowedCategoryIds;
   final RouteModel? route;
   final Map<int, double> specialPrices;
 
@@ -29,6 +34,8 @@ class Customer {
         creditLimit: 0.0,
         priceType: 'N3',
         isActive: true,
+        canLogin: false,
+        allowedCategoryIds: const [],
         specialPrices: const {},
       );
 
@@ -49,6 +56,9 @@ class Customer {
     this.latitude,
     this.longitude,
     this.visitOrder,
+    this.canLogin = false,
+    this.loginCode,
+    this.allowedCategoryIds = const [],
     this.route,
     this.specialPrices = const {},
   });
@@ -64,6 +74,22 @@ class Customer {
           if (pid != null && pr != null) {
             parsedSpecialPrices[pid] = pr;
           }
+        }
+      }
+    }
+
+    final List<int> parsedAllowedCategoryIds = [];
+    dynamic rawAllowedCategories = json['allowed_category_ids'];
+    if (rawAllowedCategories is String && rawAllowedCategories.trim().isNotEmpty) {
+      try {
+        rawAllowedCategories = jsonDecode(rawAllowedCategories);
+      } catch (_) {}
+    }
+    if (rawAllowedCategories is List) {
+      for (final cid in rawAllowedCategories) {
+        final parsed = int.tryParse(cid.toString());
+        if (parsed != null && !parsedAllowedCategoryIds.contains(parsed)) {
+          parsedAllowedCategoryIds.add(parsed);
         }
       }
     }
@@ -99,8 +125,41 @@ class Customer {
       visitOrder: json['visit_order'] != null
           ? int.tryParse(json['visit_order'].toString())
           : null,
-      route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
+      canLogin: json['can_login'] == 1 || json['can_login'] == true,
+      loginCode: json['login_code']?.toString(),
+      allowedCategoryIds: parsedAllowedCategoryIds,
+      route: json['route'] != null
+          ? RouteModel.fromJson(Map<String, dynamic>.from(json['route'] as Map))
+          : null,
       specialPrices: parsedSpecialPrices,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'customer_name': customerName,
+      'address': address,
+      'image_url': imageUrl,
+      'current_balance': balance,
+      'credit_limit': creditLimit,
+      'salesman_id': salesmanId,
+      'route_id': routeId,
+      'price_type': priceType,
+      'permanent_discount': permanentDiscount,
+      'is_active': isActive,
+      'latitude': latitude,
+      'longitude': longitude,
+      'visit_order': visitOrder,
+      'can_login': canLogin,
+      'login_code': loginCode,
+      'allowed_category_ids': allowedCategoryIds,
+      if (route != null) 'route': route!.toJson(),
+      'special_prices': specialPrices.entries
+          .map((e) => {'product_id': e.key, 'price': e.value})
+          .toList(),
+    };
   }
 }

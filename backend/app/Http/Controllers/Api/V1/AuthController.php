@@ -38,8 +38,12 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        // دەتوانین ڕۆڵەکەش لەگەڵیدا بنێرینەوە بۆ فڕۆنتێند
-        $user = $request->user()->load('role');
+        $user = $request->user();
+        if (method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $user->load(['role', 'customer.route', 'customer.specialPrices']);
+        } else {
+            $user->load('role');
+        }
 
         return response()->json([
             'data' => [

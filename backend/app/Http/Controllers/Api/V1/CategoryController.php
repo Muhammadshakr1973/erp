@@ -65,17 +65,37 @@ class CategoryController extends Controller
         ], $statusCode);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $categories = Category::withCount('products')->orderBy('name')->get();
+        $user = $request->user();
+        $query = Category::withCount('products')->orderBy('name');
+
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $allowedIds = $user->customer?->getNormalizedAllowedCategoryIds() ?? [];
+            $query->where('is_active', true)
+                  ->whereIn('id', empty($allowedIds) ? [-1] : $allowedIds);
+        }
+
+        $categories = $query->get();
         return response()->json([
             'message' => 'لیستی جۆرەکان',
             'data' => $categories
         ]);
     }
 
-    public function show(Category $category): JsonResponse
+    public function show(Request $request, Category $category): JsonResponse
     {
+        $user = $request->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $allowedIds = $user->customer?->getNormalizedAllowedCategoryIds() ?? [];
+            if (!$category->is_active || !in_array((int) $category->id, $allowedIds, true)) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم جۆرە.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
+        }
+
         $category->loadCount('products');
         return response()->json([
             'message' => 'وردەکاری جۆر',

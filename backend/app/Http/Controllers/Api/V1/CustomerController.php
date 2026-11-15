@@ -30,6 +30,13 @@ class CustomerController extends Controller
 
     public function store(StoreCustomerRequest $request): JsonResponse
     {
+        if ($request->user()->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ زیادکردنی کڕیار.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $customer = $this->customerService->createCustomer($request->validated(), $request->user()->id);
         
         return response()->json([
@@ -54,7 +61,7 @@ class CustomerController extends Controller
 
     public function update(UpdateCustomerRequest $request, Customer $customer): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ نوێکردنەوەی زانیاری ئەم کڕیارە.',
                 'error' => 'Forbidden.'
@@ -72,7 +79,7 @@ class CustomerController extends Controller
 
     public function destroy(Request $request, Customer $customer): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم کڕیارە.',
                 'error' => 'Forbidden.'
@@ -88,7 +95,7 @@ class CustomerController extends Controller
 
     public function ledger(Request $request, Customer $customer): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
                 'error' => 'Forbidden.'
@@ -120,7 +127,7 @@ class CustomerController extends Controller
 
     public function reconcile(Request $request, Customer $customer): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ ئەنجامدانی کردار لێرەدا.',
                 'error' => 'Forbidden.'
@@ -205,7 +212,7 @@ class CustomerController extends Controller
 
     public function setSpecialPrice(Request $request, Customer $customer): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم کڕیارە.',
                 'error' => 'Forbidden.'
@@ -236,7 +243,7 @@ class CustomerController extends Controller
 
     public function deleteSpecialPrice(Request $request, Customer $customer, $productId): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم کڕیارە.',
                 'error' => 'Forbidden.'
@@ -256,7 +263,7 @@ class CustomerController extends Controller
      */
     public function getLastProductPrice(Request $request, Customer $customer, $productId): JsonResponse
     {
-        if (!$request->user()->hasCustomerAccess($customer)) {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
             return response()->json([
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
                 'error' => 'Forbidden.'

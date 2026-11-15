@@ -10,6 +10,7 @@ import '../../features/orders/models/order_model.dart';
 import '../../features/admin/views/admin_main_screen.dart';
 import '../../features/warehouse/views/warehouse_main_screen.dart';
 import '../../features/driver/views/driver_main_screen.dart';
+import '../../features/customer_portal/views/customer_main_screen.dart';
 import '../../features/shared/views/customer_detail_screen.dart';
 import '../../features/shared/views/order_detail_screen.dart';
 import '../../features/driver/views/trip_orders_screen.dart';
@@ -50,6 +51,7 @@ String _getDashboardForRole(String role) {
   if (normRole == 'salesman') return '/salesman';
   if (normRole == 'warehouse') return '/warehouse';
   if (normRole == 'driver') return '/driver';
+  if (normRole == 'customer') return '/customer-portal';
   return '/login';
 }
 
@@ -80,6 +82,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Role-based route protection
       final location = state.matchedLocation;
       final role = authState.user!.role.toLowerCase();
+
+      if (role == 'customer' && location != '/customer-portal') {
+        return '/customer-portal';
+      }
+      if (location.startsWith('/customer-portal') && role != 'customer') {
+        return _getDashboardForRole(role);
+      }
 
       if (location.startsWith('/admin') &&
           !(role == 'admin' || role == 'owner')) {
@@ -182,6 +191,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/driver',
         name: 'driverDashboard',
         builder: (context, state) => const DriverMainScreen(),
+      ),
+      // Customer Self-Ordering Portal Route (Strictly 2 Pages)
+      GoRoute(
+        path: '/customer-portal',
+        name: 'customerPortal',
+        builder: (context, state) => const CustomerMainScreen(),
       ),
       // Shared Routes
       GoRoute(

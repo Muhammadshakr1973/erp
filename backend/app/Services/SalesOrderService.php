@@ -44,6 +44,20 @@ class SalesOrderService
             }
         }
 
+        // If customer creates an order while they already have an active DRAFT order, update that draft instead
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $portalCustomerId = (int) ($user->customer?->id ?? -1);
+            $existingDraft = SalesOrder::where('customer_id', $portalCustomerId)
+                ->where('status', SalesOrder::STATUS_DRAFT)
+                ->latest('id')
+                ->first();
+            if ($existingDraft) {
+                $updated = $this->updateOrder($existingDraft, $data, $user);
+                $updated->wasRecentlyCreated = false;
+                return $updated;
+            }
+        }
+
         // ١. پاراستنی لایەنی یەکسانی (Idempotency) بۆ ڕێگری لە دروستکردنی پسوڵەی دووبارە بەهۆی دووجار کلیککردن
         // Bypass time-based heuristic if request has a true Idempotency-Key, as the middleware guarantees uniqueness
         $hasTrueIdempotency = request()->hasHeader('X-Idempotency-Key') || request()->hasHeader('Idempotency-Key');
@@ -87,11 +101,24 @@ class SalesOrderService
                 && method_exists($user, 'isCashVan')
                 && $user->isCashVan()
                 && $targetWarehouse->isVan();
+            $isCustomerOrder = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
+            $allowedCategoryIds = $isCustomerOrder ? $customer->getNormalizedAllowedCategoryIds() : [];
+
+            $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
+            if ($isCustomerOrder && empty($sortedItemsData)) {
+                throw ValidationException::withMessages([
+                    'items' => 'تکایە لایەنی کەم کاڵایەک هەڵبژێرە.'
+                ]);
+            }
 
             // دروستکردنی ژمارەی تایبەت بۆ پسوڵە بە پێی ساڵ و زنجیرە (YY-N وەک 26-1, 26-2)
             $orderNumber = SalesOrder::generateOrderNumber($data['order_date'] ?? now()->toDateString());
 
-            // Cash-van orders go straight to delivery; other sales orders enter packing.
+            // Customer orders start as DRAFT; cash-van goes straight to delivery; others enter packing.
+            $initialStatus = $isCustomerOrder
+                ? SalesOrder::STATUS_DRAFT
+                : ($isCashVanDirectOrder ? SalesOrder::STATUS_IN_DELIVERY : SalesOrder::STATUS_PACKING);
+
             $order = SalesOrder::create([
                 'order_number' => $orderNumber,
                 'shared_key' => $data['shared_key'] ?? null,
@@ -100,10 +127,8 @@ class SalesOrderService
                 'salesman_id' => $user->id,
                 'warehouse_id' => $data['warehouse_id'],
                 'order_date' => now()->toDateString(),
-                'status' => $isCashVanDirectOrder
-                    ? SalesOrder::STATUS_IN_DELIVERY
-                    : SalesOrder::STATUS_PACKING,
-                'confirmed_at' => now(),
+                'status' => $initialStatus,
+                'confirmed_at' => $isCustomerOrder ? null : now(),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $user->id,
                 'subtotal' => 0,
@@ -120,8 +145,6 @@ class SalesOrderService
             $totalProfit = 0;
 
             // پاشەکەوتکردنی کاڵاکان و کەمکردنەوەی ڕاستەوخۆ لە ستۆکی کۆگا (بەبێ حجزکردن)
-            $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
-
             foreach ($sortedItemsData as $item) {
                 $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
@@ -134,6 +157,12 @@ class SalesOrderService
                 if ($product->is_parent) {
                     throw ValidationException::withMessages([
                         'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
                     ]);
                 }
 
@@ -226,7 +255,7 @@ class SalesOrderService
                 'total_profit' => $netTotalProfit,
             ]);
 
-            $this->logActivity($order, null, SalesOrder::STATUS_PACKING, $user);
+            $this->logActivity($order, null, $order->status, $user);
 
             // تۆمارکردنی کاڵای گەڕاوە لە هەمان پسوڵە ئەگەر هەبێت
             if (isset($data['returned_items'])) {
@@ -236,8 +265,10 @@ class SalesOrderService
             return $order;
         });
 
-        // Notify new order created AFTER database commit if items present
-        $this->dispatchOrderNotification($order, $user);
+        // Notify new order created AFTER database commit if not DRAFT
+        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+            $this->dispatchOrderNotification($order, $user);
+        }
 
         try {
             event(new \App\Events\SalesOrderUpdated($order, 'create'));
@@ -264,6 +295,20 @@ class SalesOrderService
             && $order->salesman_id === $user->id
             && $order->warehouse?->isVan();
 
+        $isCustomerOrder = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
+        if ($isCustomerOrder) {
+            if ((int) $order->customer_id !== (int) ($user->customer?->id ?? -1)) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە.'
+                ]);
+            }
+            if ($order->status !== SalesOrder::STATUS_DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => 'تەنها پسوڵەی کاتی (DRAFT) دەتوانرێت لەلایەن کڕیارەوە دەستکاری بکرێت.'
+                ]);
+            }
+        }
+
         if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])
             && !($isCashVanOrder && $order->status === SalesOrder::STATUS_IN_DELIVERY)) {
             throw ValidationException::withMessages([
@@ -271,11 +316,12 @@ class SalesOrderService
             ]);
         }
 
-        $updatedOrder = DB::transaction(function () use ($order, $data, $user, $isCashVanOrder) {
+        $updatedOrder = DB::transaction(function () use ($order, $data, $user, $isCashVanOrder, $isCustomerOrder) {
             $customerId = $data['customer_id'] ?? $order->customer_id;
             $customer = $this->getCustomerForOrder($customerId);
 
             $this->checkCustomerAssignment($customer, $user);
+            $allowedCategoryIds = $isCustomerOrder ? $customer->getNormalizedAllowedCategoryIds() : [];
 
             // گەڕاندنەوەی تەواوی ستۆکی کاڵاکانی پێشوو پێش سڕینەوەیان بۆ مسۆگەرکردنی حیساباتی دروست
             $this->restoreStockForOrder($order, $user, "گەڕاندنەوەی ستۆک بۆ دەستکاریکردنی پسوڵەی #{$order->order_number}");
@@ -309,6 +355,12 @@ class SalesOrderService
                 if ($product->is_parent) {
                     throw ValidationException::withMessages([
                         'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
                     ]);
                 }
 
@@ -414,7 +466,9 @@ class SalesOrderService
         });
 
         event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
-        $this->dispatchOrderNotification($updatedOrder, $user);
+        if ($updatedOrder->status !== SalesOrder::STATUS_DRAFT) {
+            $this->dispatchOrderNotification($updatedOrder, $user);
+        }
 
         return $updatedOrder;
     }
@@ -553,6 +607,11 @@ class SalesOrderService
 
                 case SalesOrder::STATUS_PACKING:
                     if ($oldStatus === SalesOrder::STATUS_DRAFT) {
+                        if ($lockedOrder->items()->count() === 0) {
+                            throw ValidationException::withMessages([
+                                'items' => 'ناتوانرێت پسوڵەی بەتاڵ تەواو بکرێت، تکایە سەرەتا کاڵا زیاد بکە.'
+                            ]);
+                        }
                         $lockedOrder->confirmed_at = now();
                     }
                     break;
@@ -667,7 +726,13 @@ class SalesOrderService
         });
 
         if ($oldStatus !== $newStatus) {
-            if ($newStatus === SalesOrder::STATUS_READY) {
+            if ($oldStatus === SalesOrder::STATUS_DRAFT && $newStatus === SalesOrder::STATUS_PACKING) {
+                try {
+                    app(NotificationService::class)->notifyNewOrderCreated($updatedOrder, $user);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for submitted draft order: " . $e->getMessage());
+                }
+            } elseif ($newStatus === SalesOrder::STATUS_READY) {
                 try {
                     app(NotificationService::class)->notifyOrderReadyForDelivery($updatedOrder, $user);
                 } catch (\Throwable $e) {
@@ -980,6 +1045,15 @@ class SalesOrderService
      */
     private function checkCustomerAssignment(Customer $customer, $user): void
     {
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            if ((int) ($user->customer?->id ?? -1) === (int) $customer->id) {
+                return;
+            }
+            throw ValidationException::withMessages([
+                'customer_id' => 'ڕێگەپێدراو نییە. تەنها دەتوانیت بۆ هەژماری خۆت کڕین ئەنجام بدەیت.'
+            ]);
+        }
+
         if ($customer->id == 0) {
             return;
         }
@@ -1094,9 +1168,24 @@ class SalesOrderService
             && $order->salesman_id === $user->id
             && $order->warehouse?->isVan();
 
-        return DB::transaction(function () use ($order, $data, $user, $isCashVanOrder) {
+        $isCustomerOrder = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
+
+        return DB::transaction(function () use ($order, $data, $user, $isCashVanOrder, $isCustomerOrder) {
             // Lock order for update to prevent concurrent race conditions
             $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
+
+            if ($isCustomerOrder) {
+                if ((int) $order->customer_id !== (int) ($user->customer?->id ?? -1)) {
+                    throw ValidationException::withMessages([
+                        'customer_id' => 'تۆ ڕێگەپێدراو نیت بۆ دەستکاریکردنی ئەم پسوڵەیە.'
+                    ]);
+                }
+                if ($order->status !== SalesOrder::STATUS_DRAFT) {
+                    throw ValidationException::withMessages([
+                        'status' => 'تەنها پسوڵەی کاتی (DRAFT) دەتوانرێت لەلایەن کڕیارەوە دەستکاری بکرێت.'
+                    ]);
+                }
+            }
 
             // Status consistency check: Shared order can only be edited while it is in PACKING, DRAFT, or CONFIRMED status
             if (!in_array($order->status, [SalesOrder::STATUS_PACKING, SalesOrder::STATUS_DRAFT, SalesOrder::STATUS_CONFIRMED])
@@ -1114,6 +1203,7 @@ class SalesOrderService
             // Lock customer row
             $customer = $this->getCustomerForOrder($data['customer_id']);
             $this->checkCustomerAssignment($customer, $user);
+            $allowedCategoryIds = $isCustomerOrder ? $customer->getNormalizedAllowedCategoryIds() : [];
 
             // گەڕاندنەوەی تەواوی ستۆکی کاڵاکانی پێشوو پێش سڕینەوەیان بۆ مسۆگەرکردنی حیساباتی دروست
             $this->restoreStockForOrder($order, $user, "گەڕاندنەوەی ستۆک بۆ دەستکاریکردنی پسوڵەی هاوبەش #{$order->order_number}");
@@ -1140,6 +1230,12 @@ class SalesOrderService
                 if ($product->is_parent) {
                     throw ValidationException::withMessages([
                         'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
                     ]);
                 }
 
@@ -1249,7 +1345,9 @@ class SalesOrderService
 
         try {
             event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
-            $this->dispatchOrderNotification($updatedOrder, $user);
+            if ($updatedOrder->status !== SalesOrder::STATUS_DRAFT) {
+                $this->dispatchOrderNotification($updatedOrder, $user);
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Event broadcast failed for shared order update: " . $e->getMessage());
         }
@@ -1342,11 +1440,13 @@ class SalesOrderService
             ]);
         });
 
-        // Dispatch order deletion notification to salesman and admins/owner
-        try {
-            app(NotificationService::class)->notifyOrderDeleted($order, $user);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order deletion: " . $e->getMessage());
+        // Dispatch order deletion notification to salesman and admins/owner (skip unsubmitted DRAFTs)
+        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+            try {
+                app(NotificationService::class)->notifyOrderDeleted($order, $user);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order deletion: " . $e->getMessage());
+            }
         }
 
         try {

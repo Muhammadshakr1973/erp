@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Traits\Auditable;
 
@@ -80,6 +81,13 @@ class User extends Authenticatable
         if ($this->isAdmin() || $this->isOwner()) {
             return true;
         }
+        if ($this->isCustomer()) {
+            return Warehouse::where('id', $warehouseId)
+                ->where('is_active', true)
+                ->where('type', '!=', Warehouse::TYPE_PHYSICAL_RESERVE)
+                ->where('type', '!=', Warehouse::TYPE_VAN)
+                ->exists();
+        }
         $assigned = $this->assignedWarehouseIds();
         if (empty($assigned)) {
             return true;
@@ -94,6 +102,10 @@ class User extends Authenticatable
             }
         }
         return false;
+    }
+    public function customer(): HasOne
+    {
+        return $this->hasOne(Customer::class, 'user_id');
     }
     public function deviceTokens(): HasMany
     {
@@ -152,6 +164,10 @@ class User extends Authenticatable
     public function isDriver(): bool
     {
         return strtolower($this->role?->name ?? '') === Role::DRIVER;
+    }
+    public function isCustomer(): bool
+    {
+        return strtolower($this->role?->name ?? '') === Role::CUSTOMER;
     }
 
     public function getAssignedRouteIds(): array
@@ -226,6 +242,11 @@ class User extends Authenticatable
     public function hasCustomerAccess($customer): bool
     {
         $customerId = $customer instanceof Customer ? $customer->id : $customer;
+        if ($this->isCustomer()) {
+            $linkedCustomerId = $this->customer?->id;
+            return $linkedCustomerId !== null && (int) $linkedCustomerId === (int) $customerId;
+        }
+
         if ($customerId == 0) {
             return true;
         }
@@ -304,6 +325,15 @@ class User extends Authenticatable
             ])) {
                 return true;
             }
+        }
+
+        if ($this->isCustomer()) {
+            return in_array($permission, [
+                'orders.create',
+                'orders.view',
+                'products.view',
+                'customers.view',
+            ], true);
         }
 
         $permissions = $this->role?->permissions;

@@ -538,6 +538,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 ),
                 const Divider(),
                 _buildInfoRow(context, Icons.alt_route, routeName),
+                if ((ref.watch(authProvider).user?.isAdmin ?? false) &&
+                    customer.canLogin) ...[
+                  const Divider(),
+                  _buildInfoRow(
+                    context,
+                    Icons.pin_outlined,
+                    'کۆدی چوونەژوورەوەی کڕیار: ${customer.loginCode ?? "---"} (${customer.allowedCategoryIds.length} کاتیگۆری)',
+                  ),
+                ],
                 if (customer.latitude != null &&
                     customer.longitude != null) ...[
                   const Divider(),

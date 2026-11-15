@@ -12,7 +12,7 @@ use App\Models\Traits\Auditable;
 class Customer extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
-    protected $fillable = ['name', 'phone', 'customer_name', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'created_by', 'image_url', 'visit_order'];
+    protected $fillable = ['name', 'phone', 'customer_name', 'route_id', 'price_type', 'permanent_discount', 'address', 'latitude', 'longitude', 'current_balance', 'is_active', 'can_login', 'login_code', 'allowed_category_ids', 'user_id', 'created_by', 'image_url', 'visit_order'];
 
     protected static function boot()
     {
@@ -27,7 +27,7 @@ class Customer extends Model
             }
         });
     }
-    protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'permanent_discount' => 'decimal:2', 'is_active' => 'boolean', 'visit_order' => 'integer'];
+    protected $casts = ['latitude' => 'decimal:8', 'longitude' => 'decimal:8', 'permanent_discount' => 'decimal:2', 'is_active' => 'boolean', 'can_login' => 'boolean', 'allowed_category_ids' => 'array', 'user_id' => 'integer', 'visit_order' => 'integer'];
     const PRICE_N1 = 'N1';
     const PRICE_N2 = 'N2';
     const PRICE_N3 = 'N3';
@@ -38,6 +38,18 @@ class Customer extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+    public function portalUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+    public function getNormalizedAllowedCategoryIds(): array
+    {
+        $raw = $this->allowed_category_ids;
+        if (!is_array($raw)) {
+            return [];
+        }
+        return array_values(array_unique(array_filter(array_map('intval', $raw), fn ($id) => $id > 0)));
     }
     public function salesOrders(): HasMany
     {

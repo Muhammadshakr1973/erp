@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class CustomerService
 {
@@ -14,6 +18,12 @@ class CustomerService
     public function getAllCustomers(array $filters, $user): LengthAwarePaginator
     {
         $query = Customer::with(['route', 'specialPrices']);
+
+        if ($user->isCustomer()) {
+            $customerId = $user->customer?->id ?? -1;
+            $query->where('id', $customerId);
+            return $query->paginate(1);
+        }
 
         // ئەگەر بەکارهێنەر مەندوب بوو، تەنها کڕیارەکانی ئەو گەڕەکانە دەبینێت کە بۆی دانراون یان بەڕاستەوخۆ بۆی تەرخانکراون
         if ($user->isSalesman()) {
@@ -77,10 +87,92 @@ class CustomerService
         return $query->paginate($perPage);
     }
 
+    public function syncPortalUser(Customer $customer): ?User
+    {
+        $customerRole = Role::firstOrCreate(
+            ['name' => Role::CUSTOMER],
+            [
+                'display_name' => 'Customer',
+                'permissions' => ['orders.create', 'orders.view', 'products.view', 'customers.view'],
+                'is_system' => true,
+            ]
+        );
+
+        $portalUser = $customer->user_id
+            ? User::withTrashed()->find($customer->user_id)
+            : User::withTrashed()->where('barcode', 'CUST-' . $customer->id)->first();
+
+        if (!$customer->can_login) {
+            if ($portalUser) {
+                $portalUser->update(['is_active' => false]);
+                $portalUser->tokens()->delete();
+            }
+            return $portalUser;
+        }
+
+        $barcode = 'CUST-' . $customer->id;
+        $internalPhone = 'CUSTPORTAL-' . $customer->id;
+        $rawPassword = $customer->login_code ?: Str::random(16);
+
+        if ($portalUser) {
+            if ($portalUser->trashed()) {
+                $portalUser->restore();
+            }
+            $portalUser->update([
+                'name' => $customer->name,
+                'phone' => $internalPhone,
+                'password' => Hash::make($rawPassword),
+                'role_id' => $customerRole->id,
+                'barcode' => $barcode,
+                'is_active' => (bool) $customer->is_active,
+            ]);
+            if (!$customer->is_active) {
+                $portalUser->tokens()->delete();
+            }
+        } else {
+            $portalUser = User::create([
+                'name' => $customer->name,
+                'phone' => $internalPhone,
+                'password' => Hash::make($rawPassword),
+                'role_id' => $customerRole->id,
+                'barcode' => $barcode,
+                'is_active' => (bool) $customer->is_active,
+            ]);
+        }
+
+        if ((int) $customer->user_id !== (int) $portalUser->id) {
+            $customer->user_id = $portalUser->id;
+            $customer->saveQuietly();
+        }
+
+        return $portalUser->fresh();
+    }
+
+    private function normalizePortalAttributes(array $data): array
+    {
+        if (array_key_exists('allowed_category_ids', $data)) {
+            $rawIds = is_array($data['allowed_category_ids']) ? $data['allowed_category_ids'] : [];
+            $data['allowed_category_ids'] = array_values(array_unique(array_filter(
+                array_map('intval', $rawIds),
+                fn ($id) => $id > 0
+            )));
+        }
+
+        if (array_key_exists('can_login', $data)) {
+            $data['can_login'] = (bool) $data['can_login'];
+            if (!$data['can_login'] && array_key_exists('login_code', $data) && $data['login_code'] === '') {
+                $data['login_code'] = null;
+            }
+        }
+
+        return $data;
+    }
+
     public function createCustomer(array $data, int $userId): Customer
     {
         $customer = DB::transaction(function () use ($data, $userId) {
             $data['created_by'] = $userId;
+            $data = $this->normalizePortalAttributes($data);
 
             $initialDebt = !empty($data['initial_debt']) ? (int)$data['initial_debt'] : 0;
             unset($data['initial_debt']);
@@ -96,6 +188,10 @@ class CustomerService
             $data['current_balance'] = $initialDebt;
 
             $customer = Customer::create($data);
+
+            if ($customer->can_login) {
+                $this->syncPortalUser($customer);
+            }
 
             if ($initialDebt > 0) {
                 \App\Models\CustomerLedger::create([
@@ -114,7 +210,7 @@ class CustomerService
 
             event(new \App\Events\CustomerAccountUpdated($customer, 'create'));
 
-            return $customer;
+            return $customer->fresh(['route', 'specialPrices']);
         });
 
         // Notify new customer created AFTER database commit (NOT-013)
@@ -130,24 +226,42 @@ class CustomerService
 
     public function updateCustomer(Customer $customer, array $data): Customer
     {
-        if (empty($data['route_id']) && !$customer->route_id) {
-            $defaultRoute = \App\Models\Route::firstOrCreate(
-                ['name' => 'گشتی'],
-                ['color' => '#888888', 'is_active' => true]
-            );
-            $data['route_id'] = $defaultRoute->id;
-        }
-        $customer->update($data);
-        
-        $updated = $customer->fresh();
-        event(new \App\Events\CustomerAccountUpdated($updated, 'update'));
-        
-        return $updated;
+        return DB::transaction(function () use ($customer, $data) {
+            $data = $this->normalizePortalAttributes($data);
+
+            if (empty($data['route_id']) && !$customer->route_id) {
+                $defaultRoute = \App\Models\Route::firstOrCreate(
+                    ['name' => 'گشتی'],
+                    ['color' => '#888888', 'is_active' => true]
+                );
+                $data['route_id'] = $defaultRoute->id;
+            }
+
+            $customer->update($data);
+            $customer->refresh();
+
+            if ($customer->can_login || $customer->user_id !== null) {
+                $this->syncPortalUser($customer);
+            }
+
+            $updated = $customer->fresh(['route', 'specialPrices']);
+            event(new \App\Events\CustomerAccountUpdated($updated, 'update'));
+
+            return $updated;
+        });
     }
 
     public function deleteCustomer(Customer $customer): bool
     {
         $customerId = $customer->id;
+        if ($customer->user_id) {
+            $portalUser = User::find($customer->user_id);
+            if ($portalUser) {
+                $portalUser->update(['is_active' => false]);
+                $portalUser->tokens()->delete();
+                $portalUser->delete();
+            }
+        }
         $deleted = $customer->delete();
         
         if ($deleted) {

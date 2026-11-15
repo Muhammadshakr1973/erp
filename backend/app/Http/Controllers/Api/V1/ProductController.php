@@ -18,7 +18,11 @@ class ProductController extends Controller
         $user = $request->user();
         $query = Product::with(['category', 'supplier', 'stocks'])->orderBy('id', 'desc');
 
-        if ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $allowedIds = $user->customer?->getNormalizedAllowedCategoryIds() ?? [];
+            $query->where('is_active', true)
+                  ->whereIn('category_id', empty($allowedIds) ? [-1] : $allowedIds);
+        } elseif ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
             $vanWarehouseId = $user->warehouse_id;
             if ($vanWarehouseId) {
                 $query->where(function ($q) use ($vanWarehouseId) {
@@ -62,7 +66,7 @@ class ProductController extends Controller
         }
 
         $products = $query->get();
-        if ($user && in_array($user->role?->name, ['salesman', 'driver'])) {
+        if ($user && in_array($user->role?->name, ['salesman', 'driver', 'customer'])) {
             $products->makeHidden(['cost_price']);
         }
         return response()->json([
@@ -74,7 +78,15 @@ class ProductController extends Controller
     public function show(Request $request, Product $product): JsonResponse
     {
         $user = $request->user();
-        if ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            $allowedIds = $user->customer?->getNormalizedAllowedCategoryIds() ?? [];
+            if (!$product->is_active || !in_array((int) $product->category_id, $allowedIds, true)) {
+                return response()->json([
+                    'message' => 'ئەم کاڵایە بەردەست نییە.',
+                    'error' => 'Not Found'
+                ], 404);
+            }
+        } elseif ($user && $user->role?->name === 'salesman' && $user->isCashVan()) {
             $vanWarehouseId = $user->warehouse_id;
             $hasStock = false;
             if ($vanWarehouseId) {
@@ -95,7 +107,7 @@ class ProductController extends Controller
         }
 
         $productData = $product->load(['category', 'supplier', 'stocks']);
-        if ($user && in_array($user->role?->name, ['salesman', 'driver'])) {
+        if ($user && in_array($user->role?->name, ['salesman', 'driver', 'customer'])) {
             $productData->makeHidden(['cost_price']);
         }
 

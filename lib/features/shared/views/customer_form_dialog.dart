@@ -1,5 +1,6 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -14,6 +15,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../admin/views/providers/reports_provider.dart';
 import '../models/customer.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../products/providers/categories_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/route_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
@@ -35,6 +37,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   bool _isLoading = false;
   bool _isPaying = false;
   String? _phoneError;
+  String? _loginCodeError;
 
   late TextEditingController _nameController;
   late TextEditingController _customerNameController;
@@ -42,6 +45,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   late TextEditingController _addressController;
   late TextEditingController _imageUrlController;
   late TextEditingController _initialDebtController;
+  late TextEditingController _loginCodeController;
 
   late TextEditingController _paymentAmountController;
   late TextEditingController _paymentNotesController;
@@ -51,6 +55,8 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   bool _isRouteInitialized = false;
   double? _latitude;
   double? _longitude;
+  bool _canLogin = false;
+  List<int> _allowedCategoryIds = [];
 
   String? _ledgerEntryType;
   DateTime? _ledgerStartDate;
@@ -79,6 +85,13 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _isRouteInitialized = widget.customer != null;
     _latitude = widget.customer?.latitude;
     _longitude = widget.customer?.longitude;
+    _canLogin = widget.customer?.canLogin ?? false;
+    _loginCodeController = TextEditingController(
+      text: widget.customer?.loginCode ?? '',
+    );
+    _allowedCategoryIds = List<int>.from(
+      widget.customer?.allowedCategoryIds ?? const [],
+    );
 
     _paymentAmountController = TextEditingController();
     _paymentNotesController = TextEditingController();
@@ -92,6 +105,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
     _addressController.dispose();
     _imageUrlController.dispose();
     _initialDebtController.dispose();
+    _loginCodeController.dispose();
     _paymentAmountController.dispose();
     _paymentNotesController.dispose();
     super.dispose();
@@ -106,13 +120,26 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       return;
     }
 
+    final currentUser = ref.read(authProvider).user;
+    final canManagePortal = currentUser?.isAdmin ?? false;
+    if (canManagePortal && _canLogin && _allowedCategoryIds.isEmpty) {
+      AppSnackbar.show(
+        context,
+        message: 'تکایە لایەنی کەم کاتیگۆرییەک بۆ کڕیارەکە دیاری بکە',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _phoneError = null;
+      _loginCodeError = null;
     });
 
     try {
       final actions = ref.read(customerActionsProvider);
+      final trimmedLoginCode = _loginCodeController.text.trim();
       Customer? createdCustomer;
       if (widget.customer == null) {
         final initialDebt = int.tryParse(_initialDebtController.text.trim());
@@ -135,6 +162,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           initialDebt: initialDebt,
           latitude: _latitude,
           longitude: _longitude,
+          canLogin: canManagePortal ? _canLogin : null,
+          loginCode: canManagePortal && _canLogin ? trimmedLoginCode : null,
+          allowedCategoryIds: canManagePortal
+              ? (_canLogin ? _allowedCategoryIds : const [])
+              : null,
         );
       } else {
         createdCustomer = await actions.updateCustomer(
@@ -156,6 +188,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           priceType: _priceType,
           latitude: _latitude,
           longitude: _longitude,
+          canLogin: canManagePortal ? _canLogin : null,
+          loginCode: canManagePortal && _canLogin ? trimmedLoginCode : null,
+          allowedCategoryIds: canManagePortal
+              ? (_canLogin ? _allowedCategoryIds : const [])
+              : null,
         );
       }
 
@@ -176,12 +213,21 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       }
     } catch (e) {
       final errStr = e.toString();
-      final isPhoneError = errStr.contains('پێشتر بەکارهاتووە') ||
-          errStr.toLowerCase().contains('phone') ||
-          errStr.toLowerCase().contains('taken') ||
-          errStr.toLowerCase().contains('unique');
+      final isLoginCodeError = errStr.contains('login_code') ||
+          errStr.contains('٤ ژمارە') ||
+          errStr.contains('کۆدی چوونەژوورەوە');
+      final isPhoneError = !isLoginCodeError &&
+          (errStr.contains('پێشتر بەکارهاتووە') ||
+              errStr.toLowerCase().contains('phone') ||
+              errStr.toLowerCase().contains('taken') ||
+              errStr.toLowerCase().contains('unique'));
 
-      if (isPhoneError) {
+      if (isLoginCodeError) {
+        setState(() {
+          _loginCodeError = errStr.replaceAll('Exception:', '').trim();
+        });
+        _formKey.currentState?.validate();
+      } else if (isPhoneError) {
         setState(() {
           _phoneError = 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
         });
@@ -191,9 +237,11 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       if (mounted) {
         AppSnackbar.show(
           context,
-          message: isPhoneError
-              ? 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە، تکایە ژمارەیەکی تر بنووسە'
-              : 'کێشە لە پاشەکەوتکردن: $e',
+          message: isLoginCodeError
+              ? errStr.replaceAll('Exception:', '').trim()
+              : (isPhoneError
+                    ? 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە، تکایە ژمارەیەکی تر بنووسە'
+                    : 'کێشە لە پاشەکەوتکردن: $e'),
           type: SnackbarType.error,
         );
       }
@@ -741,6 +789,180 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
               hintText: '0',
               prefixIcon: Icons.account_balance_wallet_outlined,
               keyboardType: TextInputType.number,
+            ),
+          ],
+          if (currentUser?.isAdmin ?? false) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _canLogin
+                      ? AppColors.primary.withValues(alpha: 0.5)
+                      : Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    title: const Text(
+                      'چوونەژوورەوەی کڕیار بۆ کڕینی خۆکار',
+                      style: AppTextStyles.bodyBold,
+                    ),
+                    subtitle: Text(
+                      'کڕیار دەتوانێت بە کۆدی ٤ ژمارەیی یان QR داخڵ ببێت و خۆی داواکاری بنێرێت',
+                      style: AppTextStyles.caption,
+                    ),
+                    value: _canLogin,
+                    onChanged: (val) {
+                      setState(() {
+                        _canLogin = val;
+                        _loginCodeError = null;
+                      });
+                    },
+                  ),
+                  if (_canLogin) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    AppTextField(
+                      controller: _loginCodeController,
+                      labelText: 'کۆدی چوونەژوورەوە (٤ ژمارە)',
+                      hintText: 'نموونە: 1234',
+                      prefixIcon: Icons.pin_outlined,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      errorText: _loginCodeError,
+                      onChanged: (_) {
+                        if (_loginCodeError != null) {
+                          setState(() => _loginCodeError = null);
+                        }
+                      },
+                      validator: (val) {
+                        if (!_canLogin) return null;
+                        if (_loginCodeError != null) return _loginCodeError;
+                        final code = val?.trim() ?? '';
+                        if (!RegExp(r'^\d{4}$').hasMatch(code)) {
+                          return 'تکایە کۆدێکی ٤ ژمارەیی دروست بنووسە (نموونە: 1234)';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ref.watch(categoriesListProvider).when(
+                          data: (categories) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'کاتیگۆرییە ڕێگەپێدراوەکان (${_allowedCategoryIds.length})',
+                                      style: AppTextStyles.bodyBold,
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _allowedCategoryIds = categories
+                                                  .map((c) => c.id)
+                                                  .toList();
+                                            });
+                                          },
+                                          child: const Text('هەموو'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _allowedCategoryIds.clear();
+                                            });
+                                          },
+                                          child: const Text(
+                                            'پاککردنەوە',
+                                            style: TextStyle(
+                                              color: AppColors.danger,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                if (categories.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                      'هیچ کاتیگۆرییەک بەردەست نییە',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  )
+                                else
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: categories.map((cat) {
+                                      final isSelected =
+                                          _allowedCategoryIds.contains(cat.id);
+                                      return FilterChip(
+                                        label: Text(cat.name),
+                                        selected: isSelected,
+                                        selectedColor: AppColors.primary
+                                            .withValues(alpha: 0.16),
+                                        checkmarkColor: AppColors.primary,
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              if (!_allowedCategoryIds
+                                                  .contains(cat.id)) {
+                                                _allowedCategoryIds.add(cat.id);
+                                              }
+                                            } else {
+                                              _allowedCategoryIds
+                                                  .remove(cat.id);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                              ],
+                            );
+                          },
+                          loading: () => const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          error: (err, _) => Text(
+                            'هەڵە لە هێنانی کاتیگۆرییەکان: $err',
+                            style: const TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                  ],
+                ],
+              ),
             ),
           ],
           if (widget.customer != null) ...[

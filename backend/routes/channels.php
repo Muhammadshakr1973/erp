@@ -20,6 +20,11 @@ Broadcast::channel('sales-order.{id}', function (User $user, int $id) {
         return true;
     }
 
+    // Portal customer owns their order
+    if (method_exists($user, 'isCustomer') && $user->isCustomer()) {
+        return (int) ($user->customer?->id ?? -1) === (int) $order->customer_id;
+    }
+
     // Check customer assignment (direct or route assignment)
     try {
         $hasDirectAssignment = \Illuminate\Support\Facades\DB::table('customer_assignments')

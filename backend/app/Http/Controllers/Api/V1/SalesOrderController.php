@@ -39,18 +39,22 @@ class SalesOrderController extends Controller
             if ($user->warehouse_id) {
                 $query->where('warehouse_id', $user->warehouse_id);
             }
+        } elseif ($user->isCustomer()) {
+            $query->where('customer_id', $user->customer?->id ?? -1);
         }
 
-        if ($request->filled('customer_id')) {
+        if ($request->filled('customer_id') && !$user->isCustomer()) {
             $query->where('customer_id', $request->input('customer_id'));
         }
 
-        if ($request->filled('salesman_id') && $user->role?->name !== 'salesman') {
+        if ($request->filled('salesman_id') && $user->role?->name !== 'salesman' && !$user->isCustomer()) {
             $query->where('salesman_id', $request->input('salesman_id'));
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
+        } elseif (!$user->isCustomer()) {
+            $query->where('status', '!=', \App\Models\SalesOrder::STATUS_DRAFT);
         }
 
         if ($request->filled('start_date')) {
@@ -200,6 +204,13 @@ class SalesOrderController extends Controller
             ], 403);
         }
 
+        if ($user->isCustomer() && (int) $order->customer_id !== (int) ($user->customer?->id ?? -1)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی ئەم پسوڵەیە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         return response()->json([
             'message' => 'وردەکاری پسوڵە',
             'data' => $order
@@ -299,6 +310,18 @@ class SalesOrderController extends Controller
             }
         }
 
+        if ($user->isCustomer()) {
+            $isOwnOrder = (int) $order->customer_id === (int) ($user->customer?->id ?? -1);
+            $isDraft = $order->status === \App\Models\SalesOrder::STATUS_DRAFT;
+            $isAllowedTarget = in_array($status, ['PACKING', 'CANCELLED'], true);
+            if (!$isOwnOrder || !$isDraft || !$isAllowedTarget) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ گۆڕینی دۆخی ئەم پسوڵەیە.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
+        }
+
         $updatedOrder = $this->salesOrderService->transitionTo(
             $order,
             $status,
@@ -323,6 +346,16 @@ class SalesOrderController extends Controller
                 'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەیە.',
                 'error' => 'Forbidden.'
             ], 403);
+        }
+
+        if ($user->isCustomer()) {
+            if ((int) $order->customer_id !== (int) ($user->customer?->id ?? -1)
+                || $order->status !== \App\Models\SalesOrder::STATUS_DRAFT) {
+                return response()->json([
+                    'message' => 'تۆ ڕێگەپێدراو نیت بۆ سڕینەوەی ئەم پسوڵەیە.',
+                    'error' => 'Forbidden.'
+                ], 403);
+            }
         }
 
         // Warehouse staff or users with stock.pack can delete empty orders (items count == 0)
@@ -350,6 +383,12 @@ class SalesOrderController extends Controller
     public function salesmanDashboard(\Illuminate\Http\Request $request): JsonResponse
     {
         $user = $request->user();
+        if ($user && $user->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی داشبۆردی مەندوب.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
         $today = now()->toDateString();
         $sevenDaysAgo = now()->subDays(6)->toDateString();
         $startOfWeek = now()->startOfWeek()->toDateTimeString();

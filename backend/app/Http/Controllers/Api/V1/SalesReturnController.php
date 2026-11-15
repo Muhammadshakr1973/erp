@@ -26,6 +26,13 @@ class SalesReturnController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی گەڕانەوەکان.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $query = SalesReturn::with(['customer', 'order'])->orderBy('id', 'desc');
 
         if ($user->role?->name === 'salesman') {
@@ -45,6 +52,13 @@ class SalesReturnController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی گەڕانەوەکان.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
         $return = SalesReturn::with(['customer', 'order', 'items.product', 'items.orderItem'])->findOrFail($id);
 
         if ($user->role?->name === 'salesman' && $return->order->salesman_id !== $user->id) {

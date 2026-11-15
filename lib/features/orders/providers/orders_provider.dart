@@ -204,6 +204,8 @@ class OrderActions {
   OrderActions(this.api, this.ref);
 
   void _refreshSalesmanDashboard() {
+    final user = ref.read(authProvider).user;
+    if (user == null || user.isCustomer) return;
     unawaited(
       ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
     );

@@ -78,4 +78,14 @@ class RouteModel {
       salesmen: parsedSalesmen,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'color': color,
+      'is_active': isActive,
+      'customers_count': customersCount,
+    };
+  }
 }

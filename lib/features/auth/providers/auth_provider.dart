@@ -165,6 +165,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     state = AuthState(); // Reset state
   }
+
+  Future<void> refreshCurrentUserSilently() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.client.get(
+        '/auth/me',
+        options: Options(validateStatus: (status) => status != null && status < 500),
+      );
+      if (response.statusCode == 200 &&
+          response.data is Map &&
+          response.data['data'] is Map &&
+          response.data['data']['user'] is Map) {
+        final freshUser = UserModel.fromJson(
+          Map<String, dynamic>.from(response.data['data']['user'] as Map),
+        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_user', jsonEncode(freshUser.toJson()));
+        state = state.copyWith(user: freshUser);
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        await logout();
+      }
+    } catch (_) {
+      // Preserve current user on transient network errors
+    }
+  }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
