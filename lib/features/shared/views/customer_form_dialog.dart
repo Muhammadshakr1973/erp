@@ -1,6 +1,5 @@
 import 'package:pos_app/core/utils/formatters.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -836,12 +835,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                       hintText: 'نموونە: 1234',
                       prefixIcon: Icons.pin_outlined,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(4),
-                      ],
                       errorText: _loginCodeError,
-                      onChanged: (_) {
+                      onChanged: (val) {
+                        final digitsOnly = val.replaceAll(RegExp(r'[^0-9]'), '');
+                        final clamped = digitsOnly.length > 4
+                            ? digitsOnly.substring(0, 4)
+                            : digitsOnly;
+                        if (clamped != val) {
+                          _loginCodeController.value = TextEditingValue(
+                            text: clamped,
+                            selection: TextSelection.collapsed(
+                              offset: clamped.length,
+                            ),
+                          );
+                        }
                         if (_loginCodeError != null) {
                           setState(() => _loginCodeError = null);
                         }
