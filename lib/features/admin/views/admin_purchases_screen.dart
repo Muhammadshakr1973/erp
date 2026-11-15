@@ -1495,8 +1495,9 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
-  void _scanBarcode(List<ProductModel> allProducts) {
-    CameraBarcodeScanner.show(
+  Future<void> _scanBarcode(List<ProductModel> allProducts) async {
+    String? notFoundBarcode;
+    await CameraBarcodeScanner.show(
       context,
       (barcode) {
         final trimmed = barcode.trim();
@@ -1513,16 +1514,16 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
         final found = matches.firstOrNull;
         if (found != null) {
           _addProductToCart(found);
+          return true;
         } else {
-          AppSnackbar.show(
-            context,
-            message: 'هیچ کاڵایەک بەم باڕکۆدە ($barcode) نەدۆزرایەوە',
-            type: SnackbarType.warning,
-          );
+          notFoundBarcode = trimmed;
+          return false;
         }
       },
       closeOnScan: true,
     );
+    if (!mounted || notFoundBarcode == null || notFoundBarcode!.isEmpty) return;
+    await _showAddNewProductDialog(context, initialBarcode: notFoundBarcode);
   }
 
   void _addCheckedProductsToCart(List<ProductModel> products) {
@@ -2223,14 +2224,20 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
     );
   }
 
-  Future<void> _showAddNewProductDialog(BuildContext context) async {
-    final initialName = _productSearchController.text.trim();
+  Future<void> _showAddNewProductDialog(
+    BuildContext context, {
+    String? initialBarcode,
+  }) async {
+    final initialName = initialBarcode == null
+        ? _productSearchController.text.trim()
+        : '';
     final result = await showDialog<Object?>(
       context: context,
       barrierDismissible: false,
       builder: (context) => ProductFormDialog(
         initialSupplierId: _selectedSupplierId,
         initialName: initialName.isEmpty ? null : initialName,
+        initialBarcode: initialBarcode,
       ),
     );
 

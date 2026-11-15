@@ -28,12 +28,14 @@ class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductModel? product;
   final int? initialSupplierId;
   final String? initialName;
+  final String? initialBarcode;
 
   const ProductFormDialog({
     super.key,
     this.product,
     this.initialSupplierId,
     this.initialName,
+    this.initialBarcode,
   });
 
   @override
@@ -106,7 +108,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       text: p?.name ?? widget.initialName ?? '',
     );
     _nameController.addListener(_onNameChanged);
-    _barcodeController = TextEditingController(text: p?.barcode ?? '');
+    _barcodeController = TextEditingController(
+      text: p?.barcode ?? widget.initialBarcode ?? '',
+    );
     _skuController = TextEditingController(text: p?.sku ?? '');
     _costPriceController = TextEditingController(
       text: p != null ? Formatters.cleanNumberString(p.costPrice) : '',
