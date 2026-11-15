@@ -55,12 +55,12 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
   }
 
   void _showAddCustomerDialog(BuildContext context, [Customer? customer]) {
-    showDialog<bool>(
+    showDialog<dynamic>(
       context: context,
       barrierDismissible: false,
       builder: (context) => CustomerFormDialog(customer: customer),
-    ).then((success) {
-      if (success == true) {
+    ).then((result) {
+      if (result == true || result is Customer) {
         ref.invalidate(filteredCustomerListProvider);
         ref.invalidate(customerListProvider);
         if (customer != null) {

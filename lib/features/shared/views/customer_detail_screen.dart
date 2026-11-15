@@ -315,13 +315,13 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     icon: const Icon(Icons.edit_outlined),
                     tooltip: 'دەستکاریکردنی کڕیار',
                     onPressed: () {
-                      showDialog<bool>(
+                      showDialog<dynamic>(
                         context: context,
                         barrierDismissible: false,
                         builder: (context) =>
                             CustomerFormDialog(customer: customer),
-                      ).then((success) {
-                        if (success == true) {
+                      ).then((result) {
+                        if (result == true || result is Customer) {
                           ref.invalidate(singleCustomerProvider(customer.id));
                           ref.invalidate(customerListProvider);
                         }
