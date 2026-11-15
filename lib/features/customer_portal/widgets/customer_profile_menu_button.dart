@@ -322,7 +322,7 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    contactPerson,
+                                    'بەڕێز : $contactPerson',
                                     style: AppTextStyles.caption.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                       fontWeight: FontWeight.w600,
