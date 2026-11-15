@@ -277,65 +277,86 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
                   ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.45),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: CustomerAvatar(
-                        imageUrl: imageUrl,
-                        size: 58,
-                        borderRadius: 15,
-                        placeholderIcon: Icons.storefront_rounded,
-                        iconSize: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
                         children: [
-                          Text(
-                            displayName,
-                            style: AppTextStyles.bodyBold.copyWith(
-                              fontSize: 15,
-                              height: 1.25,
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.45),
+                                width: 1.5,
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            child: CustomerAvatar(
+                              imageUrl: imageUrl,
+                              size: 58,
+                              borderRadius: 15,
+                              placeholderIcon: Icons.storefront_rounded,
+                              iconSize: 28,
+                            ),
                           ),
-                          if (contactPerson != null) ...[
-                            const SizedBox(height: 3),
-                            Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 14,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    'بەڕێز : $contactPerson',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                Text(
+                                  displayName,
+                                  style: AppTextStyles.bodyBold.copyWith(
+                                    fontSize: 15,
+                                    height: 1.25,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                                if (contactPerson != null) ...[
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.person_outline_rounded,
+                                        size: 14,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'بەڕێز : $contactPerson',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
-                          ],
+                          ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: theme.colorScheme.onSurfaceVariant,
+                      tooltip: 'داخستن',
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      onPressed: onClose,
                     ),
                   ],
                 ),
