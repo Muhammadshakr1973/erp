@@ -411,15 +411,68 @@ class _CustomerCatalogScreenState extends ConsumerState<CustomerCatalogScreen> {
               child: Row(
                 children: [
                   CustomerProfileMenuButton(onLogout: widget.onLogout),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'فرۆشتن بە وێنە',
-                      style: AppTextStyles.h3,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      style: AppTextStyles.bodyMedium.copyWith(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'گەڕان بە ناوی کاڵا یان بارکۆد...',
+                        hintStyle: AppTextStyles.caption.copyWith(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 34,
+                          minHeight: 36,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                onPressed: () => _searchController.clear(),
+                              )
+                            : null,
+                        suffixIconConstraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        isDense: true,
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF242C38)
+                            : Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF3A4659)
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF3A4659)
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   if (cartState.isSyncing)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 6),
@@ -485,49 +538,7 @@ class _CustomerCatalogScreenState extends ConsumerState<CustomerCatalogScreen> {
               ),
             ),
 
-            // 2. SEARCH BAR ONLY (NO category filters!)
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              color: isDark ? const Color(0xFF19202B) : Colors.grey.shade50,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'گەڕان بە ناوی کاڵا یان بارکۆد...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () => _searchController.clear(),
-                        )
-                      : null,
-                  isDense: true,
-                  filled: true,
-                  fillColor: isDark ? const Color(0xFF242C38) : Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: isDark
-                          ? const Color(0xFF3A4659)
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: isDark
-                          ? const Color(0xFF3A4659)
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // 3. SYNC ERROR BANNER IF ANY
+            // 2. SYNC ERROR BANNER IF ANY
             if (cartState.error != null)
               Container(
                 width: double.infinity,
