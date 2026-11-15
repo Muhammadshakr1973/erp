@@ -2224,11 +2224,13 @@ class _AdminPurchasesScreenState extends ConsumerState<AdminPurchasesScreen>
   }
 
   Future<void> _showAddNewProductDialog(BuildContext context) async {
+    final initialName = _productSearchController.text.trim();
     final result = await showDialog<Object?>(
       context: context,
       barrierDismissible: false,
       builder: (context) => ProductFormDialog(
         initialSupplierId: _selectedSupplierId,
+        initialName: initialName.isEmpty ? null : initialName,
       ),
     );
 

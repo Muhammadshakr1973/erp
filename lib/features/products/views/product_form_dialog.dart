@@ -27,11 +27,13 @@ import 'barcode_generator_dialog.dart';
 class ProductFormDialog extends ConsumerStatefulWidget {
   final ProductModel? product;
   final int? initialSupplierId;
+  final String? initialName;
 
   const ProductFormDialog({
     super.key,
     this.product,
     this.initialSupplierId,
+    this.initialName,
   });
 
   @override
@@ -100,7 +102,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         currentMinStock = foundMin.toInt();
       }
     }
-    _nameController = TextEditingController(text: p?.name ?? '');
+    _nameController = TextEditingController(
+      text: p?.name ?? widget.initialName ?? '',
+    );
     _nameController.addListener(_onNameChanged);
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
