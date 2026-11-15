@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_button.dart';
 import '../../../core/components/app_snackbar.dart';
-import '../../../core/components/gardi_logo.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -14,6 +13,7 @@ import '../../orders/models/order_model.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../providers/customer_cart_provider.dart';
+import '../widgets/customer_profile_menu_button.dart';
 
 class CustomerInvoiceScreen extends ConsumerWidget {
   final VoidCallback onLogout;
@@ -171,30 +171,14 @@ class CustomerInvoiceScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const GardiLogo(height: 32),
+                  CustomerProfileMenuButton(onLogout: onLogout),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'پسوڵە',
-                          style: AppTextStyles.h3,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (customer != null)
-                          Text(
-                            customer.name,
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
+                  const Expanded(
+                    child: Text(
+                      'پسوڵە',
+                      style: AppTextStyles.h3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (draftOrder != null && draftOrder.orderNumber.isNotEmpty)
@@ -225,14 +209,6 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.danger,
-                    ),
-                    tooltip: 'چوونەدەرەوە',
-                    onPressed: onLogout,
-                  ),
                 ],
               ),
             ),

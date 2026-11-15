@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/components/app_snackbar.dart';
-import '../../../core/components/gardi_logo.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -15,6 +14,7 @@ import '../../products/providers/categories_provider.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/views/variant_selector_dialog.dart';
 import '../providers/customer_cart_provider.dart';
+import '../widgets/customer_profile_menu_button.dart';
 
 class CustomerCatalogScreen extends ConsumerStatefulWidget {
   final VoidCallback onLogout;
@@ -410,30 +410,14 @@ class _CustomerCatalogScreenState extends ConsumerState<CustomerCatalogScreen> {
               ),
               child: Row(
                 children: [
-                  const GardiLogo(height: 32),
+                  CustomerProfileMenuButton(onLogout: widget.onLogout),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'فرۆشتن بە وێنە',
-                          style: AppTextStyles.h3,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (customer != null)
-                          Text(
-                            customer.name,
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
+                  const Expanded(
+                    child: Text(
+                      'فرۆشتن بە وێنە',
+                      style: AppTextStyles.h3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (cartState.isSyncing)
@@ -496,15 +480,6 @@ class _CustomerCatalogScreenState extends ConsumerState<CustomerCatalogScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.danger,
-                    ),
-                    tooltip: 'چوونەدەرەوە',
-                    onPressed: widget.onLogout,
                   ),
                 ],
               ),
