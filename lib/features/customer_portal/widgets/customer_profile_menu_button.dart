@@ -221,11 +221,10 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
         ? customer.customerName!.trim()
         : null;
 
-    final String? phone = (customer?.phone?.trim().isNotEmpty ?? false)
-        ? customer!.phone!.trim()
-        : (user?.phone.trim().isNotEmpty ?? false)
-        ? user!.phone.trim()
-        : null;
+    final String rawCustomerPhone = customer?.phone?.trim() ?? '';
+    final bool hasValidPhone = rawCustomerPhone.isNotEmpty &&
+        !rawCustomerPhone.toUpperCase().startsWith('CUSTPORTAL-');
+    final String phoneDisplay = hasValidPhone ? rawCustomerPhone : 'نیە';
 
     final String? address = (customer?.address?.trim().isNotEmpty ?? false)
         ? customer!.address!.trim()
@@ -335,27 +334,6 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
                               ],
                             ),
                           ],
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'پڕۆفایڵی کڕیار',
-                              style: AppTextStyles.caption.copyWith(
-                                fontSize: 11,
-                                color: isDark
-                                    ? const Color(0xFF60A5FA)
-                                    : AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -364,19 +342,17 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
               ),
 
               // 2. Profile Contact / Location Info & Debt
-              if (phone != null || address != null || routeName != null || hasDebt)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (phone != null)
-                        _ProfileInfoRow(
-                          icon: Icons.phone_outlined,
-                          label: 'مۆبایل',
-                          value: phone,
-                          isLtr: true,
-                        ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ProfileInfoRow(
+                      icon: Icons.phone_outlined,
+                      label: 'مۆبایل',
+                      value: phoneDisplay,
+                      isLtr: hasValidPhone,
+                    ),
                       if (routeName != null)
                         _ProfileInfoRow(
                           icon: Icons.alt_route_rounded,
@@ -390,8 +366,7 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
                           value: address,
                         ),
                       if (hasDebt) ...[
-                        if (phone != null || address != null || routeName != null)
-                          const SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -465,36 +440,36 @@ class _CustomerProfileDropdownCard extends ConsumerWidget {
                 child: Divider(height: 1),
               ),
 
-              // 3. Logout Button at the bottom
+              // 3. Compact Icon-Only Logout Button at bottom-left
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   14,
-                  2,
+                  0,
                   14,
-                  AppSpacing.md,
+                  AppSpacing.sm,
                 ),
-                child: SizedBox(
-                  height: 44,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      onClose();
-                      onLogout();
-                    },
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text(
-                      'چوونەدەرەوە',
-                      style: TextStyle(
-                        fontFamily: 'KJino',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Tooltip(
+                    message: 'چوونەدەرەوە',
+                    child: Material(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        onTap: () {
+                          onClose();
+                          onLogout();
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
                       ),
                     ),
                   ),
