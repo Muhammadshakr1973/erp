@@ -187,25 +187,32 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
     return warehouseStock + savedInDraft;
   }
 
+  double _roundQty(double value) => (value * 1000).round() / 1000.0;
+
   double getRemainingStock(ProductModel product) {
     final totalAvailable = getAvailableStock(product);
     final currentQty = state.items[product.id] ?? 0.0;
     final remaining = totalAvailable - currentQty;
-    return remaining < 0 ? 0.0 : remaining;
+    return remaining <= 1e-6 ? 0.0 : _roundQty(remaining);
   }
 
   String? incrementProduct(ProductModel product) {
     final totalAvailable = getAvailableStock(product);
     final currentQty = state.items[product.id] ?? 0.0;
 
-    if (totalAvailable <= 0) {
+    if (totalAvailable <= 1e-6) {
       return 'ئەم کاڵایە لە ستۆک بەردەست نییە';
     }
-    if (currentQty + 1 > totalAvailable) {
+    final remaining = _roundQty(totalAvailable - currentQty);
+    if (remaining <= 1e-6) {
       return 'تەنها ${Formatters.cleanNumberString(totalAvailable)} دانە لە ستۆک بەردەستە';
     }
 
-    setQuantity(product.id, currentQty + 1.0);
+    final nextQty = remaining < 1.0
+        ? _roundQty(totalAvailable)
+        : _roundQty(currentQty + 1.0);
+
+    setQuantity(product.id, nextQty);
     return null;
   }
 
@@ -213,8 +220,10 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
     final currentQty = state.items[productId] ?? 0.0;
     if (currentQty <= 0) return;
 
-    if (currentQty > 1.0) {
-      setQuantity(productId, currentQty - 1.0);
+    if (currentQty > 1.0 + 1e-6) {
+      setQuantity(productId, _roundQty(currentQty - 1.0));
+    } else if (currentQty > 0.5 + 1e-6) {
+      setQuantity(productId, 0.5);
     } else {
       removeProduct(productId);
     }

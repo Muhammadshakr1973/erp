@@ -364,7 +364,7 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                             ? cartNotifier.getAvailableStock(product)
                             : cartNotifier.getSavedQuantityInDraft(productId);
                         final bool canIncrement =
-                            product != null && qty + 1 <= maxAvailable;
+                            product != null && (maxAvailable - qty) > 1e-6;
 
                         return GestureDetector(
                           onLongPress: () => _confirmRemoveItem(
