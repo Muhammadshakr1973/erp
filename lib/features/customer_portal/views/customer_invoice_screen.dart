@@ -115,6 +115,7 @@ class CustomerInvoiceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = AppColors.primaryAdaptive(context);
     final authUser = ref.watch(authProvider.select((s) => s.user));
     final customer = authUser?.customer;
     final cartState = ref.watch(customerCartProvider);
@@ -188,13 +189,15 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
+                        color: primaryColor.withValues(
+                          alpha: isDark ? 0.2 : 0.12,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         '#${draftOrder.orderNumber}',
                         style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primary,
+                          color: primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                         textDirection: TextDirection.ltr,
@@ -284,7 +287,7 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                               Text(
                                 'ژمارەی پسوڵە: #${cartState.lastCompletedOrderNumber}',
                                 style: AppTextStyles.bodyBold.copyWith(
-                                  color: AppColors.primary,
+                                  color: primaryColor,
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.lg),
@@ -445,7 +448,7 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                                       Text(
                                         'کۆ: ${Formatters.currency(lineTotal)}',
                                         style: AppTextStyles.bodyBold.copyWith(
-                                          color: AppColors.primary,
+                                          color: primaryColor,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -626,7 +629,7 @@ class CustomerInvoiceScreen extends ConsumerWidget {
                         Text(
                           Formatters.currency(grandTotal),
                           style: AppTextStyles.priceLarge.copyWith(
-                            color: AppColors.primary,
+                            color: primaryColor,
                           ),
                         ),
                       ],

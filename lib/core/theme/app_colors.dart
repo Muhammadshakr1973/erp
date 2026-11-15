@@ -4,7 +4,7 @@ class AppColors {
   AppColors._();
 
   // Primary Brand
-  static const Color primary = Color(0xFF122D5A);
+  static const Color primary = Color(0xFF357EF5);
   static const Color primaryLight = Color(0xFFEBF0FA);
 
   // Status Semantic (Light Mode)
@@ -34,7 +34,7 @@ class AppColors {
   static const Color textTertiary = textDisabledLight;
 
   // Dark Mode colors (Modern Professional Slate/Midnight Palette)
-  static const Color primaryDark = Color(0xFF3A86FF); // Brilliant clear electric blue
+  static const Color primaryDark = Color(0xFF428DFF); // Rich, vivid electric blue
   static const Color primaryContainerDark = Color(0xFF162541); // Deep rich navy container
   static const Color backgroundDark = Color(0xFF080C14); // Ultra-rich deep space midnight black background
   static const Color surfaceDark = Color(0xFF10192A); // High-contrast premium deep midnight card surface
