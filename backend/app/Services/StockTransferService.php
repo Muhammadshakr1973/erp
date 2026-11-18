@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Events\StockTransferUpdated;
 use App\Models\StockTransfer;
 use App\Models\WarehouseStock;
 use App\Models\Warehouse;
 use App\Models\Product;
 use App\Models\StockTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 
@@ -18,7 +20,7 @@ class StockTransferService
      */
     public function createTransfer(array $data, $user): StockTransfer
     {
-        return DB::transaction(function () use ($data, $user) {
+        $transfer = DB::transaction(function () use ($data, $user) {
             $fromWarehouseId = (int)$data['from_warehouse_id'];
             $toWarehouseId   = (int)$data['to_warehouse_id'];
 
@@ -115,6 +117,14 @@ class StockTransferService
 
             return $transfer;
         });
+
+        try {
+            event(new StockTransferUpdated($transfer, 'create'));
+        } catch (\Throwable $e) {
+            Log::warning('StockTransferUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $transfer;
     }
 
     /**
@@ -122,7 +132,7 @@ class StockTransferService
      */
     public function completeTransfer(StockTransfer $transfer, $user): StockTransfer
     {
-        return DB::transaction(function () use ($transfer, $user) {
+        $completedTransfer = DB::transaction(function () use ($transfer, $user) {
             $lockedTransfer = StockTransfer::lockForUpdate()->with('items')->findOrFail($transfer->id);
 
             $currentStatus = strtoupper($lockedTransfer->status);
@@ -225,6 +235,14 @@ class StockTransferService
 
             return $lockedTransfer;
         });
+
+        try {
+            event(new StockTransferUpdated($completedTransfer, 'complete'));
+        } catch (\Throwable $e) {
+            Log::warning('StockTransferUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $completedTransfer;
     }
 
     /**
@@ -232,7 +250,7 @@ class StockTransferService
      */
     public function cancelTransfer(StockTransfer $transfer, $user): StockTransfer
     {
-        return DB::transaction(function () use ($transfer, $user) {
+        $cancelledTransfer = DB::transaction(function () use ($transfer, $user) {
             $lockedTransfer = StockTransfer::lockForUpdate()->findOrFail($transfer->id);
 
             $currentStatus = strtoupper($lockedTransfer->status);
@@ -264,5 +282,13 @@ class StockTransferService
 
             return $lockedTransfer;
         });
+
+        try {
+            event(new StockTransferUpdated($cancelledTransfer, 'cancel'));
+        } catch (\Throwable $e) {
+            Log::warning('StockTransferUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $cancelledTransfer;
     }
 }

@@ -14,6 +14,19 @@ final supplierDebtsReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onSupplierDebtsEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for supplierDebtsReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-suppliers', onSupplierDebtsEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-suppliers', onSupplierDebtsEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/supplier-debts',
@@ -182,6 +195,25 @@ final profitReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onProfitReportEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for profitReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-orders', onProfitReportEvent);
+      pusher.subscribeToChannel('private-delivery-trips', onProfitReportEvent);
+      pusher.subscribeToChannel('private-products', onProfitReportEvent);
+      pusher.subscribeToChannel('private-categories', onProfitReportEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-orders', onProfitReportEvent);
+        pusher.unsubscribeFromChannel('private-delivery-trips', onProfitReportEvent);
+        pusher.unsubscribeFromChannel('private-products', onProfitReportEvent);
+        pusher.unsubscribeFromChannel('private-categories', onProfitReportEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/profit',
@@ -209,6 +241,40 @@ final salesBySalesmanReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onSalesBySalesmanEvent(Map<String, dynamic> eventData) {
+        debugPrint(
+          "Realtime update for salesBySalesmanReportProvider: $eventData",
+        );
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-orders', onSalesBySalesmanEvent);
+      pusher.subscribeToChannel('private-delivery-trips', onSalesBySalesmanEvent);
+      pusher.subscribeToChannel('private-customers', onSalesBySalesmanEvent);
+      pusher.subscribeToChannel('private-commissions', onSalesBySalesmanEvent);
+      pusher.subscribeToChannel('private-users', onSalesBySalesmanEvent);
+      pusher.subscribeToChannel('private-routes', onSalesBySalesmanEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-orders', onSalesBySalesmanEvent);
+        pusher.unsubscribeFromChannel(
+          'private-delivery-trips',
+          onSalesBySalesmanEvent,
+        );
+        pusher.unsubscribeFromChannel(
+          'private-customers',
+          onSalesBySalesmanEvent,
+        );
+        pusher.unsubscribeFromChannel(
+          'private-commissions',
+          onSalesBySalesmanEvent,
+        );
+        pusher.unsubscribeFromChannel('private-users', onSalesBySalesmanEvent);
+        pusher.unsubscribeFromChannel('private-routes', onSalesBySalesmanEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/sales-by-salesman',
@@ -238,6 +304,25 @@ final lowStockReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onLowStockReportEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for lowStockReportProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-products', onLowStockReportEvent);
+      pusher.subscribeToChannel('private-orders', onLowStockReportEvent);
+      pusher.subscribeToChannel('private-categories', onLowStockReportEvent);
+      pusher.subscribeToChannel('private-suppliers', onLowStockReportEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-products', onLowStockReportEvent);
+        pusher.unsubscribeFromChannel('private-orders', onLowStockReportEvent);
+        pusher.unsubscribeFromChannel('private-categories', onLowStockReportEvent);
+        pusher.unsubscribeFromChannel('private-suppliers', onLowStockReportEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/reports/low-stock',
@@ -265,6 +350,27 @@ final stockTransfersReportProvider =
       filters,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onStockTransfersReportEvent(Map<String, dynamic> eventData) {
+        debugPrint(
+          "Realtime update for stockTransfersReportProvider: $eventData",
+        );
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel(
+        'private-stock-transfers',
+        onStockTransfersReportEvent,
+      );
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel(
+          'private-stock-transfers',
+          onStockTransfersReportEvent,
+        );
+      });
+
       try {
         final response = await api.client.get(
           '/reports/stock-transfers',

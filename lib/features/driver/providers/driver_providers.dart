@@ -30,7 +30,24 @@ class DriverUserSummary {
 }
 
 final activeDriversProvider = FutureProvider<List<DriverUserSummary>>((ref) async {
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onActiveDriversEvent(Map<String, dynamic> eventData) {
+    debugPrint(
+      "Realtime update received on private-users for activeDriversProvider: $eventData",
+    );
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-users', onActiveDriversEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-users', onActiveDriversEvent);
+  });
+
   try {
     final response = await api.client.get('/delivery-trips/drivers');
     if (response.statusCode == 200) {

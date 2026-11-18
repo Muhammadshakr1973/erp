@@ -84,6 +84,22 @@ Broadcast::channel('suppliers', function (User $user) {
     return (bool) $user->is_active;
 });
 
+Broadcast::channel('categories', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('routes', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('users', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('stock-transfers', function (User $user) {
+    return (bool) $user->is_active;
+});
+
 Broadcast::channel('user-notifications.{userId}', function (User $user, int $userId) {
     return (int) $user->id === (int) $userId;
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\RouteUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Route;
 use App\Models\RouteSalesman;
@@ -9,6 +10,7 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class RouteController extends Controller
 {
@@ -44,6 +46,12 @@ class RouteController extends Controller
         $route = Route::create($validated);
         $route->loadCount('customers')->load(['salesmen.salesman:id,name,phone']);
 
+        try {
+            event(new RouteUpdated('create', (int) $route->id));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'ڕاوت بەسەرکەوتوویی زیادکرا',
             'data' => $route
@@ -78,6 +86,12 @@ class RouteController extends Controller
         $route->update($validated);
         $route->loadCount('customers')->load(['salesmen.salesman:id,name,phone']);
 
+        try {
+            event(new RouteUpdated('update', (int) $route->id));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'ڕاوت بەسەرکەوتوویی نوێکرایەوە',
             'data' => $route
@@ -86,7 +100,14 @@ class RouteController extends Controller
 
     public function destroy(Route $route): JsonResponse
     {
+        $routeId = (int) $route->id;
         $route->delete();
+
+        try {
+            event(new RouteUpdated('delete', $routeId));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'ڕاوت بەسەرکەوتوویی سڕایەوە'
@@ -172,6 +193,12 @@ class RouteController extends Controller
             );
         }
 
+        try {
+            event(new RouteUpdated('assign_salesman', (int) $route->id, (int) $validated['salesman_id']));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'مەندوب بەسەرکەوتوویی بۆ ئەم ڕاوتە دیاریکرا',
             'data' => $assignment->load('salesman:id,name,phone')
@@ -204,6 +231,12 @@ class RouteController extends Controller
         }
 
         $query->delete();
+
+        try {
+            event(new RouteUpdated('remove_salesman', (int) $route->id, (int) $salesmanId));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'دیاریکردنی مەندوب سڕایەوە'
@@ -286,6 +319,12 @@ class RouteController extends Controller
                 ->update(['visit_order' => $index + 1]);
         }
 
+        try {
+            event(new RouteUpdated('reorder_customers', (int) $route->id));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'ڕیزبەندی سەردانی کڕیاران بە سەرکەوتوویی نوێکرایەوە'
         ], 200);
@@ -305,8 +344,14 @@ class RouteController extends Controller
             try {
                 event(new \App\Events\CustomerAccountUpdated(null, 'update', $cid));
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Broadcasting CustomerAccountUpdated failed: " . $e->getMessage());
+                Log::warning("Broadcasting CustomerAccountUpdated failed: " . $e->getMessage());
             }
+        }
+
+        try {
+            event(new RouteUpdated('assign_customers', (int) $route->id));
+        } catch (\Throwable $e) {
+            Log::warning('RouteUpdated broadcast failed: ' . $e->getMessage());
         }
 
         return response()->json([

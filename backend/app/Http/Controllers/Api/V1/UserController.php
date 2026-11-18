@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\RouteUpdated;
+use App\Events\UserUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -144,6 +147,15 @@ class UserController extends Controller
                     }
                 }
             }
+        }
+
+        try {
+            event(new UserUpdated('create', (int) $user->id, (int) $user->role_id));
+            if ($user->isSalesman() && $request->has('route_plans')) {
+                event(new RouteUpdated('assign_salesman', null, (int) $user->id));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('UserUpdated broadcast failed: ' . $e->getMessage());
         }
 
         return response()->json([
@@ -319,6 +331,15 @@ class UserController extends Controller
             }
         }
 
+        try {
+            event(new UserUpdated('update', (int) $user->id, (int) $user->role_id));
+            if ($user->isSalesman() && ($request->has('route_plans') || array_key_exists('is_active', $validated))) {
+                event(new RouteUpdated('assign_salesman', null, (int) $user->id));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('UserUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'بەکارهێنەر بە سەرکەوتوویی نوێکرایەوە',
             'data' => $user->load(['role', 'routeSalesmen.route'])
@@ -352,7 +373,15 @@ class UserController extends Controller
             ], 400);
         }
 
+        $deletedUserId = (int) $user->id;
+        $deletedRoleId = (int) $user->role_id;
         $user->delete();
+
+        try {
+            event(new UserUpdated('delete', $deletedUserId, $deletedRoleId));
+        } catch (\Throwable $e) {
+            Log::warning('UserUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'بەکارهێنەر بە سەرکەوتوویی سڕدرایەوە'

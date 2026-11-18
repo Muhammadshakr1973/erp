@@ -1,14 +1,32 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/category_model.dart';
 import 'products_provider.dart';
 
 class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
   @override
   Future<List<CategoryModel>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+
     final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onCategoriesEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received on private-categories: $eventData");
+      _handleRealtimeEvent(eventData);
+    }
+
+    pusher.subscribeToChannel('private-categories', onCategoriesEvent);
+    ref.onDispose(() {
+      pusher.unsubscribeFromChannel('private-categories', onCategoriesEvent);
+    });
+
     try {
       final response = await api.client.get('/categories');
       if (response.statusCode == 200) {
@@ -31,6 +49,63 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
     } on DioException catch (e) {
       throw Exception(api.parseError(e));
     }
+  }
+
+  void _handleRealtimeEvent(Map<String, dynamic> eventData) {
+    final eventType = eventData['event_type']?.toString() ?? '';
+    final rawCategoryId = eventData['category_id'];
+    final categoryId = rawCategoryId is int
+        ? rawCategoryId
+        : int.tryParse(rawCategoryId?.toString() ?? '');
+
+    if (eventType == 'delete') {
+      if (categoryId != null && categoryId > 0) {
+        removeLocally(categoryId);
+      } else {
+        ref.invalidateSelf();
+      }
+      return;
+    }
+
+    final rawCategory = eventData['category'];
+    if (rawCategory is Map) {
+      final categoryMap = Map<String, dynamic>.from(rawCategory);
+      final category = CategoryModel.fromJson(categoryMap);
+      final currentUser = ref.read(authProvider).user;
+
+      if (currentUser != null && currentUser.isCustomer) {
+        final isActive =
+            categoryMap['is_active'] == true || categoryMap['is_active'] == 1;
+        final allowedIds =
+            currentUser.customer?.allowedCategoryIds ?? const <int>[];
+        if (!isActive || !allowedIds.contains(category.id)) {
+          removeLocally(category.id);
+          return;
+        }
+      }
+
+      final current = state.valueOrNull;
+      if (current == null) {
+        ref.invalidateSelf();
+        return;
+      }
+
+      final exists = current.any((c) => c.id == category.id);
+      if (exists) {
+        updateLocally(category);
+      } else {
+        addLocally(category);
+      }
+
+      if (eventType == 'update') {
+        ref
+            .read(productsListProvider.notifier)
+            .updateCategoryNameLocally(category.id, category.name);
+      }
+      return;
+    }
+
+    ref.invalidateSelf();
   }
 
   void addLocally(CategoryModel category) {

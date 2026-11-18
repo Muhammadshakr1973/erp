@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/route_model.dart';
 import 'customer_provider.dart';
@@ -31,6 +33,23 @@ final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onRoutesEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for routeListProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-routes', onRoutesEvent);
+  pusher.subscribeToChannel('private-customers', onRoutesEvent);
+  pusher.subscribeToChannel('private-users', onRoutesEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-routes', onRoutesEvent);
+    pusher.unsubscribeFromChannel('private-customers', onRoutesEvent);
+    pusher.unsubscribeFromChannel('private-users', onRoutesEvent);
+  });
+
   try {
     final response = await api.client.get('/routes');
     if (response.statusCode == 200) {
@@ -50,6 +69,25 @@ final todayRouteAssignmentsProvider =
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onTodayAssignmentsEvent(Map<String, dynamic> eventData) {
+    debugPrint(
+      "Realtime update received for todayRouteAssignmentsProvider: $eventData",
+    );
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-routes', onTodayAssignmentsEvent);
+  pusher.subscribeToChannel('private-customers', onTodayAssignmentsEvent);
+  pusher.subscribeToChannel('private-users', onTodayAssignmentsEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-routes', onTodayAssignmentsEvent);
+    pusher.unsubscribeFromChannel('private-customers', onTodayAssignmentsEvent);
+    pusher.unsubscribeFromChannel('private-users', onTodayAssignmentsEvent);
+  });
+
   try {
     final response = await api.client.get('/routes/today-assignments');
     if (response.statusCode == 200) {
@@ -90,6 +128,7 @@ class RouteActions {
         throw response.data ?? 'هەڵەیەک ڕوویدا';
       }
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {
         throw FormatException(
@@ -121,6 +160,7 @@ class RouteActions {
         throw response.data ?? 'هەڵەیەک ڕوویدا';
       }
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
       final resData = response.data;
       if (resData is! Map || resData['data'] is! Map) {
         throw FormatException(
@@ -137,6 +177,7 @@ class RouteActions {
     try {
       await api.client.delete('/routes/$id');
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -158,6 +199,7 @@ class RouteActions {
         },
       );
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -172,6 +214,7 @@ class RouteActions {
         },
       );
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -212,6 +255,7 @@ class RouteActions {
         data: {'customer_ids': customerIds},
       );
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -224,6 +268,7 @@ class RouteActions {
         data: {'customer_ids': customerIds},
       );
       ref.invalidate(routeListProvider);
+      ref.invalidate(todayRouteAssignmentsProvider);
       for (final cid in customerIds.toSet()) {
         unawaited(
           ref.read(customerActionsProvider).refreshSingleCustomerEverywhere(cid),

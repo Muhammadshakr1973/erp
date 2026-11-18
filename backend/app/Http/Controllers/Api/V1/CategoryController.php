@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\CategoryUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
@@ -58,6 +60,12 @@ class CategoryController extends Controller
         });
 
         $category->loadCount('products');
+
+        try {
+            event(new CategoryUpdated($category, $statusCode === 201 ? 'create' : 'update'));
+        } catch (\Throwable $e) {
+            Log::warning('CategoryUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $message,
@@ -156,6 +164,12 @@ class CategoryController extends Controller
             ], 422);
         }
 
+        try {
+            event(new CategoryUpdated($result['data'], 'update'));
+        } catch (\Throwable $e) {
+            Log::warning('CategoryUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'جۆرەکە نوێکرایەوە',
             'data' => $result['data'],
@@ -164,7 +178,15 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): JsonResponse
     {
+        $categoryId = (int) $category->id;
         $category->delete();
+
+        try {
+            event(new CategoryUpdated(null, 'delete', $categoryId));
+        } catch (\Throwable $e) {
+            Log::warning('CategoryUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'جۆرەکە سڕدرایەوە'
         ]);

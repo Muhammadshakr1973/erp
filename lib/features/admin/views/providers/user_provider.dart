@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api_client.dart';
+import '../../../../core/sync/pusher_service.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 
@@ -14,6 +16,21 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     return {'users': <UserModel>[], 'roles': []};
   }
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onUsersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for userAdminProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-users', onUsersEvent);
+  pusher.subscribeToChannel('private-routes', onUsersEvent);
+
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-users', onUsersEvent);
+    pusher.unsubscribeFromChannel('private-routes', onUsersEvent);
+  });
+
   try {
     final response = await api.client.get('/users');
     if (response.statusCode == 200) {
