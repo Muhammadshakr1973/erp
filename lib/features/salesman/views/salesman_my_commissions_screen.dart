@@ -119,8 +119,9 @@ class _SalesmanMyCommissionsScreenState
   void _setupPusherListener() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final pusher = _pusherService ?? ref.read(pusherServiceProvider);
-      _pusherService ??= pusher;
+      _pusherService ??= ref.read(pusherServiceProvider);
+      final pusher = _pusherService;
+      if (pusher == null) return;
       final user = ref.read(authProvider).user;
       _subscribedUserId = user?.id;
 
