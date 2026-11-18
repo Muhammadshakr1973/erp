@@ -2,7 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const parsedPort = Number.parseInt(process.env.PORT || '', 10);
+const PORT = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -31,8 +32,16 @@ const SEARCH_DIRS = [
 ];
 
 function findFile(relativePath) {
+  const cleanRel = relativePath.replace(/^[/\\]+/, '');
   for (const dir of SEARCH_DIRS) {
-    const fullPath = path.join(dir, relativePath);
+    const resolvedDir = path.resolve(dir);
+    const fullPath = path.resolve(resolvedDir, cleanRel);
+    if (
+      fullPath !== resolvedDir &&
+      !fullPath.startsWith(resolvedDir + path.sep)
+    ) {
+      continue;
+    }
     if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
       return fullPath;
     }
@@ -41,88 +50,112 @@ function findFile(relativePath) {
 }
 
 const server = http.createServer((req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  try {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
 
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
-    return;
-  }
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
 
-  // Parse URL
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  let pathname = decodeURIComponent(parsedUrl.pathname);
-  if (pathname.endsWith('/') && pathname.length > 1) {
-    pathname = pathname.slice(0, -1);
-  }
+    // Parse URL safely
+    let pathname = '/';
+    try {
+      const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+      pathname = decodeURIComponent(parsedUrl.pathname);
+    } catch (_) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('Bad Request');
+      return;
+    }
 
-  const ext = path.extname(pathname).toLowerCase();
+    if (pathname.endsWith('/') && pathname.length > 1) {
+      pathname = pathname.slice(0, -1);
+    }
 
-  // If the request is for a static asset with a non-HTML extension
-  if (ext && ext !== '.html') {
-    const foundPath = findFile(pathname);
-    if (foundPath) {
-      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-      fs.readFile(foundPath, (err, data) => {
+    const ext = path.extname(pathname).toLowerCase();
+
+    // If the request is for a static asset with a non-HTML extension
+    if (ext && ext !== '.html') {
+      const foundPath = findFile(pathname);
+      if (foundPath) {
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        fs.readFile(foundPath, (err, data) => {
+          if (err) {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.end('Error reading file');
+            }
+            return;
+          }
+          res.statusCode = 200;
+          res.setHeader('Content-Type', contentType);
+          res.end(data);
+        });
+        return;
+      }
+
+      // Special fallback for flutter.js to avoid any SyntaxError
+      if (pathname.endsWith('flutter.js')) {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.end('window._flutter = window._flutter || { loader: { load: function() {}, loadEntrypoint: function() {} } };');
+        return;
+      }
+
+      // Static asset not found - NEVER return HTML for static assets!
+      res.statusCode = 404;
+      const fallbackMime = MIME_TYPES[ext] || 'text/plain';
+      res.setHeader('Content-Type', fallbackMime);
+      if (ext === '.js' || ext === '.mjs') {
+        res.end('/* File not found: ' + pathname + ' */');
+      } else {
+        res.end('Not Found: ' + pathname);
+      }
+      return;
+    }
+
+    // For HTML pages or SPA routes (e.g. /, /orders, /customers, etc.)
+    let htmlPath = findFile(pathname === '/' ? 'index.html' : (pathname.endsWith('.html') ? pathname : 'index.html'));
+    if (!htmlPath) {
+      htmlPath = findFile('index.html');
+    }
+
+    if (htmlPath) {
+      fs.readFile(htmlPath, (err, content) => {
         if (err) {
-          res.statusCode = 500;
-          res.end('Error reading file');
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end('Error loading index.html');
+          }
           return;
         }
         res.statusCode = 200;
-        res.setHeader('Content-Type', contentType);
-        res.end(data);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(content);
       });
       return;
     }
 
-    // Special fallback for flutter.js to avoid any SyntaxError
-    if (pathname.endsWith('flutter.js')) {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.end('window._flutter = window._flutter || { loader: { load: function() {}, loadEntrypoint: function() {} } };');
-      return;
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end('<!DOCTYPE html><html lang="ku" dir="rtl"><head><title>GARDI ERP</title></head><body><h1>GARDI ERP</h1></body></html>');
+  } catch (err) {
+    console.error('Request handling error:', err);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('Internal Server Error');
+    } else if (!res.writableEnded) {
+      res.end();
     }
-
-    // Static asset not found - NEVER return HTML for static assets!
-    res.statusCode = 404;
-    const fallbackMime = MIME_TYPES[ext] || 'text/plain';
-    res.setHeader('Content-Type', fallbackMime);
-    if (ext === '.js' || ext === '.mjs') {
-      res.end('/* File not found: ' + pathname + ' */');
-    } else {
-      res.end('Not Found: ' + pathname);
-    }
-    return;
   }
-
-  // For HTML pages or SPA routes (e.g. /, /orders, /customers, etc.)
-  let htmlPath = findFile(pathname === '/' ? 'index.html' : (pathname.endsWith('.html') ? pathname : 'index.html'));
-  if (!htmlPath) {
-    htmlPath = findFile('index.html');
-  }
-
-  if (htmlPath) {
-    fs.readFile(htmlPath, (err, content) => {
-      if (err) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'text/plain');
-        res.end('Error loading index.html');
-        return;
-      }
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.end(content);
-    });
-    return;
-  }
-
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end('<!DOCTYPE html><html lang="ku" dir="rtl"><head><title>GARDI ERP</title></head><body><h1>GARDI ERP</h1></body></html>');
 });
 
 server.on('error', (err) => {
