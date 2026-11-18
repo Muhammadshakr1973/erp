@@ -743,6 +743,9 @@ class SalesOrderService
 
         try {
             event(new \App\Events\SalesOrderUpdated($updatedOrder, 'status_change'));
+            if ($newStatus === SalesOrder::STATUS_DELIVERED && $oldStatus !== $newStatus) {
+                event(new \App\Events\CustomerAccountUpdated(null, 'balance_updated', $updatedOrder->customer_id));
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order status change: " . $e->getMessage());
         }

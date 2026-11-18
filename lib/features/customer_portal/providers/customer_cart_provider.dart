@@ -390,9 +390,6 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
           if (mounted) {
             state = state.copyWith(activeDraftOrder: updated);
           }
-          unawaited(
-            _ref.read(productsListProvider.notifier).refreshProductsSilently(),
-          );
         }
       }
     } catch (e) {
@@ -453,11 +450,6 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
           lastCompletedOrderNumber: completedNumber,
         );
       }
-
-      unawaited(_ref.read(ordersListProvider.notifier).refreshSilently());
-      unawaited(
-        _ref.read(productsListProvider.notifier).refreshProductsSilently(),
-      );
 
       return completedNumber;
     } catch (e) {

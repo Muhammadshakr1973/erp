@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -193,7 +194,9 @@ class PurchaseActions {
       if (refreshRelatedProviders) {
         _ref.invalidate(purchaseRequirementsProvider);
         _ref.invalidate(purchaseRequirementsGroupProvider);
-        _ref.invalidate(productsListProvider);
+        unawaited(
+          _ref.read(productsListProvider.notifier).refreshProductsSilently(),
+        );
         _ref.invalidate(suppliersListProvider);
       }
 
@@ -241,7 +244,9 @@ class PurchaseActions {
       if (refreshRelatedProviders) {
         _ref.invalidate(purchaseRequirementsProvider);
         _ref.invalidate(purchaseRequirementsGroupProvider);
-        _ref.invalidate(productsListProvider);
+        unawaited(
+          _ref.read(productsListProvider.notifier).refreshProductsSilently(),
+        );
         _ref.invalidate(suppliersListProvider);
       }
 

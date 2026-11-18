@@ -223,9 +223,11 @@ class DeliveryTripService
 
         \Illuminate\Support\Facades\Cache::forget('admin_dashboard_kpis_v5');
         event(new \App\Events\DeliveryTripUpdated($result['trip_order']->trip, 'deliver_order'));
-        if ($result['payment']) {
-            event(new \App\Events\CustomerAccountUpdated(null, 'payment_received', $result['payment']->customer_id));
-        }
+        event(new \App\Events\CustomerAccountUpdated(
+            null,
+            $result['payment'] ? 'payment_received' : 'balance_updated',
+            $order->customer_id
+        ));
 
         return $result['trip_order'];
     }

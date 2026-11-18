@@ -245,11 +245,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
                       );
 
-                      ref.invalidate(singleCustomerProvider(customer.id));
-                      ref.invalidate(
-                        customerLedgerProvider(_ledgerFilters),
-                      );
-                      ref.invalidate(customerListProvider);
+                      ref
+                          .read(customerLedgerProvider(_ledgerFilters).notifier)
+                          .refreshSilently();
                       
                       if (context.mounted) {
                         Navigator.pop(context);
@@ -320,12 +318,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         barrierDismissible: false,
                         builder: (context) =>
                             CustomerFormDialog(customer: customer),
-                      ).then((result) {
-                        if (result == true || result is Customer) {
-                          ref.invalidate(singleCustomerProvider(customer.id));
-                          ref.invalidate(customerListProvider);
-                        }
-                      });
+                      );
                     },
                   ),
                   if (currentUser?.isAdmin ?? false)
@@ -953,7 +946,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(ordersListProvider),
+      onRefresh: () =>
+          ref.read(ordersListProvider.notifier).refreshSilently(),
       child: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => LayoutBuilder(

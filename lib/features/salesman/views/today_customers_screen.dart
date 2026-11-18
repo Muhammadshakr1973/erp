@@ -128,8 +128,13 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                 if (filtered.isEmpty) {
                   return LayoutBuilder(
                     builder: (context, constraints) => RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(customerListProvider),
+                      onRefresh: () => ref
+                          .read(
+                            filteredCustomerListProvider(
+                              defaultCustomerDirectoryFilters,
+                            ).notifier,
+                          )
+                          .refreshSilently(),
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: ConstrainedBox(
@@ -146,7 +151,13 @@ class _TodayCustomersScreenState extends ConsumerState<TodayCustomersScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(customerListProvider),
+                  onRefresh: () => ref
+                      .read(
+                        filteredCustomerListProvider(
+                          defaultCustomerDirectoryFilters,
+                        ).notifier,
+                      )
+                      .refreshSilently(),
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.screenHorizontal,

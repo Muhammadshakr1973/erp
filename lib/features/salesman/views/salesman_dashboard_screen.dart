@@ -100,10 +100,17 @@ class SalesmanDashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(ordersListProvider);
-          ref.invalidate(customerListProvider);
-          ref.invalidate(salesmanDashboardProvider);
-          await syncService.syncPendingOperations();
+          await Future.wait([
+            ref.read(ordersListProvider.notifier).refreshSilently(),
+            ref
+                .read(
+                  filteredCustomerListProvider(defaultCustomerDirectoryFilters)
+                      .notifier,
+                )
+                .refreshSilently(),
+            ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
+            syncService.syncPendingOperations(),
+          ]);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

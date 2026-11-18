@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -160,8 +161,7 @@ class DriverActions {
       );
 
       ref.invalidate(driverTripsProvider);
-      ref.invalidate(ordersListProvider);
-      ref.invalidate(readyOrdersForDeliveryProvider);
+      unawaited(ref.read(ordersListProvider.notifier).refreshSilently());
     } catch (e) {
       throw Exception(api.parseError(e));
     }

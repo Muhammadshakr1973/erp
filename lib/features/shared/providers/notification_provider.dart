@@ -10,11 +10,9 @@ import '../../../core/utils/notification_sound_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
-import '../../orders/providers/orders_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../../warehouse/providers/warehouse_provider.dart';
 import '../models/notification_model.dart';
-import 'customer_provider.dart';
 
 // Unread count provider for badges across the app
 final unreadNotificationsCountProvider = StateProvider<int>((ref) => 0);
@@ -160,20 +158,17 @@ class NotificationsNotifier
     final lowerType = type.toLowerCase();
     if (lowerType == 'order') {
       _ref.invalidate(ordersToPackProvider);
-      _ref.invalidate(ordersListProvider);
       _ref.invalidate(warehouseDashboardProvider);
-      _ref.invalidate(readyOrdersForDeliveryProvider);
-      _ref.invalidate(salesmanDashboardProvider);
+      unawaited(
+        _ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
+      );
       _ref.invalidate(dashboardProvider);
       _ref.invalidate(driverTripsProvider);
     } else if (lowerType == 'payment') {
       _ref.invalidate(dashboardProvider);
-      _ref.invalidate(salesmanDashboardProvider);
-    } else if (lowerType == 'customer') {
-      final role = _userRole?.toLowerCase();
-      if (role == 'admin' || role == 'owner' || role == 'salesman') {
-        _ref.invalidate(customerListProvider);
-      }
+      unawaited(
+        _ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
+      );
     } else if (lowerType == 'stock') {
       _ref.invalidate(warehouseStocksProvider);
       _ref.invalidate(warehouseDashboardProvider);

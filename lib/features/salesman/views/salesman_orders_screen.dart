@@ -62,7 +62,8 @@ class SalesmanOrdersScreen extends ConsumerWidget {
     final ordersAsync = ref.watch(ordersListProvider);
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(ordersListProvider),
+      onRefresh: () =>
+          ref.read(ordersListProvider.notifier).refreshSilently(),
       child: ordersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => LayoutBuilder(

@@ -54,18 +54,27 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
     super.dispose();
   }
 
+  CustomerFilters get _currentFilters => CustomerFilters(
+    page: _currentPage,
+    routeId: _selectedRouteId,
+    onlyDebtors: _onlyDebtors,
+    searchQuery: _searchQuery,
+  );
+
   void _showAddCustomerDialog(BuildContext context, [Customer? customer]) {
     showDialog<dynamic>(
       context: context,
       barrierDismissible: false,
       builder: (context) => CustomerFormDialog(customer: customer),
     ).then((result) {
-      if (result == true || result is Customer) {
-        ref.invalidate(filteredCustomerListProvider);
-        ref.invalidate(customerListProvider);
-        if (customer != null) {
-          ref.invalidate(singleCustomerProvider(customer.id));
-        }
+      if (!mounted) return;
+      final notifier = ref.read(
+        filteredCustomerListProvider(_currentFilters).notifier,
+      );
+      if (result is Customer) {
+        notifier.upsertCustomerLocally(result);
+      } else if (result == true) {
+        notifier.refreshSilently();
       }
     });
   }
@@ -137,8 +146,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
                 await ref
                     .read(customerActionsProvider)
                     .deleteCustomer(customer.id);
-                ref.invalidate(filteredCustomerListProvider);
-                ref.invalidate(customerListProvider);
+                ref
+                    .read(filteredCustomerListProvider(_currentFilters).notifier)
+                    .removeCustomerLocally(customer.id);
                 if (context.mounted) {
                   AppSnackbar.show(
                     context,
@@ -230,10 +240,9 @@ class _AdminCustomersScreenState extends ConsumerState<AdminCustomersScreen> {
           // Customer Grid List
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(filteredCustomerListProvider);
-                ref.invalidate(customerListProvider);
-              },
+              onRefresh: () => ref
+                  .read(filteredCustomerListProvider(filters).notifier)
+                  .refreshSilently(),
               child: customersAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(

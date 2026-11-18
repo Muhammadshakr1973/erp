@@ -208,10 +208,14 @@ class CustomerService
                 ]);
             }
 
-            event(new \App\Events\CustomerAccountUpdated($customer, 'create'));
-
             return $customer->fresh(['route', 'specialPrices']);
         });
+
+        try {
+            event(new \App\Events\CustomerAccountUpdated($customer, 'create'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for new customer: " . $e->getMessage());
+        }
 
         // Notify new customer created AFTER database commit (NOT-013)
         try {
@@ -226,7 +230,7 @@ class CustomerService
 
     public function updateCustomer(Customer $customer, array $data): Customer
     {
-        return DB::transaction(function () use ($customer, $data) {
+        $updated = DB::transaction(function () use ($customer, $data) {
             $data = $this->normalizePortalAttributes($data);
 
             if (empty($data['route_id']) && !$customer->route_id) {
@@ -244,11 +248,16 @@ class CustomerService
                 $this->syncPortalUser($customer);
             }
 
-            $updated = $customer->fresh(['route', 'specialPrices']);
-            event(new \App\Events\CustomerAccountUpdated($updated, 'update'));
-
-            return $updated;
+            return $customer->fresh(['route', 'specialPrices']);
         });
+
+        try {
+            event(new \App\Events\CustomerAccountUpdated($updated, 'update'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for customer update: " . $e->getMessage());
+        }
+
+        return $updated;
     }
 
     public function deleteCustomer(Customer $customer): bool

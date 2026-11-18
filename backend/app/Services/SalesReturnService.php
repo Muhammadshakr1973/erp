@@ -33,7 +33,7 @@ class SalesReturnService
      */
     public function createReturn(array $data, $user): SalesReturn
     {
-        return DB::transaction(function () use ($data, $user) {
+        $salesReturn = DB::transaction(function () use ($data, $user) {
             $orderId = $data['sales_order_id'];
             
             // ١. قفڵکردنی پسوڵەی سەرەکی
@@ -218,5 +218,17 @@ class SalesReturnService
             // بنێرەوە بۆ بەکارهێنانی دەرەوەی ترانزاکشنەکە
             return $salesReturn;
         });
+
+        try {
+            event(new \App\Events\CustomerAccountUpdated(null, 'sales_return', $salesReturn->customer_id));
+            $order = $salesReturn->salesOrder;
+            if ($order) {
+                event(new \App\Events\SalesOrderUpdated($order, 'return_created'));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for sales return: " . $e->getMessage());
+        }
+
+        return $salesReturn;
     }
 }

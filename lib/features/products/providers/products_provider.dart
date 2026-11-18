@@ -12,9 +12,12 @@ class ProductsListNotifier
   final ApiClient _api;
   final PusherService _pusher;
   final Ref _ref;
+  final Set<int> _fetchingProductIds = {};
+  late final void Function(Map<String, dynamic>) _onProductEvent;
 
   ProductsListNotifier(this._api, this._pusher, this._ref)
       : super(const AsyncValue.loading()) {
+    _onProductEvent = _handleRealtimeEvent;
     final user = _ref.read(authProvider).user;
     if (user != null) {
       fetchProducts();
@@ -25,13 +28,125 @@ class ProductsListNotifier
   }
 
   void _subscribeToPusher() {
-    _pusher.subscribeToChannel('private-products', (eventData) {
-      _handleRealtimeEvent(eventData);
-    });
+    _pusher.subscribeToChannel('private-products', _onProductEvent);
+  }
+
+  bool _shouldIncludeProductForUser(
+    ProductModel product,
+    List<ProductModel> currentList,
+  ) {
+    final user = _ref.read(authProvider).user;
+    if (user == null) return false;
+
+    if (user.isCustomer) {
+      if (!product.isActive) return false;
+      final allowedIds = user.customer?.allowedCategoryIds ?? const <int>[];
+      return product.categoryId != null &&
+          allowedIds.contains(product.categoryId);
+    }
+
+    if (user.isCashVanSalesman) {
+      final vanWarehouseId = user.warehouseId;
+      if (vanWarehouseId == null) return false;
+      final hasVanStock = product.stocks.any(
+        (s) =>
+            s is Map &&
+            int.tryParse(s['warehouse_id']?.toString() ?? '') == vanWarehouseId,
+      );
+      if (hasVanStock) return true;
+      if (product.isParent) {
+        return currentList.any((v) => v.parentId == product.id);
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  ProductModel _mergeProductPayload(
+    ProductModel existing,
+    Map<String, dynamic> pMap,
+  ) {
+    final hasParentIdKey = pMap.containsKey('parent_id');
+    final parsedParentId = hasParentIdKey
+        ? (pMap['parent_id'] != null
+            ? int.tryParse(pMap['parent_id'].toString())
+            : null)
+        : existing.parentId;
+    final hasVariantNameKey = pMap.containsKey('variant_name');
+    final hasSkuKey = pMap.containsKey('sku');
+    final hasCategoryIdKey = pMap.containsKey('category_id');
+    final parsedCategoryId = hasCategoryIdKey
+        ? (pMap['category_id'] != null
+            ? int.tryParse(pMap['category_id'].toString())
+            : null)
+        : existing.categoryId;
+    final hasSupplierIdKey = pMap.containsKey('supplier_id');
+    final parsedSupplierId = hasSupplierIdKey
+        ? (pMap['supplier_id'] != null
+            ? int.tryParse(pMap['supplier_id'].toString())
+            : null)
+        : existing.supplierId;
+    final hasCategoryKey = pMap.containsKey('category');
+    final hasSupplierKey = pMap.containsKey('supplier');
+    final hasUnitKey = pMap.containsKey('unit');
+    final hasImagePathKey = pMap.containsKey('image_path');
+
+    return existing.copyWith(
+      parentId: parsedParentId,
+      clearParentId: hasParentIdKey && parsedParentId == null,
+      isParent: pMap['is_parent'] != null
+          ? (pMap['is_parent'] == 1 || pMap['is_parent'] == true)
+          : existing.isParent,
+      name: pMap['name']?.toString() ?? existing.name,
+      variantName: pMap['variant_name']?.toString(),
+      clearVariantName: hasVariantNameKey && pMap['variant_name'] == null,
+      sku: pMap['sku']?.toString(),
+      clearSku: hasSkuKey && pMap['sku'] == null,
+      barcode: pMap['barcode']?.toString() ?? existing.barcode,
+      categoryId: parsedCategoryId,
+      clearCategoryId: hasCategoryIdKey && parsedCategoryId == null,
+      supplierId: parsedSupplierId,
+      clearSupplierId: hasSupplierIdKey && parsedSupplierId == null,
+      category: hasCategoryKey ? pMap['category'] : existing.category,
+      clearCategory: hasCategoryKey && pMap['category'] == null,
+      supplier: hasSupplierKey ? pMap['supplier'] : existing.supplier,
+      clearSupplier: hasSupplierKey && pMap['supplier'] == null,
+      unit: pMap['unit']?.toString(),
+      clearUnit: hasUnitKey && pMap['unit'] == null,
+      unitsPerCarton: pMap['units_per_carton'] != null
+          ? (int.tryParse(pMap['units_per_carton'].toString()) ??
+              existing.unitsPerCarton)
+          : existing.unitsPerCarton,
+      imagePath: pMap['image_path']?.toString(),
+      clearImagePath: hasImagePathKey && pMap['image_path'] == null,
+      useParentPrice: pMap['use_parent_price'] != null
+          ? (pMap['use_parent_price'] == 1 || pMap['use_parent_price'] == true)
+          : existing.useParentPrice,
+      isActive: pMap['is_active'] != null
+          ? (pMap['is_active'] == 1 || pMap['is_active'] == true)
+          : existing.isActive,
+      costPrice: pMap['cost_price'] != null
+          ? (double.tryParse(pMap['cost_price'].toString()) ??
+              existing.costPrice)
+          : existing.costPrice,
+      priceN1: pMap['price_n1'] != null
+          ? (double.tryParse(pMap['price_n1'].toString()) ?? existing.priceN1)
+          : existing.priceN1,
+      priceN2: pMap['price_n2'] != null
+          ? (double.tryParse(pMap['price_n2'].toString()) ?? existing.priceN2)
+          : existing.priceN2,
+      priceN3: pMap['price_n3'] != null
+          ? (double.tryParse(pMap['price_n3'].toString()) ?? existing.priceN3)
+          : existing.priceN3,
+      stocks: pMap['stocks'] is List
+          ? (pMap['stocks'] as List)
+          : existing.stocks,
+    );
   }
 
   void _handleRealtimeEvent(dynamic eventData) {
-    if (eventData == null) return;
+    if (eventData == null || !mounted) return;
 
     Map<String, dynamic> data;
     if (eventData is Map) {
@@ -62,83 +177,67 @@ class ProductsListNotifier
         return;
       }
 
-      // 1. Granular patch if full or partial product is in payload
+      // 1. Granular patch or insert if product payload is provided
       if (data['product'] is Map) {
         final pMap = Map<String, dynamic>.from(data['product'] as Map);
         final index = currentList.indexWhere((p) => p.id == productId);
         if (index != -1) {
           final existing = currentList[index];
-          final hasParentIdKey = pMap.containsKey('parent_id');
-          final parsedParentId = hasParentIdKey
-              ? (pMap['parent_id'] != null
-                  ? int.tryParse(pMap['parent_id'].toString())
-                  : null)
-              : existing.parentId;
-          final hasVariantNameKey = pMap.containsKey('variant_name');
-          final updated = existing.copyWith(
-            parentId: parsedParentId,
-            clearParentId: hasParentIdKey && parsedParentId == null,
-            isParent: pMap['is_parent'] != null
-                ? (pMap['is_parent'] == 1 || pMap['is_parent'] == true)
-                : existing.isParent,
-            name: pMap['name']?.toString() ?? existing.name,
-            variantName: pMap['variant_name']?.toString(),
-            clearVariantName: hasVariantNameKey && pMap['variant_name'] == null,
-            sku: pMap['sku']?.toString() ?? existing.sku,
-            barcode: pMap['barcode']?.toString() ?? existing.barcode,
-            useParentPrice: pMap['use_parent_price'] != null
-                ? (pMap['use_parent_price'] == 1 || pMap['use_parent_price'] == true)
-                : existing.useParentPrice,
-            isActive: pMap['is_active'] != null
-                ? (pMap['is_active'] == 1 || pMap['is_active'] == true)
-                : existing.isActive,
-            costPrice: pMap['cost_price'] != null
-                ? (double.tryParse(pMap['cost_price'].toString()) ??
-                    existing.costPrice)
-                : existing.costPrice,
-            priceN1: pMap['price_n1'] != null
-                ? (double.tryParse(pMap['price_n1'].toString()) ??
-                    existing.priceN1)
-                : existing.priceN1,
-            priceN2: pMap['price_n2'] != null
-                ? (double.tryParse(pMap['price_n2'].toString()) ??
-                    existing.priceN2)
-                : existing.priceN2,
-            priceN3: pMap['price_n3'] != null
-                ? (double.tryParse(pMap['price_n3'].toString()) ??
-                    existing.priceN3)
-                : existing.priceN3,
-            stocks: pMap['stocks'] is List
-                ? (pMap['stocks'] as List)
-                : existing.stocks,
-          );
+          final updated = _mergeProductPayload(existing, pMap);
+          if (!_shouldIncludeProductForUser(updated, currentList)) {
+            removeProductLocally(productId);
+            return;
+          }
+          if (_sameProductData(existing, updated)) {
+            return;
+          }
           final updatedList = List<ProductModel>.from(currentList);
           updatedList[index] = updated;
           state = AsyncValue.data(updatedList);
           return;
         }
+
+        // Not currently in local list: insert if visible to this user
+        final candidate = ProductModel.fromJson(pMap);
+        if (_shouldIncludeProductForUser(candidate, currentList)) {
+          state = AsyncValue.data([candidate, ...currentList]);
+          if (candidate.parentId != null &&
+              !currentList.any((p) => p.id == candidate.parentId)) {
+            _fetchSingleProduct(candidate.parentId!);
+          }
+        }
+        return;
       }
 
       // 2. Granular stocks update
       if (data['stocks'] is List) {
+        final incomingStocks = data['stocks'] as List;
         final index = currentList.indexWhere((p) => p.id == productId);
         if (index != -1) {
           final existing = currentList[index];
+          final updated = existing.copyWith(stocks: incomingStocks);
+          if (_sameProductData(existing, updated)) {
+            return;
+          }
           final updatedList = List<ProductModel>.from(currentList);
-          updatedList[index] =
-              existing.copyWith(stocks: data['stocks'] as List);
+          updatedList[index] = updated;
           state = AsyncValue.data(updatedList);
           return;
         }
+        // Unknown product now has stock event (e.g. stock transferred to CashVan): fetch single product
+        _fetchSingleProduct(productId);
+        return;
       }
 
       // 3. Granular price update
-      if (data['price_n1'] != null || data['cost_price'] != null) {
+      if (data['price_n1'] != null ||
+          data['price_n2'] != null ||
+          data['price_n3'] != null ||
+          data['cost_price'] != null) {
         final index = currentList.indexWhere((p) => p.id == productId);
         if (index != -1) {
           final existing = currentList[index];
-          final updatedList = List<ProductModel>.from(currentList);
-          updatedList[index] = existing.copyWith(
+          final updated = existing.copyWith(
             costPrice: data['cost_price'] != null
                 ? (double.tryParse(data['cost_price'].toString()) ??
                     existing.costPrice)
@@ -156,26 +255,24 @@ class ProductsListNotifier
                     existing.priceN3)
                 : existing.priceN3,
           );
+          if (_sameProductData(existing, updated)) {
+            return;
+          }
+          final updatedList = List<ProductModel>.from(currentList);
+          updatedList[index] = updated;
           state = AsyncValue.data(updatedList);
           return;
         }
       }
 
-      // 4. In case of new product creation
-      if (eventType == 'create' && data['product'] is Map) {
-        final newProduct = ProductModel.fromJson(
-            Map<String, dynamic>.from(data['product'] as Map));
-        state = AsyncValue.data([newProduct, ...currentList]);
-        return;
-      }
-
-      // 5. Targeted single product fetch without downloading the entire product catalog
-      _fetchSingleProduct(productId, currentList);
+      // 4. Targeted single product fetch without downloading the entire product catalog
+      _fetchSingleProduct(productId);
     });
   }
 
-  Future<void> _fetchSingleProduct(
-      int productId, List<ProductModel> currentList) async {
+  Future<void> _fetchSingleProduct(int productId) async {
+    if (_fetchingProductIds.contains(productId)) return;
+    _fetchingProductIds.add(productId);
     try {
       final response = await _api.client.get('/products/$productId');
       if (!mounted) return;
@@ -183,26 +280,53 @@ class ProductsListNotifier
           response.data is Map &&
           response.data['data'] is Map) {
         final singleProduct = ProductModel.fromJson(
-            Map<String, dynamic>.from(response.data['data']));
-        final index = currentList.indexWhere((p) => p.id == productId);
-        final updatedList = List<ProductModel>.from(currentList);
+          Map<String, dynamic>.from(response.data['data']),
+        );
+        final latestList = state.valueOrNull;
+        if (latestList == null) return;
+
+        final index = latestList.indexWhere((p) => p.id == productId);
+        if (!_shouldIncludeProductForUser(singleProduct, latestList)) {
+          if (index != -1) {
+            removeProductLocally(productId);
+          }
+          return;
+        }
+        if (index != -1 && _sameProductData(latestList[index], singleProduct)) {
+          return;
+        }
+
+        final updatedList = List<ProductModel>.from(latestList);
         if (index != -1) {
           updatedList[index] = singleProduct;
         } else {
           updatedList.insert(0, singleProduct);
         }
         state = AsyncValue.data(updatedList);
+
+        if (singleProduct.parentId != null &&
+            !updatedList.any((p) => p.id == singleProduct.parentId)) {
+          _fetchSingleProduct(singleProduct.parentId!);
+        }
       }
     } catch (_) {
       // Background single product patch error ignored to avoid disrupting UI
+    } finally {
+      _fetchingProductIds.remove(productId);
     }
   }
 
   Future<void> refreshSingleProduct(int productId) async {
-    final currentList = state.valueOrNull;
-    if (currentList != null) {
-      await _fetchSingleProduct(productId, currentList);
+    if (state.valueOrNull != null) {
+      await _fetchSingleProduct(productId);
     }
+  }
+
+  Future<void> ensureLoaded() async {
+    if (state.asData != null && !state.hasError) {
+      return;
+    }
+    await fetchProducts();
   }
 
   void patchProductsFromOrderData(Map<String, dynamic> orderData) {
@@ -223,13 +347,16 @@ class ProductsListNotifier
             final index = updatedList.indexWhere((p) => p.id == pid);
             if (index != -1) {
               final existing = updatedList[index];
-              updatedList[index] = existing.copyWith(
+              final patched = existing.copyWith(
                 stocks: prodMap['stocks'] as List,
               );
-              anyUpdated = true;
+              if (!_sameProductData(existing, patched)) {
+                updatedList[index] = patched;
+                anyUpdated = true;
+              }
             }
           } else if (pid != null) {
-            _fetchSingleProduct(pid, currentList);
+            _fetchSingleProduct(pid);
           }
         }
       }
@@ -453,7 +580,7 @@ class ProductsListNotifier
 
   @override
   void dispose() {
-    _pusher.unsubscribeFromChannel('private-products');
+    _pusher.unsubscribeFromChannel('private-products', _onProductEvent);
     super.dispose();
   }
 }

@@ -1148,7 +1148,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       final refreshedOrders = next.asData?.value;
       if (selectedOrder == null || refreshedOrders == null) return;
 
-      // Only deselect if this order explicitly exists in refreshed list and has been DELIVERED or CANCELLED
       final matchingOrder = refreshedOrders
           .where((order) => order.id == selectedOrder.id)
           .firstOrNull;
@@ -1157,7 +1156,117 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         if (status == OrderModel.statusDelivered ||
             status == OrderModel.statusCancelled) {
           _setActiveOrder(null);
+          return;
         }
+
+        if (!_isSavingBatch && _debounceTimer == null) {
+          final itemsChanged =
+              matchingOrder.items.length != selectedOrder.items.length ||
+              List.generate(matchingOrder.items.length, (i) {
+                final a = matchingOrder.items[i];
+                final b = selectedOrder.items[i];
+                return a.productId != b.productId ||
+                    a.quantity != b.quantity ||
+                    a.unitPrice != b.unitPrice ||
+                    a.notes != b.notes;
+              }).any((diff) => diff);
+
+          final orderChanged =
+              matchingOrder.version != selectedOrder.version ||
+              matchingOrder.status != selectedOrder.status ||
+              matchingOrder.customerId != selectedOrder.customerId ||
+              matchingOrder.priceType != selectedOrder.priceType ||
+              matchingOrder.totalAmount != selectedOrder.totalAmount ||
+              itemsChanged;
+
+          if (orderChanged && mounted) {
+            setState(() {
+              _selectedOrder = matchingOrder;
+              _orderCart
+                ..clear()
+                ..addEntries(
+                  matchingOrder.items.map(
+                    (it) => MapEntry(it.productId, it.quantity),
+                  ),
+                );
+              _orderCartNotes.clear();
+              for (final it in matchingOrder.items) {
+                if (it.notes != null) {
+                  _orderCartNotes[it.productId] = it.notes!;
+                }
+              }
+              if (!_isManualPriceTierOverride) {
+                final custPriceType = matchingOrder.customer is Map
+                    ? matchingOrder.customer['price_type']
+                          ?.toString()
+                          .toUpperCase()
+                    : null;
+                final orderTier = matchingOrder.priceType?.toUpperCase();
+                final resolvedTier =
+                    const ['N1', 'N2', 'N3'].contains(custPriceType)
+                    ? custPriceType!
+                    : (const ['N1', 'N2', 'N3'].contains(orderTier)
+                          ? orderTier!
+                          : _selectedPriceTier);
+                _selectedPriceTier = resolvedTier;
+              }
+            });
+          }
+        }
+      }
+    });
+    ref.listen<AsyncValue<List<Customer>>>(customerListProvider, (_, next) {
+      final selectedOrder = _selectedOrder;
+      if (selectedOrder == null || selectedOrder.customerId <= 0) return;
+      final customers = next.asData?.value;
+      if (customers == null) return;
+      final updatedCustomer = customers
+          .where((c) => c.id == selectedOrder.customerId)
+          .firstOrNull;
+      if (updatedCustomer == null || !mounted) return;
+
+      final existingCustMap = selectedOrder.customer is Map
+          ? Map<String, dynamic>.from(selectedOrder.customer as Map)
+          : <String, dynamic>{};
+      final mergedCustMap = {
+        ...existingCustMap,
+        ...updatedCustomer.toJson(),
+      };
+      final newPriceTier = updatedCustomer.priceType?.toUpperCase();
+      final resolvedTier =
+          (!_isManualPriceTierOverride &&
+              const ['N1', 'N2', 'N3'].contains(newPriceTier))
+          ? newPriceTier!
+          : _selectedPriceTier;
+
+      final specialChanged =
+          updatedCustomer.specialPrices.length != _customerSpecialPrices.length ||
+          updatedCustomer.specialPrices.entries.any(
+            (e) => _customerSpecialPrices[e.key] != e.value,
+          );
+
+      setState(() {
+        _selectedOrder = selectedOrder.copyWith(customer: mergedCustMap);
+        _selectedPriceTier = resolvedTier;
+        if (updatedCustomer.specialPrices.isNotEmpty) {
+          _customerSpecialPrices = Map<int, double>.from(
+            updatedCustomer.specialPrices,
+          );
+        }
+      });
+
+      if (specialChanged && updatedCustomer.specialPrices.isEmpty) {
+        ref
+            .read(customerActionsProvider)
+            .fetchSpecialPrices(updatedCustomer.id)
+            .then((prices) {
+              if (mounted && _selectedOrder?.customerId == updatedCustomer.id) {
+                setState(() {
+                  _customerSpecialPrices = prices;
+                });
+              }
+            })
+            .catchError((_) {});
       }
     });
     final myVanWarehouse = ref.watch(myAssignedVanWarehouseProvider);
@@ -1184,11 +1293,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (_selectedOrder != null && _selectedOrder!.id > 0 && _selectedOrder!.orderNumber.isNotEmpty) {
       if (orderMap.containsKey(_selectedOrder!.id)) {
         final matching = orderMap[_selectedOrder!.id]!;
-        if ((matching.version != _selectedOrder!.version ||
-                matching.status.toUpperCase() !=
-                    _selectedOrder!.status.toUpperCase()) &&
-            !_isSavingBatch) {
-          _selectedOrder = matching;
+        if (!_isSavingBatch) {
+          orderMap[_selectedOrder!.id] = matching;
+        } else {
+          orderMap[_selectedOrder!.id] = _selectedOrder!;
         }
       } else {
         final status = _selectedOrder!.status.toUpperCase();

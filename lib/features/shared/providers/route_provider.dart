@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
@@ -223,7 +224,11 @@ class RouteActions {
         data: {'customer_ids': customerIds},
       );
       ref.invalidate(routeListProvider);
-      ref.invalidate(customerListProvider);
+      for (final cid in customerIds.toSet()) {
+        unawaited(
+          ref.read(customerActionsProvider).refreshSingleCustomerEverywhere(cid),
+        );
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }

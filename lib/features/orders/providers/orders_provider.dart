@@ -5,15 +5,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/models/paginated_response.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../../products/providers/products_provider.dart';
+import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../models/order_model.dart';
 
 class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
+  final Set<int> _fetchingOrderIds = {};
+  bool _isRefreshingAll = false;
+
   @override
   FutureOr<List<OrderModel>> build() async {
     final userId = ref.watch(authProvider.select((state) => state.user?.id));
@@ -25,16 +30,116 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       debugPrint(
         "Realtime update received on private-orders channel: $eventData",
       );
-      refreshSilently();
+      _handleOrdersRealtimeEvent(eventData);
     }
 
     pusher.subscribeToChannel('private-orders', onOrdersEvent);
+
+    // Keep customer details (name, phone, address, balance, price_type) inside loaded orders synced
+    ref.listen<AsyncValue<PaginatedResponse<Customer>>>(
+      filteredCustomerListProvider(defaultCustomerDirectoryFilters),
+      (prev, next) {
+        final prevData = prev?.valueOrNull?.data;
+        final nextData = next.valueOrNull?.data;
+        if (prevData == null || nextData == null) return;
+        final prevById = {for (final c in prevData) c.id: c};
+        for (final c in nextData) {
+          final old = prevById[c.id];
+          if (old == null ||
+              old.name != c.name ||
+              old.phone != c.phone ||
+              old.address != c.address ||
+              old.balance != c.balance ||
+              old.priceType != c.priceType ||
+              old.permanentDiscount != c.permanentDiscount ||
+              old.specialPrices.length != c.specialPrices.length) {
+            patchCustomerOnOrdersLocally(c);
+          }
+        }
+      },
+    );
 
     ref.onDispose(() {
       pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
     });
 
     return _fetchOrders(api);
+  }
+
+  void _handleOrdersRealtimeEvent(Map<String, dynamic> eventData) {
+    final eventType = eventData['event_type']?.toString();
+    final orderId = int.tryParse(
+      (eventData['sales_order_id'] ?? eventData['order_id'] ?? eventData['id'])
+              ?.toString() ??
+          '',
+    );
+
+    if (orderId == null || orderId <= 0) {
+      unawaited(refreshSilently());
+      return;
+    }
+
+    if (eventType == 'delete') {
+      removeOrderLocally(orderId.toString());
+      return;
+    }
+
+    final eventStatus = eventData['status']?.toString().toUpperCase();
+    unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
+  }
+
+  Future<void> _fetchAndPatchSingleOrder(
+    int orderId, {
+    String? eventStatus,
+  }) async {
+    if (_fetchingOrderIds.contains(orderId)) return;
+    _fetchingOrderIds.add(orderId);
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.client.get('/orders/$orderId');
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        if (data is! Map) return;
+
+        final fetched = OrderModel.fromJson(Map<String, dynamic>.from(data));
+        final user = ref.read(authProvider).user;
+        final currentOrders = state.valueOrNull;
+
+        // Non-customer /orders index hides customer portal DRAFT orders unless already tracked
+        if (user != null &&
+            !user.isCustomer &&
+            fetched.status.toUpperCase() == OrderModel.statusDraft) {
+          final alreadyExists =
+              currentOrders?.any((o) => o.id == fetched.id) ?? false;
+          if (!alreadyExists) return;
+        }
+
+        upsertOrderLocally(fetched);
+      }
+    } on DioException catch (e) {
+      final code = e.response?.statusCode;
+      if (code == 403 || code == 404) {
+        final user = ref.read(authProvider).user;
+        // Drivers get 403 on /orders/{id} for unassigned READY orders; refresh silently in that edge case
+        if (code == 403 &&
+            user != null &&
+            user.isDriver &&
+            eventStatus == OrderModel.statusReady) {
+          unawaited(refreshSilently());
+        } else {
+          removeOrderLocally(orderId.toString());
+        }
+      }
+    } catch (_) {
+      // Ignore transient errors silently
+    } finally {
+      _fetchingOrderIds.remove(orderId);
+    }
+  }
+
+  Future<void> refreshSingleOrder(int orderId) async {
+    if (orderId <= 0) return;
+    await _fetchAndPatchSingleOrder(orderId);
   }
 
   Future<List<OrderModel>> _fetchOrders(ApiClient api) async {
@@ -72,19 +177,128 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     );
   }
 
+  bool _sameOrderData(OrderModel a, OrderModel b) {
+    if (a.id != b.id ||
+        a.orderNumber != b.orderNumber ||
+        a.sharedKey != b.sharedKey ||
+        a.version != b.version ||
+        a.customerId != b.customerId ||
+        a.salesmanId != b.salesmanId ||
+        a.warehouseId != b.warehouseId ||
+        a.subtotal != b.subtotal ||
+        a.permanentDiscountPercent != b.permanentDiscountPercent ||
+        a.permanentDiscountAmount != b.permanentDiscountAmount ||
+        a.discountAmount != b.discountAmount ||
+        a.discountPercent != b.discountPercent ||
+        a.discountType != b.discountType ||
+        a.totalAmount != b.totalAmount ||
+        a.totalProfit != b.totalProfit ||
+        a.status != b.status ||
+        a.notes != b.notes ||
+        a.createdAt != b.createdAt ||
+        a.priceType != b.priceType ||
+        a.customerName != b.customerName ||
+        a.customerAddress != b.customerAddress) {
+      return false;
+    }
+
+    if (a.customer is Map && b.customer is Map) {
+      final am = a.customer as Map;
+      final bm = b.customer as Map;
+      if (am['current_balance']?.toString() != bm['current_balance']?.toString() ||
+          am['price_type']?.toString() != bm['price_type']?.toString() ||
+          am['phone']?.toString() != bm['phone']?.toString()) {
+        return false;
+      }
+    }
+
+    if (a.items.length != b.items.length) return false;
+    for (int i = 0; i < a.items.length; i++) {
+      final ai = a.items[i];
+      final bi = b.items[i];
+      if (ai.id != bi.id ||
+          ai.productId != bi.productId ||
+          ai.productName != bi.productName ||
+          ai.quantity != bi.quantity ||
+          ai.unitPrice != bi.unitPrice ||
+          ai.subtotal != bi.subtotal ||
+          ai.isPacked != bi.isPacked ||
+          ai.notes != bi.notes ||
+          ai.priceType != bi.priceType) {
+        return false;
+      }
+    }
+
+    if (a.returnedItems.length != b.returnedItems.length) return false;
+    for (int i = 0; i < a.returnedItems.length; i++) {
+      final ar = a.returnedItems[i];
+      final br = b.returnedItems[i];
+      if (ar.id != br.id ||
+          ar.productId != br.productId ||
+          ar.quantity != br.quantity ||
+          ar.unitPrice != br.unitPrice ||
+          ar.subtotal != br.subtotal ||
+          ar.reason != br.reason) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   Future<void> refreshSilently() async {
+    if (_isRefreshingAll) return;
+    _isRefreshingAll = true;
     final api = ref.read(apiClientProvider);
     try {
       final freshOrders = await _fetchOrders(api);
+      final current = state.valueOrNull;
+      if (current != null && current.length == freshOrders.length) {
+        bool allSame = true;
+        for (int i = 0; i < freshOrders.length; i++) {
+          if (!_sameOrderData(current[i], freshOrders[i])) {
+            allSame = false;
+            break;
+          }
+        }
+        if (allSame) return;
+      }
       state = AsyncData(freshOrders);
     } catch (_) {
       // Maintain current state on transient errors
+    } finally {
+      _isRefreshingAll = false;
+    }
+  }
+
+  void patchCustomerOnOrdersLocally(Customer customer) {
+    final currentOrders = state.valueOrNull;
+    if (currentOrders == null || currentOrders.isEmpty) return;
+
+    bool anyUpdated = false;
+    final updated = currentOrders.map((o) {
+      if (o.customerId != customer.id) return o;
+      final existingCustomerMap = o.customer is Map
+          ? Map<String, dynamic>.from(o.customer as Map)
+          : <String, dynamic>{};
+      final mergedCustomer = {
+        ...existingCustomerMap,
+        ...customer.toJson(),
+      };
+      anyUpdated = true;
+      return o.copyWith(customer: mergedCustomer);
+    }).toList();
+
+    if (anyUpdated) {
+      state = AsyncData(updated);
     }
   }
 
   void removeOrderLocally(String orderId) {
     final currentOrders = state.valueOrNull;
     if (currentOrders != null) {
+      final existed = currentOrders.any((o) => o.id.toString() == orderId);
+      if (!existed) return;
       final updated = currentOrders
           .where((o) => o.id.toString() != orderId)
           .toList();
@@ -95,34 +309,48 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   void updateOrderStatusLocally(String orderId, String newStatus) {
     final currentOrders = state.valueOrNull;
     if (currentOrders != null) {
+      bool changed = false;
       final updated = currentOrders.map((o) {
-        if (o.id.toString() == orderId) {
+        if (o.id.toString() == orderId && o.status != newStatus) {
+          changed = true;
           return o.copyWith(status: newStatus);
         }
         return o;
       }).toList();
-      state = AsyncData(updated);
+      if (changed) {
+        state = AsyncData(updated);
+      }
     }
   }
 
   void upsertOrderLocally(OrderModel newOrder) {
-    final currentOrders = state.valueOrNull ?? [];
-    final Map<int, OrderModel> map = {newOrder.id: newOrder};
-    for (final o in currentOrders) {
-      if (!map.containsKey(o.id)) {
-        map[o.id] = o;
-      }
+    final currentOrders = state.valueOrNull;
+    if (currentOrders == null) {
+      state = AsyncData([newOrder]);
+      return;
     }
-    final updated = map.values.toList();
-    updated.sort((a, b) {
-      final aDate =
-          DateTime.tryParse(a.createdAt) ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate =
-          DateTime.tryParse(b.createdAt) ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
+
+    final existingIndex = currentOrders.indexWhere((o) => o.id == newOrder.id);
+    if (existingIndex != -1 &&
+        _sameOrderData(currentOrders[existingIndex], newOrder)) {
+      return;
+    }
+
+    final updated = List<OrderModel>.from(currentOrders);
+    if (existingIndex != -1) {
+      updated[existingIndex] = newOrder;
+    } else {
+      updated.add(newOrder);
+      updated.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(a.createdAt) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse(b.createdAt) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+    }
     state = AsyncData(updated);
   }
 
@@ -136,53 +364,90 @@ final ordersListProvider =
       OrdersListNotifier.new,
     );
 
-final singleOrderProvider = FutureProvider.family<OrderModel?, String>((
-  ref,
-  orderId,
-) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) return null;
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
+  bool _isRefreshing = false;
 
-  final parsedId = int.tryParse(orderId);
+  @override
+  FutureOr<OrderModel?> build(String arg) async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return null;
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-  // Subscribe to Pusher channel when this provider is active for real-time updates
-  if (parsedId != null && parsedId > 0) {
-    void onOrderEvent(Map<String, dynamic> eventData) {
-      debugPrint("Realtime update for order $orderId: $eventData");
-      ref.invalidateSelf();
-      ref.invalidate(ordersListProvider);
-    }
+    final parsedId = int.tryParse(arg);
 
-    pusher.subscribeToOrder(parsedId, onOrderEvent);
-
-    ref.onDispose(() {
-      pusher.unsubscribeFromOrder(parsedId, onOrderEvent);
-    });
-  }
-
-  try {
-    final response = await api.client.get('/orders/$orderId');
-    if (response.statusCode == 200) {
-      final data = response.data['data'] ?? response.data;
-      if (data is! Map) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)',
-        );
+    // Subscribe to Pusher channel when this provider is active for real-time updates
+    if (parsedId != null && parsedId > 0) {
+      void onOrderEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update for order $arg: $eventData");
+        final eventType = eventData['event_type']?.toString();
+        if (eventType == 'delete') {
+          state = const AsyncData(null);
+          ref.read(ordersListProvider.notifier).removeOrderLocally(arg);
+          return;
+        }
+        unawaited(refreshSilently());
       }
-      return OrderModel.fromJson(Map<String, dynamic>.from(data));
+
+      pusher.subscribeToOrder(parsedId, onOrderEvent);
+
+      ref.onDispose(() {
+        pusher.unsubscribeFromOrder(parsedId, onOrderEvent);
+      });
     }
-    throw Exception(
-      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
-    );
-  } catch (e) {
-    if (e is DioException) {
-      throw Exception(api.parseError(e));
-    }
-    rethrow;
+
+    return _fetchSingleOrder(api, arg);
   }
-});
+
+  Future<OrderModel?> _fetchSingleOrder(ApiClient api, String orderId) async {
+    try {
+      final response = await api.client.get('/orders/$orderId');
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        if (data is! Map) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)',
+          );
+        }
+        return OrderModel.fromJson(Map<String, dynamic>.from(data));
+      }
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception(api.parseError(e));
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchSingleOrder(api, arg);
+      state = AsyncData(fresh);
+      if (fresh != null) {
+        ref.read(ordersListProvider.notifier).upsertOrderLocally(fresh);
+      }
+    } catch (_) {
+      // Preserve current order state on transient errors
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+
+  void setOrderLocally(OrderModel? order) {
+    state = AsyncData(order);
+  }
+}
+
+final singleOrderProvider =
+    AsyncNotifierProvider.family<SingleOrderNotifier, OrderModel?, String>(
+      SingleOrderNotifier.new,
+    );
 
 final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((
   ref,
@@ -243,13 +508,17 @@ class OrderActions {
       if (orderData is Map &&
           orderData['id'] != null &&
           (int.tryParse(orderData['id'].toString()) ?? 0) > 0) {
-        final newOrder = OrderModel.fromJson(
-          Map<String, dynamic>.from(orderData),
-        );
+        final orderMap = Map<String, dynamic>.from(orderData);
+        final newOrder = OrderModel.fromJson(orderMap);
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
-        ref.read(ordersListProvider.notifier).refreshSilently();
-        ref.invalidate(customerListProvider);
-        ref.invalidate(filteredCustomerListProvider);
+        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        if (newOrder.customerId > 0) {
+          unawaited(
+            ref
+                .read(customerActionsProvider)
+                .refreshSingleCustomerEverywhere(newOrder.customerId),
+          );
+        }
         ref.invalidate(dashboardProvider);
         return newOrder;
       }
@@ -283,7 +552,6 @@ class OrderActions {
       }
 
       _refreshSalesmanDashboard();
-      ref.invalidate(singleOrderProvider(orderId.toString()));
 
       final resData = response.data;
       final orderData = (resData is Map && resData.containsKey('data'))
@@ -293,16 +561,16 @@ class OrderActions {
       if (orderData is Map &&
           orderData['id'] != null &&
           (int.tryParse(orderData['id'].toString()) ?? 0) > 0) {
-        final updatedOrder = OrderModel.fromJson(
-          Map<String, dynamic>.from(orderData),
-        );
-        // Only update this single order locally without downloading the entire orders list
+        final orderMap = Map<String, dynamic>.from(orderData);
+        final updatedOrder = OrderModel.fromJson(orderMap);
+        // Update this single order locally in both list and detail providers without wiping UI
         ref.read(ordersListProvider.notifier).upsertOrderLocally(updatedOrder);
-
-        // Only update the products whose stock changed in this order
         ref
-            .read(productsListProvider.notifier)
-            .patchProductsFromOrderData(Map<String, dynamic>.from(orderData));
+            .read(singleOrderProvider(orderId.toString()).notifier)
+            .setOrderLocally(updatedOrder);
+
+        // Patch only the products whose stock changed in this order
+        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
 
         return updatedOrder;
       }
@@ -318,10 +586,15 @@ class OrderActions {
     String newStatus, {
     Map<String, dynamic> extraData = const {},
   }) async {
+    final previousOrders = ref.read(ordersListProvider).valueOrNull;
+    final parsedId = int.tryParse(orderId);
+    final existingOrder = previousOrders
+        ?.where((o) => o.id.toString() == orderId)
+        .firstOrNull;
+
     ref
         .read(ordersListProvider.notifier)
         .updateOrderStatusLocally(orderId, newStatus);
-    ref.invalidate(singleOrderProvider(orderId));
 
     try {
       final idempotencyKey =
@@ -342,25 +615,61 @@ class OrderActions {
         );
       }
 
-      await ref.read(ordersListProvider.notifier).refreshSilently();
-      unawaited(
-        ref.read(productsListProvider.notifier).refreshProductsSilently(),
-      );
+      final resData = response.data;
+      final orderData = (resData is Map && resData.containsKey('data'))
+          ? resData['data']
+          : null;
+      if (orderData is Map && orderData['id'] != null) {
+        final orderMap = Map<String, dynamic>.from(orderData);
+        final updated = OrderModel.fromJson(orderMap);
+        ref.read(ordersListProvider.notifier).upsertOrderLocally(updated);
+        ref
+            .read(singleOrderProvider(orderId).notifier)
+            .setOrderLocally(updated);
+        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        if (updated.customerId > 0) {
+          unawaited(
+            ref
+                .read(customerActionsProvider)
+                .refreshSingleCustomerEverywhere(updated.customerId),
+          );
+        }
+      } else if (parsedId != null) {
+        await ref.read(ordersListProvider.notifier).refreshSingleOrder(parsedId);
+        unawaited(
+          ref.read(singleOrderProvider(orderId).notifier).refreshSilently(),
+        );
+        if (existingOrder != null && existingOrder.customerId > 0) {
+          unawaited(
+            ref
+                .read(customerActionsProvider)
+                .refreshSingleCustomerEverywhere(existingOrder.customerId),
+          );
+        }
+      }
+
       _refreshSalesmanDashboard();
-      ref.invalidate(customerListProvider);
-      ref.invalidate(filteredCustomerListProvider);
     } catch (e) {
-      ref.read(ordersListProvider.notifier).refreshSilently();
+      if (previousOrders != null) {
+        ref.read(ordersListProvider.notifier).restoreState(previousOrders);
+      } else if (parsedId != null) {
+        unawaited(
+          ref.read(ordersListProvider.notifier).refreshSingleOrder(parsedId),
+        );
+      }
       throw Exception(api.parseError(e));
     }
   }
 
   Future<void> deleteOrder(String orderId) async {
     final previousList = ref.read(ordersListProvider).valueOrNull;
+    final deletedOrder = previousList
+        ?.where((o) => o.id.toString() == orderId)
+        .firstOrNull;
 
     // 1. Optimistically remove from local state immediately
     ref.read(ordersListProvider.notifier).removeOrderLocally(orderId);
-    ref.invalidate(singleOrderProvider(orderId));
+    ref.read(singleOrderProvider(orderId).notifier).setOrderLocally(null);
 
     try {
       // 2. Call backend API
@@ -375,11 +684,24 @@ class OrderActions {
         );
       }
 
-      // 3. Silently update providers in background without resetting UI state
-      ref.read(ordersListProvider.notifier).refreshSilently();
+      // 3. Patch affected products and customer silently (Pusher also broadcasts released stock)
+      if (deletedOrder != null) {
+        for (final item in deletedOrder.items) {
+          unawaited(
+            ref
+                .read(productsListProvider.notifier)
+                .refreshSingleProduct(item.productId),
+          );
+        }
+        if (deletedOrder.customerId > 0) {
+          unawaited(
+            ref
+                .read(customerActionsProvider)
+                .refreshSingleCustomerEverywhere(deletedOrder.customerId),
+          );
+        }
+      }
       _refreshSalesmanDashboard();
-      ref.invalidate(customerListProvider);
-      ref.invalidate(filteredCustomerListProvider);
       ref.invalidate(dashboardProvider);
     } catch (e) {
       // Restore state on failure
@@ -398,10 +720,13 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
   final pusher = ref.watch(pusherServiceProvider);
 
   void onSalesReturnsEvent(Map<String, dynamic> eventData) {
-    debugPrint(
-      "Realtime update received on private-orders channel for sales returns: $eventData",
-    );
-    ref.invalidateSelf();
+    final eventType = eventData['event_type']?.toString();
+    if (eventType == 'return_created') {
+      debugPrint(
+        "Realtime return update received on private-orders channel: $eventData",
+      );
+      ref.invalidateSelf();
+    }
   }
 
   pusher.subscribeToChannel('private-orders', onSalesReturnsEvent);
@@ -479,16 +804,30 @@ class SalesReturnActions {
         options: Options(headers: {'X-Idempotency-Key': returnEntityId}),
       );
 
-      if (payload['sales_order_id'] != null) {
-        ref.invalidate(
-          singleOrderProvider(payload['sales_order_id'].toString()),
+      final orderIdStr = payload['sales_order_id']?.toString();
+      final orderId = int.tryParse(orderIdStr ?? '');
+      if (orderId != null && orderId > 0) {
+        unawaited(
+          ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId),
+        );
+        unawaited(
+          ref
+              .read(singleOrderProvider(orderIdStr!).notifier)
+              .refreshSilently(),
         );
       }
-      ref.invalidate(ordersListProvider);
+      final customerId = int.tryParse(
+        payload['customer_id']?.toString() ?? '',
+      );
+      if (customerId != null && customerId > 0) {
+        unawaited(
+          ref
+              .read(customerActionsProvider)
+              .refreshSingleCustomerEverywhere(customerId),
+        );
+      }
       ref.invalidate(salesReturnsListProvider);
-      ref.invalidate(salesmanDashboardProvider);
-      ref.invalidate(customerListProvider);
-      ref.invalidate(filteredCustomerListProvider);
+      unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -507,21 +846,6 @@ final readyOrdersForDeliveryProvider = FutureProvider<List<OrderModel>>((
 ) async {
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const [];
-  final pusher = ref.watch(pusherServiceProvider);
-
-  void onOrdersEvent(Map<String, dynamic> eventData) {
-    debugPrint(
-      "Realtime update received on readyOrdersForDeliveryProvider: $eventData",
-    );
-    ref.invalidate(ordersListProvider);
-    ref.invalidateSelf();
-  }
-
-  pusher.subscribeToChannel('private-orders', onOrdersEvent);
-
-  ref.onDispose(() {
-    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
-  });
 
   final orders = await ref.watch(ordersListProvider.future);
   return orders

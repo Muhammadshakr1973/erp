@@ -139,9 +139,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
 
     if (result == true && context.mounted) {
-      ref.invalidate(singleOrderProvider(order.id.toString()));
       ref.invalidate(salesReturnsListProvider);
-      ref.invalidate(ordersListProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('کاڵاکان بە سەرکەوتوویی گەڕێندرانەوە'),
@@ -182,8 +180,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             },
           );
       if (!context.mounted) return;
-      ref.invalidate(singleOrderProvider(order.id.toString()));
-      ref.invalidate(ordersListProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('پسوڵەکە بە سەرکەوتوویی گەیشت'),

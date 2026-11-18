@@ -143,6 +143,7 @@ class CustomerController extends Controller
                 }
             });
             $customer->refresh();
+            event(new \App\Events\CustomerAccountUpdated($customer, 'balance_reconciled'));
         }
 
         $reconciliation = $customer->reconcileBalance();
@@ -235,6 +236,8 @@ class CustomerController extends Controller
             ]
         );
 
+        event(new \App\Events\CustomerAccountUpdated($customer, 'special_price_updated'));
+
         return response()->json([
             'message' => 'نرخی تایبەت بە سەرکەوتوویی تۆمارکرا',
             'data' => $specialPrice->load('product'),
@@ -251,6 +254,10 @@ class CustomerController extends Controller
         }
 
         $deleted = $customer->specialPrices()->where('product_id', $productId)->delete();
+
+        if ($deleted > 0) {
+            event(new \App\Events\CustomerAccountUpdated($customer, 'special_price_deleted'));
+        }
 
         return response()->json([
             'message' => 'نرخی تایبەت بە سەرکەوتوویی سڕایەوە',

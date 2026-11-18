@@ -15,7 +15,9 @@ class PusherService {
   bool _isConnected = false;
   bool _isInitialized = false;
   final Map<String, List<void Function(Map<String, dynamic>)>> _listeners = {};
-  
+  final Set<String> _nativelySubscribedChannels = {};
+  final Set<String> _inFlightSubscriptions = {};
+
   String? _serverKey;
   String? _serverCluster;
   bool _isFetchingConfig = false;
@@ -28,7 +30,7 @@ class PusherService {
 
   Future<void> _fetchPusherConfig() async {
     if (_serverKey != null && _serverCluster != null) return;
-    
+
     // First, try loading from local cache (SharedPreferences) for absolute zero-latency startup!
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -94,6 +96,33 @@ class PusherService {
     }
   }
 
+  Future<void> _ensureChannelSubscribedNatively(String channelName) async {
+    if (!_isInitialized || _pusher == null) return;
+    if (_nativelySubscribedChannels.contains(channelName) ||
+        _inFlightSubscriptions.contains(channelName)) {
+      return;
+    }
+
+    _inFlightSubscriptions.add(channelName);
+    try {
+      await _pusher?.subscribe(channelName: channelName);
+      _nativelySubscribedChannels.add(channelName);
+      debugPrint("Pusher Subscribed to: $channelName");
+    } catch (e) {
+      debugPrint("Pusher Subscription Error for $channelName: $e");
+    } finally {
+      _inFlightSubscriptions.remove(channelName);
+    }
+  }
+
+  Future<void> _resubscribeAllRegisteredChannels() async {
+    if (!_isInitialized || _pusher == null) return;
+    for (final channelName in _listeners.keys.toList()) {
+      if ((_listeners[channelName]?.isEmpty ?? true)) continue;
+      await _ensureChannelSubscribedNatively(channelName);
+    }
+  }
+
   Future<void> init() async {
     if (_isInitialized) return;
 
@@ -106,7 +135,7 @@ class PusherService {
     try {
       // Load the key/cluster dynamically from the backend for production safety
       await _fetchPusherConfig();
-      
+
       final apiKey = _serverKey ?? const String.fromEnvironment('PUSHER_APP_KEY', defaultValue: '');
       final cluster = _serverCluster ?? const String.fromEnvironment('PUSHER_APP_CLUSTER', defaultValue: '');
 
@@ -124,14 +153,24 @@ class PusherService {
         cluster: cluster,
         onConnectionStateChange: (currentState, previousState) {
           debugPrint("Pusher Connection State Change: $previousState -> $currentState");
+          final wasConnected = _isConnected;
           _isConnected = (currentState == 'CONNECTED');
+          if (!_isConnected && currentState != 'CONNECTING') {
+            // Connection dropped; clear native tracking so reconnect re-subscribes cleanly if needed
+            if (currentState == 'DISCONNECTED') {
+              _nativelySubscribedChannels.clear();
+            }
+          }
+          if (!wasConnected && _isConnected) {
+            _resubscribeAllRegisteredChannels();
+          }
         },
         onError: (message, code, exception) {
           debugPrint("Pusher Error: $message (code: $code) - $exception");
         },
         onEvent: (PusherEvent event) {
           debugPrint("Pusher Event Received: ${event.channelName} - ${event.eventName}");
-          
+
           // Ignore Pusher internal/protocol events (e.g. pusher:subscription_succeeded)
           // to prevent infinite invalidation loops in providers.
           if (event.eventName.startsWith('pusher:')) {
@@ -150,7 +189,7 @@ class PusherService {
                   payload = Map<String, dynamic>.from(jsonDecode(rawData));
                 }
               }
-              
+
               if (payload != null) {
                 // Safely resolve nested payload if Laravel/Pusher wraps it under 'data' key
                 Map<String, dynamic> resolvedPayload = payload;
@@ -214,14 +253,7 @@ class PusherService {
       _isInitialized = true;
 
       // Native subscribe to any channels that were registered before initialization completed
-      for (final channelName in _listeners.keys) {
-        try {
-          await _pusher?.subscribe(channelName: channelName);
-          debugPrint("Pusher Late-Subscribed to: $channelName");
-        } catch (e) {
-          debugPrint("Pusher Late-Subscription Error for $channelName: $e");
-        }
-      }
+      await _resubscribeAllRegisteredChannels();
     } catch (e) {
       _isInitialized = false;
       debugPrint("Pusher Initialization Error: $e");
@@ -247,6 +279,8 @@ class PusherService {
         await _pusher?.disconnect();
       }
       _listeners.clear();
+      _nativelySubscribedChannels.clear();
+      _inFlightSubscriptions.clear();
       _isConnected = false;
       _serverKey = null;
       _serverCluster = null;
@@ -279,8 +313,8 @@ class PusherService {
       _listeners[channelName]!.add(onUpdate);
     }
 
-    final alreadySubscribed = _listeners[channelName]!.length > 1;
-    if (alreadySubscribed) {
+    if (_nativelySubscribedChannels.contains(channelName) ||
+        _inFlightSubscriptions.contains(channelName)) {
       debugPrint("Pusher already subscribed to: $channelName. Registered callback, skipped duplicate native subscribe.");
       return;
     }
@@ -291,8 +325,7 @@ class PusherService {
         debugPrint("Pusher not initialized, skipping native subscribe to $channelName (listener registered)");
         return;
       }
-      await _pusher?.subscribe(channelName: channelName);
-      debugPrint("Pusher Subscribed to: $channelName");
+      await _ensureChannelSubscribedNatively(channelName);
     } catch (e) {
       debugPrint("Pusher Subscription Error: $e");
     }
@@ -311,6 +344,8 @@ class PusherService {
       debugPrint("Pusher WARNING: Unsubscribing channel $channelName without explicit callback reference.");
     }
     _listeners.remove(channelName);
+    _nativelySubscribedChannels.remove(channelName);
+    _inFlightSubscriptions.remove(channelName);
 
     if (!_isInitialized) return;
 

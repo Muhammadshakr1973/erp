@@ -267,11 +267,12 @@ class ProductController extends Controller
             );
         }
 
+        $product->load(['category', 'supplier', 'stocks']);
         event(new \App\Events\ProductStockUpdated($product, 'create'));
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی زیادکرا',
-            'data' => $product->load(['category', 'supplier', 'stocks'])
+            'data' => $product
         ], 201);
     }
 
@@ -530,11 +531,12 @@ class ProductController extends Controller
             }
         }
 
+        $product->load(['category', 'supplier', 'stocks']);
         event(new \App\Events\ProductStockUpdated($product, 'update'));
 
         return response()->json([
             'message' => 'کاڵاکە بە سەرکەوتوویی نوێکرایەوە',
-            'data' => $product->load(['category', 'supplier', 'stocks'])
+            'data' => $product
         ]);
     }
 

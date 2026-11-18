@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -240,9 +241,9 @@ class WarehouseActions {
         data: {'order_id': orderId},
       );
       ref.invalidate(ordersToPackProvider);
-      ref.invalidate(ordersListProvider);
-      ref.invalidate(readyOrdersForDeliveryProvider);
-      ref.invalidate(singleOrderProvider(orderId.toString()));
+      unawaited(
+        ref.read(singleOrderProvider(orderId.toString()).notifier).refreshSilently(),
+      );
       ref.invalidate(warehouseStocksProvider);
       ref.invalidate(warehouseDashboardProvider);
     } catch (e) {
@@ -254,9 +255,8 @@ class WarehouseActions {
     try {
       await api.client.delete('/orders/$orderId');
       ref.invalidate(ordersToPackProvider);
-      ref.invalidate(ordersListProvider);
-      ref.invalidate(readyOrdersForDeliveryProvider);
-      ref.invalidate(singleOrderProvider(orderId.toString()));
+      ref.read(ordersListProvider.notifier).removeOrderLocally(orderId.toString());
+      ref.read(singleOrderProvider(orderId.toString()).notifier).setOrderLocally(null);
       ref.invalidate(warehouseDashboardProvider);
       ref
           .read(salesmanDashboardProvider.notifier)

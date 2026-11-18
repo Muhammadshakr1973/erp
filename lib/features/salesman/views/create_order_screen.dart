@@ -140,7 +140,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(productsListProvider.notifier).fetchProducts();
+      ref.read(productsListProvider.notifier).ensureLoaded();
       if (widget.existingOrder != null) {
         _populateFromExistingOrder(widget.existingOrder!);
       } else if (widget.preselectedCustomerId != null) {
@@ -268,9 +268,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         debugPrint(
           "CreateOrderScreen: Event version ($eventVersion) > current local version ($_currentVersion). Refreshing order...",
         );
-        final latestOrder = await ref.refresh(
-          singleOrderProvider(_subscribedOrderId!.toString()).future,
+        final orderNotifier = ref.read(
+          singleOrderProvider(_subscribedOrderId!.toString()).notifier,
         );
+        await orderNotifier.refreshSilently();
+        final latestOrder = ref
+            .read(singleOrderProvider(_subscribedOrderId!.toString()))
+            .valueOrNull;
         if (latestOrder != null && mounted) {
           _populateFromExistingOrder(latestOrder);
           AppSnackbar.show(
@@ -384,16 +388,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Future<void> _handleRefresh() async {
-    ref.invalidate(productsListProvider);
-    ref.invalidate(customerListProvider);
     ref.invalidate(warehouseListProvider);
-    if (_selectedCustomer != null) {
+    if (_selectedCustomer != null && _selectedCustomer!.id > 0) {
       await _fetchSpecialPricesForCustomer(_selectedCustomer!.id);
     }
     try {
       await Future.wait([
-        ref.read(productsListProvider.notifier).fetchProducts(),
-        ref.read(customerListProvider.future),
+        ref.read(productsListProvider.notifier).refreshProductsSilently(),
+        ref
+            .read(
+              filteredCustomerListProvider(defaultCustomerDirectoryFilters)
+                  .notifier,
+            )
+            .refreshSilently(),
         ref.read(warehouseListProvider.future),
       ]);
     } catch (_) {}
@@ -2099,6 +2106,44 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final productsAsync = ref.watch(productsListProvider);
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
+
+    ref.listen<AsyncValue<List<Customer>>>(customerListProvider, (_, next) {
+      final selected = _selectedCustomer;
+      if (selected == null || selected.id <= 0) return;
+      final customers = next.asData?.value;
+      if (customers == null) return;
+      final updated = customers.where((c) => c.id == selected.id).firstOrNull;
+      if (updated == null) return;
+
+      final specialChanged =
+          updated.specialPrices.length != selected.specialPrices.length ||
+          updated.specialPrices.entries.any(
+            (e) => selected.specialPrices[e.key] != e.value,
+          );
+      final changed =
+          updated.name != selected.name ||
+          updated.phone != selected.phone ||
+          updated.address != selected.address ||
+          updated.balance != selected.balance ||
+          updated.creditLimit != selected.creditLimit ||
+          updated.priceType != selected.priceType ||
+          updated.permanentDiscount != selected.permanentDiscount ||
+          specialChanged;
+
+      if (changed && mounted) {
+        setState(() {
+          _selectedCustomer = updated;
+          if (specialChanged && updated.specialPrices.isNotEmpty) {
+            _customerSpecialPrices = Map<int, double>.from(
+              updated.specialPrices,
+            );
+          }
+        });
+        if (specialChanged && updated.specialPrices.isEmpty) {
+          _fetchSpecialPricesForCustomer(updated.id);
+        }
+      }
+    });
 
     final currentUser = ref.watch(authProvider).user;
     final isSalesman = currentUser?.isSalesman ?? false;

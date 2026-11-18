@@ -6,11 +6,11 @@ use App\Models\SalesOrder;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class SalesOrderUpdated implements ShouldBroadcast
+class SalesOrderUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -64,6 +64,7 @@ class SalesOrderUpdated implements ShouldBroadcast
         return [
             'event_type' => $this->actionType,
             'sales_order_id' => $this->order->id,
+            'customer_id' => $this->order->customer_id,
             'shared_key' => $this->order->shared_key,
             'version' => (int) $this->order->version,
             'status' => $this->order->status,

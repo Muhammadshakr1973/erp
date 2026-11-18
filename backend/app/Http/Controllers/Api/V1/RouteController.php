@@ -301,6 +301,14 @@ class RouteController extends Controller
         $ids = $validated['customer_ids'];
         \App\Models\Customer::whereIn('id', $ids)->update(['route_id' => $route->id]);
 
+        foreach (array_unique(array_map('intval', $ids)) as $cid) {
+            try {
+                event(new \App\Events\CustomerAccountUpdated(null, 'update', $cid));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Broadcasting CustomerAccountUpdated failed: " . $e->getMessage());
+            }
+        }
+
         return response()->json([
             'message' => 'کڕیاران بەسەرکەوتوویی بۆ ئەم ڕاوتە دیاریکران'
         ], 200);

@@ -168,7 +168,14 @@ class WarehouseStock extends Model
                 $userId
             );
 
-            event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
+            $productId = (int) $locked->product_id;
+            DB::afterCommit(function () use ($productId) {
+                try {
+                    event(new \App\Events\ProductStockUpdated(null, 'stock_change', $productId));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Broadcasting ProductStockUpdated failed: " . $e->getMessage());
+                }
+            });
 
             return $transaction;
         });
@@ -229,7 +236,14 @@ class WarehouseStock extends Model
                 $userId
             );
 
-            event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
+            $productId = (int) $locked->product_id;
+            DB::afterCommit(function () use ($productId) {
+                try {
+                    event(new \App\Events\ProductStockUpdated(null, 'stock_change', $productId));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Broadcasting ProductStockUpdated failed: " . $e->getMessage());
+                }
+            });
 
             return $transaction;
         });
@@ -273,7 +287,14 @@ class WarehouseStock extends Model
                     $userId
                 );
 
-                event(new \App\Events\ProductStockUpdated(null, 'stock_change', $locked->product_id));
+                $productId = (int) $locked->product_id;
+                DB::afterCommit(function () use ($productId) {
+                    try {
+                        event(new \App\Events\ProductStockUpdated(null, 'stock_change', $productId));
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning("Broadcasting ProductStockUpdated failed: " . $e->getMessage());
+                    }
+                });
 
                 return $transaction;
             }
