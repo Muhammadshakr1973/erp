@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/responsive_shell.dart';
 import '../../../core/router/navigation_tabs_provider.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -20,14 +21,44 @@ class CustomerMainScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerMainScreenState extends ConsumerState<CustomerMainScreen> {
+  PusherService? _pusherService;
+
   @override
   void initState() {
     super.initState();
+    _pusherService = ref.read(pusherServiceProvider);
     Future.microtask(() {
       if (!mounted) return;
       ref.read(customerPortalTabIndexProvider.notifier).state = 0;
       ref.read(authProvider.notifier).refreshCurrentUserSilently();
+      _pusherService?.subscribeToChannel(
+        'private-customers',
+        _onCustomerAccountEvent,
+      );
     });
+  }
+
+  void _onCustomerAccountEvent(Map<String, dynamic> eventData) {
+    if (!mounted) return;
+    final currentCustomerId = ref.read(authProvider).user?.customer?.id;
+    final eventCustomerId = int.tryParse(
+      (eventData['customer_id'] ?? eventData['id'])?.toString() ?? '',
+    );
+    if (currentCustomerId != null &&
+        eventCustomerId != null &&
+        eventCustomerId != currentCustomerId) {
+      return;
+    }
+    ref.read(authProvider.notifier).refreshCurrentUserSilently();
+  }
+
+  @override
+  void dispose() {
+    _pusherService?.unsubscribeFromChannel(
+      'private-customers',
+      _onCustomerAccountEvent,
+    );
+    super.dispose();
   }
 
   Future<void> _confirmLogout() async {

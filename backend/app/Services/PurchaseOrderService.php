@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\SupplierAccountUpdated;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\WarehouseStock;
@@ -9,7 +10,9 @@ use App\Models\StockTransaction;
 use App\Models\SupplierLedger;
 use App\Models\SupplierPayment;
 use App\Models\PurchaseRequirement;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
@@ -21,7 +24,7 @@ class PurchaseOrderService
      */
     public function createOrder(array $data, $user): PurchaseOrder
     {
-        return DB::transaction(function () use ($data, $user) {
+        $order = DB::transaction(function () use ($data, $user) {
             // ئەگەر دابینکەر دیاری نەکرابوو، دابینکەری نوێ (بێناو) بەکاردەهێنرێت
             $supplierId = $this->resolveSupplierId($data['supplier_id'] ?? null, $user);
 
@@ -198,6 +201,17 @@ class PurchaseOrderService
 
             return $order;
         });
+
+        if ($order->status === PurchaseOrder::STATUS_RECEIVED && (float) $order->total_amount > 0) {
+            Cache::forget('admin_dashboard_kpis_v5');
+            try {
+                event(new SupplierAccountUpdated(null, 'purchase_created', (int) $order->supplier_id));
+            } catch (\Throwable $e) {
+                Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+            }
+        }
+
+        return $order;
     }
 
     /**
@@ -205,7 +219,7 @@ class PurchaseOrderService
      */
     public function receiveOrder(PurchaseOrder $order, $user, ?array $receivingItems = null): PurchaseOrder
     {
-        return DB::transaction(function () use ($order, $user, $receivingItems) {
+        $receivedOrder = DB::transaction(function () use ($order, $user, $receivingItems) {
             // Lock the purchase order to prevent concurrent receiving race conditions
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
@@ -411,6 +425,15 @@ class PurchaseOrderService
 
             return $lockedOrder;
         });
+
+        Cache::forget('admin_dashboard_kpis_v5');
+        try {
+            event(new SupplierAccountUpdated(null, 'purchase_received', (int) $receivedOrder->supplier_id));
+        } catch (\Throwable $e) {
+            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $receivedOrder;
     }
 
     /**
@@ -521,7 +544,7 @@ class PurchaseOrderService
      */
     public function updateOrder(PurchaseOrder $order, array $data, $user): PurchaseOrder
     {
-        return DB::transaction(function () use ($order, $data, $user) {
+        $updatedOrder = DB::transaction(function () use ($order, $data, $user) {
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($lockedOrder->status !== PurchaseOrder::STATUS_DRAFT && $lockedOrder->status !== PurchaseOrder::STATUS_DRAFT_LOWER) {
@@ -706,6 +729,17 @@ class PurchaseOrderService
 
             return $lockedOrder->fresh(['supplier', 'warehouse', 'items.product', 'payments']);
         });
+
+        if ($updatedOrder->status === PurchaseOrder::STATUS_RECEIVED && $updatedOrder->supplier_id && (float) $updatedOrder->total_amount > 0) {
+            Cache::forget('admin_dashboard_kpis_v5');
+            try {
+                event(new SupplierAccountUpdated(null, 'purchase_received', (int) $updatedOrder->supplier_id));
+            } catch (\Throwable $e) {
+                Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+            }
+        }
+
+        return $updatedOrder;
     }
 
     /**

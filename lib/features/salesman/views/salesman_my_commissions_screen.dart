@@ -17,6 +17,17 @@ final myCommissionsProvider =
       final userId = ref.watch(authProvider.select((state) => state.user?.id));
       if (userId == null) return const [];
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onCommissionEvent(Map<String, dynamic> eventData) {
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-commissions', onCommissionEvent);
+      ref.onDispose(() {
+        pusher.unsubscribeFromChannel('private-commissions', onCommissionEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/commissions/my-commissions',
@@ -57,6 +68,17 @@ final myCommissionSummaryProvider = FutureProvider<Map<String, dynamic>>((
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return const {};
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onCommissionEvent(Map<String, dynamic> eventData) {
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-commissions', onCommissionEvent);
+  ref.onDispose(() {
+    pusher.unsubscribeFromChannel('private-commissions', onCommissionEvent);
+  });
+
   try {
     final response = await api.client.get('/commissions/summary');
     if (response.statusCode == 200) {
@@ -85,6 +107,7 @@ class _SalesmanMyCommissionsScreenState
     extends ConsumerState<SalesmanMyCommissionsScreen> {
   String? _selectedStatus;
   PusherService? _pusherService;
+  int? _subscribedUserId;
 
   @override
   void initState() {
@@ -96,14 +119,15 @@ class _SalesmanMyCommissionsScreenState
   void _setupPusherListener() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final pusher = (_pusherService ?? ref.read(pusherServiceProvider))!;
+      final pusher = _pusherService ?? ref.read(pusherServiceProvider);
       _pusherService ??= pusher;
       final user = ref.read(authProvider).user;
+      _subscribedUserId = user?.id;
 
       pusher.subscribeToChannel('private-commissions', _onCommissionPusherEvent);
-      if (user != null) {
+      if (_subscribedUserId != null) {
         pusher.subscribeToChannel(
-          'private-user-notifications.${user.id}',
+          'private-user-notifications.$_subscribedUserId',
           _onCommissionPusherEvent,
         );
       }
@@ -111,6 +135,7 @@ class _SalesmanMyCommissionsScreenState
   }
 
   void _onCommissionPusherEvent(Map<String, dynamic> data) {
+    if (!mounted) return;
     ref.invalidate(myCommissionsProvider);
     ref.invalidate(myCommissionSummaryProvider);
   }
@@ -118,12 +143,15 @@ class _SalesmanMyCommissionsScreenState
   @override
   void dispose() {
     final pusher = _pusherService;
-    final user = ref.read(authProvider).user;
+    final userId = _subscribedUserId;
     if (pusher != null) {
-      pusher.unsubscribeFromChannel('commissions', _onCommissionPusherEvent);
-      if (user != null) {
+      pusher.unsubscribeFromChannel(
+        'private-commissions',
+        _onCommissionPusherEvent,
+      );
+      if (userId != null) {
         pusher.unsubscribeFromChannel(
-          'private-user-notifications.${user.id}',
+          'private-user-notifications.$userId',
           _onCommissionPusherEvent,
         );
       }

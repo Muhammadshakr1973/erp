@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\SupplierAccountUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
@@ -9,7 +10,9 @@ use App\Models\SupplierLedger;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class SupplierController extends Controller
@@ -42,7 +45,7 @@ class SupplierController extends Controller
             $validated['created_by'] = auth()->id();
         }
 
-        return DB::transaction(function () use ($validated) {
+        $supplier = DB::transaction(function () use ($validated) {
             $supplier = Supplier::create([
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
@@ -69,11 +72,20 @@ class SupplierController extends Controller
                 ]);
             }
 
-            return response()->json([
-                'message' => 'سەپڵایەر بە سەرکەوتوویی زیادکرا',
-                'data' => $supplier->append('debt')
-            ], 201);
+            return $supplier;
         });
+
+        Cache::forget('admin_dashboard_kpis_v5');
+        try {
+            event(new SupplierAccountUpdated($supplier, 'create'));
+        } catch (\Throwable $e) {
+            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'سەپڵایەر بە سەرکەوتوویی زیادکرا',
+            'data' => $supplier->append('debt')
+        ], 201);
     }
 
     
@@ -104,6 +116,12 @@ class SupplierController extends Controller
 
         $supplier->update($validated);
 
+        try {
+            event(new SupplierAccountUpdated($supplier, 'update'));
+        } catch (\Throwable $e) {
+            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'سەپڵایەر بە سەرکەوتوویی نوێکرایەوە',
             'data' => $supplier
@@ -113,7 +131,15 @@ class SupplierController extends Controller
     public function destroy($id): JsonResponse
     {
         $supplier = Supplier::findOrFail($id);
+        $supplierId = (int) $supplier->id;
         $supplier->delete();
+
+        Cache::forget('admin_dashboard_kpis_v5');
+        try {
+            event(new SupplierAccountUpdated(null, 'delete', $supplierId));
+        } catch (\Throwable $e) {
+            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'سەپڵایەر بە سەرکەوتوویی سڕدرایەوە'
@@ -232,6 +258,13 @@ class SupplierController extends Controller
             ];
         });
 
+        Cache::forget('admin_dashboard_kpis_v5');
+        try {
+            event(new SupplierAccountUpdated($result['supplier'], 'payment_made'));
+        } catch (\Throwable $e) {
+            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'پارەدان بە سەرکەوتوویی تۆمارکرا',
             'data' => $result['supplier']->append('debt')
@@ -264,6 +297,12 @@ class SupplierController extends Controller
                 }
             });
             $supplier->refresh();
+            Cache::forget('admin_dashboard_kpis_v5');
+            try {
+                event(new SupplierAccountUpdated($supplier, 'balance_reconciled'));
+            } catch (\Throwable $e) {
+                Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+            }
         }
 
         $reconciliation = $supplier->reconcileBalance();

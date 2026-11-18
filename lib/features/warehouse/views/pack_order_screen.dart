@@ -214,7 +214,12 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
     }
 
     // Check if some items are not packed and confirm partial ready
-    final bool hasUnpacked = order.items.any((e) => !(_optimisticPackedStates[e.id] ?? e.isPacked));
+    final bool hasUnpacked = order.items.any((e) {
+      final packed = _unsavedChanges.containsKey(e.id)
+          ? _unsavedChanges[e.id]!
+          : (_optimisticPackedStates[e.id] ?? e.isPacked);
+      return !packed;
+    });
     if (hasUnpacked) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -417,6 +422,27 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<WarehouseOrderModel>>>(ordersToPackProvider, (
+      prev,
+      next,
+    ) {
+      if (!next.isLoading &&
+          next.hasValue &&
+          !_isSaving &&
+          _optimisticPackedStates.isNotEmpty) {
+        final keysToRemove = _optimisticPackedStates.keys
+            .where((id) => !_unsavedChanges.containsKey(id))
+            .toList();
+        if (keysToRemove.isNotEmpty && mounted) {
+          setState(() {
+            for (final id in keysToRemove) {
+              _optimisticPackedStates.remove(id);
+            }
+          });
+        }
+      }
+    });
+
     return PermissionGuard(
       permission: 'stock.pack',
       child: PopScope(

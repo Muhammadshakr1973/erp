@@ -30,26 +30,70 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   final Set<int> _checkedItemIds = {};
+  final Map<int, bool> _lastServerPackedByItemId = {};
+  final Set<int> _locallyToggledItemIds = {};
   final TextEditingController _cashVanDiscountController =
       TextEditingController();
   int? _checklistOrderId;
   int? _discountOrderId;
+  double? _lastServerDiscountAmount;
+  bool _isDiscountLocallyEdited = false;
   bool _isSubmittingCashVanDelivery = false;
 
   void _syncCheckedItems(OrderModel order) {
-    if (_checklistOrderId == order.id) return;
-    _checklistOrderId = order.id;
-    _checkedItemIds
-      ..clear()
-      ..addAll(
-        order.items.where((item) => item.isPacked).map((item) => item.id),
-      );
+    if (_checklistOrderId != order.id) {
+      _checklistOrderId = order.id;
+      _checkedItemIds
+        ..clear()
+        ..addAll(
+          order.items.where((item) => item.isPacked).map((item) => item.id),
+        );
+      _lastServerPackedByItemId
+        ..clear()
+        ..addEntries(
+          order.items.map((item) => MapEntry(item.id, item.isPacked)),
+        );
+      _locallyToggledItemIds.clear();
+      return;
+    }
+
+    final currentItemIds = order.items.map((item) => item.id).toSet();
+    _checkedItemIds.removeWhere((id) => !currentItemIds.contains(id));
+    _lastServerPackedByItemId.removeWhere((id, _) => !currentItemIds.contains(id));
+    _locallyToggledItemIds.removeWhere((id) => !currentItemIds.contains(id));
+
+    for (final item in order.items) {
+      final prevServerPacked = _lastServerPackedByItemId[item.id];
+      if (prevServerPacked == null) {
+        if (item.isPacked) {
+          _checkedItemIds.add(item.id);
+        }
+      } else if (prevServerPacked != item.isPacked &&
+          !_locallyToggledItemIds.contains(item.id)) {
+        if (item.isPacked) {
+          _checkedItemIds.add(item.id);
+        } else {
+          _checkedItemIds.remove(item.id);
+        }
+      }
+      _lastServerPackedByItemId[item.id] = item.isPacked;
+    }
   }
 
   void _syncCashVanDiscount(OrderModel order) {
-    if (_discountOrderId == order.id) return;
-    _discountOrderId = order.id;
-    _cashVanDiscountController.text = order.discountAmount.toInt().toString();
+    if (_discountOrderId != order.id) {
+      _discountOrderId = order.id;
+      _lastServerDiscountAmount = order.discountAmount;
+      _isDiscountLocallyEdited = false;
+      _cashVanDiscountController.text = order.discountAmount.toInt().toString();
+      return;
+    }
+
+    if (!_isDiscountLocallyEdited &&
+        _lastServerDiscountAmount != order.discountAmount) {
+      _cashVanDiscountController.text = order.discountAmount.toInt().toString();
+    }
+    _lastServerDiscountAmount = order.discountAmount;
   }
 
   @override
@@ -609,6 +653,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                               value: _checkedItemIds.contains(item.id),
                               onChanged: (checked) {
                                 setState(() {
+                                  _locallyToggledItemIds.add(item.id);
                                   if (checked == true) {
                                     _checkedItemIds.add(item.id);
                                   } else {
@@ -758,7 +803,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onChanged: (_) => setState(() {}),
+                          onChanged: (_) => setState(() {
+                            _isDiscountLocallyEdited = true;
+                          }),
                         ),
                       ),
                     ],
