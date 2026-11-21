@@ -1279,7 +1279,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               .read(ordersListProvider)
               .asData
               ?.value
-              ?.where((o) => o.id == currentOrder.id)
+              .where((o) => o.id == currentOrder.id)
               .firstOrNull;
           if (refreshed != null && mounted) {
             _applyRemoteOrderSafely(
