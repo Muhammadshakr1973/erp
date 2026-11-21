@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/providers/suppliers_provider.dart';
 import '../models/purchase_requirement_model.dart';
@@ -12,6 +15,29 @@ import '../models/purchase_order_model.dart';
 final purchaseRequirementsProvider =
     FutureProvider<List<PurchaseRequirementModel>>((ref) async {
       final apiClient = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onRequirementsEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update received for purchaseRequirementsProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-purchases', onRequirementsEvent);
+      pusher.subscribeToChannel('private-orders', onRequirementsEvent);
+      pusher.subscribeToChannel('private-products', onRequirementsEvent);
+      pusher.subscribeToChannel('private-suppliers', onRequirementsEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        reconnectSub.cancel();
+        pusher.unsubscribeFromChannel('private-purchases', onRequirementsEvent);
+        pusher.unsubscribeFromChannel('private-orders', onRequirementsEvent);
+        pusher.unsubscribeFromChannel('private-products', onRequirementsEvent);
+        pusher.unsubscribeFromChannel('private-suppliers', onRequirementsEvent);
+      });
+
       try {
         final response = await apiClient.client.get('/purchase-requirements');
         final resData = response.data;
@@ -41,6 +67,29 @@ final purchaseRequirementsProvider =
 
 final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onGroupedRequirementsEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for purchaseRequirementsGroupProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-purchases', onGroupedRequirementsEvent);
+  pusher.subscribeToChannel('private-orders', onGroupedRequirementsEvent);
+  pusher.subscribeToChannel('private-products', onGroupedRequirementsEvent);
+  pusher.subscribeToChannel('private-suppliers', onGroupedRequirementsEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-purchases', onGroupedRequirementsEvent);
+    pusher.unsubscribeFromChannel('private-orders', onGroupedRequirementsEvent);
+    pusher.unsubscribeFromChannel('private-products', onGroupedRequirementsEvent);
+    pusher.unsubscribeFromChannel('private-suppliers', onGroupedRequirementsEvent);
+  });
+
   try {
     final response = await apiClient.client.get('/purchase-requirements/group');
     final resData = response.data;
@@ -66,10 +115,44 @@ final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) as
 class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
   final Map<int, PurchaseOrderModel> _localOrders = {};
   final Set<int> _removedOrderIds = {};
+  bool _isRefreshingSilently = false;
 
   @override
   Future<List<PurchaseOrderModel>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
     final apiClient = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onPurchaseOrdersEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for PurchaseOrdersNotifier: $eventData");
+      final eventType = eventData['event_type']?.toString();
+      final orderId = int.tryParse(
+        (eventData['purchase_order_id'] ?? eventData['id'])?.toString() ?? '',
+      );
+      if (eventType == 'delete' && orderId != null && orderId > 0) {
+        removeOrderLocally(orderId);
+        return;
+      }
+      unawaited(refreshSilently());
+    }
+
+    pusher.subscribeToChannel('private-purchases', onPurchaseOrdersEvent);
+    pusher.subscribeToChannel('private-suppliers', onPurchaseOrdersEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-purchases', onPurchaseOrdersEvent);
+      pusher.unsubscribeFromChannel('private-suppliers', onPurchaseOrdersEvent);
+    });
+
+    return _fetchOrders(apiClient);
+  }
+
+  Future<List<PurchaseOrderModel>> _fetchOrders(ApiClient apiClient) async {
     try {
       final response = await apiClient.client.get('/purchase-orders');
       final resData = response.data;
@@ -98,6 +181,20 @@ class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
       return _mergeOrders(orders, _localOrders.values);
     } catch (e) {
       throw Exception(apiClient.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshingSilently) return;
+    _isRefreshingSilently = true;
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final freshOrders = await _fetchOrders(apiClient);
+      state = AsyncData(freshOrders);
+    } catch (_) {
+      // Preserve current purchase orders on transient errors
+    } finally {
+      _isRefreshingSilently = false;
     }
   }
 

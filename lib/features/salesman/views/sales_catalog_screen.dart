@@ -626,6 +626,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
+      final lowerErr = errorMsg.toLowerCase();
+      if (lowerErr.contains('version') ||
+          lowerErr.contains('409') ||
+          errorMsg.contains('نوێکراوەتەوە')) {
+        unawaited(
+          ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId),
+        );
+      }
       if (mounted) {
         final isStillSelected = _selectedOrder?.id == orderId;
         setState(() {
@@ -1171,17 +1179,43 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     a.notes != b.notes;
               }).any((diff) => diff);
 
+          final existingCust = selectedOrder.customer is Map
+              ? selectedOrder.customer as Map
+              : null;
+          final nextCust = matchingOrder.customer is Map
+              ? matchingOrder.customer as Map
+              : null;
+          final customerDetailsChanged =
+              existingCust?['name']?.toString() != nextCust?['name']?.toString() ||
+              existingCust?['current_balance']?.toString() !=
+                  nextCust?['current_balance']?.toString() ||
+              existingCust?['price_type']?.toString() !=
+                  nextCust?['price_type']?.toString();
+
           final orderChanged =
               matchingOrder.version != selectedOrder.version ||
               matchingOrder.status != selectedOrder.status ||
               matchingOrder.customerId != selectedOrder.customerId ||
+              matchingOrder.warehouseId != selectedOrder.warehouseId ||
               matchingOrder.priceType != selectedOrder.priceType ||
+              matchingOrder.notes != selectedOrder.notes ||
+              matchingOrder.discountType != selectedOrder.discountType ||
+              matchingOrder.discountPercent != selectedOrder.discountPercent ||
+              matchingOrder.discountAmount != selectedOrder.discountAmount ||
+              matchingOrder.permanentDiscountAmount !=
+                  selectedOrder.permanentDiscountAmount ||
               matchingOrder.totalAmount != selectedOrder.totalAmount ||
+              customerDetailsChanged ||
               itemsChanged;
 
           if (orderChanged && mounted) {
+            final customerChanged =
+                matchingOrder.customerId != selectedOrder.customerId;
             setState(() {
               _selectedOrder = matchingOrder;
+              if (customerChanged) {
+                _customerSpecialPrices = {};
+              }
               _orderCart
                 ..clear()
                 ..addEntries(
@@ -1211,7 +1245,33 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                 _selectedPriceTier = resolvedTier;
               }
             });
+
+            if (customerChanged && matchingOrder.customerId > 0) {
+              ref
+                  .read(customerActionsProvider)
+                  .fetchSpecialPrices(matchingOrder.customerId)
+                  .then((prices) {
+                    if (mounted && _selectedOrder?.id == matchingOrder.id) {
+                      setState(() {
+                        _customerSpecialPrices = prices;
+                      });
+                    }
+                  })
+                  .catchError((_) {});
+            }
           }
+        }
+      } else if (!_isSavingBatch &&
+          _debounceTimer == null &&
+          next.hasValue &&
+          !next.isLoading) {
+        _setActiveOrder(null);
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
+            type: SnackbarType.info,
+          );
         }
       }
     });
@@ -1298,7 +1358,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         } else {
           orderMap[_selectedOrder!.id] = _selectedOrder!;
         }
-      } else {
+      } else if (_isSavingBatch || !ordersAsync.hasValue) {
         final status = _selectedOrder!.status.toUpperCase();
         if (status != OrderModel.statusDelivered &&
             status != OrderModel.statusCancelled) {

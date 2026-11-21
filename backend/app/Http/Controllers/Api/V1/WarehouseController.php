@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\WarehouseUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
 use App\Models\WarehouseStock;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
@@ -288,6 +290,12 @@ class WarehouseController extends Controller
             'user' => $request->user(),
         ]);
 
+        try {
+            event(new WarehouseUpdated($warehouse, 'create'));
+        } catch (\Throwable $e) {
+            Log::warning('WarehouseUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'کۆگا بە سەرکەوتوویی دروستکرا',
             'data' => $warehouse
@@ -356,6 +364,12 @@ class WarehouseController extends Controller
             'description' => "زانیارییەکانی کۆگای {$warehouse->name} نوێکرایەوە",
             'user' => $request->user(),
         ]);
+
+        try {
+            event(new WarehouseUpdated($warehouse, 'update'));
+        } catch (\Throwable $e) {
+            Log::warning('WarehouseUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'زانیارییەکانی کۆگا بە سەرکەوتوویی نوێکرانەوە',
@@ -432,6 +446,7 @@ class WarehouseController extends Controller
             ], 422);
         }
 
+        $deletedWarehouseId = (int) $warehouse->id;
         $oldValues = $warehouse->toArray();
         $warehouse->is_active = false;
         $warehouse->save();
@@ -440,13 +455,19 @@ class WarehouseController extends Controller
         app(\App\Services\AuditService::class)->log([
             'action' => 'DELETE_WAREHOUSE',
             'entity_type' => 'Warehouse',
-            'entity_id' => $warehouse->id,
+            'entity_id' => $deletedWarehouseId,
             'table_name' => 'warehouses',
             'old_values' => $oldValues,
             'new_values' => null,
             'description' => "کۆگای {$warehouse->name} سڕایەوە / ناچالاک کرا",
             'user' => $request->user(),
         ]);
+
+        try {
+            event(new WarehouseUpdated(null, 'delete', $deletedWarehouseId));
+        } catch (\Throwable $e) {
+            Log::warning('WarehouseUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'کۆگا بە سەرکەوتوویی سڕایەوە',

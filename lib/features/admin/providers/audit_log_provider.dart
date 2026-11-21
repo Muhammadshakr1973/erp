@@ -1,9 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 
 final auditLogsProvider = FutureProvider<List<dynamic>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onAuditLogEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for auditLogsProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-audit-logs', onAuditLogEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-audit-logs', onAuditLogEvent);
+  });
+
   try {
     final response = await api.client.get('/audit-logs');
     if (response.statusCode == 200) {
@@ -34,6 +53,23 @@ final singleAuditLogProvider = FutureProvider.family<dynamic, int>((
   id,
 ) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onSingleAuditEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for singleAuditLogProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-audit-logs', onSingleAuditEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-audit-logs', onSingleAuditEvent);
+  });
+
   try {
     final response = await api.client.get('/audit-logs/$id');
     if (response.statusCode == 200) {
@@ -74,6 +110,30 @@ class EntityAuditParam {
 final entityAuditLogsProvider =
     FutureProvider.family<List<dynamic>, EntityAuditParam>((ref, param) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onEntityAuditEvent(Map<String, dynamic> eventData) {
+        final targetType = eventData['entity_type']?.toString();
+        final targetId = int.tryParse(eventData['entity_id']?.toString() ?? '');
+        if (targetType != null &&
+            targetType != param.entityType &&
+            targetId != param.entityId) {
+          return;
+        }
+        debugPrint("Realtime update received for entityAuditLogsProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-audit-logs', onEntityAuditEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        reconnectSub.cancel();
+        pusher.unsubscribeFromChannel('private-audit-logs', onEntityAuditEvent);
+      });
+
       try {
         final response = await api.client.get(
           '/audit-logs/entity/${param.entityType}/${param.entityId}',

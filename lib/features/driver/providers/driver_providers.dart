@@ -43,8 +43,12 @@ final activeDriversProvider = FutureProvider<List<DriverUserSummary>>((ref) asyn
   }
 
   pusher.subscribeToChannel('private-users', onActiveDriversEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-users', onActiveDriversEvent);
   });
 
@@ -81,9 +85,15 @@ final driverTripsProvider = FutureProvider<List<DeliveryTripModel>>((ref) async 
   }
 
   pusher.subscribeToChannel('private-delivery-trips', onDriverTripsEvent);
+  pusher.subscribeToChannel('private-orders', onDriverTripsEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-delivery-trips', onDriverTripsEvent);
+    pusher.unsubscribeFromChannel('private-orders', onDriverTripsEvent);
   });
 
   try {
@@ -115,9 +125,15 @@ final tripDetailProvider =
   }
 
   pusher.subscribeToChannel('private-delivery-trips', onTripDetailEvent);
+  pusher.subscribeToChannel('private-orders', onTripDetailEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-delivery-trips', onTripDetailEvent);
+    pusher.unsubscribeFromChannel('private-orders', onTripDetailEvent);
   });
 
   try {

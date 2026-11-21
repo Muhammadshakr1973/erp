@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,11 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
     }
 
     pusher.subscribeToChannel('private-categories', onCategoriesEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-categories', onCategoriesEvent);
     });
 
@@ -62,7 +67,7 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
       if (categoryId != null && categoryId > 0) {
         removeLocally(categoryId);
       } else {
-        ref.invalidateSelf();
+        unawaited(refreshSilently());
       }
       return;
     }
@@ -86,7 +91,7 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
 
       final current = state.valueOrNull;
       if (current == null) {
-        ref.invalidateSelf();
+        unawaited(refreshSilently());
         return;
       }
 
@@ -105,7 +110,23 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
       return;
     }
 
-    ref.invalidateSelf();
+    unawaited(refreshSilently());
+  }
+
+  Future<void> refreshSilently() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.client.get('/categories');
+      if (response.statusCode == 200 &&
+          response.data is Map &&
+          response.data['data'] is List) {
+        final List data = response.data['data'] as List;
+        final fresh = data.map((json) => CategoryModel.fromJson(json)).toList();
+        state = AsyncValue.data(fresh);
+      }
+    } catch (_) {
+      // Keep current categories on transient error
+    }
   }
 
   void addLocally(CategoryModel category) {

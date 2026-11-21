@@ -43,8 +43,12 @@ final routeListProvider = FutureProvider<List<RouteModel>>((ref) async {
   pusher.subscribeToChannel('private-routes', onRoutesEvent);
   pusher.subscribeToChannel('private-customers', onRoutesEvent);
   pusher.subscribeToChannel('private-users', onRoutesEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-routes', onRoutesEvent);
     pusher.unsubscribeFromChannel('private-customers', onRoutesEvent);
     pusher.unsubscribeFromChannel('private-users', onRoutesEvent);
@@ -81,8 +85,12 @@ final todayRouteAssignmentsProvider =
   pusher.subscribeToChannel('private-routes', onTodayAssignmentsEvent);
   pusher.subscribeToChannel('private-customers', onTodayAssignmentsEvent);
   pusher.subscribeToChannel('private-users', onTodayAssignmentsEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-routes', onTodayAssignmentsEvent);
     pusher.unsubscribeFromChannel('private-customers', onTodayAssignmentsEvent);
     pusher.unsubscribeFromChannel('private-users', onTodayAssignmentsEvent);

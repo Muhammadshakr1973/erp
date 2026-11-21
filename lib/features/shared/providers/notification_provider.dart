@@ -41,6 +41,7 @@ class NotificationsNotifier
   final PusherService _pusherService;
   final String? _userRole;
   String? _subscribedChannelName;
+  StreamSubscription<void>? _reconnectSub;
   Timer? _pollingTimer;
   bool _isPollingActive = false;
 
@@ -64,6 +65,9 @@ class NotificationsNotifier
       final channelName = 'private-user-notifications.${user.id}';
       _subscribedChannelName = channelName;
       _pusherService.subscribeToChannel(channelName, _onLiveNotificationReceived);
+      _reconnectSub = _pusherService.onReconnected.listen((_) {
+        unawaited(_pollForNewNotifications());
+      });
     }
   }
 
@@ -234,6 +238,7 @@ class NotificationsNotifier
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _reconnectSub?.cancel();
     final channelName = _subscribedChannelName;
     if (channelName != null) {
       _pusherService.unsubscribeFromChannel(channelName, _onLiveNotificationReceived);

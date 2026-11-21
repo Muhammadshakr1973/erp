@@ -15,8 +15,12 @@ final driverCashSummaryProvider = FutureProvider<List<DriverCashSummary>>((ref) 
   }
 
   pusher.subscribeToChannel('private-delivery-trips', onDeliveryTripEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-delivery-trips', onDeliveryTripEvent);
   });
 
@@ -46,8 +50,12 @@ final driverCollectionsHistoryProvider = FutureProvider<List<DriverCollection>>(
   }
 
   pusher.subscribeToChannel('private-delivery-trips', onDeliveryTripHistoryEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-delivery-trips', onDeliveryTripHistoryEvent);
   });
 

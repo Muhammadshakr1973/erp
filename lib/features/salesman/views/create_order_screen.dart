@@ -64,6 +64,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   int _currentVersion = 1;
   int? _subscribedOrderId;
   PusherService? _pusherService;
+  StreamSubscription<void>? _orderReconnectSub;
   bool _hasSavedOnce = false;
   bool _isSaving = false;
 
@@ -225,16 +226,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (_subscribedOrderId == orderId) return;
     _unsubscribeFromOrderPusher();
 
-    final pusher = (_pusherService ?? ref.read(pusherServiceProvider))!;
+    final pusher = _pusherService ?? ref.read(pusherServiceProvider);
     _pusherService ??= pusher;
     _subscribedOrderId = orderId;
     pusher.subscribeToOrder(orderId, _onRemoteOrderUpdate);
+    _orderReconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(_syncSubscribedOrderFromServer());
+    });
     debugPrint(
       "CreateOrderScreen: Subscribed to Pusher updates for order $orderId",
     );
   }
 
   void _unsubscribeFromOrderPusher() {
+    _orderReconnectSub?.cancel();
+    _orderReconnectSub = null;
     if (_subscribedOrderId == null) return;
 
     final pusher = _pusherService;
@@ -248,9 +254,39 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _subscribedOrderId = null;
   }
 
+  Future<void> _syncSubscribedOrderFromServer({
+    bool showNotification = false,
+  }) async {
+    final targetOrderId = _subscribedOrderId;
+    if (targetOrderId == null || !mounted || _isSaving || _debounceTimer != null) {
+      return;
+    }
+    try {
+      final orderNotifier = ref.read(
+        singleOrderProvider(targetOrderId.toString()).notifier,
+      );
+      await orderNotifier.refreshSilently();
+      final latestOrder = ref
+          .read(singleOrderProvider(targetOrderId.toString()))
+          .valueOrNull;
+      if (latestOrder != null && mounted && !_isSaving && _debounceTimer == null) {
+        _populateFromExistingOrder(latestOrder);
+        if (showNotification) {
+          AppSnackbar.show(
+            context,
+            message: 'پسوڵەکە لە لایەن ئامێرێکی ترەوە نوێکرایەوە',
+            type: SnackbarType.info,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("CreateOrderScreen: Error fetching updated order: $e");
+    }
+  }
+
   void _onRemoteOrderUpdate(Map<String, dynamic> eventData) async {
     debugPrint("CreateOrderScreen: Received Pusher event: $eventData");
-    if (!mounted || _isSaving) return;
+    if (!mounted) return;
 
     // Support both flat and nested 'data' wrappers from Laravel/Pusher
     final dynamic dataObj =
@@ -258,34 +294,47 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ? eventData['data']
         : eventData;
 
+    final eventType =
+        dataObj['event_type']?.toString() ??
+        eventData['event_type']?.toString();
+    final targetOrderId = _subscribedOrderId;
+
+    if (eventType == 'delete') {
+      _unsubscribeFromOrderPusher();
+      if (targetOrderId != null) {
+        ref
+            .read(ordersListProvider.notifier)
+            .removeOrderLocally(targetOrderId.toString());
+      }
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
+          type: SnackbarType.warning,
+        );
+        Navigator.of(context).maybePop();
+      }
+      return;
+    }
+
+    if (_isSaving || targetOrderId == null) return;
+
     final dynamic rawVersion = dataObj['version'];
     final int? eventVersion = rawVersion is num
         ? rawVersion.toInt()
         : (rawVersion != null ? int.tryParse(rawVersion.toString()) : null);
 
-    if (eventVersion != null && eventVersion > _currentVersion) {
-      try {
-        debugPrint(
-          "CreateOrderScreen: Event version ($eventVersion) > current local version ($_currentVersion). Refreshing order...",
-        );
-        final orderNotifier = ref.read(
-          singleOrderProvider(_subscribedOrderId!.toString()).notifier,
-        );
-        await orderNotifier.refreshSilently();
-        final latestOrder = ref
-            .read(singleOrderProvider(_subscribedOrderId!.toString()))
-            .valueOrNull;
-        if (latestOrder != null && mounted) {
-          _populateFromExistingOrder(latestOrder);
-          AppSnackbar.show(
-            context,
-            message: 'پسوڵەکە لە لایەن ئامێرێکی ترەوە نوێکرایەوە',
-            type: SnackbarType.info,
-          );
-        }
-      } catch (e) {
-        debugPrint("CreateOrderScreen: Error fetching updated order: $e");
-      }
+    final isNonVersionedSyncEvent =
+        const ['status_change', 'pack_item', 'return_created'].contains(eventType) &&
+        _debounceTimer == null &&
+        (eventVersion == null || eventVersion >= _currentVersion);
+
+    if ((eventVersion != null && eventVersion > _currentVersion) ||
+        isNonVersionedSyncEvent) {
+      debugPrint(
+        "CreateOrderScreen: Remote event ($eventType, v$eventVersion vs v$_currentVersion). Refreshing order...",
+      );
+      await _syncSubscribedOrderFromServer(showNotification: true);
     } else {
       debugPrint(
         "CreateOrderScreen: Ignored older or duplicate version event (eventVersion: $eventVersion, localVersion: $_currentVersion)",

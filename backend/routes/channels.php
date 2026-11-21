@@ -100,6 +100,22 @@ Broadcast::channel('stock-transfers', function (User $user) {
     return (bool) $user->is_active;
 });
 
+Broadcast::channel('purchases', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('warehouses', function (User $user) {
+    return (bool) $user->is_active;
+});
+
+Broadcast::channel('settings', function (User $user) {
+    return (bool) $user->is_active && ($user->isOwner() || $user->isAdmin());
+});
+
+Broadcast::channel('audit-logs', function (User $user) {
+    return (bool) $user->is_active && ($user->isOwner() || $user->isAdmin());
+});
+
 Broadcast::channel('user-notifications.{userId}', function (User $user, int $userId) {
     return (int) $user->id === (int) $userId;
 });

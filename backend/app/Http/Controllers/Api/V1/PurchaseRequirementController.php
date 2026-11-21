@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\PurchaseOrderUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseRequirement;
 use App\Models\PurchaseOrder;
@@ -10,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -249,6 +251,14 @@ class PurchaseRequirementController extends Controller
 
                 return $orders;
             });
+
+            foreach ($createdOrders as $createdOrder) {
+                try {
+                    event(new PurchaseOrderUpdated($createdOrder, 'converted_from_requirements'));
+                } catch (\Throwable $e) {
+                    Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+                }
+            }
 
             return response()->json([
                 'message' => 'داواکارییەکان بە سەرکەوتوویی گۆڕدران بۆ پسوڵەی کڕین',

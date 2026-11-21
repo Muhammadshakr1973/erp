@@ -27,8 +27,12 @@ final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
   }
 
   pusher.subscribeToChannel('private-orders', onOrdersEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
   });
 
@@ -87,10 +91,16 @@ final FutureProvider<WarehouseDashboardData> warehouseDashboardProvider =
 
   pusher.subscribeToChannel('private-orders', onRealtimeEvent);
   pusher.subscribeToChannel('private-products', onRealtimeEvent);
+  pusher.subscribeToChannel('private-warehouses', onRealtimeEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-orders', onRealtimeEvent);
     pusher.unsubscribeFromChannel('private-products', onRealtimeEvent);
+    pusher.unsubscribeFromChannel('private-warehouses', onRealtimeEvent);
   });
 
   try {
@@ -165,9 +175,15 @@ final FutureProvider<List<WarehouseStockModel>> warehouseStocksProvider =
   }
 
   pusher.subscribeToChannel('private-products', onProductStockEvent);
+  pusher.subscribeToChannel('private-warehouses', onProductStockEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-products', onProductStockEvent);
+    pusher.unsubscribeFromChannel('private-warehouses', onProductStockEvent);
   });
 
   try {
@@ -416,8 +432,30 @@ class WarehouseActions {
 
 final stockTransfersListProvider =
     FutureProvider<List<StockTransferModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
+  final userId = ref.watch(authProvider.select((state) => state.user?.id));
+  if (userId == null) return const [];
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onStockTransferEvent(Map<String, dynamic> eventData) {
+    debugPrint("Pusher: Realtime update received on stockTransfersListProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-stock-transfers', onStockTransferEvent);
+  pusher.subscribeToChannel('private-products', onStockTransferEvent);
+  pusher.subscribeToChannel('private-warehouses', onStockTransferEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-stock-transfers', onStockTransferEvent);
+    pusher.unsubscribeFromChannel('private-products', onStockTransferEvent);
+    pusher.unsubscribeFromChannel('private-warehouses', onStockTransferEvent);
+  });
+
   try {
     final response = await api.client.get('/stock-transfers');
     if (response.statusCode == 200) {

@@ -93,8 +93,12 @@ class FilteredCustomerListNotifier
     }
 
     pusher.subscribeToChannel('private-customers', onCustomerEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-customers', onCustomerEvent);
     });
 
@@ -398,8 +402,12 @@ class SingleCustomerNotifier extends FamilyAsyncNotifier<Customer, int> {
     }
 
     pusher.subscribeToChannel('private-customers', onSingleCustomerEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-customers', onSingleCustomerEvent);
     });
 
@@ -461,6 +469,27 @@ final customerReconciliationProvider =
         throw Exception('تەنها بەڕێوەبەر مۆڵەتی ئەم بەشەی هەیە');
       }
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onReconcileEvent(Map<String, dynamic> eventData) {
+        final eventCustId = eventData['customer_id']?.toString();
+        if (eventCustId == null || eventCustId == id.toString()) {
+          ref.invalidateSelf();
+        }
+      }
+
+      pusher.subscribeToChannel('private-customers', onReconcileEvent);
+      pusher.subscribeToChannel('private-orders', onReconcileEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        reconnectSub.cancel();
+        pusher.unsubscribeFromChannel('private-customers', onReconcileEvent);
+        pusher.unsubscribeFromChannel('private-orders', onReconcileEvent);
+      });
+
       try {
         final response = await api.client.get('/customers/$id/reconcile');
         if (response.statusCode == 200) {
@@ -512,8 +541,12 @@ class CustomerLedgerNotifier
 
     pusher.subscribeToChannel('private-customers', onLedgerEvent);
     pusher.subscribeToChannel('private-orders', onLedgerEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-customers', onLedgerEvent);
       pusher.unsubscribeFromChannel('private-orders', onLedgerEvent);
     });

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class WarehouseModel {
@@ -107,9 +109,29 @@ class WarehouseModel {
 final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   // Watch authProvider so that when a user logs in, logs out, or user details update,
   // the warehouse cache is automatically refreshed with the correct permissions.
-  ref.watch(authProvider);
+  final authState = ref.watch(authProvider);
+  if (authState.user == null) return const [];
 
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onWarehouseEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for warehouseListProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-warehouses', onWarehouseEvent);
+  pusher.subscribeToChannel('private-users', onWarehouseEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-warehouses', onWarehouseEvent);
+    pusher.unsubscribeFromChannel('private-users', onWarehouseEvent);
+  });
+
   try {
     final response = await api.client.get('/warehouses');
     if (response.statusCode == 200) {

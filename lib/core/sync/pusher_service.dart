@@ -39,11 +39,15 @@ class PusherService {
   Timer? _wsReconnectTimer;
   int _wsReconnectAttempt = 0;
   bool _manuallyDisconnected = false;
+  bool _hasConnectedBefore = false;
+  final StreamController<void> _reconnectController =
+      StreamController<void>.broadcast();
 
   PusherService([Ref? _]);
 
   bool get isConnected => _isConnected;
   bool get isInitialized => _isInitialized;
+  Stream<void> get onReconnected => _reconnectController.stream;
 
   bool get _prefersPureDartWs =>
       kIsWeb ||
@@ -52,6 +56,25 @@ class PusherService {
       defaultTargetPlatform == TargetPlatform.macOS;
 
   Future<void> _fetchPusherConfig() async {
+    if (_serverKey != null &&
+        _serverKey!.isNotEmpty &&
+        _serverCluster != null &&
+        _serverCluster!.isNotEmpty) {
+      return;
+    }
+
+    if (_fetchFuture != null) {
+      await _fetchFuture;
+      return;
+    }
+
+    _fetchFuture = _fetchConfigFromServer();
+    try {
+      await _fetchFuture;
+    } finally {
+      _fetchFuture = null;
+    }
+
     if (_serverKey != null &&
         _serverKey!.isNotEmpty &&
         _serverCluster != null &&
@@ -69,22 +92,9 @@ class PusherService {
           cachedCluster.isNotEmpty) {
         _serverKey = cachedKey;
         _serverCluster = cachedCluster;
-        debugPrint("Pusher config loaded from local cache: key=$_serverKey");
-        return;
+        debugPrint("Pusher config loaded from local cache fallback: key=$_serverKey");
       }
     } catch (_) {}
-
-    if (_fetchFuture != null) {
-      await _fetchFuture;
-      return;
-    }
-
-    _fetchFuture = _fetchConfigFromServer();
-    try {
-      await _fetchFuture;
-    } finally {
-      _fetchFuture = null;
-    }
   }
 
   Future<void> _fetchConfigFromServer() async {
@@ -258,14 +268,22 @@ class PusherService {
       return;
     }
 
-    if (_pusher == null) return;
+    if (!_isConnected || _pusher == null) {
+      debugPrint(
+        "Pusher deferred native subscribe for $channelName until connected.",
+      );
+      return;
+    }
 
     _inFlightSubscriptions.add(channelName);
     try {
       await _pusher?.subscribe(channelName: channelName);
-      _nativelySubscribedChannels.add(channelName);
-      debugPrint("Pusher Subscribed to: $channelName");
+      if (_isConnected) {
+        _nativelySubscribedChannels.add(channelName);
+        debugPrint("Pusher Subscribed to: $channelName");
+      }
     } catch (e) {
+      _nativelySubscribedChannels.remove(channelName);
       debugPrint("Pusher Subscription Error for $channelName: $e");
     } finally {
       _inFlightSubscriptions.remove(channelName);
@@ -273,9 +291,9 @@ class PusherService {
   }
 
   Future<void> _resubscribeAllRegisteredChannels() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_isConnected) return;
     if (!_usePureDartWs && _pusher == null) return;
-    if (_usePureDartWs && (!_isConnected || _wsSocketId == null)) return;
+    if (_usePureDartWs && _wsSocketId == null) return;
 
     for (final channelName in _listeners.keys.toList()) {
       if ((_listeners[channelName]?.isEmpty ?? true)) continue;
@@ -347,15 +365,22 @@ class PusherService {
             debugPrint(
               "Pusher Connection State Change: $previousState -> $currentState",
             );
+            final normalizedState = currentState.toString().toUpperCase();
             final wasConnected = _isConnected;
-            _isConnected = (currentState == 'CONNECTED');
-            if (!_isConnected && currentState != 'CONNECTING') {
-              if (currentState == 'DISCONNECTED') {
-                _nativelySubscribedChannels.clear();
-              }
+            _isConnected = (normalizedState == 'CONNECTED');
+            if (!_isConnected && normalizedState != 'CONNECTING') {
+              _nativelySubscribedChannels.clear();
+              _inFlightSubscriptions.clear();
             }
             if (!wasConnected && _isConnected) {
-              _resubscribeAllRegisteredChannels();
+              if (_hasConnectedBefore) {
+                if (!_reconnectController.isClosed) {
+                  _reconnectController.add(null);
+                }
+              } else {
+                _hasConnectedBefore = true;
+              }
+              unawaited(_resubscribeAllRegisteredChannels());
             }
           },
           onError: (message, code, exception) {
@@ -384,7 +409,6 @@ class PusherService {
         );
         _usePureDartWs = false;
         _isInitialized = true;
-        await _resubscribeAllRegisteredChannels();
       } on MissingPluginException {
         debugPrint(
           "Pusher native plugin unavailable on this platform; falling back to pure-Dart WebSocket.",
@@ -476,6 +500,13 @@ class PusherService {
 
         _startWsPingTimer(activityTimeout);
         if (_isConnected) {
+          if (_hasConnectedBefore) {
+            if (!_reconnectController.isClosed) {
+              _reconnectController.add(null);
+            }
+          } else {
+            _hasConnectedBefore = true;
+          }
           unawaited(_resubscribeAllRegisteredChannels());
         }
         return;
@@ -490,8 +521,31 @@ class PusherService {
         return;
       }
 
+      if (eventName == 'pusher:subscription_error') {
+        debugPrint("Pusher WS Subscription Error for $channelName: $data");
+        if (channelName != null) {
+          _nativelySubscribedChannels.remove(channelName);
+          _inFlightSubscriptions.remove(channelName);
+          if (_listeners.containsKey(channelName) &&
+              (_listeners[channelName]?.isNotEmpty ?? false)) {
+            Future.delayed(const Duration(seconds: 2), () {
+              if (!_manuallyDisconnected &&
+                  _isConnected &&
+                  _listeners.containsKey(channelName)) {
+                unawaited(_ensureChannelSubscribedNatively(channelName));
+              }
+            });
+          }
+        }
+        return;
+      }
+
       if (eventName == 'pusher:error') {
         debugPrint("Pusher WS Error Frame: $data");
+        if (channelName != null) {
+          _nativelySubscribedChannels.remove(channelName);
+          _inFlightSubscriptions.remove(channelName);
+        }
         return;
       }
 
@@ -564,6 +618,8 @@ class PusherService {
       return;
     }
 
+    if (_isConnected) return;
+
     try {
       await _pusher?.connect();
     } catch (e) {
@@ -573,6 +629,7 @@ class PusherService {
 
   Future<void> disconnect() async {
     _manuallyDisconnected = true;
+    _hasConnectedBefore = false;
     _wsReconnectTimer?.cancel();
     _wsReconnectTimer = null;
     try {
@@ -628,8 +685,9 @@ class PusherService {
       _listeners[channelName]!.add(onUpdate);
     }
 
-    if (_nativelySubscribedChannels.contains(channelName) ||
-        _inFlightSubscriptions.contains(channelName)) {
+    if (_isConnected &&
+        (_nativelySubscribedChannels.contains(channelName) ||
+            _inFlightSubscriptions.contains(channelName))) {
       debugPrint(
         "Pusher already subscribed to: $channelName. Registered callback, skipped duplicate subscribe.",
       );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ class ProductsListNotifier
   final Ref _ref;
   final Set<int> _fetchingProductIds = {};
   late final void Function(Map<String, dynamic>) _onProductEvent;
+  StreamSubscription<void>? _reconnectSub;
 
   ProductsListNotifier(this._api, this._pusher, this._ref)
       : super(const AsyncValue.loading()) {
@@ -29,6 +31,10 @@ class ProductsListNotifier
 
   void _subscribeToPusher() {
     _pusher.subscribeToChannel('private-products', _onProductEvent);
+    _reconnectSub?.cancel();
+    _reconnectSub = _pusher.onReconnected.listen((_) {
+      unawaited(refreshProductsSilently());
+    });
   }
 
   bool _shouldIncludeProductForUser(
@@ -580,6 +586,7 @@ class ProductsListNotifier
 
   @override
   void dispose() {
+    _reconnectSub?.cancel();
     _pusher.unsubscribeFromChannel('private-products', _onProductEvent);
     super.dispose();
   }

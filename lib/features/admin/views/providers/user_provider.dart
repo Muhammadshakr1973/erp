@@ -25,10 +25,16 @@ final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
   pusher.subscribeToChannel('private-users', onUsersEvent);
   pusher.subscribeToChannel('private-routes', onUsersEvent);
+  pusher.subscribeToChannel('private-warehouses', onUsersEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-users', onUsersEvent);
     pusher.unsubscribeFromChannel('private-routes', onUsersEvent);
+    pusher.unsubscribeFromChannel('private-warehouses', onUsersEvent);
   });
 
   try {

@@ -194,12 +194,18 @@ class SalesmanDashboardNotifier extends AsyncNotifier<SalesmanDashboardData> {
     pusher.subscribeToChannel('private-products', onSalesmanDashboardEvent);
     pusher.subscribeToChannel('private-customers', onSalesmanDashboardEvent);
     pusher.subscribeToChannel('private-delivery-trips', onSalesmanDashboardEvent);
+    pusher.subscribeToChannel('private-routes', onSalesmanDashboardEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-orders', onSalesmanDashboardEvent);
       pusher.unsubscribeFromChannel('private-products', onSalesmanDashboardEvent);
       pusher.unsubscribeFromChannel('private-customers', onSalesmanDashboardEvent);
       pusher.unsubscribeFromChannel('private-delivery-trips', onSalesmanDashboardEvent);
+      pusher.unsubscribeFromChannel('private-routes', onSalesmanDashboardEvent);
     });
 
     return _fetchDashboard(api);

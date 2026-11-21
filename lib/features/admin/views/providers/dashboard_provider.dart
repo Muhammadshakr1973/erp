@@ -42,14 +42,24 @@ final FutureProvider<DashboardModel> dashboardProvider =
   pusher.subscribeToChannel('private-products', onRealtimeDashboardEvent);
   pusher.subscribeToChannel('private-commissions', onRealtimeDashboardEvent);
   pusher.subscribeToChannel('private-suppliers', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-purchases', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-warehouses', onRealtimeDashboardEvent);
+  pusher.subscribeToChannel('private-stock-transfers', onRealtimeDashboardEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-orders', onRealtimeDashboardEvent);
     pusher.unsubscribeFromChannel('private-delivery-trips', onRealtimeDashboardEvent);
     pusher.unsubscribeFromChannel('private-customers', onRealtimeDashboardEvent);
     pusher.unsubscribeFromChannel('private-products', onRealtimeDashboardEvent);
     pusher.unsubscribeFromChannel('private-commissions', onRealtimeDashboardEvent);
     pusher.unsubscribeFromChannel('private-suppliers', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-purchases', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-warehouses', onRealtimeDashboardEvent);
+    pusher.unsubscribeFromChannel('private-stock-transfers', onRealtimeDashboardEvent);
   });
 
   try {

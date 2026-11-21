@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\SettingsUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\AuditService;
@@ -9,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SettingController extends Controller
 {
@@ -180,6 +182,12 @@ class SettingController extends Controller
             'user' => $user,
         ]);
 
+        try {
+            event(new SettingsUpdated('update'));
+        } catch (\Throwable $e) {
+            Log::warning('SettingsUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'ڕێکخستنەکان بە سەرکەوتوویی پاشەکەوت کران',
             'data' => $newValues,
@@ -210,6 +218,12 @@ class SettingController extends Controller
             'description' => 'کاشی سیستەم لەلایەن خاوەنکارەوە پاککرایەوە',
             'user' => $user,
         ]);
+
+        try {
+            event(new SettingsUpdated('cache_clear'));
+        } catch (\Throwable $e) {
+            Log::warning('SettingsUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'کاشی سیستەم بە سەرکەوتوویی پاککرایەوە',

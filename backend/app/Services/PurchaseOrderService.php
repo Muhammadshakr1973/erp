@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\PurchaseOrderUpdated;
 use App\Events\SupplierAccountUpdated;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -201,6 +202,12 @@ class PurchaseOrderService
 
             return $order;
         });
+
+        try {
+            event(new PurchaseOrderUpdated($order, 'create'));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+        }
 
         if ($order->status === PurchaseOrder::STATUS_RECEIVED && (float) $order->total_amount > 0) {
             Cache::forget('admin_dashboard_kpis_v5');
@@ -428,9 +435,10 @@ class PurchaseOrderService
 
         Cache::forget('admin_dashboard_kpis_v5');
         try {
+            event(new PurchaseOrderUpdated($receivedOrder, 'receive'));
             event(new SupplierAccountUpdated(null, 'purchase_received', (int) $receivedOrder->supplier_id));
         } catch (\Throwable $e) {
-            Log::warning('SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
+            Log::warning('PurchaseOrderUpdated/SupplierAccountUpdated broadcast failed: ' . $e->getMessage());
         }
 
         return $receivedOrder;
@@ -441,7 +449,7 @@ class PurchaseOrderService
      */
     public function confirmOrder(PurchaseOrder $order, $user): PurchaseOrder
     {
-        return DB::transaction(function () use ($order, $user) {
+        $confirmedOrder = DB::transaction(function () use ($order, $user) {
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
@@ -469,6 +477,14 @@ class PurchaseOrderService
 
             return $lockedOrder;
         });
+
+        try {
+            event(new PurchaseOrderUpdated($confirmedOrder, 'confirm'));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $confirmedOrder;
     }
 
     /**
@@ -476,7 +492,7 @@ class PurchaseOrderService
      */
     public function cancelOrder(PurchaseOrder $order, $user): PurchaseOrder
     {
-        return DB::transaction(function () use ($order, $user) {
+        $cancelledOrder = DB::transaction(function () use ($order, $user) {
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_CANCELLED) {
@@ -537,6 +553,14 @@ class PurchaseOrderService
 
             return $lockedOrder;
         });
+
+        try {
+            event(new PurchaseOrderUpdated($cancelledOrder, 'cancel'));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+        }
+
+        return $cancelledOrder;
     }
 
     /**
@@ -730,6 +754,12 @@ class PurchaseOrderService
             return $lockedOrder->fresh(['supplier', 'warehouse', 'items.product', 'payments']);
         });
 
+        try {
+            event(new PurchaseOrderUpdated($updatedOrder, 'update'));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+        }
+
         if ($updatedOrder->status === PurchaseOrder::STATUS_RECEIVED && $updatedOrder->supplier_id && (float) $updatedOrder->total_amount > 0) {
             Cache::forget('admin_dashboard_kpis_v5');
             try {
@@ -747,7 +777,7 @@ class PurchaseOrderService
      */
     public function deleteOrder(PurchaseOrder $order, $user): void
     {
-        DB::transaction(function () use ($order, $user) {
+        $deletedMeta = DB::transaction(function () use ($order, $user) {
             $lockedOrder = PurchaseOrder::lockForUpdate()->findOrFail($order->id);
 
             if ($lockedOrder->status === PurchaseOrder::STATUS_RECEIVED || $lockedOrder->status === PurchaseOrder::STATUS_RECEIVED_LOWER) {
@@ -757,6 +787,12 @@ class PurchaseOrderService
             if ($lockedOrder->items()->where('received_quantity', '>', 0)->exists()) {
                 throw ValidationException::withMessages(['status' => 'ناتوانرێت ئەم پسوڵەیە بسڕدرێتەوە چونكە بەشێک لە کاڵاکانی وەرگیراون.']);
             }
+
+            $meta = [
+                'id' => (int) $lockedOrder->id,
+                'supplier_id' => $lockedOrder->supplier_id ? (int) $lockedOrder->supplier_id : null,
+                'warehouse_id' => $lockedOrder->warehouse_id ? (int) $lockedOrder->warehouse_id : null,
+            ];
 
             $lockedOrder->requirements()->update(['status' => 'OPEN', 'purchase_order_id' => null]);
             $lockedOrder->items()->delete();
@@ -772,7 +808,21 @@ class PurchaseOrderService
                 'description' => "پسوڵەی کڕینی ڕەشنووس {$lockedOrder->order_number} سڕایەوە",
                 'user'        => $user,
             ]);
+
+            return $meta;
         });
+
+        try {
+            event(new PurchaseOrderUpdated(
+                null,
+                'delete',
+                $deletedMeta['id'],
+                $deletedMeta['supplier_id'],
+                $deletedMeta['warehouse_id']
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('PurchaseOrderUpdated broadcast failed: ' . $e->getMessage());
+        }
     }
 
     /**

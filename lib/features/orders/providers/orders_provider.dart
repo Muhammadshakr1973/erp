@@ -34,6 +34,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     }
 
     pusher.subscribeToChannel('private-orders', onOrdersEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
     // Keep customer details (name, phone, address, balance, price_type) inside loaded orders synced
     ref.listen<AsyncValue<PaginatedResponse<Customer>>>(
@@ -60,6 +63,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     );
 
     ref.onDispose(() {
+      reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
     });
 
@@ -390,8 +394,12 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
       }
 
       pusher.subscribeToOrder(parsedId, onOrderEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        unawaited(refreshSilently());
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromOrder(parsedId, onOrderEvent);
       });
     }
@@ -730,8 +738,12 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
   }
 
   pusher.subscribeToChannel('private-orders', onSalesReturnsEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-orders', onSalesReturnsEvent);
   });
 
@@ -761,6 +773,24 @@ final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
   final userId = ref.watch(authProvider.select((state) => state.user?.id));
   if (userId == null) return null;
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onReturnDetailEvent(Map<String, dynamic> eventData) {
+    if (eventData['event_type']?.toString() == 'return_created') {
+      ref.invalidateSelf();
+    }
+  }
+
+  pusher.subscribeToChannel('private-orders', onReturnDetailEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-orders', onReturnDetailEvent);
+  });
+
   try {
     final response = await api.client.get('/sales-returns/$id');
     if (response.statusCode == 200) {

@@ -22,9 +22,15 @@ final supplierDebtsReportProvider =
       }
 
       pusher.subscribeToChannel('private-suppliers', onSupplierDebtsEvent);
+      pusher.subscribeToChannel('private-purchases', onSupplierDebtsEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-suppliers', onSupplierDebtsEvent);
+        pusher.unsubscribeFromChannel('private-purchases', onSupplierDebtsEvent);
       });
 
       try {
@@ -68,8 +74,12 @@ final customerDebtsReportProvider =
       pusher.subscribeToChannel('private-customers', onCustomerDebtsEvent);
       pusher.subscribeToChannel('private-orders', onCustomerDebtsEvent);
       pusher.subscribeToChannel('private-delivery-trips', onCustomerDebtsEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-customers', onCustomerDebtsEvent);
         pusher.unsubscribeFromChannel('private-orders', onCustomerDebtsEvent);
         pusher.unsubscribeFromChannel('private-delivery-trips', onCustomerDebtsEvent);
@@ -115,8 +125,12 @@ final paymentsHistoryReportProvider =
 
       pusher.subscribeToChannel('private-customers', onPaymentsEvent);
       pusher.subscribeToChannel('private-delivery-trips', onPaymentsEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-customers', onPaymentsEvent);
         pusher.unsubscribeFromChannel('private-delivery-trips', onPaymentsEvent);
       });
@@ -162,8 +176,12 @@ final salesReportProvider =
 
       pusher.subscribeToChannel('private-orders', onSalesReportEvent);
       pusher.subscribeToChannel('private-delivery-trips', onSalesReportEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-orders', onSalesReportEvent);
         pusher.unsubscribeFromChannel('private-delivery-trips', onSalesReportEvent);
       });
@@ -206,12 +224,18 @@ final profitReportProvider =
       pusher.subscribeToChannel('private-delivery-trips', onProfitReportEvent);
       pusher.subscribeToChannel('private-products', onProfitReportEvent);
       pusher.subscribeToChannel('private-categories', onProfitReportEvent);
+      pusher.subscribeToChannel('private-purchases', onProfitReportEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-orders', onProfitReportEvent);
         pusher.unsubscribeFromChannel('private-delivery-trips', onProfitReportEvent);
         pusher.unsubscribeFromChannel('private-products', onProfitReportEvent);
         pusher.unsubscribeFromChannel('private-categories', onProfitReportEvent);
+        pusher.unsubscribeFromChannel('private-purchases', onProfitReportEvent);
       });
 
       try {
@@ -256,8 +280,12 @@ final salesBySalesmanReportProvider =
       pusher.subscribeToChannel('private-commissions', onSalesBySalesmanEvent);
       pusher.subscribeToChannel('private-users', onSalesBySalesmanEvent);
       pusher.subscribeToChannel('private-routes', onSalesBySalesmanEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-orders', onSalesBySalesmanEvent);
         pusher.unsubscribeFromChannel(
           'private-delivery-trips',
@@ -315,12 +343,20 @@ final lowStockReportProvider =
       pusher.subscribeToChannel('private-orders', onLowStockReportEvent);
       pusher.subscribeToChannel('private-categories', onLowStockReportEvent);
       pusher.subscribeToChannel('private-suppliers', onLowStockReportEvent);
+      pusher.subscribeToChannel('private-purchases', onLowStockReportEvent);
+      pusher.subscribeToChannel('private-warehouses', onLowStockReportEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-products', onLowStockReportEvent);
         pusher.unsubscribeFromChannel('private-orders', onLowStockReportEvent);
         pusher.unsubscribeFromChannel('private-categories', onLowStockReportEvent);
         pusher.unsubscribeFromChannel('private-suppliers', onLowStockReportEvent);
+        pusher.unsubscribeFromChannel('private-purchases', onLowStockReportEvent);
+        pusher.unsubscribeFromChannel('private-warehouses', onLowStockReportEvent);
       });
 
       try {
@@ -363,10 +399,22 @@ final stockTransfersReportProvider =
         'private-stock-transfers',
         onStockTransfersReportEvent,
       );
+      pusher.subscribeToChannel(
+        'private-warehouses',
+        onStockTransfersReportEvent,
+      );
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel(
           'private-stock-transfers',
+          onStockTransfersReportEvent,
+        );
+        pusher.unsubscribeFromChannel(
+          'private-warehouses',
           onStockTransfersReportEvent,
         );
       });

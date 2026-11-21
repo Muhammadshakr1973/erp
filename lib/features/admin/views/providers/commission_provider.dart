@@ -20,9 +20,15 @@ final commissionsListProvider =
       }
 
       pusher.subscribeToChannel('private-commissions', onCommissionsListEvent);
+      pusher.subscribeToChannel('private-orders', onCommissionsListEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-commissions', onCommissionsListEvent);
+        pusher.unsubscribeFromChannel('private-orders', onCommissionsListEvent);
       });
 
       try {
@@ -74,9 +80,15 @@ final commissionSummaryProvider =
       }
 
       pusher.subscribeToChannel('private-commissions', onCommissionSummaryEvent);
+      pusher.subscribeToChannel('private-orders', onCommissionSummaryEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
 
       ref.onDispose(() {
+        reconnectSub.cancel();
         pusher.unsubscribeFromChannel('private-commissions', onCommissionSummaryEvent);
+        pusher.unsubscribeFromChannel('private-orders', onCommissionSummaryEvent);
       });
 
       try {
@@ -119,8 +131,12 @@ final commissionDetailProvider = FutureProvider.family<CommissionModel, int>((
   }
 
   pusher.subscribeToChannel('private-commissions', onCommissionDetailEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
 
   ref.onDispose(() {
+    reconnectSub.cancel();
     pusher.unsubscribeFromChannel('private-commissions', onCommissionDetailEvent);
   });
 

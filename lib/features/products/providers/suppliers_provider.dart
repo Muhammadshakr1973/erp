@@ -1,12 +1,33 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../models/supplier_model.dart';
 import '../models/supplier_ledger_model.dart';
 import '../models/supplier_reconciliation_model.dart';
 
 final suppliersListProvider = FutureProvider<List<SupplierModel>>((ref) async {
   final api = ref.watch(apiClientProvider);
+  final pusher = ref.watch(pusherServiceProvider);
+
+  void onSuppliersEvent(Map<String, dynamic> eventData) {
+    debugPrint("Realtime update received for suppliersListProvider: $eventData");
+    ref.invalidateSelf();
+  }
+
+  pusher.subscribeToChannel('private-suppliers', onSuppliersEvent);
+  pusher.subscribeToChannel('private-purchases', onSuppliersEvent);
+  final reconnectSub = pusher.onReconnected.listen((_) {
+    ref.invalidateSelf();
+  });
+
+  ref.onDispose(() {
+    reconnectSub.cancel();
+    pusher.unsubscribeFromChannel('private-suppliers', onSuppliersEvent);
+    pusher.unsubscribeFromChannel('private-purchases', onSuppliersEvent);
+  });
+
   try {
     final response = await api.client.get('/suppliers');
     if (response.statusCode == 200) {
@@ -33,6 +54,25 @@ final supplierLedgerProvider =
       supplierId,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onSupplierLedgerEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update received for supplierLedgerProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-suppliers', onSupplierLedgerEvent);
+      pusher.subscribeToChannel('private-purchases', onSupplierLedgerEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        reconnectSub.cancel();
+        pusher.unsubscribeFromChannel('private-suppliers', onSupplierLedgerEvent);
+        pusher.unsubscribeFromChannel('private-purchases', onSupplierLedgerEvent);
+      });
+
       try {
         final response = await api.client.get('/suppliers/$supplierId/ledger');
         if (response.statusCode == 200) {
@@ -61,6 +101,25 @@ final supplierReconciliationProvider =
       supplierId,
     ) async {
       final api = ref.watch(apiClientProvider);
+      final pusher = ref.watch(pusherServiceProvider);
+
+      void onSupplierReconcileEvent(Map<String, dynamic> eventData) {
+        debugPrint("Realtime update received for supplierReconciliationProvider: $eventData");
+        ref.invalidateSelf();
+      }
+
+      pusher.subscribeToChannel('private-suppliers', onSupplierReconcileEvent);
+      pusher.subscribeToChannel('private-purchases', onSupplierReconcileEvent);
+      final reconnectSub = pusher.onReconnected.listen((_) {
+        ref.invalidateSelf();
+      });
+
+      ref.onDispose(() {
+        reconnectSub.cancel();
+        pusher.unsubscribeFromChannel('private-suppliers', onSupplierReconcileEvent);
+        pusher.unsubscribeFromChannel('private-purchases', onSupplierReconcileEvent);
+      });
+
       try {
         final response =
             await api.client.get('/suppliers/$supplierId/reconcile');

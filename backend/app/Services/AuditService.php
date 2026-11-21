@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\AuditLogCreated;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -86,6 +87,13 @@ class AuditService
         // Insert directly into audit_logs
         try {
             $auditLog = AuditLog::create($auditData);
+            DB::afterCommit(function () use ($auditLog) {
+                try {
+                    event(new AuditLogCreated($auditLog));
+                } catch (\Throwable $e) {
+                    Log::warning('AuditLogCreated broadcast failed: ' . $e->getMessage());
+                }
+            });
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Failed to record audit log: " . $e->getMessage());
             $auditLog = new AuditLog($auditData);
