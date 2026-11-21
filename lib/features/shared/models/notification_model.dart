@@ -33,8 +33,8 @@ class AppNotification {
       type: json['type'] as String? ?? 'system',
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
-      data: json['data'] is Map<String, dynamic>
-          ? json['data'] as Map<String, dynamic>
+      data: json['data'] is Map
+          ? Map<String, dynamic>.from(json['data'] as Map)
           : null,
       isRead: json['is_read'] as bool? ?? (json['read_at'] != null),
       readAt: json['read_at'] != null

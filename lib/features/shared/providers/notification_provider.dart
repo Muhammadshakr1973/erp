@@ -10,6 +10,7 @@ import '../../../core/utils/notification_sound_service.dart';
 import '../../admin/views/providers/dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../driver/providers/driver_providers.dart';
+import '../../orders/providers/orders_provider.dart';
 import '../../salesman/providers/salesman_dashboard_provider.dart';
 import '../../warehouse/providers/warehouse_provider.dart';
 import '../models/notification_model.dart';
@@ -140,7 +141,7 @@ class NotificationsNotifier
 
               // Invalidate screen providers so active views refresh immediately
               for (final n in newNotifications) {
-                _invalidateProvidersForNotificationType(n.type);
+                _syncProvidersForNotification(n);
               }
             }
           }
@@ -158,9 +159,27 @@ class NotificationsNotifier
     }
   }
 
-  void _invalidateProvidersForNotificationType(String type) {
-    final lowerType = type.toLowerCase();
+  void _syncProvidersForNotification(AppNotification notification) {
+    final lowerType = notification.type.toLowerCase();
     if (lowerType == 'order') {
+      final data = notification.data;
+      final action = data?['action']?.toString().toLowerCase() ?? '';
+      final orderId = int.tryParse(data?['order_id']?.toString() ?? '');
+
+      if (action == 'order_deleted' && orderId != null && orderId > 0) {
+        final orderKey = orderId.toString();
+        _ref.read(ordersListProvider.notifier).removeOrderLocally(orderKey);
+        if (_ref.exists(singleOrderProvider(orderKey))) {
+          _ref.read(singleOrderProvider(orderKey).notifier).setOrderLocally(null);
+        }
+      } else if (orderId != null && orderId > 0) {
+        unawaited(
+          _ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId),
+        );
+      } else {
+        unawaited(_ref.read(ordersListProvider.notifier).refreshSilently());
+      }
+
       _ref.invalidate(ordersToPackProvider);
       _ref.invalidate(warehouseDashboardProvider);
       unawaited(
@@ -229,7 +248,7 @@ class NotificationsNotifier
       }
 
       // Automatically refresh dependent modules
-      _invalidateProvidersForNotificationType(newNotification.type);
+      _syncProvidersForNotification(newNotification);
     } catch (e) {
       debugPrint("Error parsing live notification: $e");
     }

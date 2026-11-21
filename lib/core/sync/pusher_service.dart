@@ -166,6 +166,9 @@ class PusherService {
             'Accept': 'application/json',
             'Authorization': 'Bearer $token',
           },
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
         ),
       );
       if (response.data is Map) {

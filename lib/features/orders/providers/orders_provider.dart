@@ -18,8 +18,21 @@ import '../models/order_model.dart';
 class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   final Set<int> _fetchingOrderIds = {};
   final Set<int> _pendingRefetchOrderIds = {};
+  final Map<int, DateTime> _deletedAtByOrderId = {};
   bool _isRefreshingAll = false;
   bool _pendingRefreshAll = false;
+
+  void _pruneDeletedCache() {
+    if (_deletedAtByOrderId.isEmpty) return;
+    final cutoff = DateTime.now().subtract(const Duration(seconds: 60));
+    _deletedAtByOrderId.removeWhere((_, deletedAt) => deletedAt.isBefore(cutoff));
+  }
+
+  bool _wasDeletedSince(int orderId, DateTime fetchStartedAt) {
+    final deletedAt = _deletedAtByOrderId[orderId];
+    if (deletedAt == null) return false;
+    return !deletedAt.isBefore(fetchStartedAt);
+  }
 
   @override
   FutureOr<List<OrderModel>> build() async {
@@ -108,9 +121,13 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       return;
     }
     _fetchingOrderIds.add(orderId);
+    final fetchStartedAt = DateTime.now();
     try {
       final api = ref.read(apiClientProvider);
       final response = await api.client.get('/orders/$orderId');
+      if (_wasDeletedSince(orderId, fetchStartedAt)) {
+        return;
+      }
       if (response.statusCode == 200) {
         final data = response.data['data'] ?? response.data;
         if (data is! Map) return;
@@ -168,6 +185,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   Future<List<OrderModel>> _fetchOrders(ApiClient api) async {
+    final fetchStartedAt = DateTime.now();
     final response = await api.client.get('/orders');
     if (response.statusCode == 200) {
       final resData = response.data['data'] ?? response.data;
@@ -177,11 +195,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
         );
       }
       final List data = resData;
+      _pruneDeletedCache();
       final Map<int, OrderModel> uniqueMap = {};
       for (final json in data) {
         if (json is Map) {
           final ord = OrderModel.fromJson(Map<String, dynamic>.from(json));
-          uniqueMap[ord.id] = ord;
+          if (!_wasDeletedSince(ord.id, fetchStartedAt)) {
+            uniqueMap[ord.id] = ord;
+          }
         }
       }
       final onlineOrders = uniqueMap.values.toList();
@@ -327,6 +348,13 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   void removeOrderLocally(String orderId) {
+    final parsedId = int.tryParse(orderId);
+    if (parsedId != null && parsedId > 0) {
+      _pruneDeletedCache();
+      _deletedAtByOrderId[parsedId] = DateTime.now();
+      _pendingRefetchOrderIds.remove(parsedId);
+    }
+
     final currentOrders = state.valueOrNull;
     if (currentOrders != null) {
       final existed = currentOrders.any((o) => o.id.toString() == orderId);
@@ -395,6 +423,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   void restoreState(List<OrderModel> previousOrders) {
+    for (final order in previousOrders) {
+      _deletedAtByOrderId.remove(order.id);
+    }
     state = AsyncData(previousOrders);
   }
 }

@@ -1447,6 +1447,12 @@ class SalesOrderService
             return $lockedOrder;
         });
 
+        try {
+            event(new \App\Events\SalesOrderUpdated($deletedOrder, 'delete'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order deletion: " . $e->getMessage());
+        }
+
         // Dispatch order deletion notification to salesman and admins/owner (skip unsubmitted DRAFTs)
         if ($deletedOrder->status !== SalesOrder::STATUS_DRAFT) {
             try {
@@ -1454,12 +1460,6 @@ class SalesOrderService
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order deletion: " . $e->getMessage());
             }
-        }
-
-        try {
-            event(new \App\Events\SalesOrderUpdated($deletedOrder, 'delete'));
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order deletion: " . $e->getMessage());
         }
     }
 

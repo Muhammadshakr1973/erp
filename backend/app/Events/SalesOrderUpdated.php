@@ -21,8 +21,13 @@ class SalesOrderUpdated implements ShouldBroadcastNow
      */
     public $afterCommit = true;
 
-    public SalesOrder $order;
+    public ?SalesOrder $order;
     public string $actionType;
+    public int $orderId;
+    public ?int $customerId;
+    public ?string $sharedKey;
+    public int $version;
+    public ?string $status;
 
     /**
      * Create a new event instance.
@@ -31,6 +36,11 @@ class SalesOrderUpdated implements ShouldBroadcastNow
     {
         $this->order = $order;
         $this->actionType = $actionType;
+        $this->orderId = (int) $order->id;
+        $this->customerId = $order->customer_id !== null ? (int) $order->customer_id : null;
+        $this->sharedKey = $order->shared_key;
+        $this->version = (int) ($order->version ?? 0);
+        $this->status = $order->status;
     }
 
     /**
@@ -41,7 +51,7 @@ class SalesOrderUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('sales-order.' . $this->order->id),
+            new PrivateChannel('sales-order.' . $this->orderId),
             new PrivateChannel('orders'),
         ];
     }
@@ -63,11 +73,11 @@ class SalesOrderUpdated implements ShouldBroadcastNow
     {
         return [
             'event_type' => $this->actionType,
-            'sales_order_id' => $this->order->id,
-            'customer_id' => $this->order->customer_id,
-            'shared_key' => $this->order->shared_key,
-            'version' => (int) $this->order->version,
-            'status' => $this->order->status,
+            'sales_order_id' => $this->orderId,
+            'customer_id' => $this->customerId,
+            'shared_key' => $this->sharedKey,
+            'version' => $this->version,
+            'status' => $this->status,
             'changed_at' => now()->toIso8601String(),
             'authoritative_signal' => 'refetch',
         ];

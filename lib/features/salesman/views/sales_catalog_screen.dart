@@ -41,6 +41,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   final Map<int, bool> _categoryExpandedOverrides = {};
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final MenuController _orderMenuController = MenuController();
 
   // Local cart map: productId -> quantity in active order
   final Map<int, double> _orderCart = {};
@@ -2013,66 +2014,96 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           ),
           const SizedBox(width: 6),
 
-          // Order Selection Dropdown
+          // Order Selection Menu (live-reactive even while open)
           Expanded(
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A3442) : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int?>(
-                  value:
-                      (_selectedOrder != null &&
-                          _selectedOrder!.id > 0 &&
-                          availableOrders.any(
-                            (o) => o.id == _selectedOrder!.id,
-                          ))
-                      ? _selectedOrder!.id
-                      : null,
-                  isExpanded: true,
-                  dropdownColor: isDark
-                      ? const Color(0xFF2A3442)
-                      : Colors.white,
-                  hint: Text(
-                    'پسوڵەیەک هەڵبژێرە',
-                    style: AppTextStyles.caption.copyWith(
-                      fontFamily: 'KJino',
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.black87,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final selectedValidOrder =
+                    (_selectedOrder != null &&
+                            _selectedOrder!.id > 0 &&
+                            availableOrders.any(
+                              (o) => o.id == _selectedOrder!.id,
+                            ))
+                        ? availableOrders
+                              .where((o) => o.id == _selectedOrder!.id)
+                              .firstOrNull
+                        : null;
+
+                String orderLabel(OrderModel order) {
+                  final custName =
+                      (order.customer is Map &&
+                          order.customer['name'] != null)
+                      ? order.customer['name'].toString()
+                      : (order.customerId == 0
+                            ? 'کڕیاری کاتی (بێ ناو)'
+                            : 'کڕیار #${order.customerId}');
+                  return '\u202A${order.orderNumber}\u202C • $custName';
+                }
+
+                final displayOrders = availableOrders
+                    .where((o) => o.id > 0 && o.orderNumber.isNotEmpty)
+                    .toList();
+
+                return MenuAnchor(
+                  controller: _orderMenuController,
+                  alignmentOffset: const Offset(0, 4),
+                  style: MenuStyle(
+                    backgroundColor: WidgetStatePropertyAll(
+                      isDark ? const Color(0xFF2A3442) : Colors.white,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  icon: const Icon(Icons.arrow_drop_down, size: 20),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(
-                        'هیچ پسوڵەیەک هەڵنەبژێردراوە',
-                        style: TextStyle(fontFamily: 'KJino', fontSize: 12),
+                    minimumSize: WidgetStatePropertyAll(
+                      Size(constraints.maxWidth, 0),
+                    ),
+                    maximumSize: WidgetStatePropertyAll(
+                      Size(
+                        constraints.maxWidth < 260
+                            ? 260
+                            : constraints.maxWidth,
+                        360,
                       ),
                     ),
-                    ...availableOrders
-                        .where((o) => o.id > 0 && o.orderNumber.isNotEmpty)
-                        .map((order) {
-                      final custName =
-                          (order.customer is Map &&
-                              order.customer['name'] != null)
-                          ? order.customer['name'].toString()
-                          : (order.customerId == 0
-                                ? 'کڕیاری کاتی (بێ ناو)'
-                                : 'کڕیار #${order.customerId}');
-                      return DropdownMenuItem<int?>(
-                        value: order.id,
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  menuChildren: [
+                    MenuItemButton(
+                      onPressed: () {
+                        _orderMenuController.close();
+                        _setActiveOrder(null);
+                      },
+                      child: Text(
+                        'هیچ پسوڵەیەک هەڵنەبژێردراوە',
+                        style: TextStyle(
+                          fontFamily: 'KJino',
+                          fontSize: 12,
+                          fontWeight: selectedValidOrder == null
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selectedValidOrder == null
+                              ? theme.colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                    ),
+                    ...displayOrders.map((order) {
+                      final isSelected = selectedValidOrder?.id == order.id;
+                      return MenuItemButton(
+                        onPressed: () {
+                          _orderMenuController.close();
+                          _setActiveOrder(order);
+                        },
                         child: Text(
-                          '\u202A${order.orderNumber}\u202C • $custName',
-                          style: const TextStyle(
+                          orderLabel(order),
+                          style: TextStyle(
                             fontFamily: 'KJino',
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : null,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -2080,18 +2111,52 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                       );
                     }),
                   ],
-                  onChanged: (orderId) {
-                    if (orderId == null) {
-                      _setActiveOrder(null);
-                    } else {
-                      final ord = availableOrders
-                          .where((o) => o.id == orderId)
-                          .firstOrNull;
-                      _setActiveOrder(ord);
-                    }
+                  builder: (context, controller, child) {
+                    return InkWell(
+                      onTap: () {
+                        if (controller.isOpen) {
+                          controller.close();
+                        } else {
+                          controller.open();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF2A3442)
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                selectedValidOrder != null
+                                    ? orderLabel(selectedValidOrder)
+                                    : 'هیچ پسوڵەیەک هەڵنەبژێردراوە',
+                                style: TextStyle(
+                                  fontFamily: 'KJino',
+                                  fontSize: 12,
+                                  fontWeight: selectedValidOrder != null
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
                   },
-                ),
-              ),
+                );
+              },
             ),
           ),
           const SizedBox(width: 6),
