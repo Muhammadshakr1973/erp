@@ -226,7 +226,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (_subscribedOrderId == orderId) return;
     _unsubscribeFromOrderPusher();
 
-    final pusher = _pusherService ?? ref.read(pusherServiceProvider);
+    final PusherService pusher =
+        _pusherService ?? ref.read(pusherServiceProvider);
     _pusherService ??= pusher;
     _subscribedOrderId = orderId;
     pusher.subscribeToOrder(orderId, _onRemoteOrderUpdate);
