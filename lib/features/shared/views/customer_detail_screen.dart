@@ -238,17 +238,23 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   if (_paymentFormKey.currentState!.validate()) {
                     setStateDialog(() => _isPaying = true);
                     try {
-                      await ref.read(customerActionsProvider).createPayment(
-                        customerId: customer.id,
-                        amount: int.parse(_paymentAmountController.text.trim()),
-                        paymentMethod: 'CASH',
-                        notes: _paymentNotesController.text.trim().isEmpty ? null : _paymentNotesController.text.trim(),
-                      );
+                      await ref
+                          .read(customerActionsProvider)
+                          .createPayment(
+                            customerId: customer.id,
+                            amount: int.parse(
+                              _paymentAmountController.text.trim(),
+                            ),
+                            paymentMethod: 'CASH',
+                            notes: _paymentNotesController.text.trim().isEmpty
+                                ? null
+                                : _paymentNotesController.text.trim(),
+                          );
 
                       ref
                           .read(customerLedgerProvider(_ledgerFilters).notifier)
                           .refreshSilently();
-                      
+
                       if (context.mounted) {
                         Navigator.pop(context);
                         AppSnackbar.show(
@@ -347,7 +353,9 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                                 if (customer.balance > 0) ...[
                                   const SizedBox(height: AppSpacing.sm),
                                   Container(
-                                    padding: const EdgeInsets.all(AppSpacing.sm),
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.sm,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: AppColors.danger.withValues(
                                         alpha: 0.1,
@@ -370,10 +378,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                                         Expanded(
                                           child: Text(
                                             'ئاگاداربە: ئەم کڕیارە بڕی ${Formatters.currency(customer.balance)} قەرزی لەسەرە!',
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: AppColors.danger,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color: AppColors.danger,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -590,8 +599,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                            urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                             userAgentPackageName: 'com.gardipos.app',
                             maxZoom: 20,
                             maxNativeZoom: 20,
@@ -641,7 +649,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('کۆی قەرزی ئێستا', style: AppTextStyles.bodyLarge),
+                    const Text(
+                      'کۆی قەرزی ئێستا',
+                      style: AppTextStyles.bodyLarge,
+                    ),
                     Text(
                       _formatCurrency(customer.balance),
                       style: AppTextStyles.priceLarge.copyWith(
@@ -721,27 +732,46 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   items: const [
                     DropdownMenuItem(
                       value: 'ALL',
-                      child: Text('گشتی', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        'گشتی',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'PAYMENT',
-                      child: Text('پارەدان', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        'پارەدان',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'SALE',
-                      child: Text('فرۆشتن', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        'فرۆشتن',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'RETURN',
-                      child: Text('گەڕانەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        'گەڕانەوە',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: 'ADJUSTMENT',
-                      child: Text('ڕاستکردنەوە', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        'ڕاستکردنەوە',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
-                  onChanged: (val) =>
-                      setState(() => _ledgerEntryType = val),
+                  onChanged: (val) => setState(() => _ledgerEntryType = val),
                 );
 
                 final startDatePicker = InkWell(
@@ -757,10 +787,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     ),
                     child: Text(
                       _ledgerStartDate != null
-                          ? _ledgerStartDate!
-                                .toIso8601String()
-                                .split('T')
-                                .first
+                          ? _ledgerStartDate!.toIso8601String().split('T').first
                           : 'دیارینەکراوە',
                       style: AppTextStyles.caption,
                       maxLines: 1,
@@ -782,10 +809,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     ),
                     child: Text(
                       _ledgerEndDate != null
-                          ? _ledgerEndDate!
-                                .toIso8601String()
-                                .split('T')
-                                .first
+                          ? _ledgerEndDate!.toIso8601String().split('T').first
                           : 'دیارینەکراوە',
                       style: AppTextStyles.caption,
                       maxLines: 1,
@@ -942,122 +966,95 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   }
 
   Widget _buildOrdersTab(BuildContext context, Customer customer) {
-    final ordersAsync = ref.watch(customerOrdersProvider(customer.id));
+    final orders = ref.watch(customerOrdersProvider(customer.id));
     final theme = Theme.of(context);
 
     return RefreshIndicator(
-      onRefresh: () =>
-          ref.read(ordersListProvider.notifier).refreshSilently(),
-      child: ordersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Center(
-                child: ErrorState(
-                  title: 'هەڵەیەک ڕوویدا',
-                  message: Formatters.cleanError(error),
-                  retryText: 'دووبارە هەوڵبدەرەوە',
-                  onRetry: () =>
-                      ref.invalidate(customerOrdersProvider(customer.id)),
-                ),
-              ),
-            ),
-          ),
-        ),
-        data: (orders) {
-          if (orders.isEmpty) {
-            return const Center(
-              child: Text('هیچ پسوڵەیەکی کڕین بۆ ئەم کڕیارە نییە'),
-            );
-          }
+      onRefresh: () => ref.read(ordersListProvider.notifier).refreshSilently(),
+      child: orders.isEmpty
+          ? const Center(child: Text('هیچ پسوڵەیەکی کڕین بۆ ئەم کڕیارە نییە'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              itemCount: orders.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                final salesmanName = order.salesman != null
+                    ? order.salesman['name']
+                    : 'نەناسراو';
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            itemCount: orders.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              final salesmanName = order.salesman != null
-                  ? order.salesman['name']
-                  : 'نەناسراو';
+                String statusLabel = 'ئامادەکردن';
+                StatusBadgeType statusType = StatusBadgeType.warning;
 
-              String statusLabel = 'ئامادەکردن';
-              StatusBadgeType statusType = StatusBadgeType.warning;
+                if (order.status == 'DELIVERED') {
+                  statusLabel = 'گەیشتووە';
+                  statusType = StatusBadgeType.success;
+                } else if (order.status == 'IN_DELIVERY') {
+                  statusLabel = 'لە ڕێگایە';
+                  statusType = StatusBadgeType.info;
+                } else if (order.status == 'CANCELLED' ||
+                    order.status == 'RETURNED') {
+                  statusLabel = 'گەڕاوە';
+                  statusType = StatusBadgeType.danger;
+                }
 
-              if (order.status == 'DELIVERED') {
-                statusLabel = 'گەیشتووە';
-                statusType = StatusBadgeType.success;
-              } else if (order.status == 'IN_DELIVERY') {
-                statusLabel = 'لە ڕێگایە';
-                statusType = StatusBadgeType.info;
-              } else if (order.status == 'CANCELLED' ||
-                  order.status == 'RETURNED') {
-                statusLabel = 'گەڕاوە';
-                statusType = StatusBadgeType.danger;
-              }
-
-              return AppCard(
-                onTap: () {
-                  context.push('/order/${order.id}');
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            AppIcons.order,
-                            color: theme.colorScheme.primary,
+                return AppCard(
+                  onTap: () {
+                    context.push('/order/${order.id}');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(
+                              AppIcons.order,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'پسوڵەی #${order.orderNumber}',
+                                style: AppTextStyles.bodyBold,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'مەندوب: $salesmanName • ${Formatters.kurdishDayAndDate(order.createdAt)}',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              'پسوڵەی #${order.orderNumber}',
-                              style: AppTextStyles.bodyBold,
+                              Formatters.currency(order.totalAmount),
+                              style: AppTextStyles.price,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              'مەندوب: $salesmanName • ${Formatters.kurdishDayAndDate(order.createdAt)}',
-                              style: AppTextStyles.caption,
-                            ),
+                            StatusBadge(label: statusLabel, type: statusType),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            Formatters.currency(order.totalAmount),
-                            style: AppTextStyles.price,
-                          ),
-                          const SizedBox(height: 4),
-                          StatusBadge(label: statusLabel, type: statusType),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
     );
   }
 }

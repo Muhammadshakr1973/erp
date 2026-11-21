@@ -25,7 +25,9 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   void _pruneDeletedCache() {
     if (_deletedAtByOrderId.isEmpty) return;
     final cutoff = DateTime.now().subtract(const Duration(seconds: 60));
-    _deletedAtByOrderId.removeWhere((_, deletedAt) => deletedAt.isBefore(cutoff));
+    _deletedAtByOrderId.removeWhere(
+      (_, deletedAt) => deletedAt.isBefore(cutoff),
+    );
   }
 
   bool _wasDeletedSince(int orderId, DateTime fetchStartedAt) {
@@ -172,9 +174,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     } finally {
       _fetchingOrderIds.remove(orderId);
       if (_pendingRefetchOrderIds.remove(orderId)) {
-        unawaited(
-          _fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus),
-        );
+        unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
       }
     }
   }
@@ -251,7 +251,8 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     if (a.customer is Map && b.customer is Map) {
       final am = a.customer as Map;
       final bm = b.customer as Map;
-      if (am['current_balance']?.toString() != bm['current_balance']?.toString() ||
+      if (am['current_balance']?.toString() !=
+              bm['current_balance']?.toString() ||
           am['price_type']?.toString() != bm['price_type']?.toString() ||
           am['phone']?.toString() != bm['phone']?.toString()) {
         return false;
@@ -334,10 +335,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       final existingCustomerMap = o.customer is Map
           ? Map<String, dynamic>.from(o.customer as Map)
           : <String, dynamic>{};
-      final mergedCustomer = {
-        ...existingCustomerMap,
-        ...customer.toJson(),
-      };
+      final mergedCustomer = {...existingCustomerMap, ...customer.toJson()};
       anyUpdated = true;
       return o.copyWith(customer: mergedCustomer);
     }).toList();
@@ -386,9 +384,13 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   void upsertOrderLocally(OrderModel newOrder) {
     final singleKey = newOrder.id.toString();
     if (ref.exists(singleOrderProvider(singleKey))) {
-      final existingSingle = ref.read(singleOrderProvider(singleKey)).valueOrNull;
+      final existingSingle = ref
+          .read(singleOrderProvider(singleKey))
+          .valueOrNull;
       if (existingSingle == null || !_sameOrderData(existingSingle, newOrder)) {
-        ref.read(singleOrderProvider(singleKey).notifier).setOrderLocally(newOrder);
+        ref
+            .read(singleOrderProvider(singleKey).notifier)
+            .setOrderLocally(newOrder);
       }
     }
 
@@ -537,11 +539,16 @@ final singleOrderProvider =
       SingleOrderNotifier.new,
     );
 
-final customerOrdersProvider = FutureProvider.family<List<OrderModel>, int>((
+/// A live customer-specific view of the central orders list.
+///
+/// `ordersListProvider` receives Pusher updates for creates, edits, item
+/// changes, status changes, and deletes. Deriving this list directly from that
+/// state keeps customer order history in sync without a manual refresh.
+final customerOrdersProvider = Provider.family<List<OrderModel>, int>((
   ref,
   customerId,
-) async {
-  final orders = await ref.watch(ordersListProvider.future);
+) {
+  final orders = ref.watch(ordersListProvider).valueOrNull ?? const [];
   return orders.where((order) => order.customerId == customerId).toList();
 });
 
@@ -559,9 +566,7 @@ class OrderActions {
   void _refreshSalesmanDashboard() {
     final user = ref.read(authProvider).user;
     if (user == null || user.isCustomer) return;
-    unawaited(
-      ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
-    );
+    unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
   }
 
   Future<OrderModel> createOrder(Map<String, dynamic> data) async {
@@ -599,7 +604,9 @@ class OrderActions {
         final orderMap = Map<String, dynamic>.from(orderData);
         final newOrder = OrderModel.fromJson(orderMap);
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
-        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        ref
+            .read(productsListProvider.notifier)
+            .patchProductsFromOrderData(orderMap);
         if (data.containsKey('returned_items')) {
           ref.invalidate(salesReturnsListProvider);
         }
@@ -661,7 +668,9 @@ class OrderActions {
             .setOrderLocally(updatedOrder);
 
         // Patch only the products whose stock changed in this order
-        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        ref
+            .read(productsListProvider.notifier)
+            .patchProductsFromOrderData(orderMap);
         if (data.containsKey('returned_items')) {
           ref.invalidate(salesReturnsListProvider);
         }
@@ -720,7 +729,9 @@ class OrderActions {
         ref
             .read(singleOrderProvider(orderId).notifier)
             .setOrderLocally(updated);
-        ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        ref
+            .read(productsListProvider.notifier)
+            .patchProductsFromOrderData(orderMap);
         if (updated.customerId > 0) {
           unawaited(
             ref
@@ -729,7 +740,9 @@ class OrderActions {
           );
         }
       } else if (parsedId != null) {
-        await ref.read(ordersListProvider.notifier).refreshSingleOrder(parsedId);
+        await ref
+            .read(ordersListProvider.notifier)
+            .refreshSingleOrder(parsedId);
         unawaited(
           ref.read(singleOrderProvider(orderId).notifier).refreshSilently(),
         );
@@ -927,14 +940,10 @@ class SalesReturnActions {
           ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId),
         );
         unawaited(
-          ref
-              .read(singleOrderProvider(orderIdStr!).notifier)
-              .refreshSilently(),
+          ref.read(singleOrderProvider(orderIdStr!).notifier).refreshSilently(),
         );
       }
-      final customerId = int.tryParse(
-        payload['customer_id']?.toString() ?? '',
-      );
+      final customerId = int.tryParse(payload['customer_id']?.toString() ?? '');
       if (customerId != null && customerId > 0) {
         unawaited(
           ref
