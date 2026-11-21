@@ -14,48 +14,123 @@ import '../models/stock_transfer_model.dart';
 
 final activeWarehouseIdProvider = StateProvider<int?>((ref) => null);
 
-final FutureProvider<List<WarehouseOrderModel>> ordersToPackProvider =
-    FutureProvider<List<WarehouseOrderModel>>((ref) async {
-  ref.watch(authProvider.select((state) => state.user?.id));
-  final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class OrdersToPackNotifier extends AsyncNotifier<List<WarehouseOrderModel>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
-  void onOrdersEvent(Map<String, dynamic> eventData) {
-    debugPrint("Pusher: Realtime update received on ordersToPackProvider: $eventData");
-    ref.invalidateSelf();
-  }
+  @override
+  FutureOr<List<WarehouseOrderModel>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+    final activeWarehouseId = ref.watch(activeWarehouseIdProvider);
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-orders', onOrdersEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
-  });
-
-  try {
-    final response = await api.client.get(
-      '/warehouse/orders-to-pack',
-      queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
-    );
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      if (resData is! Map || resData['data'] is! List) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed orders-to-pack response payload)',
-        );
-      }
-      final List data = resData['data'] as List;
-      return data.map((json) => WarehouseOrderModel.fromJson(json)).toList();
+    void onOrdersEvent(Map<String, dynamic> eventData) {
+      debugPrint("Pusher: Realtime update received on ordersToPackProvider: $eventData");
+      unawaited(refreshSilently());
     }
-    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
-  } catch (e) {
-    throw Exception(api.parseError(e));
+
+    pusher.subscribeToChannel('private-orders', onOrdersEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
+    });
+
+    return _fetchOrdersToPack(api, activeWarehouseId);
   }
-});
+
+  Future<List<WarehouseOrderModel>> _fetchOrdersToPack(
+    ApiClient api,
+    int? activeWarehouseId,
+  ) async {
+    try {
+      final response = await api.client.get(
+        '/warehouse/orders-to-pack',
+        queryParameters: activeWarehouseId != null ? {'warehouse_id': activeWarehouseId} : null,
+      );
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! List) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed orders-to-pack response payload)',
+          );
+        }
+        final List data = resData['data'] as List;
+        return data.map((json) => WarehouseOrderModel.fromJson(json)).toList();
+      }
+      throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}');
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  bool _samePackList(
+    List<WarehouseOrderModel> a,
+    List<WarehouseOrderModel> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      final oa = a[i];
+      final ob = b[i];
+      if (oa.id != ob.id ||
+          oa.orderNumber != ob.orderNumber ||
+          oa.status != ob.status ||
+          oa.customerName != ob.customerName ||
+          oa.salesmanName != ob.salesmanName ||
+          oa.items.length != ob.items.length) {
+        return false;
+      }
+      for (int j = 0; j < oa.items.length; j++) {
+        final ia = oa.items[j];
+        final ib = ob.items[j];
+        if (ia.id != ib.id ||
+            ia.productId != ib.productId ||
+            ia.quantity != ib.quantity ||
+            ia.isPacked != ib.isPacked ||
+            ia.packedAt != ib.packedAt) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final activeWarehouseId = ref.read(activeWarehouseIdProvider);
+      final fresh = await _fetchOrdersToPack(api, activeWarehouseId);
+      final current = state.valueOrNull;
+      if (current != null && _samePackList(current, fresh)) {
+        return;
+      }
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final ordersToPackProvider =
+    AsyncNotifierProvider<OrdersToPackNotifier, List<WarehouseOrderModel>>(
+      OrdersToPackNotifier.new,
+    );
 
 class WarehouseDashboardData {
   final int? warehouseId;
@@ -256,7 +331,7 @@ class WarehouseActions {
         '/warehouse/mark-ready',
         data: {'order_id': orderId},
       );
-      ref.invalidate(ordersToPackProvider);
+      unawaited(ref.read(ordersToPackProvider.notifier).refreshSilently());
       unawaited(
         ref.read(singleOrderProvider(orderId.toString()).notifier).refreshSilently(),
       );
@@ -270,7 +345,7 @@ class WarehouseActions {
   Future<void> deleteOrder(int orderId) async {
     try {
       await api.client.delete('/orders/$orderId');
-      ref.invalidate(ordersToPackProvider);
+      unawaited(ref.read(ordersToPackProvider.notifier).refreshSilently());
       ref.read(ordersListProvider.notifier).removeOrderLocally(orderId.toString());
       ref.read(singleOrderProvider(orderId.toString()).notifier).setOrderLocally(null);
       ref.invalidate(warehouseDashboardProvider);

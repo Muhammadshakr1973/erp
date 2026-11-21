@@ -51,6 +51,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
   bool _isSavingBatch = false;
+  int _localMutationSeq = 0;
 
   // Track failed actions for persistent retry
   Map<String, dynamic>? _lastFailedBatch;
@@ -77,6 +78,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   void _setActiveOrder(OrderModel? order, {bool isManualOverride = false}) {
     final previousOrderId = _selectedOrder?.id;
     final previousWarehouseId = _selectedOrder?.warehouseId;
+    _localMutationSeq++;
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
 
@@ -523,6 +525,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
   /// 10-Second Debounce Timer
   void _startOrRestart10SecondDebounce({required String actionDesc}) {
+    _localMutationSeq++;
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
 
@@ -686,6 +689,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     final baseOrder = _selectedOrder!;
     final orderId = baseOrder.id;
+    final int mutationSeqAtStart = _localMutationSeq;
     final itemsList = <Map<String, dynamic>>[];
     _orderCart.forEach((productId, qty) {
       if (qty > 0) {
@@ -727,6 +731,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .updateOrder(orderId, payload);
       if (mounted) {
         final isStillSelected = _selectedOrder?.id == orderId;
+        final editedMidFlight = _localMutationSeq != mutationSeqAtStart;
         setState(() {
           if (isStillSelected && updatedOrder.id > 0) {
             _selectedOrder = updatedOrder;
@@ -734,6 +739,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           }
           _isSavingBatch = false;
         });
+        if (isStillSelected && editedMidFlight && _debounceTimer == null) {
+          _startOrRestart10SecondDebounce(actionDesc: actionDesc);
+        }
       }
     } catch (e) {
       if (_isConcurrencyConflictError(e)) {
@@ -1212,7 +1220,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     if (_selectedOrder == null) return;
 
     final selectedCust = await CustomerSelectionDialog.show(context);
-    if (selectedCust == null || !mounted) return;
+    if (selectedCust == null || !mounted || _selectedOrder == null) return;
 
     if (selectedCust.id == 0) {
       AppSnackbar.show(
@@ -1223,31 +1231,71 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       return;
     }
 
-    final payload = {
-      'customer_id': selectedCust.id,
-      'warehouse_id': _selectedOrder!.warehouseId,
-      'status': 'PACKING',
-      'price_type': selectedCust.priceType?.toUpperCase() ?? _selectedPriceTier,
-      'is_manual_price_type': false,
-      'version': _selectedOrder!.version,
-      'items': _orderCart.entries
-          .map((e) => {'product_id': e.key, 'quantity': e.value})
-          .toList(),
-    };
+    Future<void> submitCustomerChange({bool allowRetry = true}) async {
+      final currentOrder = _selectedOrder;
+      if (currentOrder == null) return;
+
+      final payload = {
+        'customer_id': selectedCust.id,
+        'warehouse_id': currentOrder.warehouseId,
+        'status': currentOrder.status,
+        'price_type': selectedCust.priceType?.toUpperCase() ?? _selectedPriceTier,
+        'is_manual_price_type': false,
+        'discount_type': currentOrder.discountType,
+        'discount_percent': currentOrder.discountPercent,
+        'discount_amount': currentOrder.discountAmount,
+        'shared_key': currentOrder.sharedKey,
+        'version': currentOrder.version,
+        'notes': currentOrder.notes,
+        'items': _orderCart.entries
+            .where((e) => e.value > 0)
+            .map((e) => {
+                  'product_id': e.key,
+                  'quantity': e.value,
+                  'notes': _orderCartNotes[e.key],
+                })
+            .toList(),
+      };
+
+      try {
+        final updated = await ref
+            .read(orderActionsProvider)
+            .updateOrder(currentOrder.id, payload);
+        if (mounted) {
+          _setActiveOrder(updated);
+          AppSnackbar.show(
+            context,
+            message:
+                'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
+            type: SnackbarType.success,
+          );
+        }
+      } catch (e) {
+        if (allowRetry && _isConcurrencyConflictError(e)) {
+          await ref
+              .read(ordersListProvider.notifier)
+              .refreshSingleOrder(currentOrder.id);
+          final refreshed = ref
+              .read(ordersListProvider)
+              .asData
+              ?.value
+              ?.where((o) => o.id == currentOrder.id)
+              .firstOrNull;
+          if (refreshed != null && mounted) {
+            _applyRemoteOrderSafely(
+              refreshed,
+              baseOrderOverride: currentOrder,
+              mergePendingLocalChanges: true,
+            );
+            return submitCustomerChange(allowRetry: false);
+          }
+        }
+        rethrow;
+      }
+    }
 
     try {
-      final updated = await ref
-          .read(orderActionsProvider)
-          .updateOrder(_selectedOrder!.id, payload);
-      if (mounted) {
-        _setActiveOrder(updated);
-        AppSnackbar.show(
-          context,
-          message:
-              'کڕیاری پسوڵەکە بە سەرکەوتوویی گۆڕدرا بۆ ${selectedCust.name}',
-          type: SnackbarType.success,
-        );
-      }
+      await submitCustomerChange();
     } catch (e) {
       if (mounted) {
         AppSnackbar.show(
@@ -1323,16 +1371,24 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         }
 
         if (!_isSavingBatch) {
+          final prevItemsByPid = {
+            for (final it in selectedOrder.items) it.productId: it,
+          };
+          final nextItemsByPid = {
+            for (final it in matchingOrder.items) it.productId: it,
+          };
           final itemsChanged =
-              matchingOrder.items.length != selectedOrder.items.length ||
-              List.generate(matchingOrder.items.length, (i) {
-                final a = matchingOrder.items[i];
-                final b = selectedOrder.items[i];
-                return a.productId != b.productId ||
+              prevItemsByPid.length != nextItemsByPid.length ||
+              nextItemsByPid.entries.any((entry) {
+                final b = prevItemsByPid[entry.key];
+                final a = entry.value;
+                return b == null ||
+                    a.id != b.id ||
                     a.quantity != b.quantity ||
                     a.unitPrice != b.unitPrice ||
+                    a.isPacked != b.isPacked ||
                     a.notes != b.notes;
-              }).any((diff) => diff);
+              });
 
           final existingCust = selectedOrder.customer is Map
               ? selectedOrder.customer as Map
@@ -1349,6 +1405,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
           final orderChanged =
               matchingOrder.version != selectedOrder.version ||
+              matchingOrder.sharedKey != selectedOrder.sharedKey ||
               matchingOrder.status != selectedOrder.status ||
               matchingOrder.customerId != selectedOrder.customerId ||
               matchingOrder.warehouseId != selectedOrder.warehouseId ||
@@ -1360,6 +1417,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               matchingOrder.permanentDiscountAmount !=
                   selectedOrder.permanentDiscountAmount ||
               matchingOrder.totalAmount != selectedOrder.totalAmount ||
+              matchingOrder.returnedItems.length !=
+                  selectedOrder.returnedItems.length ||
               customerDetailsChanged ||
               itemsChanged;
 

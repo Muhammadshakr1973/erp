@@ -450,6 +450,7 @@ class SalesOrderService
                 'discount_type' => $discountType,
                 'total_amount' => $totalAmount,
                 'total_profit' => $netTotalProfit,
+                'version' => ((int) ($order->version ?? 1)) + 1,
             ]);
 
             $requestedStatus = $data['status'] ?? $order->status;
@@ -717,6 +718,7 @@ class SalesOrderService
 
             // ئەگەر پسوڵەکە لێرە ئەبدەیت کرا
             $lockedOrder->status = $newStatus;
+            $lockedOrder->version = ((int) ($lockedOrder->version ?? 1)) + 1;
             $lockedOrder->save();
 
             // تۆمارکردنی مێژووی چالاکی بۆ سیستەم (Audit Logging)
@@ -1405,7 +1407,7 @@ class SalesOrderService
      */
     public function deleteOrder(SalesOrder $order, $user): void
     {
-        DB::transaction(function () use ($order, $user) {
+        $deletedOrder = DB::transaction(function () use ($order, $user) {
             $lockedOrder = SalesOrder::lockForUpdate()->findOrFail($order->id);
 
             // Limit deletion of completed/delivered/in-delivery orders to preserve integrity
@@ -1441,19 +1443,21 @@ class SalesOrderService
                 'description' => "پسوڵەی فرۆشتنی ژمارە {$lockedOrder->order_number} سڕایەوە (Soft Delete)",
                 'user'        => $user,
             ]);
+
+            return $lockedOrder;
         });
 
         // Dispatch order deletion notification to salesman and admins/owner (skip unsubmitted DRAFTs)
-        if ($order->status !== SalesOrder::STATUS_DRAFT) {
+        if ($deletedOrder->status !== SalesOrder::STATUS_DRAFT) {
             try {
-                app(NotificationService::class)->notifyOrderDeleted($order, $user);
+                app(NotificationService::class)->notifyOrderDeleted($deletedOrder, $user);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Notification dispatch failed for order deletion: " . $e->getMessage());
             }
         }
 
         try {
-            event(new \App\Events\SalesOrderUpdated($order, 'delete'));
+            event(new \App\Events\SalesOrderUpdated($deletedOrder, 'delete'));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order deletion: " . $e->getMessage());
         }

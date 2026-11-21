@@ -25,6 +25,33 @@ Broadcast::channel('sales-order.{id}', function (User $user, int $id) {
         return (int) ($user->customer?->id ?? -1) === (int) $order->customer_id;
     }
 
+    // Warehouse users with access to the order's warehouse
+    if ($user->role?->name === 'warehouse' || $user->hasPermission('stock.pack')) {
+        if (method_exists($user, 'hasWarehouseAccess')) {
+            if ($user->hasWarehouseAccess($order->warehouse_id)) {
+                return true;
+            }
+        } elseif (!$user->warehouse_id || (int) $user->warehouse_id === (int) $order->warehouse_id) {
+            return true;
+        }
+    }
+
+    // Drivers assigned to a delivery trip containing this order
+    if ($user->role?->name === 'driver' || $user->hasPermission('delivery.update')) {
+        try {
+            $onTrip = \Illuminate\Support\Facades\DB::table('delivery_trip_orders')
+                ->join('delivery_trips', 'delivery_trip_orders.delivery_trip_id', '=', 'delivery_trips.id')
+                ->where('delivery_trip_orders.sales_order_id', $order->id)
+                ->where('delivery_trips.driver_id', $user->id)
+                ->exists();
+            if ($onTrip) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     // Check customer assignment (direct or route assignment)
     try {
         $hasDirectAssignment = \Illuminate\Support\Facades\DB::table('customer_assignments')

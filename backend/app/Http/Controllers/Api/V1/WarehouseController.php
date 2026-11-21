@@ -654,6 +654,7 @@ class WarehouseController extends Controller
                 }
 
                 $this->salesOrderService->setItemPacked($order, $item, $packed, $user);
+                $order->increment('version');
 
                 app(\App\Services\AuditService::class)->log([
                     'action'      => 'PACK_ITEM',
@@ -674,7 +675,7 @@ class WarehouseController extends Controller
                 ]);
             });
 
-            $freshOrder = $order->fresh(['customer', 'warehouse', 'items.product']);
+            $freshOrder = $order->fresh(['customer', 'warehouse', 'salesman', 'items.product', 'salesReturns.items.product']);
             try {
                 event(new \App\Events\SalesOrderUpdated($freshOrder, 'pack_item'));
             } catch (\Throwable $e) {
@@ -758,10 +759,14 @@ class WarehouseController extends Controller
 
                     $updatedOrders[$order->id] = $order;
                 }
+
+                foreach ($updatedOrders as $orderToBump) {
+                    $orderToBump->increment('version');
+                }
             });
 
             foreach ($updatedOrders as $orderId => $order) {
-                $freshOrder = $order->fresh(['customer', 'warehouse', 'items.product']);
+                $freshOrder = $order->fresh(['customer', 'warehouse', 'salesman', 'items.product', 'salesReturns.items.product']);
                 try {
                     event(new \App\Events\SalesOrderUpdated($freshOrder, 'pack_item'));
                 } catch (\Throwable $e) {

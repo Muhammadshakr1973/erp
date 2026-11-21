@@ -117,7 +117,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           type: SnackbarType.success,
         );
 
-        ref.invalidate(ordersToPackProvider);
+        unawaited(ref.read(ordersToPackProvider.notifier).refreshSilently());
       }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
@@ -256,8 +256,8 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
           message: 'پسوڵەکە بە سەرکەوتوویی بە ئامادەکراو تۆمارکرا',
           type: SnackbarType.success,
         );
-        ref.invalidate(ordersToPackProvider);
-        ref.invalidate(ordersListProvider);
+        unawaited(ref.read(ordersToPackProvider.notifier).refreshSilently());
+        unawaited(ref.read(ordersListProvider.notifier).refreshSingleOrder(order.id));
         ref.invalidate(readyOrdersForDeliveryProvider);
         Navigator.pop(context);
       }
@@ -426,17 +426,58 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
       prev,
       next,
     ) {
-      if (!next.isLoading &&
-          next.hasValue &&
-          !_isSaving &&
-          _optimisticPackedStates.isNotEmpty) {
-        final keysToRemove = _optimisticPackedStates.keys
-            .where((id) => !_unsavedChanges.containsKey(id))
+      if (!next.isLoading && next.hasValue) {
+        final orders = next.value ?? const [];
+        WarehouseOrderModel? foundOrder;
+        for (final o in orders) {
+          if (o.id.toString() == widget.orderId ||
+              o.orderNumber == widget.orderId) {
+            foundOrder = o;
+            break;
+          }
+        }
+
+        if (foundOrder == null) {
+          if ((_unsavedChanges.isNotEmpty || _optimisticPackedStates.isNotEmpty) &&
+              mounted) {
+            _debounceTimer?.cancel();
+            _countdownTimer?.cancel();
+            setState(() {
+              _unsavedChanges.clear();
+              _optimisticPackedStates.clear();
+              _secondsRemaining = 0;
+              _timerPausedForRetry = false;
+            });
+          }
+          return;
+        }
+
+        final existingItemIds = foundOrder.items.map((e) => e.id).toSet();
+        final deletedUnsaved = _unsavedChanges.keys
+            .where((id) => !existingItemIds.contains(id))
             .toList();
-        if (keysToRemove.isNotEmpty && mounted) {
+        final staleOptimistic = _optimisticPackedStates.keys
+            .where(
+              (id) =>
+                  !existingItemIds.contains(id) ||
+                  (!_isSaving && !_unsavedChanges.containsKey(id)),
+            )
+            .toList();
+
+        if ((deletedUnsaved.isNotEmpty || staleOptimistic.isNotEmpty) &&
+            mounted) {
           setState(() {
-            for (final id in keysToRemove) {
+            for (final id in deletedUnsaved) {
+              _unsavedChanges.remove(id);
+            }
+            for (final id in staleOptimistic) {
               _optimisticPackedStates.remove(id);
+            }
+            if (_unsavedChanges.isEmpty) {
+              _debounceTimer?.cancel();
+              _countdownTimer?.cancel();
+              _secondsRemaining = 0;
+              _timerPausedForRetry = false;
             }
           });
         }
@@ -453,7 +494,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
             _triggerAutoSave();
           }
           if (didPop) {
-            ref.invalidate(ordersToPackProvider);
+            unawaited(ref.read(ordersToPackProvider.notifier).refreshSilently());
           }
         },
         child: _buildScaffold(context),
@@ -568,6 +609,7 @@ class _PackOrderScreenState extends ConsumerState<PackOrderScreen> {
                     final isPending = _pendingItemIds.contains(item.id);
 
                     return AppCard(
+                      key: ValueKey(item.id),
                       child: Row(
                         children: [
                           Checkbox(

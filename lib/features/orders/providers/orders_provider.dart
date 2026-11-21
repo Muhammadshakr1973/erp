@@ -17,7 +17,9 @@ import '../models/order_model.dart';
 
 class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   final Set<int> _fetchingOrderIds = {};
+  final Set<int> _pendingRefetchOrderIds = {};
   bool _isRefreshingAll = false;
+  bool _pendingRefreshAll = false;
 
   @override
   FutureOr<List<OrderModel>> build() async {
@@ -85,6 +87,11 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
 
     if (eventType == 'delete') {
       removeOrderLocally(orderId.toString());
+      if (ref.exists(singleOrderProvider(orderId.toString()))) {
+        ref
+            .read(singleOrderProvider(orderId.toString()).notifier)
+            .setOrderLocally(null);
+      }
       return;
     }
 
@@ -96,7 +103,10 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     int orderId, {
     String? eventStatus,
   }) async {
-    if (_fetchingOrderIds.contains(orderId)) return;
+    if (_fetchingOrderIds.contains(orderId)) {
+      _pendingRefetchOrderIds.add(orderId);
+      return;
+    }
     _fetchingOrderIds.add(orderId);
     try {
       final api = ref.read(apiClientProvider);
@@ -132,12 +142,23 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
           unawaited(refreshSilently());
         } else {
           removeOrderLocally(orderId.toString());
+          if (code == 404 &&
+              ref.exists(singleOrderProvider(orderId.toString()))) {
+            ref
+                .read(singleOrderProvider(orderId.toString()).notifier)
+                .setOrderLocally(null);
+          }
         }
       }
     } catch (_) {
       // Ignore transient errors silently
     } finally {
       _fetchingOrderIds.remove(orderId);
+      if (_pendingRefetchOrderIds.remove(orderId)) {
+        unawaited(
+          _fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus),
+        );
+      }
     }
   }
 
@@ -251,7 +272,10 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   Future<void> refreshSilently() async {
-    if (_isRefreshingAll) return;
+    if (_isRefreshingAll) {
+      _pendingRefreshAll = true;
+      return;
+    }
     _isRefreshingAll = true;
     final api = ref.read(apiClientProvider);
     try {
@@ -272,6 +296,10 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       // Maintain current state on transient errors
     } finally {
       _isRefreshingAll = false;
+      if (_pendingRefreshAll) {
+        _pendingRefreshAll = false;
+        unawaited(refreshSilently());
+      }
     }
   }
 
@@ -328,6 +356,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   void upsertOrderLocally(OrderModel newOrder) {
+    final singleKey = newOrder.id.toString();
+    if (ref.exists(singleOrderProvider(singleKey))) {
+      final existingSingle = ref.read(singleOrderProvider(singleKey)).valueOrNull;
+      if (existingSingle == null || !_sameOrderData(existingSingle, newOrder)) {
+        ref.read(singleOrderProvider(singleKey).notifier).setOrderLocally(newOrder);
+      }
+    }
+
     final currentOrders = state.valueOrNull;
     if (currentOrders == null) {
       state = AsyncData([newOrder]);
@@ -370,6 +406,7 @@ final ordersListProvider =
 
 class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
   bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
   @override
   FutureOr<OrderModel?> build(String arg) async {
@@ -424,6 +461,9 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
       );
     } catch (e) {
       if (e is DioException) {
+        if (e.response?.statusCode == 404) {
+          return null;
+        }
         throw Exception(api.parseError(e));
       }
       rethrow;
@@ -431,7 +471,10 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
   }
 
   Future<void> refreshSilently() async {
-    if (_isRefreshing) return;
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
     _isRefreshing = true;
     try {
       final api = ref.read(apiClientProvider);
@@ -439,11 +482,17 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
       state = AsyncData(fresh);
       if (fresh != null) {
         ref.read(ordersListProvider.notifier).upsertOrderLocally(fresh);
+      } else {
+        ref.read(ordersListProvider.notifier).removeOrderLocally(arg);
       }
     } catch (_) {
       // Preserve current order state on transient errors
     } finally {
       _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
     }
   }
 
@@ -520,6 +569,9 @@ class OrderActions {
         final newOrder = OrderModel.fromJson(orderMap);
         ref.read(ordersListProvider.notifier).upsertOrderLocally(newOrder);
         ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        if (data.containsKey('returned_items')) {
+          ref.invalidate(salesReturnsListProvider);
+        }
         if (newOrder.customerId > 0) {
           unawaited(
             ref
@@ -579,6 +631,9 @@ class OrderActions {
 
         // Patch only the products whose stock changed in this order
         ref.read(productsListProvider.notifier).patchProductsFromOrderData(orderMap);
+        if (data.containsKey('returned_items')) {
+          ref.invalidate(salesReturnsListProvider);
+        }
 
         return updatedOrder;
       }
@@ -729,7 +784,7 @@ final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
 
   void onSalesReturnsEvent(Map<String, dynamic> eventData) {
     final eventType = eventData['event_type']?.toString();
-    if (eventType == 'return_created') {
+    if (eventType == 'return_created' || eventType == 'delete') {
       debugPrint(
         "Realtime return update received on private-orders channel: $eventData",
       );

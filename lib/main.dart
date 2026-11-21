@@ -13,6 +13,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/components/global_numeric_keyboard.dart';
+import 'features/orders/providers/orders_provider.dart';
 import 'features/shared/providers/notification_provider.dart';
 
 bool _shouldIgnoreWebTextInputError(Object error, StackTrace? stack) {
@@ -112,8 +113,9 @@ class _NotificationListenerWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Keep notifications list provider active continuously so notifications arrive live
+    // Keep notifications and orders list providers active continuously so Pusher events arrive live
     ref.watch(notificationsListProvider);
+    ref.watch(ordersListProvider);
     return child;
   }
 } 

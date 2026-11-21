@@ -311,10 +311,21 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
     unawaited(_runSyncLoop());
   }
 
+  bool _isConcurrencyConflictError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('409') ||
+        msg.contains('conflict_version') ||
+        msg.contains('هاوکاتی') ||
+        msg.contains('نوێ بکەرەوە') ||
+        msg.contains('نوێکراوەتەوە') ||
+        msg.contains('version');
+  }
+
   Future<void> _runSyncLoop() async {
     if (_isSyncLoopRunning) return;
     _isSyncLoopRunning = true;
     _syncIdleCompleter = Completer<void>();
+    bool conflictRetried = false;
 
     if (mounted) {
       state = state.copyWith(isSyncing: true, clearError: true);
@@ -384,11 +395,35 @@ class CustomerCartNotifier extends StateNotifier<CustomerCartState> {
             'items': itemsList,
           };
 
-          final updated = await _ref
-              .read(orderActionsProvider)
-              .updateOrder(currentDraft.id, payload);
-          if (mounted) {
-            state = state.copyWith(activeDraftOrder: updated);
+          try {
+            final updated = await _ref
+                .read(orderActionsProvider)
+                .updateOrder(currentDraft.id, payload);
+            if (mounted) {
+              state = state.copyWith(activeDraftOrder: updated);
+            }
+          } catch (e) {
+            if (!conflictRetried && _isConcurrencyConflictError(e)) {
+              conflictRetried = true;
+              await _ref
+                  .read(ordersListProvider.notifier)
+                  .refreshSingleOrder(currentDraft.id);
+              final refreshedDraft = _ref
+                  .read(ordersListProvider)
+                  .valueOrNull
+                  ?.where(
+                    (o) =>
+                        o.id == currentDraft.id &&
+                        o.status.toUpperCase() == OrderModel.statusDraft,
+                  )
+                  .firstOrNull;
+              if (refreshedDraft != null && mounted) {
+                state = state.copyWith(activeDraftOrder: refreshedDraft);
+                _dirty = true;
+                continue;
+              }
+            }
+            rethrow;
           }
         }
       }

@@ -46,6 +46,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   String? _overridePriceType;
   final Map<int, double> _cart = {}; // product_id -> quantity
   final Map<int, String> _cartNotes = {}; // product_id -> notes
+  final Map<int, TextEditingController> _noteControllers = {};
   final Map<int, double> _serverSavedQuantities = {}; // product_id -> quantity saved on server
   final List<Map<String, dynamic>> _returnedItems =
       []; // returned items in this order
@@ -62,11 +63,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   int? _serverOrderId;
   String? _sharedKey;
   int _currentVersion = 1;
+  String? _lastKnownServerStatus;
   int? _subscribedOrderId;
   PusherService? _pusherService;
   StreamSubscription<void>? _orderReconnectSub;
   bool _hasSavedOnce = false;
   bool _isSaving = false;
+  int _localMutationSeq = 0;
 
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
@@ -74,10 +77,39 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   int _failureCount = 0;
 
   String? _lastChangedField;
+  final Set<String> _dirtyFields = {};
+  final Map<String, int> _fieldMutationSeq = {};
   final Map<String, String> _fieldStates =
       {}; // field_name -> 'saving' | 'success' | 'error'
   final Map<String, String> _fieldErrors = {}; // field_name -> error message
   final Map<String, Timer> _successTimers = {};
+
+  void _markFieldDirty(String field) {
+    _localMutationSeq++;
+    _lastChangedField = field;
+    _dirtyFields.add(field);
+    _fieldMutationSeq[field] = _localMutationSeq;
+  }
+
+  void _syncNoteControllers() {
+    final removedIds = _noteControllers.keys
+        .where((pid) => !_cart.containsKey(pid))
+        .toList();
+    for (final pid in removedIds) {
+      _noteControllers.remove(pid)?.dispose();
+    }
+
+    for (final pid in _cart.keys) {
+      final serverOrLocalText = _cartNotes[pid] ?? '';
+      final controller = _noteControllers[pid];
+      if (controller == null) {
+        _noteControllers[pid] = TextEditingController(text: serverOrLocalText);
+      } else if (!_dirtyFields.contains('product_note_$pid') &&
+          controller.text != serverOrLocalText) {
+        controller.text = serverOrLocalText;
+      }
+    }
+  }
 
   void _setFieldState(String field, String state, {String? error}) {
     if (!mounted) return;
@@ -144,6 +176,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       ref.read(productsListProvider.notifier).ensureLoaded();
       if (widget.existingOrder != null) {
         _populateFromExistingOrder(widget.existingOrder!);
+        unawaited(_syncSubscribedOrderFromServer());
       } else if (widget.preselectedCustomerId != null) {
         _loadPreselectedCustomer();
       }
@@ -156,6 +189,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _overridePriceType = order.priceType;
       _sharedKey = order.sharedKey;
       _currentVersion = order.version;
+      _lastKnownServerStatus = order.status.toUpperCase();
       _hasSavedOnce = true;
       _selectedWarehouseId = order.warehouseId;
       final isCashVanSalesman =
@@ -198,24 +232,33 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         });
       }
 
+      _dirtyFields.clear();
+      _fieldMutationSeq.clear();
+      _lastChangedField = null;
+      _syncNoteControllers();
+
       // Clear all local error and saving states since we populated the pristine server-state!
       _fieldStates.removeWhere(
         (key, value) =>
             key.startsWith('product_qty_') ||
             key.startsWith('product_note_') ||
             key == 'customer' ||
+            key == 'price_type' ||
             key == 'warehouse' ||
             key == 'discount' ||
-            key == 'order_notes',
+            key == 'order_notes' ||
+            key == 'returned_items',
       );
       _fieldErrors.removeWhere(
         (key, value) =>
             key.startsWith('product_qty_') ||
             key.startsWith('product_note_') ||
             key == 'customer' ||
+            key == 'price_type' ||
             key == 'warehouse' ||
             key == 'discount' ||
-            key == 'order_notes',
+            key == 'order_notes' ||
+            key == 'returned_items',
       );
     });
     _subscribeToOrderPusher(order.id);
@@ -278,7 +321,46 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         .valueOrNull;
     if (latestOrder == null || !mounted) return null;
 
-    if (!mergePendingLocalChanges) {
+    return _applyServerOrderSnapshot(
+      latestOrder,
+      mergePendingLocalChanges: mergePendingLocalChanges,
+    );
+  }
+
+  OrderModel? _applyServerOrderSnapshot(
+    OrderModel latestOrder, {
+    required bool mergePendingLocalChanges,
+  }) {
+    if (!mounted) return null;
+
+    final remoteStatus = latestOrder.status.toUpperCase();
+    final isCashVanSalesman =
+        ref.read(authProvider).user?.isCashVanSalesman ?? false;
+    final bool becameUneditable =
+        remoteStatus == OrderModel.statusDelivered ||
+        remoteStatus == OrderModel.statusCancelled ||
+        (!isCashVanSalesman &&
+            (remoteStatus == OrderModel.statusReady ||
+                remoteStatus == OrderModel.statusInDelivery));
+
+    if (becameUneditable) {
+      _debounceTimer?.cancel();
+      _countdownTimer?.cancel();
+      _unsubscribeFromOrderPusher();
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: remoteStatus == OrderModel.statusCancelled
+              ? 'ئەم پسوڵەیە لە ئامێرێکی ترەوە هەڵوەشێنرایەوە'
+              : 'ئەم پسوڵەیە لە ئامێرێکی ترەوە دۆخەکەی گۆڕدرا و چیتر دەستکاری ناکرێت',
+          type: SnackbarType.warning,
+        );
+        Navigator.of(context).maybePop();
+      }
+      return latestOrder;
+    }
+
+    if (!mergePendingLocalChanges && _dirtyFields.isEmpty) {
       _populateFromExistingOrder(latestOrder);
       return latestOrder;
     }
@@ -308,7 +390,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
 
-      if (_fieldStates.containsKey('product_note_$pid')) {
+      if (_dirtyFields.contains('product_note_$pid') ||
+          _fieldStates.containsKey('product_note_$pid')) {
         final localNote = _cartNotes[pid] ?? '';
         if (localNote.isNotEmpty) {
           nextNotes[pid] = localNote;
@@ -318,11 +401,57 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
     }
 
+    final bool shouldReloadCustomer =
+        !_dirtyFields.contains('customer') &&
+        _selectedCustomer?.id != latestOrder.customerId;
+
     setState(() {
       _serverOrderId = latestOrder.id;
       _sharedKey = latestOrder.sharedKey;
       _currentVersion = latestOrder.version;
+      _lastKnownServerStatus = remoteStatus;
       _hasSavedOnce = true;
+
+      if (!_dirtyFields.contains('price_type')) {
+        _overridePriceType = latestOrder.priceType;
+      }
+      if (!_dirtyFields.contains('warehouse')) {
+        _selectedWarehouseId = latestOrder.warehouseId;
+      }
+      if (!_dirtyFields.contains('discount')) {
+        _discountType =
+            isCashVanSalesman ||
+                (latestOrder.discountPercent == 0 &&
+                    latestOrder.discountAmount == 0)
+            ? 'FIXED'
+            : latestOrder.discountType;
+        _discountValue = isCashVanSalesman
+            ? 0
+            : _discountType == 'PERCENT'
+            ? latestOrder.discountPercent
+            : latestOrder.discountAmount;
+      }
+      if (!_dirtyFields.contains('order_notes')) {
+        final serverNote = latestOrder.notes ?? '';
+        if (_notesController.text != serverNote) {
+          _notesController.text = serverNote;
+        }
+      }
+      if (!_dirtyFields.contains('returned_items')) {
+        _returnedItems.clear();
+        for (final ret in latestOrder.returnedItems) {
+          _returnedItems.add({
+            'product_id': ret.productId,
+            'product_name': ret.productName,
+            'quantity': ret.quantity,
+            'unit_price': ret.unitPrice,
+            'subtotal': ret.subtotal,
+            'reason': ret.reason,
+            'product_unit': ret.productUnit,
+          });
+        }
+      }
+
       _serverSavedQuantities
         ..clear()
         ..addAll(nextServerSaved);
@@ -332,7 +461,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _cartNotes
         ..clear()
         ..addAll(nextNotes);
+      _syncNoteControllers();
     });
+
+    if (shouldReloadCustomer) {
+      _loadCustomerById(latestOrder.customerId);
+    }
+
     return latestOrder;
   }
 
@@ -344,7 +479,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return;
     }
     try {
-      final hasPendingEdits = _debounceTimer != null || _timerPausedForRetry;
+      final hasPendingEdits =
+          _debounceTimer != null ||
+          _timerPausedForRetry ||
+          _dirtyFields.isNotEmpty;
       final latestOrder = await _mergeLatestServerOrder(
         targetOrderId,
         mergePendingLocalChanges: hasPendingEdits,
@@ -377,6 +515,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final targetOrderId = _subscribedOrderId;
 
     if (eventType == 'delete') {
+      _debounceTimer?.cancel();
+      _countdownTimer?.cancel();
       _unsubscribeFromOrderPusher();
       if (targetOrderId != null) {
         ref
@@ -401,13 +541,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ? rawVersion.toInt()
         : (rawVersion != null ? int.tryParse(rawVersion.toString()) : null);
 
-    final isNonVersionedSyncEvent =
-        const ['status_change', 'pack_item', 'return_created'].contains(eventType) &&
-        _debounceTimer == null &&
-        (eventVersion == null || eventVersion >= _currentVersion);
+    final isNonVersionedOrSideEvent = const [
+      'status_change',
+      'pack_item',
+      'return_created',
+    ].contains(eventType);
 
-    if ((eventVersion != null && eventVersion > _currentVersion) ||
-        isNonVersionedSyncEvent) {
+    if (eventVersion == null ||
+        eventVersion > _currentVersion ||
+        (isNonVersionedOrSideEvent && eventVersion >= _currentVersion)) {
       debugPrint(
         "CreateOrderScreen: Remote event ($eventType, v$eventVersion vs v$_currentVersion). Refreshing order...",
       );
@@ -540,6 +682,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _notesController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    for (final c in _noteControllers.values) {
+      c.dispose();
+    }
+    _noteControllers.clear();
     for (var timer in _successTimers.values) {
       timer.cancel();
     }
@@ -652,16 +798,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return false;
     }
 
-    _lastChangedField = 'product_qty_$productId';
+    _markFieldDirty('product_qty_$productId');
     setState(() {
       _cart[productId] = currentQty + 1.0;
+      _syncNoteControllers();
     });
     _triggerDebouncedAutoSave();
     return true;
   }
 
   void _removeFromCart(int productId) {
-    _lastChangedField = 'product_qty_$productId';
+    _markFieldDirty('product_qty_$productId');
     setState(() {
       if (_cart.containsKey(productId)) {
         if (_cart[productId]! > 1.0) {
@@ -669,6 +816,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         } else {
           _cart.remove(productId);
           _cartNotes.remove(productId);
+          _syncNoteControllers();
         }
       }
     });
@@ -712,9 +860,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
 
     if (confirmed == true && mounted) {
+      _markFieldDirty('product_qty_$productId');
       setState(() {
         _cart.remove(productId);
         _cartNotes.remove(productId);
+        _syncNoteControllers();
       });
       _triggerDebouncedAutoSave();
       AppSnackbar.show(
@@ -815,7 +965,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
 
     if (newQty != null && newQty > 0 && mounted) {
-      _lastChangedField = 'product_qty_$productId';
+      _markFieldDirty('product_qty_$productId');
       setState(() {
         _cart[productId] = newQty;
       });
@@ -1208,6 +1358,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             }
                           });
 
+                          _markFieldDirty('returned_items');
                           Navigator.pop(dialogCtx);
                           _triggerDebouncedAutoSave();
                           AppSnackbar.show(
@@ -1230,6 +1381,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void _removeReturnedItem(int index) {
     if (index >= 0 && index < _returnedItems.length) {
       final name = _returnedItems[index]['product_name'];
+      _markFieldDirty('returned_items');
       setState(() {
         _returnedItems.removeAt(index);
       });
@@ -1518,6 +1670,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final String sharedKey =
         _sharedKey ?? 'order_${DateTime.now().microsecondsSinceEpoch}';
     final int version = _currentVersion;
+    final int mutationSeqAtStart = _localMutationSeq;
 
     final payload = {
       'customer_id': _selectedCustomer!.id,
@@ -1556,49 +1709,82 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     try {
+      final OrderModel savedOrder;
       if (_hasSavedOnce && _serverOrderId != null) {
-        final updatedOrder = await ref
+        savedOrder = await ref
             .read(orderActionsProvider)
             .updateOrder(_serverOrderId!, payload);
-        _currentVersion = updatedOrder.version;
       } else {
-        final createdOrder = await ref
+        savedOrder = await ref
             .read(orderActionsProvider)
             .createOrder(payload);
-        _serverOrderId = createdOrder.id;
-        _currentVersion = createdOrder.version;
+        _serverOrderId = savedOrder.id;
         _hasSavedOnce = true;
-        _subscribeToOrderPusher(createdOrder.id);
+        _subscribeToOrderPusher(savedOrder.id);
       }
+
+      _currentVersion = savedOrder.version;
+      _lastKnownServerStatus = savedOrder.status.toUpperCase();
 
       if (mounted) {
         _serverSavedQuantities.clear();
-        _cart.forEach((k, v) => _serverSavedQuantities[k] = v);
+        if (savedOrder.items.isNotEmpty) {
+          for (final item in savedOrder.items) {
+            _serverSavedQuantities[item.productId] = item.quantity;
+          }
+        } else {
+          for (final item in itemsList) {
+            final pid = item['product_id'] as int;
+            final q = (item['quantity'] as num).toDouble();
+            _serverSavedQuantities[pid] = q;
+          }
+        }
+
+        final bool editedMidFlight = _localMutationSeq != mutationSeqAtStart;
+
         setState(() {
           _failureCount = 0;
           _timerPausedForRetry = false;
+
+          if (!editedMidFlight) {
+            _dirtyFields.clear();
+            _fieldMutationSeq.clear();
+          } else {
+            _dirtyFields.removeWhere(
+              (f) => (_fieldMutationSeq[f] ?? 0) <= mutationSeqAtStart,
+            );
+          }
+
           _fieldStates.removeWhere(
             (key, value) =>
-                key.startsWith('product_qty_') ||
-                key.startsWith('product_note_') ||
-                key == 'customer' ||
-                key == 'warehouse' ||
-                key == 'discount' ||
-                key == 'order_notes',
+                !_dirtyFields.contains(key) &&
+                (key.startsWith('product_qty_') ||
+                    key.startsWith('product_note_') ||
+                    key == 'customer' ||
+                    key == 'price_type' ||
+                    key == 'warehouse' ||
+                    key == 'discount' ||
+                    key == 'order_notes' ||
+                    key == 'returned_items'),
           );
           _fieldErrors.removeWhere(
             (key, value) =>
-                key.startsWith('product_qty_') ||
-                key.startsWith('product_note_') ||
-                key == 'customer' ||
-                key == 'warehouse' ||
-                key == 'discount' ||
-                key == 'order_notes',
+                !_dirtyFields.contains(key) &&
+                (key.startsWith('product_qty_') ||
+                    key.startsWith('product_note_') ||
+                    key == 'customer' ||
+                    key == 'price_type' ||
+                    key == 'warehouse' ||
+                    key == 'discount' ||
+                    key == 'order_notes' ||
+                    key == 'returned_items'),
           );
         });
-        if (_lastChangedField != null) {
+        if (!editedMidFlight && _lastChangedField != null) {
           _setFieldState(_lastChangedField!, 'success');
           _lastChangedField = null;
+        } else if (editedMidFlight && _debounceTimer == null) {
+          _triggerDebouncedAutoSave();
         }
       }
     } catch (e) {
@@ -1705,6 +1891,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                         ? warehouses.first.id
                         : 1);
 
+                final List<Map<String, dynamic>> retList = _returnedItems
+                    .map(
+                      (ret) => {
+                        'product_id': ret['product_id'],
+                        'quantity': ret['quantity'],
+                        'unit_price': ret['unit_price'],
+                        'reason': ret['reason'],
+                      },
+                    )
+                    .toList();
+
                 final payload = {
                   'customer_id': _selectedCustomer!.id,
                   'warehouse_id': warehouseId,
@@ -1728,6 +1925,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       : _discountType == 'FIXED'
                       ? _discountValue
                       : null,
+                  'price_type':
+                      _overridePriceType ??
+                      _selectedCustomer?.priceType?.toUpperCase(),
+                  'is_manual_price_type': _overridePriceType != null,
                   'shared_key':
                       _sharedKey ??
                       'order_${DateTime.now().microsecondsSinceEpoch}',
@@ -1736,25 +1937,33 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       ? null
                       : _notesController.text.trim(),
                   'items': itemsToSave,
+                  'returned_items': retList,
                 };
 
+                final OrderModel savedOrder;
                 if (_hasSavedOnce && _serverOrderId != null) {
-                  final updatedOrder = await ref
+                  savedOrder = await ref
                       .read(orderActionsProvider)
                       .updateOrder(_serverOrderId!, payload);
-                  _currentVersion = updatedOrder.version;
                 } else {
-                  final createdOrder = await ref
+                  savedOrder = await ref
                       .read(orderActionsProvider)
                       .createOrder(payload);
-                  _serverOrderId = createdOrder.id;
-                  _currentVersion = createdOrder.version;
+                  _serverOrderId = savedOrder.id;
                   _hasSavedOnce = true;
-                  _subscribeToOrderPusher(createdOrder.id);
+                  _subscribeToOrderPusher(savedOrder.id);
                 }
+                _currentVersion = savedOrder.version;
+                _lastKnownServerStatus = savedOrder.status.toUpperCase();
 
                 if (mounted) {
+                  _serverSavedQuantities.clear();
+                  for (final item in savedOrder.items) {
+                    _serverSavedQuantities[item.productId] = item.quantity;
+                  }
                   setState(() {
+                    _dirtyFields.remove('product_qty_$prodId');
+                    _dirtyFields.remove('product_note_$prodId');
                     _fieldStates.remove('product_qty_$prodId');
                     _fieldErrors.remove('product_qty_$prodId');
                   });
@@ -1771,23 +1980,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       _failureCount = 0;
                       _timerPausedForRetry = false;
                       _secondsRemaining = 0;
+                      _dirtyFields.clear();
+                      _fieldMutationSeq.clear();
                       _fieldStates.removeWhere(
                         (key, value) =>
                             key.startsWith('product_qty_') ||
                             key.startsWith('product_note_') ||
                             key == 'customer' ||
+                            key == 'price_type' ||
                             key == 'warehouse' ||
                             key == 'discount' ||
-                            key == 'order_notes',
+                            key == 'order_notes' ||
+                            key == 'returned_items',
                       );
                       _fieldErrors.removeWhere(
                         (key, value) =>
                             key.startsWith('product_qty_') ||
                             key.startsWith('product_note_') ||
                             key == 'customer' ||
+                            key == 'price_type' ||
                             key == 'warehouse' ||
                             key == 'discount' ||
-                            key == 'order_notes',
+                            key == 'order_notes' ||
+                            key == 'returned_items',
                       );
                     });
                     Navigator.pop(context);
@@ -1834,6 +2049,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               setState(() {
                 _cart.remove(prodId);
                 _cartNotes.remove(prodId);
+                _dirtyFields.remove('product_qty_$prodId');
+                _dirtyFields.remove('product_note_$prodId');
+                _syncNoteControllers();
               });
               setDialogState(() {
                 localItems.removeWhere((item) => item['product_id'] == prodId);
@@ -2263,6 +2481,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     final customersAsync = ref.watch(customerListProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
 
+    ref.listen<AsyncValue<List<OrderModel>>>(ordersListProvider, (_, next) {
+      final serverId = _serverOrderId;
+      if (serverId == null || _isSaving || !mounted) return;
+      final orders = next.asData?.value;
+      if (orders == null) return;
+      final matchingOrder = orders.where((o) => o.id == serverId).firstOrNull;
+      if (matchingOrder == null) return;
+
+      final matchingStatus = matchingOrder.status.toUpperCase();
+      if (matchingOrder.version > _currentVersion ||
+          (_lastKnownServerStatus != null &&
+              matchingStatus != _lastKnownServerStatus)) {
+        final hasPendingEdits =
+            _debounceTimer != null ||
+            _timerPausedForRetry ||
+            _dirtyFields.isNotEmpty;
+        _applyServerOrderSnapshot(
+          matchingOrder,
+          mergePendingLocalChanges: hasPendingEdits,
+        );
+      }
+    });
+
     ref.listen<AsyncValue<List<Customer>>>(customerListProvider, (_, next) {
       final selected = _selectedCustomer;
       if (selected == null || selected.id <= 0) return;
@@ -2351,6 +2592,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     builder: (context) => const CustomerFormDialog(),
                   );
                   if (result != null && result is Customer && mounted) {
+                    _markFieldDirty('customer');
                     setState(() {
                       _selectedCustomer = result;
                     });
@@ -2547,7 +2789,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) {
-                        _lastChangedField = 'warehouse';
+                        _markFieldDirty('warehouse');
                         setState(() {
                           _selectedWarehouseId = val;
                           final products =
@@ -2597,7 +2839,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 suffixIcon: _buildFieldStatusIcon('order_notes'),
                 borderRadius: BorderRadius.circular(8),
                 onChanged: (val) {
-                  _lastChangedField = 'order_notes';
+                  _markFieldDirty('order_notes');
                   _triggerDebouncedAutoSave();
                 },
               ),
@@ -3447,7 +3689,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             final found = dropdownCustomers
                 .where((c) => c.id == val)
                 .firstOrNull;
-            _lastChangedField = 'customer';
+            _markFieldDirty('customer');
             setState(() {
               _selectedCustomer = found;
             });
@@ -3516,8 +3758,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         );
 
         if (selected != null && mounted) {
-          _lastChangedField =
-              'customer'; // triggers auto-save and updates UI prices
+          _markFieldDirty('price_type');
           setState(() {
             _overridePriceType = selected;
           });
@@ -3689,7 +3930,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     if (updated == null || !mounted) return;
 
-    _lastChangedField = 'product_qty_${parentProduct.id}';
+    _markFieldDirty('product_qty_${parentProduct.id}');
     setState(() {
       for (final v in variants) {
         final qty = updated[v.id] ?? 0;
@@ -3700,6 +3941,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           _cartNotes.remove(v.id);
         }
       }
+      _syncNoteControllers();
     });
     _triggerDebouncedAutoSave();
   }
@@ -4183,8 +4425,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: TextFormField(
-                                              initialValue:
-                                                  _cartNotes[productId] ?? '',
+                                              controller: _noteControllers.putIfAbsent(
+                                                productId,
+                                                () => TextEditingController(
+                                                  text: _cartNotes[productId] ?? '',
+                                                ),
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 11,
                                               ),
@@ -4211,8 +4457,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                               ),
                                               onChanged: (val) {
                                                 _cartNotes[productId] = val;
-                                                _lastChangedField =
-                                                    'product_note_$productId';
+                                                _markFieldDirty(
+                                                  'product_note_$productId',
+                                                );
                                                 _triggerDebouncedAutoSave();
                                               },
                                             ),
@@ -4350,7 +4597,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {
-                                      _lastChangedField = 'discount';
+                                      _markFieldDirty('discount');
                                       setState(() {
                                         _discountType = val;
                                         if (_discountType == 'PERCENT' &&
@@ -4416,7 +4663,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   ),
                                   onChanged: (val) {
                                     final parsed = double.tryParse(val) ?? 0.0;
-                                    _lastChangedField = 'discount';
+                                    _markFieldDirty('discount');
                                     setState(() {
                                       _discountValue = parsed;
                                       if (_discountType == 'PERCENT' &&
