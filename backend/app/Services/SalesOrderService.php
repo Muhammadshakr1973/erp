@@ -1173,7 +1173,7 @@ class SalesOrderService
 
         $isCustomerOrder = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
 
-        return DB::transaction(function () use ($order, $data, $user, $isCashVanOrder, $isCustomerOrder) {
+        $updatedOrder = DB::transaction(function () use ($order, $data, $user, $isCashVanOrder, $isCustomerOrder) {
             // Lock order for update to prevent concurrent race conditions
             $order = SalesOrder::lockForUpdate()->findOrFail($order->id);
 

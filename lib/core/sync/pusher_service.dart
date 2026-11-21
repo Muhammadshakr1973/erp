@@ -37,6 +37,10 @@ class PusherService {
   String? _wsSocketId;
   Timer? _wsPingTimer;
   Timer? _wsReconnectTimer;
+  Timer? _initRetryTimer;
+  int _initRetryAttempt = 0;
+  final Map<String, Timer> _channelRetryTimers = {};
+  final Map<String, int> _channelRetryAttempts = {};
   int _wsReconnectAttempt = 0;
   bool _manuallyDisconnected = false;
   bool _hasConnectedBefore = false;
@@ -113,8 +117,8 @@ class PusherService {
             'Accept': 'application/json',
             'Authorization': 'Bearer $token',
           },
-          receiveTimeout: const Duration(seconds: 4),
-          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
         ),
       );
 
@@ -247,6 +251,7 @@ class PusherService {
             debugPrint(
               "Pusher WS authorization failed for $channelName: $authResult",
             );
+            _scheduleChannelRetry(channelName);
             return;
           }
           subData['auth'] = auth;
@@ -259,9 +264,12 @@ class PusherService {
           jsonEncode({'event': 'pusher:subscribe', 'data': subData}),
         );
         _nativelySubscribedChannels.add(channelName);
+        _channelRetryTimers.remove(channelName)?.cancel();
+        _channelRetryAttempts.remove(channelName);
         debugPrint("Pusher WS Subscribed to: $channelName");
       } catch (e) {
         debugPrint("Pusher WS Subscription Error for $channelName: $e");
+        _scheduleChannelRetry(channelName);
       } finally {
         _inFlightSubscriptions.remove(channelName);
       }
@@ -334,12 +342,16 @@ class PusherService {
 
       if (apiKey.isEmpty || cluster.isEmpty) {
         debugPrint(
-          "Pusher: No valid apiKey or cluster provided. Realtime pusher events disabled.",
+          "Pusher: No valid apiKey or cluster provided. Scheduling retry.",
         );
         _isInitialized = false;
+        _scheduleInitRetry();
         return;
       }
 
+      _initRetryTimer?.cancel();
+      _initRetryTimer = null;
+      _initRetryAttempt = 0;
       _serverKey = apiKey;
       _serverCluster = cluster;
 
@@ -420,7 +432,46 @@ class PusherService {
     } catch (e) {
       _isInitialized = false;
       debugPrint("Pusher Initialization Error: $e");
+      _scheduleInitRetry();
     }
+  }
+
+  void _scheduleInitRetry() {
+    if (_manuallyDisconnected || _listeners.isEmpty) return;
+    _initRetryTimer?.cancel();
+    _initRetryAttempt++;
+    final delaySec = (3 * _initRetryAttempt).clamp(3, 20);
+    _initRetryTimer = Timer(Duration(seconds: delaySec), () {
+      if (!_manuallyDisconnected && !_isInitialized && _listeners.isNotEmpty) {
+        unawaited(() async {
+          await connect();
+          if (_isInitialized && _isConnected) {
+            await _resubscribeAllRegisteredChannels();
+          }
+        }());
+      }
+    });
+  }
+
+  void _scheduleChannelRetry(String channelName) {
+    if (_manuallyDisconnected ||
+        !_listeners.containsKey(channelName) ||
+        (_listeners[channelName]?.isEmpty ?? true)) {
+      return;
+    }
+    _channelRetryTimers.remove(channelName)?.cancel();
+    final attempt = (_channelRetryAttempts[channelName] ?? 0) + 1;
+    _channelRetryAttempts[channelName] = attempt;
+    final delaySec = (2 * attempt).clamp(2, 15);
+    _channelRetryTimers[channelName] = Timer(Duration(seconds: delaySec), () {
+      _channelRetryTimers.remove(channelName);
+      if (!_manuallyDisconnected &&
+          _isConnected &&
+          (_listeners[channelName]?.isNotEmpty ?? false) &&
+          !_nativelySubscribedChannels.contains(channelName)) {
+        unawaited(_ensureChannelSubscribedNatively(channelName));
+      }
+    });
   }
 
   Future<void> _connectPureDartWs() async {
@@ -632,6 +683,14 @@ class PusherService {
     _hasConnectedBefore = false;
     _wsReconnectTimer?.cancel();
     _wsReconnectTimer = null;
+    _initRetryTimer?.cancel();
+    _initRetryTimer = null;
+    _initRetryAttempt = 0;
+    for (final timer in _channelRetryTimers.values) {
+      timer.cancel();
+    }
+    _channelRetryTimers.clear();
+    _channelRetryAttempts.clear();
     try {
       await _teardownWsTransport();
       if (_isInitialized && !_usePureDartWs) {
@@ -730,6 +789,8 @@ class PusherService {
     _listeners.remove(channelName);
     _nativelySubscribedChannels.remove(channelName);
     _inFlightSubscriptions.remove(channelName);
+    _channelRetryTimers.remove(channelName)?.cancel();
+    _channelRetryAttempts.remove(channelName);
 
     if (!_isInitialized) return;
 

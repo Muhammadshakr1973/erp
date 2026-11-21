@@ -570,11 +570,122 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     _executeBatchSave(actionDesc: 'پاشەکەوتکردنی دەستبەجێ');
   }
 
+  bool _isConcurrencyConflictError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('409') ||
+        msg.contains('conflict_version') ||
+        msg.contains('هاوکاتی') ||
+        msg.contains('دەستکاری کراون') ||
+        msg.contains('نوێ بکەرەوە') ||
+        msg.contains('نوێکراوەتەوە') ||
+        msg.contains('version');
+  }
+
+  /// Applies a newer remote order version while optionally preserving unsaved local cart/note deltas
+  void _applyRemoteOrderSafely(
+    OrderModel matchingOrder, {
+    OrderModel? baseOrderOverride,
+    required bool mergePendingLocalChanges,
+  }) {
+    if (!mounted) return;
+    final prevOrder = baseOrderOverride ?? _selectedOrder;
+    final customerChanged =
+        prevOrder != null && matchingOrder.customerId != prevOrder.customerId;
+
+    final Map<int, double> nextCart = {};
+    final Map<int, String> nextNotes = {};
+
+    for (final it in matchingOrder.items) {
+      nextCart[it.productId] = it.quantity;
+      if (it.notes != null && it.notes!.isNotEmpty) {
+        nextNotes[it.productId] = it.notes!;
+      }
+    }
+
+    if (mergePendingLocalChanges && prevOrder != null) {
+      final prevServerMap = <int, double>{
+        for (final it in prevOrder.items) it.productId: it.quantity,
+      };
+      final prevServerNotes = <int, String>{
+        for (final it in prevOrder.items)
+          if (it.notes != null) it.productId: it.notes!,
+      };
+
+      final allProductIds = <int>{...prevServerMap.keys, ..._orderCart.keys};
+      for (final pid in allProductIds) {
+        final oldQty = prevServerMap[pid] ?? 0.0;
+        final localQty = _orderCart[pid] ?? 0.0;
+        final delta = localQty - oldQty;
+        if (delta.abs() > 1e-6) {
+          final updatedQty = (nextCart[pid] ?? 0.0) + delta;
+          if (updatedQty > 0) {
+            nextCart[pid] = updatedQty;
+          } else {
+            nextCart.remove(pid);
+          }
+        }
+
+        final oldNote = prevServerNotes[pid] ?? '';
+        final localNote = _orderCartNotes[pid] ?? '';
+        if (localNote != oldNote) {
+          if (localNote.isNotEmpty) {
+            nextNotes[pid] = localNote;
+          } else {
+            nextNotes.remove(pid);
+          }
+        }
+      }
+    }
+
+    setState(() {
+      _selectedOrder = matchingOrder;
+      if (customerChanged) {
+        _customerSpecialPrices = {};
+      }
+      _orderCart
+        ..clear()
+        ..addAll(nextCart);
+      _orderCartNotes
+        ..clear()
+        ..addAll(nextNotes);
+      if (!_isManualPriceTierOverride) {
+        final custPriceType = matchingOrder.customer is Map
+            ? matchingOrder.customer['price_type']?.toString().toUpperCase()
+            : null;
+        final orderTier = matchingOrder.priceType?.toUpperCase();
+        final resolvedTier = const ['N1', 'N2', 'N3'].contains(custPriceType)
+            ? custPriceType!
+            : (const ['N1', 'N2', 'N3'].contains(orderTier)
+                ? orderTier!
+                : _selectedPriceTier);
+        _selectedPriceTier = resolvedTier;
+      }
+    });
+
+    if (customerChanged && matchingOrder.customerId > 0) {
+      ref
+          .read(customerActionsProvider)
+          .fetchSpecialPrices(matchingOrder.customerId)
+          .then((prices) {
+            if (mounted && _selectedOrder?.id == matchingOrder.id) {
+              setState(() {
+                _customerSpecialPrices = prices;
+              });
+            }
+          })
+          .catchError((_) {});
+    }
+  }
+
   /// Executes batch sync to server in a single connection / database transaction
-  Future<void> _executeBatchSave({required String actionDesc}) async {
+  Future<void> _executeBatchSave({
+    required String actionDesc,
+    bool allowConflictRetry = true,
+  }) async {
     if (_selectedOrder == null) return;
 
-    final orderId = _selectedOrder!.id;
+    final baseOrder = _selectedOrder!;
+    final orderId = baseOrder.id;
     final itemsList = <Map<String, dynamic>>[];
     _orderCart.forEach((productId, qty) {
       if (qty > 0) {
@@ -589,20 +700,20 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final currentUser = ref.read(authProvider).user;
     final myVanWarehouse = ref.read(myAssignedVanWarehouseProvider);
     final targetWarehouseId =
-        _selectedOrder!.warehouseId ?? myVanWarehouse?.id ?? currentUser?.warehouseId ?? 1;
+        baseOrder.warehouseId ?? myVanWarehouse?.id ?? currentUser?.warehouseId ?? 1;
 
     final payload = {
-      'customer_id': _selectedOrder!.customerId,
+      'customer_id': baseOrder.customerId,
       'warehouse_id': targetWarehouseId,
-      'status': _selectedOrder!.status,
+      'status': baseOrder.status,
       'price_type': _selectedPriceTier,
       'is_manual_price_type': _isManualPriceTierOverride,
-      'discount_type': _selectedOrder!.discountType,
-      'discount_percent': _selectedOrder!.discountPercent,
-      'discount_amount': _selectedOrder!.discountAmount,
-      'shared_key': _selectedOrder!.sharedKey,
-      'version': _selectedOrder!.version,
-      'notes': _selectedOrder!.notes,
+      'discount_type': baseOrder.discountType,
+      'discount_percent': baseOrder.discountPercent,
+      'discount_amount': baseOrder.discountAmount,
+      'shared_key': baseOrder.sharedKey,
+      'version': baseOrder.version,
+      'notes': baseOrder.notes,
       'items': itemsList,
     };
 
@@ -625,15 +736,59 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         });
       }
     } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception:', '').trim();
-      final lowerErr = errorMsg.toLowerCase();
-      if (lowerErr.contains('version') ||
-          lowerErr.contains('409') ||
-          errorMsg.contains('نوێکراوەتەوە')) {
-        unawaited(
-          ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId),
-        );
+      if (_isConcurrencyConflictError(e)) {
+        await ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId);
+        final refreshedOrders = ref.read(ordersListProvider).asData?.value;
+        final refreshedOrder = refreshedOrders
+            ?.where((o) => o.id == orderId)
+            .firstOrNull;
+
+        if (refreshedOrder == null) {
+          if (mounted && _selectedOrder?.id == orderId) {
+            _setActiveOrder(null);
+            setState(() => _isSavingBatch = false);
+            AppSnackbar.show(
+              context,
+              message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
+              type: SnackbarType.warning,
+            );
+          }
+          return;
+        }
+
+        final nextStatus = refreshedOrder.status.toUpperCase();
+        if (nextStatus == OrderModel.statusDelivered ||
+            nextStatus == OrderModel.statusCancelled) {
+          if (mounted && _selectedOrder?.id == orderId) {
+            _setActiveOrder(null);
+            setState(() => _isSavingBatch = false);
+            AppSnackbar.show(
+              context,
+              message:
+                  'ئەم پسوڵەیە لە ئامێرێکی ترەوە تەواو کراوە یان هەڵوەشاوەتەوە',
+              type: SnackbarType.warning,
+            );
+          }
+          return;
+        }
+
+        if (mounted && _selectedOrder?.id == orderId) {
+          _applyRemoteOrderSafely(
+            refreshedOrder,
+            baseOrderOverride: baseOrder,
+            mergePendingLocalChanges: true,
+          );
+
+          if (allowConflictRetry && refreshedOrder.version > baseOrder.version) {
+            return _executeBatchSave(
+              actionDesc: actionDesc,
+              allowConflictRetry: false,
+            );
+          }
+        }
       }
+
+      final errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (mounted) {
         final isStillSelected = _selectedOrder?.id == orderId;
         setState(() {
@@ -1167,7 +1322,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           return;
         }
 
-        if (!_isSavingBatch && _debounceTimer == null) {
+        if (!_isSavingBatch) {
           final itemsChanged =
               matchingOrder.items.length != selectedOrder.items.length ||
               List.generate(matchingOrder.items.length, (i) {
@@ -1209,56 +1364,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               itemsChanged;
 
           if (orderChanged && mounted) {
-            final customerChanged =
-                matchingOrder.customerId != selectedOrder.customerId;
-            setState(() {
-              _selectedOrder = matchingOrder;
-              if (customerChanged) {
-                _customerSpecialPrices = {};
-              }
-              _orderCart
-                ..clear()
-                ..addEntries(
-                  matchingOrder.items.map(
-                    (it) => MapEntry(it.productId, it.quantity),
-                  ),
-                );
-              _orderCartNotes.clear();
-              for (final it in matchingOrder.items) {
-                if (it.notes != null) {
-                  _orderCartNotes[it.productId] = it.notes!;
-                }
-              }
-              if (!_isManualPriceTierOverride) {
-                final custPriceType = matchingOrder.customer is Map
-                    ? matchingOrder.customer['price_type']
-                          ?.toString()
-                          .toUpperCase()
-                    : null;
-                final orderTier = matchingOrder.priceType?.toUpperCase();
-                final resolvedTier =
-                    const ['N1', 'N2', 'N3'].contains(custPriceType)
-                    ? custPriceType!
-                    : (const ['N1', 'N2', 'N3'].contains(orderTier)
-                          ? orderTier!
-                          : _selectedPriceTier);
-                _selectedPriceTier = resolvedTier;
-              }
-            });
-
-            if (customerChanged && matchingOrder.customerId > 0) {
-              ref
-                  .read(customerActionsProvider)
-                  .fetchSpecialPrices(matchingOrder.customerId)
-                  .then((prices) {
-                    if (mounted && _selectedOrder?.id == matchingOrder.id) {
-                      setState(() {
-                        _customerSpecialPrices = prices;
-                      });
-                    }
-                  })
-                  .catchError((_) {});
-            }
+            final hasPendingLocalEdits =
+                _debounceTimer != null ||
+                _lastFailedBatch?['orderId'] == selectedOrder.id;
+            _applyRemoteOrderSafely(
+              matchingOrder,
+              mergePendingLocalChanges: hasPendingLocalEdits,
+            );
           }
         }
       } else if (!_isSavingBatch &&

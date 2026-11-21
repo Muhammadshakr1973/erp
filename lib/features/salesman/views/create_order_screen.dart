@@ -255,30 +255,106 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _subscribedOrderId = null;
   }
 
+  bool _isConcurrencyConflictError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('409') ||
+        msg.contains('conflict_version') ||
+        msg.contains('هاوکاتی') ||
+        msg.contains('دەستکاری کراون') ||
+        msg.contains('نوێ بکەرەوە') ||
+        msg.contains('نوێکراوەتەوە') ||
+        msg.contains('version');
+  }
+
+  Future<OrderModel?> _mergeLatestServerOrder(
+    int orderId, {
+    bool mergePendingLocalChanges = true,
+  }) async {
+    await ref
+        .read(singleOrderProvider(orderId.toString()).notifier)
+        .refreshSilently();
+    final latestOrder = ref
+        .read(singleOrderProvider(orderId.toString()))
+        .valueOrNull;
+    if (latestOrder == null || !mounted) return null;
+
+    if (!mergePendingLocalChanges) {
+      _populateFromExistingOrder(latestOrder);
+      return latestOrder;
+    }
+
+    final Map<int, double> nextCart = {};
+    final Map<int, String> nextNotes = {};
+    final Map<int, double> nextServerSaved = {};
+    for (final item in latestOrder.items) {
+      nextCart[item.productId] = item.quantity;
+      nextServerSaved[item.productId] = item.quantity;
+      if (item.notes != null && item.notes!.isNotEmpty) {
+        nextNotes[item.productId] = item.notes!;
+      }
+    }
+
+    final allProductIds = <int>{..._serverSavedQuantities.keys, ..._cart.keys};
+    for (final pid in allProductIds) {
+      final oldQty = _serverSavedQuantities[pid] ?? 0.0;
+      final localQty = _cart[pid] ?? 0.0;
+      final delta = localQty - oldQty;
+      if (delta.abs() > 1e-6) {
+        final updatedQty = (nextCart[pid] ?? 0.0) + delta;
+        if (updatedQty > 0) {
+          nextCart[pid] = updatedQty;
+        } else {
+          nextCart.remove(pid);
+        }
+      }
+
+      if (_fieldStates.containsKey('product_note_$pid')) {
+        final localNote = _cartNotes[pid] ?? '';
+        if (localNote.isNotEmpty) {
+          nextNotes[pid] = localNote;
+        } else {
+          nextNotes.remove(pid);
+        }
+      }
+    }
+
+    setState(() {
+      _serverOrderId = latestOrder.id;
+      _sharedKey = latestOrder.sharedKey;
+      _currentVersion = latestOrder.version;
+      _hasSavedOnce = true;
+      _serverSavedQuantities
+        ..clear()
+        ..addAll(nextServerSaved);
+      _cart
+        ..clear()
+        ..addAll(nextCart);
+      _cartNotes
+        ..clear()
+        ..addAll(nextNotes);
+    });
+    return latestOrder;
+  }
+
   Future<void> _syncSubscribedOrderFromServer({
     bool showNotification = false,
   }) async {
     final targetOrderId = _subscribedOrderId;
-    if (targetOrderId == null || !mounted || _isSaving || _debounceTimer != null) {
+    if (targetOrderId == null || !mounted || _isSaving) {
       return;
     }
     try {
-      final orderNotifier = ref.read(
-        singleOrderProvider(targetOrderId.toString()).notifier,
+      final hasPendingEdits = _debounceTimer != null || _timerPausedForRetry;
+      final latestOrder = await _mergeLatestServerOrder(
+        targetOrderId,
+        mergePendingLocalChanges: hasPendingEdits,
       );
-      await orderNotifier.refreshSilently();
-      final latestOrder = ref
-          .read(singleOrderProvider(targetOrderId.toString()))
-          .valueOrNull;
-      if (latestOrder != null && mounted && !_isSaving && _debounceTimer == null) {
-        _populateFromExistingOrder(latestOrder);
-        if (showNotification) {
-          AppSnackbar.show(
-            context,
-            message: 'پسوڵەکە لە لایەن ئامێرێکی ترەوە نوێکرایەوە',
-            type: SnackbarType.info,
-          );
-        }
+      if (latestOrder != null && mounted && showNotification) {
+        AppSnackbar.show(
+          context,
+          message: 'پسوڵەکە لە لایەن ئامێرێکی ترەوە نوێکرایەوە',
+          type: SnackbarType.info,
+        );
       }
     } catch (e) {
       debugPrint("CreateOrderScreen: Error fetching updated order: $e");
@@ -1396,6 +1472,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Future<void> _autoSaveOrder(
     AsyncValue<List<WarehouseModel>> warehousesAsync, {
     List<Map<String, dynamic>>? customItems,
+    bool allowConflictRetry = true,
   }) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
     final isCashVanSalesman =
@@ -1525,6 +1602,27 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     } catch (e) {
+      if (_isConcurrencyConflictError(e) &&
+          _hasSavedOnce &&
+          _serverOrderId != null) {
+        final previousVersion = version;
+        final latestOrder = await _mergeLatestServerOrder(
+          _serverOrderId!,
+          mergePendingLocalChanges: true,
+        );
+        if (allowConflictRetry &&
+            latestOrder != null &&
+            latestOrder.version > previousVersion &&
+            mounted) {
+          await _autoSaveOrder(
+            warehousesAsync,
+            customItems: customItems,
+            allowConflictRetry: false,
+          );
+          return;
+        }
+      }
+
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
       if (mounted) {
         setState(() {
@@ -1707,6 +1805,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   }
                 }
               } catch (e) {
+                if (_isConcurrencyConflictError(e) &&
+                    _hasSavedOnce &&
+                    _serverOrderId != null) {
+                  await _mergeLatestServerOrder(
+                    _serverOrderId!,
+                    mergePendingLocalChanges: true,
+                  );
+                }
                 if (mounted) {
                   final errorMsg = e
                       .toString()

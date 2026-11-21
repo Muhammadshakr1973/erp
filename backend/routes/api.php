@@ -62,10 +62,11 @@ Route::prefix('v1')->group(function () {
         }
     });
 
+    // تۆمارکردنی ڕێڕەوی پەخشکردن (Pusher Auth) بە بێ 'web' CSRF middleware بۆ ئەوەی مۆبایل و وێب بە Bearer Token ڕێگەپێدراوبن
+    \Illuminate\Support\Facades\Broadcast::routes(['middleware' => ['auth:sanctum', 'active', 'throttle:180,1']]);
+
     // ئەوانەی پێویستیان بە تۆکنە (Protected)
     Route::middleware(['auth:sanctum', 'active', 'throttle:180,1'])->group(function () {
-
-        Broadcast::routes();
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
