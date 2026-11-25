@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/api_client.dart';
-import '../../../../core/sync/pusher_service.dart';
-import '../../../auth/providers/auth_provider.dart';
+import '../../../core/api_client.dart';
+import '../../../core/sync/pusher_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class AuditLogsNotifier extends AsyncNotifier<List<dynamic>> {
   bool _isRefreshing = false;
