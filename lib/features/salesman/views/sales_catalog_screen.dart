@@ -657,11 +657,15 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
             ? matchingOrder.customer['price_type']?.toString().toUpperCase()
             : null;
         final orderTier = matchingOrder.priceType?.toUpperCase();
-        final resolvedTier = const ['N1', 'N2', 'N3'].contains(custPriceType)
-            ? custPriceType!
-            : (const ['N1', 'N2', 'N3'].contains(orderTier)
+        final resolvedTier = matchingOrder.customerId == 0
+            ? (const ['N1', 'N2', 'N3'].contains(orderTier)
                 ? orderTier!
-                : _selectedPriceTier);
+                : _selectedPriceTier)
+            : (const ['N1', 'N2', 'N3'].contains(custPriceType)
+                ? custPriceType!
+                : (const ['N1', 'N2', 'N3'].contains(orderTier)
+                    ? orderTier!
+                    : _selectedPriceTier));
         _selectedPriceTier = resolvedTier;
       }
     });
@@ -1471,11 +1475,27 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           ? newPriceTier!
           : _selectedPriceTier;
 
+      final customerMetaChanged =
+          existingCustMap['name']?.toString() != updatedCustomer.name ||
+          existingCustMap['phone']?.toString() != updatedCustomer.phone ||
+          existingCustMap['address']?.toString() != updatedCustomer.address ||
+          existingCustMap['price_type']?.toString() != updatedCustomer.priceType ||
+          existingCustMap['current_balance']?.toString() !=
+              updatedCustomer.balance.toString() ||
+          existingCustMap['permanent_discount']?.toString() !=
+              updatedCustomer.permanentDiscount.toString();
+
       final specialChanged =
           updatedCustomer.specialPrices.length != _customerSpecialPrices.length ||
           updatedCustomer.specialPrices.entries.any(
             (e) => _customerSpecialPrices[e.key] != e.value,
           );
+
+      if (!customerMetaChanged &&
+          !specialChanged &&
+          resolvedTier == _selectedPriceTier) {
+        return;
+      }
 
       setState(() {
         _selectedOrder = selectedOrder.copyWith(customer: mergedCustMap);

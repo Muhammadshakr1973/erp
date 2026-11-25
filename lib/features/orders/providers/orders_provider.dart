@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -809,7 +810,9 @@ class OrderActions {
         }
       }
       _refreshSalesmanDashboard();
-      ref.invalidate(dashboardProvider);
+      if (ref.exists(dashboardProvider)) {
+        unawaited(ref.read(dashboardProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       // Restore state on failure
       if (previousList != null) {
@@ -820,97 +823,174 @@ class OrderActions {
   }
 }
 
-final salesReturnsListProvider = FutureProvider<List<dynamic>>((ref) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) return const [];
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class SalesReturnsListNotifier extends AsyncNotifier<List<dynamic>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
-  void onSalesReturnsEvent(Map<String, dynamic> eventData) {
-    final eventType = eventData['event_type']?.toString();
-    if (eventType == 'return_created' || eventType == 'delete') {
-      debugPrint(
-        "Realtime return update received on private-orders channel: $eventData",
+  @override
+  FutureOr<List<dynamic>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onSalesReturnsEvent(Map<String, dynamic> eventData) {
+      final eventType = eventData['event_type']?.toString();
+      if (eventType == 'return_created' || eventType == 'delete') {
+        debugPrint(
+          "Realtime return update received on private-orders channel: $eventData",
+        );
+        unawaited(refreshSilently());
+      }
+    }
+
+    pusher.subscribeToChannel('private-orders', onSalesReturnsEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-orders', onSalesReturnsEvent);
+    });
+
+    return _fetchSalesReturns(api);
+  }
+
+  Future<List<dynamic>> _fetchSalesReturns(ApiClient api) async {
+    try {
+      final response = await api.client.get('/sales-returns');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! List) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales returns list payload)',
+          );
+        }
+        return resData['data'] as List<dynamic>;
+      }
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
       );
-      ref.invalidateSelf();
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
   }
 
-  pusher.subscribeToChannel('private-orders', onSalesReturnsEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-orders', onSalesReturnsEvent);
-  });
-
-  try {
-    final response = await api.client.get('/sales-returns');
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      if (resData is! Map || resData['data'] is! List) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales returns list payload)',
-        );
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchSalesReturns(api);
+      final current = state.valueOrNull;
+      if (current != null && jsonEncode(current) == jsonEncode(fresh)) {
+        return;
       }
-      return resData['data'] as List<dynamic>;
-    }
-    throw Exception(
-      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
-    );
-  } catch (e) {
-    throw Exception(api.parseError(e));
-  }
-});
-
-final singleSalesReturnProvider = FutureProvider.family<dynamic, String>((
-  ref,
-  id,
-) async {
-  final userId = ref.watch(authProvider.select((state) => state.user?.id));
-  if (userId == null) return null;
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
-
-  void onReturnDetailEvent(Map<String, dynamic> eventData) {
-    if (eventData['event_type']?.toString() == 'return_created') {
-      ref.invalidateSelf();
-    }
-  }
-
-  pusher.subscribeToChannel('private-orders', onReturnDetailEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-orders', onReturnDetailEvent);
-  });
-
-  try {
-    final response = await api.client.get('/sales-returns/$id');
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      final data = (resData is Map && resData.containsKey('data'))
-          ? resData['data']
-          : resData;
-      if (data is! Map) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales return detail payload)',
-        );
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
       }
-      return data;
     }
-    throw Exception(
-      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
-    );
-  } catch (e) {
-    throw Exception(api.parseError(e));
   }
-});
+}
+
+final salesReturnsListProvider =
+    AsyncNotifierProvider<SalesReturnsListNotifier, List<dynamic>>(
+  SalesReturnsListNotifier.new,
+);
+
+class SingleSalesReturnNotifier extends FamilyAsyncNotifier<dynamic, String> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
+
+  @override
+  FutureOr<dynamic> build(String arg) async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return null;
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onReturnDetailEvent(Map<String, dynamic> eventData) {
+      if (eventData['event_type']?.toString() == 'return_created') {
+        unawaited(refreshSilently());
+      }
+    }
+
+    pusher.subscribeToChannel('private-orders', onReturnDetailEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-orders', onReturnDetailEvent);
+    });
+
+    return _fetchReturnDetail(api, arg);
+  }
+
+  Future<dynamic> _fetchReturnDetail(ApiClient api, String id) async {
+    try {
+      final response = await api.client.get('/sales-returns/$id');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        final data = (resData is Map && resData.containsKey('data'))
+            ? resData['data']
+            : resData;
+        if (data is! Map) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed sales return detail payload)',
+          );
+        }
+        return data;
+      }
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchReturnDetail(api, arg);
+      final current = state.valueOrNull;
+      if (current != null && jsonEncode(current) == jsonEncode(fresh)) {
+        return;
+      }
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current return detail on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final singleSalesReturnProvider =
+    AsyncNotifierProvider.family<SingleSalesReturnNotifier, dynamic, String>(
+  SingleSalesReturnNotifier.new,
+);
 
 class SalesReturnActions {
   final ApiClient api;
@@ -951,7 +1031,11 @@ class SalesReturnActions {
               .refreshSingleCustomerEverywhere(customerId),
         );
       }
-      ref.invalidate(salesReturnsListProvider);
+      if (ref.exists(salesReturnsListProvider)) {
+        unawaited(
+          ref.read(salesReturnsListProvider.notifier).refreshSilently(),
+        );
+      }
       unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
     } catch (e) {
       throw Exception(api.parseError(e));

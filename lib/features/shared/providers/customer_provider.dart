@@ -458,56 +458,95 @@ final singleCustomerProvider =
   SingleCustomerNotifier.new,
 );
 
-final customerReconciliationProvider =
-    FutureProvider.family<CustomerReconciliationModel, int>((ref, id) async {
-      final user = ref.watch(authProvider.select((state) => state.user));
-      if (user == null) {
-        throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+class CustomerReconciliationNotifier
+    extends FamilyAsyncNotifier<CustomerReconciliationModel, int> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
+
+  @override
+  FutureOr<CustomerReconciliationModel> build(int arg) async {
+    final user = ref.watch(authProvider.select((state) => state.user));
+    if (user == null) {
+      throw Exception('بەکارهێنەر چۆتە دەرەوە (User is logged out)');
+    }
+    final role = user.role.toLowerCase();
+    if (role != 'admin' && role != 'owner') {
+      throw Exception('تەنها بەڕێوەبەر مۆڵەتی ئەم بەشەی هەیە');
+    }
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onReconcileEvent(Map<String, dynamic> eventData) {
+      final eventCustId = eventData['customer_id']?.toString();
+      if (eventCustId == null || eventCustId == arg.toString()) {
+        unawaited(refreshSilently());
       }
-      final role = user.role.toLowerCase();
-      if (role != 'admin' && role != 'owner') {
-        throw Exception('تەنها بەڕێوەبەر مۆڵەتی ئەم بەشەی هەیە');
-      }
-      final api = ref.watch(apiClientProvider);
-      final pusher = ref.watch(pusherServiceProvider);
+    }
 
-      void onReconcileEvent(Map<String, dynamic> eventData) {
-        final eventCustId = eventData['customer_id']?.toString();
-        if (eventCustId == null || eventCustId == id.toString()) {
-          ref.invalidateSelf();
-        }
-      }
+    pusher.subscribeToChannel('private-customers', onReconcileEvent);
+    pusher.subscribeToChannel('private-orders', onReconcileEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
 
-      pusher.subscribeToChannel('private-customers', onReconcileEvent);
-      pusher.subscribeToChannel('private-orders', onReconcileEvent);
-      final reconnectSub = pusher.onReconnected.listen((_) {
-        ref.invalidateSelf();
-      });
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-customers', onReconcileEvent);
+      pusher.unsubscribeFromChannel('private-orders', onReconcileEvent);
+    });
 
-      ref.onDispose(() {
-        reconnectSub.cancel();
-        pusher.unsubscribeFromChannel('private-customers', onReconcileEvent);
-        pusher.unsubscribeFromChannel('private-orders', onReconcileEvent);
-      });
+    return _fetchReconciliation(api, arg);
+  }
 
-      try {
-        final response = await api.client.get('/customers/$id/reconcile');
-        if (response.statusCode == 200) {
-          final resData = response.data;
-          if (resData is! Map || resData['data'] is! Map) {
-            throw FormatException(
-              'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed reconciliation response)',
-            );
-          }
-          return CustomerReconciliationModel.fromJson(
-            Map<String, dynamic>.from(resData['data']),
+  Future<CustomerReconciliationModel> _fetchReconciliation(
+    ApiClient api,
+    int id,
+  ) async {
+    try {
+      final response = await api.client.get('/customers/$id/reconcile');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed reconciliation response)',
           );
         }
-        throw Exception('Failed to fetch reconciliation report');
-      } catch (e) {
-        throw Exception(api.parseError(e));
+        return CustomerReconciliationModel.fromJson(
+          Map<String, dynamic>.from(resData['data']),
+        );
       }
-    });
+      throw Exception('Failed to fetch reconciliation report');
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchReconciliation(api, arg);
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current reconciliation view on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final customerReconciliationProvider = AsyncNotifierProvider.family<
+    CustomerReconciliationNotifier, CustomerReconciliationModel, int>(
+  CustomerReconciliationNotifier.new,
+);
 
 class CustomerLedgerNotifier
     extends FamilyAsyncNotifier<List<CustomerLedgerModel>, Map<String, dynamic>> {
@@ -771,7 +810,13 @@ class CustomerActions {
         );
 
         await refreshSingleCustomerEverywhere(id);
-        ref.invalidate(customerReconciliationProvider(id));
+        if (ref.exists(customerReconciliationProvider(id))) {
+          unawaited(
+            ref
+                .read(customerReconciliationProvider(id).notifier)
+                .refreshSilently(),
+          );
+        }
         unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
 
         return result;
@@ -841,7 +886,9 @@ class CustomerActions {
       if (response.statusCode == 200 || response.statusCode == 201) {
         await refreshSingleCustomerEverywhere(customerId);
         unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
-        ref.invalidate(dashboardProvider);
+        if (ref.exists(dashboardProvider)) {
+          unawaited(ref.read(dashboardProvider.notifier).refreshSilently());
+        }
         return;
       }
       throw FormatException('داتای وەڵامدانەوەی سێرڤەر نادروستە');

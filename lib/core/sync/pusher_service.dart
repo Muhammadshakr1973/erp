@@ -26,6 +26,7 @@ class PusherService {
 
   String? _serverKey;
   String? _serverCluster;
+  String? _serverConfigBaseUrl;
   Future<void>? _fetchFuture;
   Future<void>? _initFuture;
 
@@ -35,6 +36,7 @@ class PusherService {
   StreamSubscription<void>? _wsCloseSub;
   Future<void>? _wsConnectFuture;
   String? _wsSocketId;
+  DateTime _lastWsMessageAt = DateTime.now();
   Timer? _wsPingTimer;
   Timer? _wsReconnectTimer;
   Timer? _initRetryTimer;
@@ -60,6 +62,12 @@ class PusherService {
       defaultTargetPlatform == TargetPlatform.macOS;
 
   Future<void> _fetchPusherConfig() async {
+    final currentBaseUrl = ApiClient.baseUrl;
+    if (_serverConfigBaseUrl != null && _serverConfigBaseUrl != currentBaseUrl) {
+      _serverKey = null;
+      _serverCluster = null;
+    }
+
     if (_serverKey != null &&
         _serverKey!.isNotEmpty &&
         _serverCluster != null &&
@@ -88,14 +96,17 @@ class PusherService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final cachedBaseUrl = prefs.getString('pusher_server_base_url')?.trim();
       final cachedKey = prefs.getString('pusher_server_key')?.trim();
       final cachedCluster = prefs.getString('pusher_server_cluster')?.trim();
-      if (cachedKey != null &&
+      if ((cachedBaseUrl == null || cachedBaseUrl == currentBaseUrl) &&
+          cachedKey != null &&
           cachedKey.isNotEmpty &&
           cachedCluster != null &&
           cachedCluster.isNotEmpty) {
         _serverKey = cachedKey;
         _serverCluster = cachedCluster;
+        _serverConfigBaseUrl = currentBaseUrl;
         debugPrint("Pusher config loaded from local cache fallback: key=$_serverKey");
       }
     } catch (_) {}
@@ -110,8 +121,9 @@ class PusherService {
         return;
       }
 
+      final requestBaseUrl = ApiClient.baseUrl;
       final response = await Dio().get(
-        '${ApiClient.baseUrl}/broadcasting/config',
+        '$requestBaseUrl/broadcasting/config',
         options: Options(
           headers: {
             'Accept': 'application/json',
@@ -131,11 +143,13 @@ class PusherService {
             cluster.isNotEmpty) {
           _serverKey = key;
           _serverCluster = cluster;
+          _serverConfigBaseUrl = requestBaseUrl;
           debugPrint(
             "Pusher Config dynamically loaded from server: key=$_serverKey, cluster=$_serverCluster",
           );
           await prefs.setString('pusher_server_key', key);
           await prefs.setString('pusher_server_cluster', cluster);
+          await prefs.setString('pusher_server_base_url', requestBaseUrl);
         }
       }
     } catch (e) {
@@ -521,6 +535,7 @@ class PusherService {
 
   void _handleWsMessage(String rawMessage) {
     try {
+      _lastWsMessageAt = DateTime.now();
       final decoded = jsonDecode(rawMessage);
       if (decoded is! Map) return;
       final msg = Map<String, dynamic>.from(decoded);
@@ -575,21 +590,22 @@ class PusherService {
         return;
       }
 
+      if (eventName == 'pusher_internal:subscription_succeeded') {
+        if (channelName != null) {
+          _nativelySubscribedChannels.add(channelName);
+          _inFlightSubscriptions.remove(channelName);
+          _channelRetryTimers.remove(channelName)?.cancel();
+          _channelRetryAttempts.remove(channelName);
+        }
+        return;
+      }
+
       if (eventName == 'pusher:subscription_error') {
         debugPrint("Pusher WS Subscription Error for $channelName: $data");
         if (channelName != null) {
           _nativelySubscribedChannels.remove(channelName);
           _inFlightSubscriptions.remove(channelName);
-          if (_listeners.containsKey(channelName) &&
-              (_listeners[channelName]?.isNotEmpty ?? false)) {
-            Future.delayed(const Duration(seconds: 2), () {
-              if (!_manuallyDisconnected &&
-                  _isConnected &&
-                  _listeners.containsKey(channelName)) {
-                unawaited(_ensureChannelSubscribedNatively(channelName));
-              }
-            });
-          }
+          _scheduleChannelRetry(channelName);
         }
         return;
       }
@@ -618,10 +634,18 @@ class PusherService {
   void _startWsPingTimer(int activityTimeoutSeconds) {
     _wsPingTimer?.cancel();
     final intervalSec = (activityTimeoutSeconds ~/ 2).clamp(15, 45);
+    final deadThresholdSec = intervalSec * 2 + 15;
     _wsPingTimer = Timer.periodic(Duration(seconds: intervalSec), (_) {
-      if (_isConnected && _wsTransport != null) {
-        _wsTransport?.send(jsonEncode({'event': 'pusher:ping', 'data': {}}));
+      if (!_isConnected || _wsTransport == null) return;
+      final elapsed = DateTime.now().difference(_lastWsMessageAt).inSeconds;
+      if (elapsed > deadThresholdSec) {
+        debugPrint(
+          "Pusher WS dead connection detected (${elapsed}s without activity); reconnecting...",
+        );
+        _handleWsDisconnected();
+        return;
       }
+      _wsTransport?.send(jsonEncode({'event': 'pusher:ping', 'data': {}}));
     });
   }
 
@@ -706,6 +730,7 @@ class PusherService {
       _usePureDartWs = false;
       _serverKey = null;
       _serverCluster = null;
+      _serverConfigBaseUrl = null;
       _isInitialized = false;
       _fetchFuture = null;
       _initFuture = null;
@@ -714,6 +739,7 @@ class PusherService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('pusher_server_key');
       await prefs.remove('pusher_server_cluster');
+      await prefs.remove('pusher_server_base_url');
 
       debugPrint("Pusher Disconnected and states cleared.");
     } catch (e) {

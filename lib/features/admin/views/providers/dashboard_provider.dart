@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,75 +7,151 @@ import '../../../../core/sync/pusher_service.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../models/dashboard_model.dart';
 
-final FutureProvider<DashboardModel> dashboardProvider =
-    FutureProvider<DashboardModel>((ref) async {
-  final user = ref.watch(authProvider.select((state) => state.user));
-  if (user == null) {
-    throw Exception('بەکارهێنەر لۆگئۆت بووە (User is logged out)');
-  }
-  final role = user.role.toLowerCase();
-  if (role != 'admin' && role != 'owner') {
-    return DashboardModel(
-      monthlySales: 0,
-      monthlyProfit: 0,
-      totalReceivables: 0,
-      totalCustomerDebts: 0,
-      totalPayables: 0,
-      monthlyCollected: 0,
-      deliveredToOffice: 0,
-      lastMonthSales: 0,
-      lastMonthProfit: 0,
-      driversRemainingCash: 0,
-      lastCollectionAmount: 0,
+class DashboardNotifier extends AsyncNotifier<DashboardModel> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
+
+  static DashboardModel _emptyDashboard() => DashboardModel(
+        monthlySales: 0,
+        monthlyProfit: 0,
+        totalReceivables: 0,
+        totalCustomerDebts: 0,
+        totalPayables: 0,
+        monthlyCollected: 0,
+        deliveredToOffice: 0,
+        lastMonthSales: 0,
+        lastMonthProfit: 0,
+        driversRemainingCash: 0,
+        lastCollectionAmount: 0,
+      );
+
+  @override
+  FutureOr<DashboardModel> build() async {
+    final user = ref.watch(authProvider.select((state) => state.user));
+    if (user == null) {
+      throw Exception('بەکارهێنەر لۆگئۆت بووە (User is logged out)');
+    }
+    final role = user.role.toLowerCase();
+    if (role != 'admin' && role != 'owner') {
+      return _emptyDashboard();
+    }
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onRealtimeDashboardEvent(Map<String, dynamic> eventData) {
+      debugPrint(
+        "Pusher: Realtime update received on admin dashboardProvider: $eventData",
+      );
+      unawaited(refreshSilently());
+    }
+
+    pusher.subscribeToChannel('private-orders', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel(
+      'private-delivery-trips',
+      onRealtimeDashboardEvent,
     );
+    pusher.subscribeToChannel('private-customers', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel('private-products', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel('private-commissions', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel('private-suppliers', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel('private-purchases', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel('private-warehouses', onRealtimeDashboardEvent);
+    pusher.subscribeToChannel(
+      'private-stock-transfers',
+      onRealtimeDashboardEvent,
+    );
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-orders', onRealtimeDashboardEvent);
+      pusher.unsubscribeFromChannel(
+        'private-delivery-trips',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-customers',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-products',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-commissions',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-suppliers',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-purchases',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-warehouses',
+        onRealtimeDashboardEvent,
+      );
+      pusher.unsubscribeFromChannel(
+        'private-stock-transfers',
+        onRealtimeDashboardEvent,
+      );
+    });
+
+    return _fetchDashboard(api);
   }
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
 
-  void onRealtimeDashboardEvent(Map<String, dynamic> eventData) {
-    debugPrint("Pusher: Realtime update received on admin dashboardProvider: $eventData");
-    ref.invalidateSelf();
-  }
-
-  pusher.subscribeToChannel('private-orders', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-delivery-trips', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-customers', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-products', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-commissions', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-suppliers', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-purchases', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-warehouses', onRealtimeDashboardEvent);
-  pusher.subscribeToChannel('private-stock-transfers', onRealtimeDashboardEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-orders', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-delivery-trips', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-customers', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-products', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-commissions', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-suppliers', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-purchases', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-warehouses', onRealtimeDashboardEvent);
-    pusher.unsubscribeFromChannel('private-stock-transfers', onRealtimeDashboardEvent);
-  });
-
-  try {
-    final response = await api.client.get('/reports/dashboard');
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      if (resData is! Map || resData['data'] is! Map) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed dashboard response payload)',
+  Future<DashboardModel> _fetchDashboard(ApiClient api) async {
+    try {
+      final response = await api.client.get('/reports/dashboard');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed dashboard response payload)',
+          );
+        }
+        return DashboardModel.fromJson(
+          Map<String, dynamic>.from(resData['data']),
         );
       }
-      return DashboardModel.fromJson(Map<String, dynamic>.from(resData['data']));
+      throw Exception('داتا نەگەڕایەوە');
+    } catch (e) {
+      throw Exception(api.parseError(e));
     }
-    throw Exception('داتا نەگەڕایەوە');
-  } catch (e) {
-    throw Exception(api.parseError(e));
   }
-});
+
+  Future<void> refreshSilently() async {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+    final role = user.role.toLowerCase();
+    if (role != 'admin' && role != 'owner') return;
+
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchDashboard(api);
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current dashboard state on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final dashboardProvider =
+    AsyncNotifierProvider<DashboardNotifier, DashboardModel>(
+      DashboardNotifier.new,
+    );

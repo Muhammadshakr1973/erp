@@ -12,105 +12,186 @@ import '../../products/providers/suppliers_provider.dart';
 import '../models/purchase_requirement_model.dart';
 import '../models/purchase_order_model.dart';
 
-final purchaseRequirementsProvider =
-    FutureProvider<List<PurchaseRequirementModel>>((ref) async {
-      final apiClient = ref.watch(apiClientProvider);
-      final pusher = ref.watch(pusherServiceProvider);
+class PurchaseRequirementsNotifier
+    extends AsyncNotifier<List<PurchaseRequirementModel>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
-      void onRequirementsEvent(Map<String, dynamic> eventData) {
-        debugPrint("Realtime update received for purchaseRequirementsProvider: $eventData");
-        ref.invalidateSelf();
-      }
+  @override
+  FutureOr<List<PurchaseRequirementModel>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+    final apiClient = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-      pusher.subscribeToChannel('private-purchases', onRequirementsEvent);
-      pusher.subscribeToChannel('private-orders', onRequirementsEvent);
-      pusher.subscribeToChannel('private-products', onRequirementsEvent);
-      pusher.subscribeToChannel('private-suppliers', onRequirementsEvent);
-      final reconnectSub = pusher.onReconnected.listen((_) {
-        ref.invalidateSelf();
-      });
+    void onRequirementsEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for purchaseRequirementsProvider: $eventData");
+      unawaited(refreshSilently());
+    }
 
-      ref.onDispose(() {
-        reconnectSub.cancel();
-        pusher.unsubscribeFromChannel('private-purchases', onRequirementsEvent);
-        pusher.unsubscribeFromChannel('private-orders', onRequirementsEvent);
-        pusher.unsubscribeFromChannel('private-products', onRequirementsEvent);
-        pusher.unsubscribeFromChannel('private-suppliers', onRequirementsEvent);
-      });
-
-      try {
-        final response = await apiClient.client.get('/purchase-requirements');
-        final resData = response.data;
-        if (!_isSuccessStatus(response.statusCode)) {
-          throw Exception(
-            apiClient.extractErrorMessage(
-              resData,
-              defaultMsg: 'کێشە لە بارکردنی داواکارییەکانی کڕین',
-            ),
-          );
-        }
-        if (resData is! Map || resData['data'] is! List) {
-          throw FormatException(
-            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase requirements response payload)',
-          );
-        }
-        final List<dynamic> data = resData['data'] as List;
-        return data
-            .whereType<Map>()
-            .map((json) => PurchaseRequirementModel.fromJson(Map<String, dynamic>.from(json)))
-            .toList();
-      } catch (e) {
-        throw Exception(apiClient.parseError(e));
-      }
+    pusher.subscribeToChannel('private-purchases', onRequirementsEvent);
+    pusher.subscribeToChannel('private-orders', onRequirementsEvent);
+    pusher.subscribeToChannel('private-products', onRequirementsEvent);
+    pusher.subscribeToChannel('private-suppliers', onRequirementsEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
     });
 
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-purchases', onRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-orders', onRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-products', onRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-suppliers', onRequirementsEvent);
+    });
 
-final purchaseRequirementsGroupProvider = FutureProvider<List<dynamic>>((ref) async {
-  final apiClient = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
-
-  void onGroupedRequirementsEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received for purchaseRequirementsGroupProvider: $eventData");
-    ref.invalidateSelf();
+    return _fetchRequirements(apiClient);
   }
 
-  pusher.subscribeToChannel('private-purchases', onGroupedRequirementsEvent);
-  pusher.subscribeToChannel('private-orders', onGroupedRequirementsEvent);
-  pusher.subscribeToChannel('private-products', onGroupedRequirementsEvent);
-  pusher.subscribeToChannel('private-suppliers', onGroupedRequirementsEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-purchases', onGroupedRequirementsEvent);
-    pusher.unsubscribeFromChannel('private-orders', onGroupedRequirementsEvent);
-    pusher.unsubscribeFromChannel('private-products', onGroupedRequirementsEvent);
-    pusher.unsubscribeFromChannel('private-suppliers', onGroupedRequirementsEvent);
-  });
-
-  try {
-    final response = await apiClient.client.get('/purchase-requirements/group');
-    final resData = response.data;
-    if (!_isSuccessStatus(response.statusCode)) {
-      throw Exception(
-        apiClient.extractErrorMessage(
-          resData,
-          defaultMsg: 'کێشە لە بارکردنی داواکارییە گرووپکراوەکان',
-        ),
-      );
+  Future<List<PurchaseRequirementModel>> _fetchRequirements(
+    ApiClient apiClient,
+  ) async {
+    try {
+      final response = await apiClient.client.get('/purchase-requirements');
+      final resData = response.data;
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            resData,
+            defaultMsg: 'کێشە لە بارکردنی داواکارییەکانی کڕین',
+          ),
+        );
+      }
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed purchase requirements response payload)',
+        );
+      }
+      final List<dynamic> data = resData['data'] as List;
+      return data
+          .whereType<Map>()
+          .map((json) => PurchaseRequirementModel.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
     }
-    if (resData is! Map || resData['data'] is! List) {
-      throw FormatException(
-        'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed grouped purchase requirements response payload)',
-      );
-    }
-    return resData['data'] as List<dynamic>;
-  } catch (e) {
-    throw Exception(apiClient.parseError(e));
   }
-});
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final fresh = await _fetchRequirements(apiClient);
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final purchaseRequirementsProvider = AsyncNotifierProvider<
+    PurchaseRequirementsNotifier, List<PurchaseRequirementModel>>(
+  PurchaseRequirementsNotifier.new,
+);
+
+class PurchaseRequirementsGroupNotifier extends AsyncNotifier<List<dynamic>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
+
+  @override
+  FutureOr<List<dynamic>> build() async {
+    final userId = ref.watch(authProvider.select((state) => state.user?.id));
+    if (userId == null) return const [];
+    final apiClient = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onGroupedRequirementsEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for purchaseRequirementsGroupProvider: $eventData");
+      unawaited(refreshSilently());
+    }
+
+    pusher.subscribeToChannel('private-purchases', onGroupedRequirementsEvent);
+    pusher.subscribeToChannel('private-orders', onGroupedRequirementsEvent);
+    pusher.subscribeToChannel('private-products', onGroupedRequirementsEvent);
+    pusher.subscribeToChannel('private-suppliers', onGroupedRequirementsEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-purchases', onGroupedRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-orders', onGroupedRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-products', onGroupedRequirementsEvent);
+      pusher.unsubscribeFromChannel('private-suppliers', onGroupedRequirementsEvent);
+    });
+
+    return _fetchGrouped(apiClient);
+  }
+
+  Future<List<dynamic>> _fetchGrouped(ApiClient apiClient) async {
+    try {
+      final response = await apiClient.client.get('/purchase-requirements/group');
+      final resData = response.data;
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw Exception(
+          apiClient.extractErrorMessage(
+            resData,
+            defaultMsg: 'کێشە لە بارکردنی داواکارییە گرووپکراوەکان',
+          ),
+        );
+      }
+      if (resData is! Map || resData['data'] is! List) {
+        throw FormatException(
+          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed grouped purchase requirements response payload)',
+        );
+      }
+      return resData['data'] as List<dynamic>;
+    } catch (e) {
+      throw Exception(apiClient.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final fresh = await _fetchGrouped(apiClient);
+      final current = state.valueOrNull;
+      if (current != null && jsonEncode(current) == jsonEncode(fresh)) {
+        return;
+      }
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current grouped list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final purchaseRequirementsGroupProvider =
+    AsyncNotifierProvider<PurchaseRequirementsGroupNotifier, List<dynamic>>(
+  PurchaseRequirementsGroupNotifier.new,
+);
 
 class PurchaseOrdersNotifier extends AsyncNotifier<List<PurchaseOrderModel>> {
   final Map<int, PurchaseOrderModel> _localOrders = {};
@@ -289,12 +370,18 @@ class PurchaseActions {
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
       if (refreshRelatedProviders) {
-        _ref.invalidate(purchaseRequirementsProvider);
-        _ref.invalidate(purchaseRequirementsGroupProvider);
+        if (_ref.exists(purchaseRequirementsProvider)) {
+          unawaited(_ref.read(purchaseRequirementsProvider.notifier).refreshSilently());
+        }
+        if (_ref.exists(purchaseRequirementsGroupProvider)) {
+          unawaited(_ref.read(purchaseRequirementsGroupProvider.notifier).refreshSilently());
+        }
         unawaited(
           _ref.read(productsListProvider.notifier).refreshProductsSilently(),
         );
-        _ref.invalidate(suppliersListProvider);
+        if (_ref.exists(suppliersListProvider)) {
+          unawaited(_ref.read(suppliersListProvider.notifier).refreshSilently());
+        }
       }
 
       return order;
@@ -339,12 +426,18 @@ class PurchaseActions {
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
 
       if (refreshRelatedProviders) {
-        _ref.invalidate(purchaseRequirementsProvider);
-        _ref.invalidate(purchaseRequirementsGroupProvider);
+        if (_ref.exists(purchaseRequirementsProvider)) {
+          unawaited(_ref.read(purchaseRequirementsProvider.notifier).refreshSilently());
+        }
+        if (_ref.exists(purchaseRequirementsGroupProvider)) {
+          unawaited(_ref.read(purchaseRequirementsGroupProvider.notifier).refreshSilently());
+        }
         unawaited(
           _ref.read(productsListProvider.notifier).refreshProductsSilently(),
         );
-        _ref.invalidate(suppliersListProvider);
+        if (_ref.exists(suppliersListProvider)) {
+          unawaited(_ref.read(suppliersListProvider.notifier).refreshSilently());
+        }
       }
 
       return order;
@@ -366,7 +459,9 @@ class PurchaseActions {
         );
       }
       _ref.read(purchaseOrdersProvider.notifier).removeOrderLocally(orderId);
-      _ref.invalidate(purchaseRequirementsProvider);
+      if (_ref.exists(purchaseRequirementsProvider)) {
+        unawaited(_ref.read(purchaseRequirementsProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -431,8 +526,12 @@ class PurchaseActions {
               ),
             );
       }
-      _ref.invalidate(purchaseRequirementsProvider);
-      _ref.invalidate(purchaseRequirementsGroupProvider);
+      if (_ref.exists(purchaseRequirementsProvider)) {
+        unawaited(_ref.read(purchaseRequirementsProvider.notifier).refreshSilently());
+      }
+      if (_ref.exists(purchaseRequirementsGroupProvider)) {
+        unawaited(_ref.read(purchaseRequirementsGroupProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }
@@ -518,7 +617,9 @@ class PurchaseActions {
         defaultError: 'کێشە لە خوێندنەوەی پسوڵەی هەڵوەشاوە',
       );
       _ref.read(purchaseOrdersProvider.notifier).upsertOrderLocally(order);
-      _ref.invalidate(purchaseRequirementsProvider);
+      if (_ref.exists(purchaseRequirementsProvider)) {
+        unawaited(_ref.read(purchaseRequirementsProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(apiClient.parseError(e));
     }

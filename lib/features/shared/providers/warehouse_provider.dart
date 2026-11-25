@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -106,49 +108,114 @@ class WarehouseModel {
   }
 }
 
-final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
-  // Watch authProvider so that when a user logs in, logs out, or user details update,
-  // the warehouse cache is automatically refreshed with the correct permissions.
-  final authState = ref.watch(authProvider);
-  if (authState.user == null) return const [];
+class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+  @override
+  FutureOr<List<WarehouseModel>> build() async {
+    // Watch authProvider so that when a user logs in, logs out, or user details update,
+    // the warehouse cache is automatically refreshed with the correct permissions.
+    final authState = ref.watch(authProvider);
+    if (authState.user == null) return const [];
 
-  void onWarehouseEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received for warehouseListProvider: $eventData");
-    ref.invalidateSelf();
-  }
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
 
-  pusher.subscribeToChannel('private-warehouses', onWarehouseEvent);
-  pusher.subscribeToChannel('private-users', onWarehouseEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-warehouses', onWarehouseEvent);
-    pusher.unsubscribeFromChannel('private-users', onWarehouseEvent);
-  });
-
-  try {
-    final response = await api.client.get('/warehouses');
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      if (resData is! Map || resData['data'] is! List) {
-        throw const FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed warehouse response payload)',
-        );
+    void onWarehouseEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for warehouseListProvider: $eventData");
+      final eventType = eventData['event_type']?.toString();
+      final warehouseId =
+          int.tryParse(eventData['warehouse_id']?.toString() ?? '');
+      if (eventType == 'delete' && warehouseId != null && warehouseId > 0) {
+        removeWarehouseLocally(warehouseId);
+        return;
       }
-      final List data = resData['data'] as List;
-      return data.map((json) => WarehouseModel.fromJson(json)).toList();
+      unawaited(refreshSilently());
     }
-    throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە: ${response.statusCode}');
-  } catch (e) {
-    throw Exception(api.parseError(e));
+
+    pusher.subscribeToChannel('private-warehouses', onWarehouseEvent);
+    pusher.subscribeToChannel('private-users', onWarehouseEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-warehouses', onWarehouseEvent);
+      pusher.unsubscribeFromChannel('private-users', onWarehouseEvent);
+    });
+
+    return _fetchWarehouses(api);
   }
-});
+
+  Future<List<WarehouseModel>> _fetchWarehouses(ApiClient api) async {
+    try {
+      final response = await api.client.get('/warehouses');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! List) {
+          throw const FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed warehouse response payload)',
+          );
+        }
+        final List data = resData['data'] as List;
+        return data.map((json) => WarehouseModel.fromJson(json)).toList();
+      }
+      throw Exception('سێرڤەر کۆدی نادروستی گەڕاندەوە: ${response.statusCode}');
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchWarehouses(api);
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current warehouse list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+
+  void upsertWarehouseLocally(WarehouseModel warehouse) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final idx = current.indexWhere((w) => w.id == warehouse.id);
+    final updated = List<WarehouseModel>.from(current);
+    if (idx != -1) {
+      updated[idx] = warehouse;
+    } else {
+      updated.add(warehouse);
+    }
+    state = AsyncData(updated);
+  }
+
+  void removeWarehouseLocally(int warehouseId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final filtered = current.where((w) => w.id != warehouseId).toList();
+    if (filtered.length != current.length) {
+      state = AsyncData(filtered);
+    }
+  }
+}
+
+final warehouseListProvider =
+    AsyncNotifierProvider<WarehouseListNotifier, List<WarehouseModel>>(
+  WarehouseListNotifier.new,
+);
 
 /// Returns the assigned cash van warehouse for the currently logged-in salesman
 final myAssignedVanWarehouseProvider = Provider<WarehouseModel?>((ref) {
@@ -198,8 +265,13 @@ class WarehouseAdminActions {
           if (salesmanIds != null) 'salesman_ids': salesmanIds,
         },
       );
-      ref.invalidate(warehouseListProvider);
-      return WarehouseModel.fromJson(response.data['data']);
+      final created = WarehouseModel.fromJson(response.data['data']);
+      if (ref.exists(warehouseListProvider)) {
+        ref
+            .read(warehouseListProvider.notifier)
+            .upsertWarehouseLocally(created);
+      }
+      return created;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -230,8 +302,13 @@ class WarehouseAdminActions {
           'salesman_ids': salesmanIds ?? [],
         },
       );
-      ref.invalidate(warehouseListProvider);
-      return WarehouseModel.fromJson(response.data['data']);
+      final updated = WarehouseModel.fromJson(response.data['data']);
+      if (ref.exists(warehouseListProvider)) {
+        ref
+            .read(warehouseListProvider.notifier)
+            .upsertWarehouseLocally(updated);
+      }
+      return updated;
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -240,7 +317,9 @@ class WarehouseAdminActions {
   Future<void> deleteWarehouse(int id) async {
     try {
       await api.client.delete('/warehouses/$id');
-      ref.invalidate(warehouseListProvider);
+      if (ref.exists(warehouseListProvider)) {
+        ref.read(warehouseListProvider.notifier).removeWarehouseLocally(id);
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }

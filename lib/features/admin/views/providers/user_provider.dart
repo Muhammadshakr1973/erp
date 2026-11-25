@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,66 +7,107 @@ import '../../../../core/sync/pusher_service.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/auth_provider.dart';
 
-final userAdminProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final user = ref.watch(authProvider.select((state) => state.user));
-  if (user == null) {
-    return {'users': <UserModel>[], 'roles': []};
-  }
-  final role = user.role.toLowerCase();
-  if (role != 'admin' && role != 'owner') {
-    return {'users': <UserModel>[], 'roles': []};
-  }
-  final api = ref.watch(apiClientProvider);
-  final pusher = ref.watch(pusherServiceProvider);
+class UserAdminNotifier extends AsyncNotifier<Map<String, dynamic>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
 
-  void onUsersEvent(Map<String, dynamic> eventData) {
-    debugPrint("Realtime update received for userAdminProvider: $eventData");
-    ref.invalidateSelf();
-  }
-
-  pusher.subscribeToChannel('private-users', onUsersEvent);
-  pusher.subscribeToChannel('private-routes', onUsersEvent);
-  pusher.subscribeToChannel('private-warehouses', onUsersEvent);
-  final reconnectSub = pusher.onReconnected.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(() {
-    reconnectSub.cancel();
-    pusher.unsubscribeFromChannel('private-users', onUsersEvent);
-    pusher.unsubscribeFromChannel('private-routes', onUsersEvent);
-    pusher.unsubscribeFromChannel('private-warehouses', onUsersEvent);
-  });
-
-  try {
-    final response = await api.client.get('/users');
-    if (response.statusCode == 200) {
-      final resData = response.data;
-      if (resData is! Map || resData['data'] is! Map) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed user admin response payload)',
-        );
-      }
-      final rawData = resData['data'] as Map;
-      if (rawData['users'] is! List || rawData['roles'] is! List) {
-        throw FormatException(
-          'داتای وەڵامدانەوەی سێرڤەر نادروستە (Users or roles list missing or malformed)',
-        );
-      }
-      final List usersList = rawData['users'] as List;
-      final List rolesList = rawData['roles'] as List;
-      return {
-        'users': usersList.map((json) => UserModel.fromJson(json)).toList(),
-        'roles': rolesList, // e.g. [{id: 1, name: "owner", display_name: "خاوەن کار"}, ...]
-      };
+  @override
+  FutureOr<Map<String, dynamic>> build() async {
+    final user = ref.watch(authProvider.select((state) => state.user));
+    if (user == null) {
+      return {'users': <UserModel>[], 'roles': []};
     }
-    throw Exception(
-      'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
-    );
-  } catch (e) {
-    throw Exception(api.parseError(e));
+    final role = user.role.toLowerCase();
+    if (role != 'admin' && role != 'owner') {
+      return {'users': <UserModel>[], 'roles': []};
+    }
+    final api = ref.watch(apiClientProvider);
+    final pusher = ref.watch(pusherServiceProvider);
+
+    void onUsersEvent(Map<String, dynamic> eventData) {
+      debugPrint("Realtime update received for userAdminProvider: $eventData");
+      unawaited(refreshSilently());
+    }
+
+    pusher.subscribeToChannel('private-users', onUsersEvent);
+    pusher.subscribeToChannel('private-routes', onUsersEvent);
+    pusher.subscribeToChannel('private-warehouses', onUsersEvent);
+    final reconnectSub = pusher.onReconnected.listen((_) {
+      unawaited(refreshSilently());
+    });
+
+    ref.onDispose(() {
+      reconnectSub.cancel();
+      pusher.unsubscribeFromChannel('private-users', onUsersEvent);
+      pusher.unsubscribeFromChannel('private-routes', onUsersEvent);
+      pusher.unsubscribeFromChannel('private-warehouses', onUsersEvent);
+    });
+
+    return _fetchUsersAndRoles(api);
   }
-});
+
+  Future<Map<String, dynamic>> _fetchUsersAndRoles(ApiClient api) async {
+    try {
+      final response = await api.client.get('/users');
+      if (response.statusCode == 200) {
+        final resData = response.data;
+        if (resData is! Map || resData['data'] is! Map) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed user admin response payload)',
+          );
+        }
+        final rawData = resData['data'] as Map;
+        if (rawData['users'] is! List || rawData['roles'] is! List) {
+          throw FormatException(
+            'داتای وەڵامدانەوەی سێرڤەر نادروستە (Users or roles list missing or malformed)',
+          );
+        }
+        final List usersList = rawData['users'] as List;
+        final List rolesList = rawData['roles'] as List;
+        return {
+          'users': usersList.map((json) => UserModel.fromJson(json)).toList(),
+          'roles': rolesList,
+        };
+      }
+      throw Exception(
+        'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
+      );
+    } catch (e) {
+      throw Exception(api.parseError(e));
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+    final role = user.role.toLowerCase();
+    if (role != 'admin' && role != 'owner') return;
+
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
+    try {
+      final api = ref.read(apiClientProvider);
+      final fresh = await _fetchUsersAndRoles(api);
+      state = AsyncData(fresh);
+    } catch (_) {
+      // Preserve current user list on transient errors
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
+    }
+  }
+}
+
+final userAdminProvider =
+    AsyncNotifierProvider<UserAdminNotifier, Map<String, dynamic>>(
+      UserAdminNotifier.new,
+    );
 
 final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
   final userData = await ref.watch(userAdminProvider.future);
@@ -74,25 +116,35 @@ final salesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
   return allUsers.where((u) => u.role.toLowerCase() == 'salesman').toList();
 });
 
-final warehouseKeepersListProvider = FutureProvider<List<UserModel>>((ref) async {
+final warehouseKeepersListProvider = FutureProvider<List<UserModel>>((
+  ref,
+) async {
   final userData = await ref.watch(userAdminProvider.future);
   final List<UserModel> allUsers =
       (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
   return allUsers.where((u) => u.role.toLowerCase() == 'warehouse').toList();
 });
 
-final cashVanSalesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
+final cashVanSalesmenListProvider = FutureProvider<List<UserModel>>((
+  ref,
+) async {
   final userData = await ref.watch(userAdminProvider.future);
   final List<UserModel> allUsers =
       (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
-  return allUsers.where((u) => u.role.toLowerCase() == 'salesman' && u.isCashVan).toList();
+  return allUsers
+      .where((u) => u.role.toLowerCase() == 'salesman' && u.isCashVan)
+      .toList();
 });
 
-final presellSalesmenListProvider = FutureProvider<List<UserModel>>((ref) async {
+final presellSalesmenListProvider = FutureProvider<List<UserModel>>((
+  ref,
+) async {
   final userData = await ref.watch(userAdminProvider.future);
   final List<UserModel> allUsers =
       (userData['users'] as List<dynamic>?)?.cast<UserModel>() ?? [];
-  return allUsers.where((u) => u.role.toLowerCase() == 'salesman' && !u.isCashVan).toList();
+  return allUsers
+      .where((u) => u.role.toLowerCase() == 'salesman' && !u.isCashVan)
+      .toList();
 });
 
 final userActionsProvider = Provider<UserActions>((ref) {
@@ -141,9 +193,16 @@ class UserActions {
         },
       );
       if (response.statusCode != null && response.statusCode! >= 400) {
-        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+        throw Exception(
+          api.extractErrorMessage(
+            response.data,
+            defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە',
+          ),
+        );
       }
-      ref.invalidate(userAdminProvider);
+      if (ref.exists(userAdminProvider)) {
+        unawaited(ref.read(userAdminProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -185,9 +244,16 @@ class UserActions {
         },
       );
       if (response.statusCode != null && response.statusCode! >= 400) {
-        throw Exception(api.extractErrorMessage(response.data, defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە'));
+        throw Exception(
+          api.extractErrorMessage(
+            response.data,
+            defaultMsg: 'کێشەیەک لە زانیارییەکاندا هەیە',
+          ),
+        );
       }
-      ref.invalidate(userAdminProvider);
+      if (ref.exists(userAdminProvider)) {
+        unawaited(ref.read(userAdminProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }
@@ -196,7 +262,9 @@ class UserActions {
   Future<void> deleteUser(int id) async {
     try {
       await api.client.delete('/users/$id');
-      ref.invalidate(userAdminProvider);
+      if (ref.exists(userAdminProvider)) {
+        unawaited(ref.read(userAdminProvider.notifier).refreshSilently());
+      }
     } catch (e) {
       throw Exception(api.parseError(e));
     }

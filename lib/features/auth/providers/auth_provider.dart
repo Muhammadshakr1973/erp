@@ -148,7 +148,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     state = state.copyWith(isLoading: true);
     try {
-      ref.read(pusherServiceProvider).disconnect();
+      await ref.read(pusherServiceProvider).disconnect();
     } catch (_) {}
 
     try {

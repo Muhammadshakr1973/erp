@@ -180,21 +180,41 @@ class NotificationsNotifier
         unawaited(_ref.read(ordersListProvider.notifier).refreshSilently());
       }
 
-      _ref.invalidate(ordersToPackProvider);
-      _ref.invalidate(warehouseDashboardProvider);
+      if (_ref.exists(ordersToPackProvider)) {
+        unawaited(_ref.read(ordersToPackProvider.notifier).refreshSilently());
+      }
+      if (_ref.exists(warehouseDashboardProvider)) {
+        unawaited(
+          _ref.read(warehouseDashboardProvider.notifier).refreshSilently(),
+        );
+      }
       unawaited(
         _ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
       );
-      _ref.invalidate(dashboardProvider);
-      _ref.invalidate(driverTripsProvider);
+      if (_ref.exists(dashboardProvider)) {
+        unawaited(_ref.read(dashboardProvider.notifier).refreshSilently());
+      }
+      if (_ref.exists(driverTripsProvider)) {
+        unawaited(_ref.read(driverTripsProvider.notifier).refreshSilently());
+      }
     } else if (lowerType == 'payment') {
-      _ref.invalidate(dashboardProvider);
+      if (_ref.exists(dashboardProvider)) {
+        unawaited(_ref.read(dashboardProvider.notifier).refreshSilently());
+      }
       unawaited(
         _ref.read(salesmanDashboardProvider.notifier).refreshSilently(),
       );
     } else if (lowerType == 'stock') {
-      _ref.invalidate(warehouseStocksProvider);
-      _ref.invalidate(warehouseDashboardProvider);
+      if (_ref.exists(warehouseStocksProvider)) {
+        unawaited(
+          _ref.read(warehouseStocksProvider.notifier).refreshSilently(),
+        );
+      }
+      if (_ref.exists(warehouseDashboardProvider)) {
+        unawaited(
+          _ref.read(warehouseDashboardProvider.notifier).refreshSilently(),
+        );
+      }
     }
   }
 
