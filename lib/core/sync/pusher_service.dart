@@ -254,7 +254,8 @@ class PusherService {
     }
 
     if (_usePureDartWs) {
-      if (!_isConnected || _wsSocketId == null || _wsTransport == null) {
+      final socketIdBeforeAuth = _wsSocketId;
+      if (!_isConnected || socketIdBeforeAuth == null || _wsTransport == null) {
         return;
       }
       _inFlightSubscriptions.add(channelName);
@@ -262,7 +263,15 @@ class PusherService {
         final subData = <String, dynamic>{'channel': channelName};
         if (channelName.startsWith('private-') ||
             channelName.startsWith('presence-')) {
-          final authResult = await _authorizeChannel(channelName, _wsSocketId!);
+          final authResult = await _authorizeChannel(channelName, socketIdBeforeAuth);
+          if (!_isConnected ||
+              _wsTransport == null ||
+              _wsSocketId != socketIdBeforeAuth) {
+            debugPrint(
+              "Pusher WS connection changed during auth for $channelName; skipping stale subscribe.",
+            );
+            return;
+          }
           final auth = authResult?['auth']?.toString();
           if (auth == null || auth.isEmpty) {
             debugPrint(
@@ -277,6 +286,11 @@ class PusherService {
           }
         }
 
+        if (!_isConnected ||
+            _wsTransport == null ||
+            _wsSocketId != socketIdBeforeAuth) {
+          return;
+        }
         _wsTransport?.send(
           jsonEncode({'event': 'pusher:subscribe', 'data': subData}),
         );
@@ -320,10 +334,13 @@ class PusherService {
     if (!_usePureDartWs && _pusher == null) return;
     if (_usePureDartWs && _wsSocketId == null) return;
 
-    for (final channelName in _listeners.keys.toList()) {
-      if ((_listeners[channelName]?.isEmpty ?? true)) continue;
-      await _ensureChannelSubscribedNatively(channelName);
-    }
+    final activeChannels = _listeners.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
+    if (activeChannels.isEmpty) return;
+
+    await Future.wait(activeChannels.map(_ensureChannelSubscribedNatively));
   }
 
   Future<void> init() {

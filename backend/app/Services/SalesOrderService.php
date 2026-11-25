@@ -466,7 +466,11 @@ class SalesOrderService
             return $order;
         });
 
-        event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        try {
+            event(new \App\Events\SalesOrderUpdated($updatedOrder, 'update'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Event broadcast failed for order update: " . $e->getMessage());
+        }
         if ($updatedOrder->status !== SalesOrder::STATUS_DRAFT) {
             $this->dispatchOrderNotification($updatedOrder, $user);
         }

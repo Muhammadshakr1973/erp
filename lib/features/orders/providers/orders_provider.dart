@@ -20,8 +20,11 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   final Set<int> _fetchingOrderIds = {};
   final Set<int> _pendingRefetchOrderIds = {};
   final Map<int, DateTime> _deletedAtByOrderId = {};
+  final Map<int, Timer> _retryTimers = {};
+  final Map<int, int> _retryAttempts = {};
   bool _isRefreshingAll = false;
   bool _pendingRefreshAll = false;
+  bool _disposed = false;
 
   void _pruneDeletedCache() {
     if (_deletedAtByOrderId.isEmpty) return;
@@ -80,7 +83,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       },
     );
 
+    _disposed = false;
     ref.onDispose(() {
+      _disposed = true;
+      for (final timer in _retryTimers.values) {
+        timer.cancel();
+      }
+      _retryTimers.clear();
+      _retryAttempts.clear();
       reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
     });
@@ -89,6 +99,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
   }
 
   void _handleOrdersRealtimeEvent(Map<String, dynamic> eventData) {
+    if (_disposed) return;
     final eventType = eventData['event_type']?.toString();
     final orderId = int.tryParse(
       (eventData['sales_order_id'] ?? eventData['order_id'] ?? eventData['id'])
@@ -112,13 +123,62 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     }
 
     final eventStatus = eventData['status']?.toString().toUpperCase();
+    final rawOrder = eventData['order'];
+    if (rawOrder is Map) {
+      try {
+        final patched = OrderModel.fromJson(Map<String, dynamic>.from(rawOrder));
+        if (patched.id > 0) {
+          _pruneDeletedCache();
+          if (_deletedAtByOrderId.containsKey(patched.id) && eventType != 'create') {
+            return;
+          }
+          final user = ref.read(authProvider).user;
+          final currentOrders = state.valueOrNull;
+          if (user != null &&
+              !user.isCustomer &&
+              patched.status.toUpperCase() == OrderModel.statusDraft) {
+            final alreadyExists =
+                currentOrders?.any((o) => o.id == patched.id) ?? false;
+            if (!alreadyExists) return;
+          }
+
+          _retryTimers.remove(patched.id)?.cancel();
+          _retryAttempts.remove(patched.id);
+          upsertOrderLocally(patched);
+          return;
+        }
+      } catch (e) {
+        debugPrint("Realtime order patch parse fallback to refetch: $e");
+      }
+    }
+
     unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
+  }
+
+  void _scheduleSingleOrderRetry(int orderId, {String? eventStatus}) {
+    if (_disposed) return;
+    _pruneDeletedCache();
+    if (_deletedAtByOrderId.containsKey(orderId)) return;
+
+    final attempt = (_retryAttempts[orderId] ?? 0) + 1;
+    if (attempt > 2) {
+      _retryAttempts.remove(orderId);
+      return;
+    }
+    _retryAttempts[orderId] = attempt;
+    _retryTimers.remove(orderId)?.cancel();
+    _retryTimers[orderId] = Timer(Duration(seconds: attempt), () {
+      _retryTimers.remove(orderId);
+      if (_disposed || _deletedAtByOrderId.containsKey(orderId)) return;
+      unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
+    });
   }
 
   Future<void> _fetchAndPatchSingleOrder(
     int orderId, {
     String? eventStatus,
   }) async {
+    if (_disposed) return;
     if (_fetchingOrderIds.contains(orderId)) {
       _pendingRefetchOrderIds.add(orderId);
       return;
@@ -127,8 +187,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     final fetchStartedAt = DateTime.now();
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.client.get('/orders/$orderId');
-      if (_wasDeletedSince(orderId, fetchStartedAt)) {
+      final response = await api.client.get(
+        '/orders/$orderId',
+        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+        options: Options(
+          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+        ),
+      );
+      if (_disposed || _wasDeletedSince(orderId, fetchStartedAt)) {
         return;
       }
       if (response.statusCode == 200) {
@@ -148,11 +214,16 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
           if (!alreadyExists) return;
         }
 
+        _retryTimers.remove(orderId)?.cancel();
+        _retryAttempts.remove(orderId);
         upsertOrderLocally(fetched);
       }
     } on DioException catch (e) {
+      if (_disposed) return;
       final code = e.response?.statusCode;
       if (code == 403 || code == 404) {
+        _retryTimers.remove(orderId)?.cancel();
+        _retryAttempts.remove(orderId);
         final user = ref.read(authProvider).user;
         // Drivers get 403 on /orders/{id} for unassigned READY orders; refresh silently in that edge case
         if (code == 403 &&
@@ -169,12 +240,14 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
                 .setOrderLocally(null);
           }
         }
+      } else {
+        _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
       }
     } catch (_) {
-      // Ignore transient errors silently
+      _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
     } finally {
       _fetchingOrderIds.remove(orderId);
-      if (_pendingRefetchOrderIds.remove(orderId)) {
+      if (!_disposed && _pendingRefetchOrderIds.remove(orderId)) {
         unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
       }
     }
@@ -187,7 +260,13 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
 
   Future<List<OrderModel>> _fetchOrders(ApiClient api) async {
     final fetchStartedAt = DateTime.now();
-    final response = await api.client.get('/orders');
+    final response = await api.client.get(
+      '/orders',
+      queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+      options: Options(
+        headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+      ),
+    );
     if (response.statusCode == 200) {
       final resData = response.data['data'] ?? response.data;
       if (resData is! List) {
@@ -346,12 +425,37 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     }
   }
 
+  OrderModel _preserveExistingCustomerExtras(
+    OrderModel? existing,
+    OrderModel incoming,
+  ) {
+    if (existing == null ||
+        existing.customerId != incoming.customerId ||
+        existing.customer is! Map ||
+        incoming.customer is! Map) {
+      return incoming;
+    }
+    final existingCust = existing.customer as Map;
+    final incomingCust = Map<String, dynamic>.from(incoming.customer as Map);
+    if (!incomingCust.containsKey('special_prices') &&
+        existingCust.containsKey('special_prices')) {
+      incomingCust['special_prices'] = existingCust['special_prices'];
+    }
+    if (!incomingCust.containsKey('specialPrices') &&
+        existingCust.containsKey('specialPrices')) {
+      incomingCust['specialPrices'] = existingCust['specialPrices'];
+    }
+    return incoming.copyWith(customer: incomingCust);
+  }
+
   void removeOrderLocally(String orderId) {
     final parsedId = int.tryParse(orderId);
     if (parsedId != null && parsedId > 0) {
       _pruneDeletedCache();
       _deletedAtByOrderId[parsedId] = DateTime.now();
       _pendingRefetchOrderIds.remove(parsedId);
+      _retryTimers.remove(parsedId)?.cancel();
+      _retryAttempts.remove(parsedId);
     }
 
     final currentOrders = state.valueOrNull;
@@ -382,36 +486,61 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     }
   }
 
-  void upsertOrderLocally(OrderModel newOrder) {
-    final singleKey = newOrder.id.toString();
+  void upsertOrderLocally(
+    OrderModel newOrder, {
+    bool allowVersionDowngrade = false,
+  }) {
+    final currentOrders = state.valueOrNull;
+    final existingIndex = currentOrders != null
+        ? currentOrders.indexWhere((o) => o.id == newOrder.id)
+        : -1;
+    final existingInList =
+        existingIndex != -1 ? currentOrders![existingIndex] : null;
+
+    if (existingInList != null &&
+        !allowVersionDowngrade &&
+        newOrder.version < existingInList.version &&
+        !newOrder.isTerminal) {
+      return;
+    }
+
+    final resolvedOrder = _preserveExistingCustomerExtras(existingInList, newOrder);
+
+    final singleKey = resolvedOrder.id.toString();
     if (ref.exists(singleOrderProvider(singleKey))) {
       final existingSingle = ref
           .read(singleOrderProvider(singleKey))
           .valueOrNull;
-      if (existingSingle == null || !_sameOrderData(existingSingle, newOrder)) {
+      final singleResolved = _preserveExistingCustomerExtras(
+        existingSingle,
+        resolvedOrder,
+      );
+      if (existingSingle == null ||
+          (!_sameOrderData(existingSingle, singleResolved) &&
+              (allowVersionDowngrade ||
+                  singleResolved.version >= existingSingle.version ||
+                  singleResolved.isTerminal))) {
         ref
             .read(singleOrderProvider(singleKey).notifier)
-            .setOrderLocally(newOrder);
+            .setOrderLocally(singleResolved);
       }
     }
 
-    final currentOrders = state.valueOrNull;
     if (currentOrders == null) {
-      state = AsyncData([newOrder]);
+      state = AsyncData([resolvedOrder]);
       return;
     }
 
-    final existingIndex = currentOrders.indexWhere((o) => o.id == newOrder.id);
     if (existingIndex != -1 &&
-        _sameOrderData(currentOrders[existingIndex], newOrder)) {
+        _sameOrderData(currentOrders[existingIndex], resolvedOrder)) {
       return;
     }
 
     final updated = List<OrderModel>.from(currentOrders);
     if (existingIndex != -1) {
-      updated[existingIndex] = newOrder;
+      updated[existingIndex] = resolvedOrder;
     } else {
-      updated.add(newOrder);
+      updated.add(resolvedOrder);
       updated.sort((a, b) {
         final aDate =
             DateTime.tryParse(a.createdAt) ??
@@ -461,6 +590,26 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
           ref.read(ordersListProvider.notifier).removeOrderLocally(arg);
           return;
         }
+        final rawOrder = eventData['order'];
+        if (rawOrder is Map) {
+          try {
+            final patched = OrderModel.fromJson(
+              Map<String, dynamic>.from(rawOrder),
+            );
+            if (patched.id == parsedId) {
+              final existing = state.valueOrNull;
+              if (existing == null ||
+                  patched.version >= existing.version ||
+                  patched.isTerminal) {
+                state = AsyncData(patched);
+                ref
+                    .read(ordersListProvider.notifier)
+                    .upsertOrderLocally(patched);
+              }
+              return;
+            }
+          } catch (_) {}
+        }
         unawaited(refreshSilently());
       }
 
@@ -480,7 +629,13 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
 
   Future<OrderModel?> _fetchSingleOrder(ApiClient api, String orderId) async {
     try {
-      final response = await api.client.get('/orders/$orderId');
+      final response = await api.client.get(
+        '/orders/$orderId',
+        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+        options: Options(
+          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+        ),
+      );
       if (response.statusCode == 200) {
         final data = response.data['data'] ?? response.data;
         if (data is! Map) {

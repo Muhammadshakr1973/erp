@@ -30,25 +30,36 @@ class OrderItemModel {
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
-    final productJson = json['product'] as Map<String, dynamic>?;
+    final rawProduct = json['product'];
+    final productJson = rawProduct is Map<String, dynamic>
+        ? rawProduct
+        : (rawProduct is Map ? Map<String, dynamic>.from(rawProduct) : null);
     final imgPath = productJson != null
         ? (productJson['image_path'] ?? productJson['image_url'] ?? productJson['image'])
         : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
 
     return OrderItemModel(
-      id: json['id'] ?? 0,
-      orderId: json['sales_order_id'] ?? json['order_id'] ?? 0,
-      productId: json['product_id'] ?? 0,
-      productName: json['product'] != null
-          ? (json['product']['name'] ?? 'کاڵا')
-          : (json['product_name'] ?? 'کاڵا'),
+      id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
+      orderId: json['sales_order_id'] is int
+          ? json['sales_order_id']
+          : (int.tryParse((json['sales_order_id'] ?? json['order_id'])?.toString() ?? '0') ?? 0),
+      productId: json['product_id'] is int
+          ? json['product_id']
+          : (int.tryParse(json['product_id']?.toString() ?? '0') ?? 0),
+      productName: productJson != null
+          ? (productJson['name']?.toString() ?? 'کاڵا')
+          : (json['product_name']?.toString() ?? 'کاڵا'),
       quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
       unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
       subtotal: double.tryParse((json['subtotal'] ?? json['total_price'] ?? json['line_total'])?.toString() ?? '0') ?? 0.0,
       isPacked: json['is_packed'] == true || json['is_packed'] == 1,
-      notes: json['notes'],
-      productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
-      unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      notes: json['notes']?.toString(),
+      productUnit: productJson != null
+          ? (productJson['unit']?.toString() ?? 'دانە')
+          : (json['product_unit']?.toString() ?? 'دانە'),
+      unitsPerCarton: productJson != null
+          ? (int.tryParse(productJson['units_per_carton']?.toString() ?? '1') ?? 1)
+          : (int.tryParse(json['units_per_carton']?.toString() ?? '1') ?? 1),
       productImagePath: imgPath?.toString(),
       priceType: json['price_type']?.toString(),
     );
@@ -83,7 +94,10 @@ class OrderReturnItemModel {
   });
 
   factory OrderReturnItemModel.fromJson(Map<String, dynamic> json, {String? generalReason}) {
-    final productJson = json['product'] as Map<String, dynamic>?;
+    final rawProduct = json['product'];
+    final productJson = rawProduct is Map<String, dynamic>
+        ? rawProduct
+        : (rawProduct is Map ? Map<String, dynamic>.from(rawProduct) : null);
     final imgPath = productJson != null
         ? (productJson['image_path'] ?? productJson['image_url'] ?? productJson['image'])
         : (json['product_image_path'] ?? json['image_path'] ?? json['image_url']);
@@ -94,17 +108,25 @@ class OrderReturnItemModel {
 
     return OrderReturnItemModel(
       id: json['id'] is int ? json['id'] : (int.tryParse(json['id']?.toString() ?? '0') ?? 0),
-      orderId: json['sales_order_id'] ?? json['order_id'] ?? 0,
-      productId: json['product_id'] ?? (productJson?['id'] ?? 0),
+      orderId: json['sales_order_id'] is int
+          ? json['sales_order_id']
+          : (int.tryParse((json['sales_order_id'] ?? json['order_id'])?.toString() ?? '0') ?? 0),
+      productId: json['product_id'] is int
+          ? json['product_id']
+          : (int.tryParse((json['product_id'] ?? productJson?['id'])?.toString() ?? '0') ?? 0),
       productName: productJson != null
-          ? (productJson['name'] ?? 'کاڵا')
-          : (json['product_name'] ?? json['name'] ?? 'کاڵا'),
+          ? (productJson['name']?.toString() ?? 'کاڵا')
+          : ((json['product_name'] ?? json['name'])?.toString() ?? 'کاڵا'),
       quantity: qty,
       unitPrice: price,
       subtotal: total,
       reason: json['reason']?.toString() ?? generalReason,
-      productUnit: productJson != null ? (productJson['unit'] ?? 'دانە') : (json['product_unit'] ?? 'دانە'),
-      unitsPerCarton: productJson != null ? (productJson['units_per_carton'] ?? 1) : (json['units_per_carton'] ?? 1),
+      productUnit: productJson != null
+          ? (productJson['unit']?.toString() ?? 'دانە')
+          : (json['product_unit']?.toString() ?? 'دانە'),
+      unitsPerCarton: productJson != null
+          ? (int.tryParse(productJson['units_per_carton']?.toString() ?? '1') ?? 1)
+          : (int.tryParse(json['units_per_carton']?.toString() ?? '1') ?? 1),
       productImagePath: imgPath?.toString(),
     );
   }
@@ -199,17 +221,25 @@ class OrderModel {
     List<OrderItemModel> parsedItems = [];
     if (json['items'] is List) {
       parsedItems = (json['items'] as List)
-          .map((itemJson) => OrderItemModel.fromJson(itemJson))
+          .whereType<Map>()
+          .map(
+            (itemJson) => OrderItemModel.fromJson(
+              itemJson is Map<String, dynamic>
+                  ? itemJson
+                  : Map<String, dynamic>.from(itemJson),
+            ),
+          )
           .toList();
     }
 
     List<OrderReturnItemModel> parsedReturns = [];
     if (json['returned_items'] is List) {
       parsedReturns = (json['returned_items'] as List)
+          .whereType<Map>()
           .map((rJson) => OrderReturnItemModel.fromJson(
                 rJson is Map<String, dynamic>
                     ? rJson
-                    : Map<String, dynamic>.from(rJson as Map),
+                    : Map<String, dynamic>.from(rJson),
               ))
           .toList();
     } else if (json['sales_returns'] is List) {

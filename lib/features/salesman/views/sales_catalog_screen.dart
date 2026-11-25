@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_snackbar.dart';
 import '../../../core/components/app_text_field.dart';
+import '../../../core/sync/pusher_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -52,7 +53,13 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
   bool _isSavingBatch = false;
+  bool _pendingRemoteOrderSync = false;
   int _localMutationSeq = 0;
+
+  // Direct Pusher subscription for currently selected order
+  late final PusherService _pusherService;
+  StreamSubscription<void>? _pusherReconnectSub;
+  int? _subscribedOrderId;
 
   // Track failed actions for persistent retry
   Map<String, dynamic>? _lastFailedBatch;
@@ -60,6 +67,17 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   @override
   void initState() {
     super.initState();
+    _pusherService = ref.read(pusherServiceProvider);
+    _pusherReconnectSub = _pusherService.onReconnected.listen((_) {
+      final activeOrderId = _selectedOrder?.id;
+      if (mounted && activeOrderId != null && activeOrderId > 0) {
+        unawaited(
+          ref
+              .read(ordersListProvider.notifier)
+              .refreshSingleOrder(activeOrderId),
+        );
+      }
+    });
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim().toLowerCase();
@@ -71,8 +89,189 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   void dispose() {
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
+    _pusherReconnectSub?.cancel();
+    if (_subscribedOrderId != null) {
+      unawaited(
+        _pusherService.unsubscribeFromOrder(
+          _subscribedOrderId!,
+          _onActiveOrderEvent,
+        ),
+      );
+      _subscribedOrderId = null;
+    }
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _syncActiveOrderPusherSubscription(int? nextOrderId) {
+    final normalizedNext =
+        (nextOrderId != null && nextOrderId > 0) ? nextOrderId : null;
+    if (_subscribedOrderId == normalizedNext) return;
+
+    if (_subscribedOrderId != null) {
+      unawaited(
+        _pusherService.unsubscribeFromOrder(
+          _subscribedOrderId!,
+          _onActiveOrderEvent,
+        ),
+      );
+      _subscribedOrderId = null;
+    }
+
+    if (normalizedNext != null) {
+      _subscribedOrderId = normalizedNext;
+      unawaited(
+        _pusherService.subscribeToOrder(normalizedNext, _onActiveOrderEvent),
+      );
+    }
+  }
+
+  void _onActiveOrderEvent(Map<String, dynamic> eventData) {
+    if (!mounted) return;
+    final activeOrder = _selectedOrder;
+    if (activeOrder == null || activeOrder.id <= 0) return;
+
+    final eventOrderId = int.tryParse(
+      (eventData['sales_order_id'] ?? eventData['order_id'] ?? eventData['id'])
+              ?.toString() ??
+          '',
+    );
+    if (eventOrderId != null && eventOrderId != activeOrder.id) {
+      return;
+    }
+
+    final eventType = eventData['event_type']?.toString();
+    if (eventType == 'delete') {
+      ref.read(ordersListProvider.notifier).removeOrderLocally(
+        activeOrder.id.toString(),
+      );
+      if (!mounted) return;
+      _setActiveOrder(null);
+      AppSnackbar.show(
+        context,
+        message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    final rawOrder = eventData['order'];
+    if (rawOrder is Map) {
+      try {
+        final remoteOrder = OrderModel.fromJson(
+          Map<String, dynamic>.from(rawOrder),
+        );
+        if (remoteOrder.id == activeOrder.id) {
+          ref.read(ordersListProvider.notifier).upsertOrderLocally(remoteOrder);
+          _handleIncomingRemoteOrder(remoteOrder);
+          return;
+        }
+      } catch (e) {
+        debugPrint("SalesCatalogScreen active order patch fallback: $e");
+      }
+    }
+
+    unawaited(
+      ref.read(ordersListProvider.notifier).refreshSingleOrder(activeOrder.id),
+    );
+  }
+
+  bool _hasOrderChanged(OrderModel selectedOrder, OrderModel matchingOrder) {
+    final prevItemsByPid = {
+      for (final it in selectedOrder.items) it.productId: it,
+    };
+    final nextItemsByPid = {
+      for (final it in matchingOrder.items) it.productId: it,
+    };
+    final itemsChanged =
+        prevItemsByPid.length != nextItemsByPid.length ||
+        nextItemsByPid.entries.any((entry) {
+          final b = prevItemsByPid[entry.key];
+          final a = entry.value;
+          return b == null ||
+              a.id != b.id ||
+              a.quantity != b.quantity ||
+              a.unitPrice != b.unitPrice ||
+              a.isPacked != b.isPacked ||
+              a.notes != b.notes;
+        });
+
+    final existingCust = selectedOrder.customer is Map
+        ? selectedOrder.customer as Map
+        : null;
+    final nextCust = matchingOrder.customer is Map
+        ? matchingOrder.customer as Map
+        : null;
+    final customerDetailsChanged =
+        existingCust?['name']?.toString() != nextCust?['name']?.toString() ||
+        existingCust?['current_balance']?.toString() !=
+            nextCust?['current_balance']?.toString() ||
+        existingCust?['price_type']?.toString() !=
+            nextCust?['price_type']?.toString();
+
+    return matchingOrder.version != selectedOrder.version ||
+        matchingOrder.sharedKey != selectedOrder.sharedKey ||
+        matchingOrder.status != selectedOrder.status ||
+        matchingOrder.customerId != selectedOrder.customerId ||
+        matchingOrder.warehouseId != selectedOrder.warehouseId ||
+        matchingOrder.priceType != selectedOrder.priceType ||
+        matchingOrder.notes != selectedOrder.notes ||
+        matchingOrder.discountType != selectedOrder.discountType ||
+        matchingOrder.discountPercent != selectedOrder.discountPercent ||
+        matchingOrder.discountAmount != selectedOrder.discountAmount ||
+        matchingOrder.permanentDiscountAmount !=
+            selectedOrder.permanentDiscountAmount ||
+        matchingOrder.totalAmount != selectedOrder.totalAmount ||
+        matchingOrder.returnedItems.length !=
+            selectedOrder.returnedItems.length ||
+        customerDetailsChanged ||
+        itemsChanged;
+  }
+
+  void _handleIncomingRemoteOrder(OrderModel matchingOrder) {
+    if (!mounted) return;
+    final selectedOrder = _selectedOrder;
+    if (selectedOrder == null || selectedOrder.id != matchingOrder.id) return;
+
+    final status = matchingOrder.status.toUpperCase();
+    if (status == OrderModel.statusDelivered ||
+        status == OrderModel.statusCancelled) {
+      _setActiveOrder(null);
+      return;
+    }
+
+    if (_isSavingBatch) {
+      _pendingRemoteOrderSync = true;
+      return;
+    }
+
+    if (matchingOrder.version < selectedOrder.version) {
+      return;
+    }
+
+    if (_hasOrderChanged(selectedOrder, matchingOrder)) {
+      final hasPendingLocalEdits =
+          _debounceTimer != null ||
+          _lastFailedBatch?['orderId'] == selectedOrder.id;
+      _applyRemoteOrderSafely(
+        matchingOrder,
+        mergePendingLocalChanges: hasPendingLocalEdits,
+      );
+    }
+  }
+
+  void _flushPendingRemoteOrderSyncIfNeeded(int orderId) {
+    if (!_pendingRemoteOrderSync || !mounted) return;
+    _pendingRemoteOrderSync = false;
+    final latestOrder = ref
+        .read(ordersListProvider)
+        .asData
+        ?.value
+        .where((o) => o.id == orderId)
+        .firstOrNull;
+    if (latestOrder != null) {
+      _handleIncomingRemoteOrder(latestOrder);
+    }
   }
 
   /// Sets or switches the currently active order
@@ -80,8 +279,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     final previousOrderId = _selectedOrder?.id;
     final previousWarehouseId = _selectedOrder?.warehouseId;
     _localMutationSeq++;
+    _pendingRemoteOrderSync = false;
     _debounceTimer?.cancel();
     _countdownTimer?.cancel();
+    _syncActiveOrderPusherSubscription(order?.id);
 
     final Map<int, double> initialSpecialPrices = {};
     if (order != null && order.customer is Map) {
@@ -728,6 +929,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     setState(() {
       _isSavingBatch = true;
+      _pendingRemoteOrderSync = false;
     });
 
     try {
@@ -744,6 +946,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           }
           _isSavingBatch = false;
         });
+        if (isStillSelected) {
+          _flushPendingRemoteOrderSyncIfNeeded(orderId);
+        }
         if (isStillSelected && editedMidFlight && _debounceTimer == null) {
           _startOrRestart10SecondDebounce(actionDesc: actionDesc);
         }
@@ -819,6 +1024,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         });
 
         if (isStillSelected) {
+          _flushPendingRemoteOrderSyncIfNeeded(orderId);
           _showFailedActionPersistentDialog();
         }
       }
@@ -1368,75 +1574,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           .where((order) => order.id == selectedOrder.id)
           .firstOrNull;
       if (matchingOrder != null) {
-        final status = matchingOrder.status.toUpperCase();
-        if (status == OrderModel.statusDelivered ||
-            status == OrderModel.statusCancelled) {
-          _setActiveOrder(null);
-          return;
-        }
-
-        if (!_isSavingBatch) {
-          final prevItemsByPid = {
-            for (final it in selectedOrder.items) it.productId: it,
-          };
-          final nextItemsByPid = {
-            for (final it in matchingOrder.items) it.productId: it,
-          };
-          final itemsChanged =
-              prevItemsByPid.length != nextItemsByPid.length ||
-              nextItemsByPid.entries.any((entry) {
-                final b = prevItemsByPid[entry.key];
-                final a = entry.value;
-                return b == null ||
-                    a.id != b.id ||
-                    a.quantity != b.quantity ||
-                    a.unitPrice != b.unitPrice ||
-                    a.isPacked != b.isPacked ||
-                    a.notes != b.notes;
-              });
-
-          final existingCust = selectedOrder.customer is Map
-              ? selectedOrder.customer as Map
-              : null;
-          final nextCust = matchingOrder.customer is Map
-              ? matchingOrder.customer as Map
-              : null;
-          final customerDetailsChanged =
-              existingCust?['name']?.toString() != nextCust?['name']?.toString() ||
-              existingCust?['current_balance']?.toString() !=
-                  nextCust?['current_balance']?.toString() ||
-              existingCust?['price_type']?.toString() !=
-                  nextCust?['price_type']?.toString();
-
-          final orderChanged =
-              matchingOrder.version != selectedOrder.version ||
-              matchingOrder.sharedKey != selectedOrder.sharedKey ||
-              matchingOrder.status != selectedOrder.status ||
-              matchingOrder.customerId != selectedOrder.customerId ||
-              matchingOrder.warehouseId != selectedOrder.warehouseId ||
-              matchingOrder.priceType != selectedOrder.priceType ||
-              matchingOrder.notes != selectedOrder.notes ||
-              matchingOrder.discountType != selectedOrder.discountType ||
-              matchingOrder.discountPercent != selectedOrder.discountPercent ||
-              matchingOrder.discountAmount != selectedOrder.discountAmount ||
-              matchingOrder.permanentDiscountAmount !=
-                  selectedOrder.permanentDiscountAmount ||
-              matchingOrder.totalAmount != selectedOrder.totalAmount ||
-              matchingOrder.returnedItems.length !=
-                  selectedOrder.returnedItems.length ||
-              customerDetailsChanged ||
-              itemsChanged;
-
-          if (orderChanged && mounted) {
-            final hasPendingLocalEdits =
-                _debounceTimer != null ||
-                _lastFailedBatch?['orderId'] == selectedOrder.id;
-            _applyRemoteOrderSafely(
-              matchingOrder,
-              mergePendingLocalChanges: hasPendingLocalEdits,
-            );
-          }
-        }
+        _handleIncomingRemoteOrder(matchingOrder);
       } else if (!_isSavingBatch &&
           _debounceTimer == null &&
           next.hasValue &&
