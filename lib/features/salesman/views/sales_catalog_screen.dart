@@ -2339,14 +2339,23 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
           // If current order is temporary, show quick convert icon
           if (_isSelectedOrderTemporary)
-            IconButton(
-              icon: const Icon(
-                Icons.person_pin_rounded,
-                color: Colors.amber,
-                size: 22,
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: SizedBox(
+                width: 34,
+                height: 38,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(
+                    Icons.person_pin_rounded,
+                    color: Colors.amber,
+                    size: 22,
+                  ),
+                  tooltip: 'گۆڕینی کڕیاری کاتی بۆ کڕیاری ڕاستەقینە',
+                  onPressed: _changeOrderCustomer,
+                ),
               ),
-              tooltip: 'گۆڕینی کڕیاری کاتی بۆ کڕیاری ڕاستەقینە',
-              onPressed: _changeOrderCustomer,
             ),
 
           // Logo image — tap to silently refresh only items that changed on the server
@@ -2362,25 +2371,39 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     horizontal: 2,
                     vertical: 1,
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      AnimatedOpacity(
-                        opacity: _isManualRefreshing ? 0.35 : 1.0,
-                        duration: const Duration(milliseconds: 180),
-                        child: Image.asset(
-                          'assets/images/1.png',
-                          height: 36,
-                          fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedOpacity(
+                          opacity: _isManualRefreshing ? 0.35 : 1.0,
+                          duration: const Duration(milliseconds: 180),
+                          child: Image.asset(
+                            'assets/images/1.png',
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.apartment_rounded,
+                                size: 24,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.blueGrey.shade700,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      if (_isManualRefreshing)
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.2),
-                        ),
-                    ],
+                        if (_isManualRefreshing)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.2),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
