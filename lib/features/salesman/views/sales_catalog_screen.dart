@@ -718,7 +718,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
     if (mounted) {
       setState(() {
-        _secondsRemaining = 1;
+        _secondsRemaining = 10;
       });
     }
 
@@ -737,7 +737,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       });
     });
 
-    _debounceTimer = Timer(const Duration(seconds: 1), () {
+    _debounceTimer = Timer(const Duration(seconds: 10), () {
       _countdownTimer?.cancel();
       if (mounted) {
         setState(() {
