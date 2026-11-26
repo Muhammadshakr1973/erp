@@ -2555,16 +2555,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final effectiveWhId = _getEffectiveWarehouseId();
     final rawProducts = productsAsync.asData?.value ?? [];
-    final allProducts = isSalesman
-        ? (effectiveWhId == null
-            ? <ProductModel>[]
-            : rawProducts
-                .where(
-                  (p) =>
-                      _getProductAvailableStock(p) > 0 ||
-                      _cart.containsKey(p.id),
-                )
-                .toList())
+    final allProducts = isSalesman && effectiveWhId == null
+        ? <ProductModel>[]
         : rawProducts;
 
     return Scaffold(
@@ -2942,14 +2934,31 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     );
   }
 
+  double _getOptionAvailableStock(
+    ProductModel product,
+    List<ProductModel> allProducts,
+  ) {
+    if (product.isParent) {
+      final childVariants = allProducts
+          .where((v) => v.isActive && v.parentId == product.id)
+          .toList();
+      double sum = 0.0;
+      for (final v in childVariants) {
+        final s = _getProductAvailableStock(v);
+        if (s > 0) sum += s;
+      }
+      return sum;
+    }
+    return _getProductAvailableStock(product);
+  }
+
   Widget _buildProductAutocompleteInput(List<ProductModel> allProducts) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final panelWidth = constraints.maxWidth;
-        final screenWidth = MediaQuery.of(context).size.width;
-        final isMobile = screenWidth < 600;
 
         return RawAutocomplete<ProductModel>(
       textEditingController: _searchController,
@@ -3004,7 +3013,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           return a.name.compareTo(b.name);
         });
 
-        return [...exactConcreteMatches, ...topLevelMatches];
+        bool isAvailable(ProductModel p) {
+          if (p.isParent) {
+            final children = variantsByParent[p.id] ?? const <ProductModel>[];
+            return children.any((v) => _getProductAvailableStock(v) > 0);
+          }
+          return _getProductAvailableStock(p) > 0;
+        }
+
+        final combined = [...exactConcreteMatches, ...topLevelMatches];
+        final availableMatches = combined.where(isAvailable).toList();
+        final unavailableMatches = combined
+            .where((p) => !isAvailable(p))
+            .toList();
+
+        return [...availableMatches, ...unavailableMatches];
       },
       onSelected: (ProductModel selection) {
         _handleProductSelected(selection);
@@ -3105,62 +3128,138 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             AutocompleteOnSelected<ProductModel> onSelected,
             Iterable<ProductModel> options,
           ) {
+            final allOptions = options.toList();
+            final availableOptions = <ProductModel>[];
+            final unavailableOptions = <ProductModel>[];
+
+            for (final option in allOptions) {
+              if (_getOptionAvailableStock(option, allProducts) > 0) {
+                availableOptions.add(option);
+              } else {
+                unavailableOptions.add(option);
+              }
+            }
+
+            final Color frameBorderColor = theme.colorScheme.primary.withValues(
+              alpha: isDark ? 0.6 : 0.45,
+            );
+            final Color frameBgColor = isDark
+                ? AppColors.surfaceContainerDark
+                : theme.colorScheme.surface;
+            final Color headerBgColor = theme.colorScheme.primary.withValues(
+              alpha: isDark ? 0.16 : 0.08,
+            );
+            final Color dangerAccent = isDark
+                ? AppColors.dangerDark
+                : AppColors.danger;
+
             return TapRegion(
               groupId: _searchFocusNode,
               child: Align(
-                alignment: Alignment.topLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Material(
-                    elevation: 8,
-                    shadowColor: Colors.black.withValues(alpha: 0.15),
-                    borderRadius: isMobile
-                        ? BorderRadius.zero
-                        : BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    color: theme.colorScheme.surface,
-                    child: SizedBox(
-                      width: panelWidth,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 380),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                alignment: AlignmentDirectional.topStart,
+                child: SizedBox(
+                  width: panelWidth,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      4,
+                      AppSpacing.md,
+                      8,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.55 : 0.18,
+                            ),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: isDark ? 0.15 : 0.08,
+                            ),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        elevation: 0,
+                        color: frameBgColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: frameBorderColor, width: 1.5),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 400),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
-                                  vertical: 8,
+                                  vertical: 9,
                                 ),
-                                color: theme.colorScheme.surfaceContainerHighest
-                                    .withValues(alpha: 0.5),
+                                decoration: BoxDecoration(
+                                  color: headerBgColor,
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      Icons.search,
-                                      size: 16,
-                                      color: theme.colorScheme.primary,
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Icon(
+                                        Icons.manage_search_rounded,
+                                        size: 16,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        '${options.length} کاڵا دۆزرایەوە',
+                                        'ئەنجامی گەڕان (${allOptions.length} کاڵا)',
                                         style: AppTextStyles.caption.copyWith(
                                           fontWeight: FontWeight.bold,
-                                          color: theme
-                                              .colorScheme
-                                              .onSurfaceVariant,
+                                          fontSize: 12,
+                                          color: theme.colorScheme.onSurface,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     InkWell(
                                       onTap: () {
                                         _searchFocusNode.unfocus();
                                       },
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Padding(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
                                           vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: theme.colorScheme.primary
+                                                .withValues(alpha: 0.3),
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -3188,379 +3287,93 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   ],
                                 ),
                               ),
-                              const Divider(height: 1),
                               Flexible(
-                                child: ListView.separated(
+                                child: ListView(
                                   padding: EdgeInsets.zero,
                                   shrinkWrap: true,
-                                  itemCount: options.length,
-                                  separatorBuilder: (context, index) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final product = options.elementAt(index);
-                                    final childVariants = product.isParent
-                                        ? allProducts
-                                            .where((v) => v.isActive && v.parentId == product.id)
-                                            .toList()
-                                        : const <ProductModel>[];
-                                    final double unitPrice = product.isParent && childVariants.isNotEmpty
-                                        ? (childVariants.map(_getProductUnitPrice).toList()..sort()).first
-                                        : _getProductUnitPrice(product);
-                                    final double qtyInCart = product.isParent
-                                        ? childVariants.fold<double>(0, (s, v) => s + (_cart[v.id] ?? 0.0))
-                                        : (_cart[product.id] ?? 0.0);
-
-                                    return Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () {
-                                          if (product.isParent) {
-                                            final queryText = _searchController.text.trim();
-                                            _searchController.clear();
-                                            _searchFocusNode.unfocus();
-                                            _openVariantSelectorDialog(
-                                              product,
-                                              allProducts,
-                                              initialQuery: queryText,
-                                            );
-                                            return;
-                                          }
-                                          final added = _addToCart(product.id);
-                                          if (!added) return;
-                                          _searchController.clear();
-                                          _searchFocusNode.unfocus();
-                                          WidgetsBinding.instance
-                                              .addPostFrameCallback((_) {
-                                                if (mounted) {
-                                                  _searchFocusNode
-                                                      .requestFocus();
-                                                }
-                                              });
-                                          ScaffoldMessenger.of(context)
-                                              .hideCurrentSnackBar();
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                '${product.name} زیادکرا بۆ سەبەتە (${qtyInCart + 1})',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.success,
-                                              duration: const Duration(
-                                                milliseconds: 900,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        onLongPress: () {
-                                          if (product.isParent) {
-                                            final queryText = _searchController.text.trim();
-                                            _searchController.clear();
-                                            _searchFocusNode.unfocus();
-                                            _openVariantSelectorDialog(
-                                              product,
-                                              allProducts,
-                                              initialQuery: queryText,
-                                            );
-                                            return;
-                                          }
-                                          final added = _addToCart(product.id);
-                                          if (!added) return;
-                                          ScaffoldMessenger.of(context)
-                                              .hideCurrentSnackBar();
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                '${product.name} زیادکرا (${qtyInCart + 1})',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.success,
-                                              duration: const Duration(
-                                                milliseconds: 900,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 10,
+                                  children: [
+                                    for (int i = 0;
+                                        i < availableOptions.length;
+                                        i++) ...[
+                                      _buildSearchOptionItem(
+                                        product: availableOptions[i],
+                                        allProducts: allProducts,
+                                        isUnavailable: false,
+                                        isDark: isDark,
+                                      ),
+                                      if (i < availableOptions.length - 1)
+                                        Divider(
+                                          height: 1,
+                                          color: theme.dividerColor
+                                              .withValues(alpha: 0.2),
+                                        ),
+                                    ],
+                                    if (unavailableOptions.isNotEmpty) ...[
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 7,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.danger.withValues(
+                                            alpha: isDark ? 0.2 : 0.1,
                                           ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .primaryContainer
-                                                      .withValues(alpha: 0.5),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                clipBehavior: Clip.antiAlias,
-                                                child:
-                                                    (product.imagePath !=
-                                                            null &&
-                                                        product
-                                                            .imagePath!
-                                                            .isNotEmpty)
-                                                    ? GestureDetector(
-                                                        onTap: () {
-                                                          _showLargeImageDialog(
-                                                            context,
-                                                            product.imagePath!,
-                                                            product.name,
-                                                          );
-                                                        },
-                                                        child: Image.network(
-                                                          product.imagePath!,
-                                                          fit: BoxFit.cover,
-                                                          errorBuilder:
-                                                              (
-                                                                context,
-                                                                error,
-                                                                stackTrace,
-                                                              ) => Icon(
-                                                                Icons
-                                                                    .inventory_2_outlined,
-                                                                color: theme
-                                                                    .colorScheme
-                                                                    .primary,
-                                                                size: 20,
-                                                              ),
-                                                        ),
-                                                      )
-                                                    : Icon(
-                                                        Icons
-                                                            .inventory_2_outlined,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .primary,
-                                                        size: 20,
-                                                      ),
+                                          border: Border(
+                                            top: BorderSide(
+                                              color: dangerAccent.withValues(
+                                                alpha: 0.55,
                                               ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Row(
-                                                      children: [
-                                                        Flexible(
-                                                          child: Text(
-                                                            product.name,
-                                                            style: AppTextStyles
-                                                                .bodyBold,
-                                                            overflow:
-                                                                TextOverflow.ellipsis,
-                                                          ),
-                                                        ),
-                                                        if (product.isParent) ...[
-                                                          const SizedBox(width: 6),
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                              horizontal: 6,
-                                                              vertical: 2,
-                                                            ),
-                                                            decoration: BoxDecoration(
-                                                              color: AppColors.primary.withValues(alpha: 0.14),
-                                                              borderRadius: BorderRadius.circular(6),
-                                                            ),
-                                                            child: Text(
-                                                              '${childVariants.length} جۆر',
-                                                              style: const TextStyle(
-                                                                fontSize: 10,
-                                                                fontWeight: FontWeight.bold,
-                                                                color: AppColors.primary,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Row(
-                                                      children: [
-                                                        if (!product.isParent &&
-                                                            product
-                                                                .barcode
-                                                                .isNotEmpty) ...[
-                                                          const Icon(
-                                                            Icons.qr_code,
-                                                            size: 14,
-                                                            color: Colors.grey,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 4,
-                                                          ),
-                                                          Text(
-                                                            product.barcode,
-                                                            style: AppTextStyles
-                                                                .caption
-                                                                .copyWith(
-                                                                  fontFamily: 'monospace',
-                                                                ),
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                        ],
-                                                        Text(
-                                                          Formatters.currency(
-                                                            unitPrice,
-                                                          ),
-                                                          style: AppTextStyles
-                                                              .caption
-                                                              .copyWith(
-                                                                color: theme
-                                                                    .colorScheme
-                                                                    .primary,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          '(${product.unit ?? "دانە"})',
-                                                          style: AppTextStyles
-                                                              .caption
-                                                              .copyWith(
-                                                                color: theme
-                                                                    .colorScheme
-                                                                    .onSurfaceVariant,
-                                                                fontSize: 10,
-                                                              ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 6,
-                                                        ),
-                                                        Builder(
-                                                          builder: (context) {
-                                                            final availStock = product.isParent
-                                                                ? childVariants.fold<double>(
-                                                                    0.0,
-                                                                    (s, v) => s + _getProductAvailableStock(v),
-                                                                  )
-                                                                : _getProductAvailableStock(
-                                                                    product,
-                                                                  );
-                                                            final isOut =
-                                                                availStock <= 0;
-                                                            return Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                    horizontal:
-                                                                        6,
-                                                                    vertical:
-                                                                        1.5,
-                                                                  ),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                    color: isOut
-                                                                        ? AppColors
-                                                                              .danger
-                                                                              .withValues(
-                                                                                alpha:
-                                                                                    0.12,
-                                                                              )
-                                                                        : (availStock <=
-                                                                                  3
-                                                                              ? AppColors.warning
-                                                                              : AppColors.success)
-                                                                          .withValues(
-                                                                            alpha:
-                                                                                0.12,
-                                                                          ),
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          4,
-                                                                        ),
-                                                                    border: Border.all(
-                                                                      color: isOut
-                                                                          ? AppColors.danger.withValues(alpha: 0.3)
-                                                                          : (availStock <= 3 ? AppColors.warning : AppColors.success).withValues(alpha: 0.3),
-                                                                    ),
-                                                                  ),
-                                                              child: Text(
-                                                                isOut
-                                                                    ? 'لە ستۆک تەواو بووە'
-                                                                    : 'ستۆک: ${Formatters.cleanNumberString(availStock)}',
-                                                                style:
-                                                                    TextStyle(
-                                                                      fontSize:
-                                                                          9.5,
-                                                                      color:
-                                                                          isOut
-                                                                              ? AppColors.danger
-                                                                              : (availStock <= 3 ? AppColors.warning : AppColors.success),
-                                                                      fontWeight:
-                                                                          FontWeight.bold,
-                                                                    ),
-                                                              ),
-                                                            );
-                                                          },
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
+                                              width: availableOptions.isEmpty
+                                                  ? 0
+                                                  : 1.5,
+                                            ),
+                                            bottom: BorderSide(
+                                              color: dangerAccent.withValues(
+                                                alpha: 0.35,
                                               ),
-                                              const SizedBox(width: 8),
-                                              if (qtyInCart > 0)
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primaryContainer
-                                                        .withValues(alpha: 0.3),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: theme
-                                                          .colorScheme
-                                                          .primary
-                                                          .withValues(
-                                                            alpha: 0.5,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: Text(
-                                                    '${Formatters.cleanNumberString(qtyInCart)} دانە',
-                                                    style: AppTextStyles.caption
-                                                        .copyWith(
-                                                          color: theme
-                                                              .colorScheme
-                                                              .primary,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                  ),
-                                                ),
-                                            ],
+                                              width: 1,
+                                            ),
                                           ),
                                         ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.block_rounded,
+                                              size: 14,
+                                              color: dangerAccent,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'کاڵا بەردەستنەبووەکان (${unavailableOptions.length})',
+                                              style: AppTextStyles.caption
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: dangerAccent,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    );
-                                  },
+                                      for (int i = 0;
+                                          i < unavailableOptions.length;
+                                          i++) ...[
+                                        _buildSearchOptionItem(
+                                          product: unavailableOptions[i],
+                                          allProducts: allProducts,
+                                          isUnavailable: true,
+                                          isDark: isDark,
+                                        ),
+                                        if (i < unavailableOptions.length - 1)
+                                          Divider(
+                                            height: 1,
+                                            color: dangerAccent.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                          ),
+                                      ],
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],
@@ -3570,11 +3383,320 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchOptionItem({
+    required ProductModel product,
+    required List<ProductModel> allProducts,
+    required bool isUnavailable,
+    required bool isDark,
+  }) {
+    final theme = Theme.of(context);
+    final childVariants = product.isParent
+        ? allProducts
+              .where((v) => v.isActive && v.parentId == product.id)
+              .toList()
+        : const <ProductModel>[];
+    final double unitPrice = product.isParent && childVariants.isNotEmpty
+        ? (childVariants.map(_getProductUnitPrice).toList()..sort()).first
+        : _getProductUnitPrice(product);
+    final double qtyInCart = product.isParent
+        ? childVariants.fold<double>(0, (s, v) => s + (_cart[v.id] ?? 0.0))
+        : (_cart[product.id] ?? 0.0);
+    final double availStock = _getOptionAvailableStock(product, allProducts);
+    final bool isOut = isUnavailable || availStock <= 0;
+    final Color dangerAccent = isDark ? AppColors.dangerDark : AppColors.danger;
+
+    final rowContent = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (product.isParent) {
+            final queryText = _searchController.text.trim();
+            _searchController.clear();
+            _searchFocusNode.unfocus();
+            _openVariantSelectorDialog(
+              product,
+              allProducts,
+              initialQuery: queryText,
+            );
+            return;
+          }
+          final added = _addToCart(product.id);
+          if (!added) return;
+          _searchController.clear();
+          _searchFocusNode.unfocus();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _searchFocusNode.requestFocus();
+            }
+          });
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${product.name} زیادکرا بۆ سەبەتە (${qtyInCart + 1})',
+              ),
+              backgroundColor: AppColors.success,
+              duration: const Duration(milliseconds: 900),
+            ),
           );
         },
-      );
+        onLongPress: () {
+          if (product.isParent) {
+            final queryText = _searchController.text.trim();
+            _searchController.clear();
+            _searchFocusNode.unfocus();
+            _openVariantSelectorDialog(
+              product,
+              allProducts,
+              initialQuery: queryText,
+            );
+            return;
+          }
+          final added = _addToCart(product.id);
+          if (!added) return;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${product.name} زیادکرا (${qtyInCart + 1})'),
+              backgroundColor: AppColors.success,
+              duration: const Duration(milliseconds: 900),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (isOut
+                          ? AppColors.danger
+                          : theme.colorScheme.primaryContainer)
+                      .withValues(alpha: isOut ? 0.16 : 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    (product.imagePath != null && product.imagePath!.isNotEmpty)
+                    ? GestureDetector(
+                        onTap: () {
+                          _showLargeImageDialog(
+                            context,
+                            product.imagePath!,
+                            product.name,
+                          );
+                        },
+                        child: Image.network(
+                          product.imagePath!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.inventory_2_outlined,
+                            color: isOut
+                                ? dangerAccent
+                                : theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.inventory_2_outlined,
+                        color: isOut
+                            ? dangerAccent
+                            : theme.colorScheme.primary,
+                        size: 20,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            product.name,
+                            style: AppTextStyles.bodyBold.copyWith(
+                              color: isOut
+                                  ? theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.78,
+                                    )
+                                  : null,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (product.isParent) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${childVariants.length} جۆر',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (!product.isParent &&
+                            product.barcode.isNotEmpty) ...[
+                          const Icon(
+                            Icons.qr_code,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            product.barcode,
+                            style: AppTextStyles.caption.copyWith(
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          Formatters.currency(unitPrice),
+                          style: AppTextStyles.caption.copyWith(
+                            color: isOut
+                                ? theme.colorScheme.onSurfaceVariant
+                                : theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${product.unit ?? "دانە"})',
+                          style: AppTextStyles.caption.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isOut
+                                        ? AppColors.danger
+                                        : (availStock <= 3
+                                              ? AppColors.warning
+                                              : AppColors.success))
+                                    .withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color:
+                                  (isOut
+                                          ? AppColors.danger
+                                          : (availStock <= 3
+                                                ? AppColors.warning
+                                                : AppColors.success))
+                                      .withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            isOut
+                                ? 'بەردەست نییە'
+                                : 'ستۆک: ${Formatters.cleanNumberString(availStock)}',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: isOut
+                                  ? dangerAccent
+                                  : (availStock <= 3
+                                        ? AppColors.warning
+                                        : AppColors.success),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (qtyInCart > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(
+                      alpha: 0.3,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    '${Formatters.cleanNumberString(qtyInCart)} دانە',
+                    style: AppTextStyles.caption.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!isOut) return rowContent;
+
+    return Stack(
+      children: [
+        rowContent,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
+                  colors: [
+                    AppColors.danger.withValues(alpha: isDark ? 0.28 : 0.17),
+                    AppColors.danger.withValues(alpha: isDark ? 0.16 : 0.09),
+                  ],
+                ),
+                border: BorderDirectional(
+                  start: BorderSide(color: dangerAccent, width: 4),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildCustomerSelectionDropdown(
@@ -4006,7 +4128,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _openVariantSelectorDialog(match, allProducts, initialQuery: query);
         return;
       }
-      _addToCart(match.id);
+      final added = _addToCart(match.id);
+      if (!added) {
+        try {
+          NotificationSoundService.playErrorSound();
+        } catch (_) {}
+        return;
+      }
       try {
         NotificationSoundService.playSuccessSound();
       } catch (_) {}
