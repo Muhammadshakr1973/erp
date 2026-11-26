@@ -14,7 +14,8 @@ class ProductsListNotifier
   final ApiClient _api;
   final PusherService _pusher;
   final Ref _ref;
-  final Set<int> _fetchingProductIds = {};
+  final Map<int, Future<void>> _inFlightProductFetches = {};
+  final Set<int> _pendingProductFetches = {};
   bool _isRefreshingProducts = false;
   bool _pendingRefreshProducts = false;
   late final void Function(Map<String, dynamic>) _onProductEvent;
@@ -280,48 +281,74 @@ class ProductsListNotifier
   }
 
   Future<void> _fetchSingleProduct(int productId) async {
-    if (_fetchingProductIds.contains(productId)) return;
-    _fetchingProductIds.add(productId);
-    try {
-      final response = await _api.client.get('/products/$productId');
-      if (!mounted) return;
-      if (response.statusCode == 200 &&
-          response.data is Map &&
-          response.data['data'] is Map) {
-        final singleProduct = ProductModel.fromJson(
-          Map<String, dynamic>.from(response.data['data']),
-        );
-        final latestList = state.valueOrNull;
-        if (latestList == null) return;
+    final existingFuture = _inFlightProductFetches[productId];
+    if (existingFuture != null) {
+      _pendingProductFetches.add(productId);
+      await existingFuture;
+      return;
+    }
 
-        final index = latestList.indexWhere((p) => p.id == productId);
-        if (!_shouldIncludeProductForUser(singleProduct, latestList)) {
-          if (index != -1) {
-            removeProductLocally(productId);
+    Future<void> runFetchLoop() async {
+      while (mounted) {
+        _pendingProductFetches.remove(productId);
+        try {
+          final response = await _api.client.get(
+            '/products/$productId',
+            queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+            options: Options(
+              headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+            ),
+          );
+          if (!mounted) return;
+          if (response.statusCode == 200 &&
+              response.data is Map &&
+              response.data['data'] is Map) {
+            final singleProduct = ProductModel.fromJson(
+              Map<String, dynamic>.from(response.data['data']),
+            );
+            final latestList = state.valueOrNull;
+            if (latestList == null) return;
+
+            final index = latestList.indexWhere((p) => p.id == productId);
+            if (!_shouldIncludeProductForUser(singleProduct, latestList)) {
+              if (index != -1) {
+                removeProductLocally(productId);
+              }
+              return;
+            }
+            if (index == -1 || !_sameProductData(latestList[index], singleProduct)) {
+              final updatedList = List<ProductModel>.from(latestList);
+              if (index != -1) {
+                updatedList[index] = singleProduct;
+              } else {
+                updatedList.insert(0, singleProduct);
+              }
+              state = AsyncValue.data(updatedList);
+
+              if (singleProduct.parentId != null &&
+                  !updatedList.any((p) => p.id == singleProduct.parentId)) {
+                _fetchSingleProduct(singleProduct.parentId!);
+              }
+            }
           }
-          return;
+        } catch (_) {
+          // Background single product patch error ignored to avoid disrupting UI
         }
-        if (index != -1 && _sameProductData(latestList[index], singleProduct)) {
-          return;
-        }
-
-        final updatedList = List<ProductModel>.from(latestList);
-        if (index != -1) {
-          updatedList[index] = singleProduct;
-        } else {
-          updatedList.insert(0, singleProduct);
-        }
-        state = AsyncValue.data(updatedList);
-
-        if (singleProduct.parentId != null &&
-            !updatedList.any((p) => p.id == singleProduct.parentId)) {
-          _fetchSingleProduct(singleProduct.parentId!);
+        if (!mounted || !_pendingProductFetches.remove(productId)) {
+          break;
         }
       }
-    } catch (_) {
-      // Background single product patch error ignored to avoid disrupting UI
+    }
+
+    final future = runFetchLoop();
+    _inFlightProductFetches[productId] = future;
+    try {
+      await future;
     } finally {
-      _fetchingProductIds.remove(productId);
+      if (identical(_inFlightProductFetches[productId], future)) {
+        _inFlightProductFetches.remove(productId);
+      }
+      _pendingProductFetches.remove(productId);
     }
   }
 

@@ -69,6 +69,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   StreamSubscription<void>? _orderReconnectSub;
   bool _hasSavedOnce = false;
   bool _isSaving = false;
+  bool _pendingRemoteOrderSync = false;
   int _localMutationSeq = 0;
 
   Timer? _countdownTimer;
@@ -299,14 +300,59 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   bool _isConcurrencyConflictError(Object e) {
+    if (e is OrderConcurrencyConflictException) return true;
     final msg = e.toString().toLowerCase();
     return msg.contains('409') ||
         msg.contains('conflict_version') ||
         msg.contains('هاوکاتی') ||
         msg.contains('دەستکاری کراون') ||
         msg.contains('نوێ بکەرەوە') ||
-        msg.contains('نوێکراوەتەوە') ||
-        msg.contains('version');
+        msg.contains('نوێکراوەتەوە');
+  }
+
+  bool _isStockInsufficientError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('ستۆک') ||
+        msg.contains('بڕی پێویست') ||
+        msg.contains('stock') ||
+        msg.contains('insufficient');
+  }
+
+  double? _getMaxAllowedQtyForOrder(
+    int productId,
+    OrderModel targetOrder,
+    List<ProductModel> products,
+  ) {
+    final product = products.where((p) => p.id == productId).firstOrNull;
+    if (product == null) return null;
+
+    final warehouseId = targetOrder.warehouseId ?? _getEffectiveWarehouseId();
+    final double warehouseStock = warehouseId != null
+        ? product.getStockForWarehouse(warehouseId)
+        : product.totalStock;
+    final double savedInTargetOrder =
+        targetOrder.items
+            .where((it) => it.productId == productId)
+            .firstOrNull
+            ?.quantity ??
+        0.0;
+    final maxAllowed = warehouseStock + savedInTargetOrder;
+    return maxAllowed < 0 ? 0.0 : maxAllowed;
+  }
+
+  Future<void> _refreshMissingOrderProductStocks(OrderModel targetOrder) async {
+    final targetItemPids = targetOrder.items.map((it) => it.productId).toSet();
+    final missingPids = <int>{
+      ..._cart.keys,
+      ..._serverSavedQuantities.keys,
+    }.where((pid) => !targetItemPids.contains(pid)).toList();
+
+    if (missingPids.isEmpty) return;
+    await Future.wait(
+      missingPids.map(
+        (pid) => ref.read(productsListProvider.notifier).refreshSingleProduct(pid),
+      ),
+    );
   }
 
   Future<OrderModel?> _mergeLatestServerOrder(
@@ -320,6 +366,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         .read(singleOrderProvider(orderId.toString()))
         .valueOrNull;
     if (latestOrder == null || !mounted) return null;
+
+    await _refreshMissingOrderProductStocks(latestOrder);
+    if (!mounted) return null;
 
     return _applyServerOrderSnapshot(
       latestOrder,
@@ -365,6 +414,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return latestOrder;
     }
 
+    final products =
+        ref.read(productsListProvider).asData?.value ?? <ProductModel>[];
+    final clampedProductNames = <String>[];
+
     final Map<int, double> nextCart = {};
     final Map<int, String> nextNotes = {};
     final Map<int, double> nextServerSaved = {};
@@ -382,16 +435,30 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       final localQty = _cart[pid] ?? 0.0;
       final delta = localQty - oldQty;
       if (delta.abs() > 1e-6) {
-        final updatedQty = (nextCart[pid] ?? 0.0) + delta;
+        double updatedQty = (nextCart[pid] ?? 0.0) + delta;
+        if (updatedQty > 0 && delta > 0) {
+          final maxAllowed = _getMaxAllowedQtyForOrder(
+            pid,
+            latestOrder,
+            products,
+          );
+          if (maxAllowed != null && updatedQty > maxAllowed) {
+            updatedQty = maxAllowed;
+            final prod = products.where((p) => p.id == pid).firstOrNull;
+            clampedProductNames.add(prod?.name ?? 'کاڵا #$pid');
+          }
+        }
         if (updatedQty > 0) {
           nextCart[pid] = updatedQty;
         } else {
           nextCart.remove(pid);
+          nextNotes.remove(pid);
         }
       }
 
-      if (_dirtyFields.contains('product_note_$pid') ||
-          _fieldStates.containsKey('product_note_$pid')) {
+      if ((_dirtyFields.contains('product_note_$pid') ||
+              _fieldStates.containsKey('product_note_$pid')) &&
+          nextCart.containsKey(pid)) {
         final localNote = _cartNotes[pid] ?? '';
         if (localNote.isNotEmpty) {
           nextNotes[pid] = localNote;
@@ -464,6 +531,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _syncNoteControllers();
     });
 
+    if (clampedProductNames.isNotEmpty && mounted) {
+      AppSnackbar.show(
+        context,
+        message:
+            'بڕی ${clampedProductNames.join("، ")} بەپێی ستۆکی بەردەست ڕێکخرایەوە',
+        type: SnackbarType.warning,
+      );
+    }
+
     if (shouldReloadCustomer) {
       _loadCustomerById(latestOrder.customerId);
     }
@@ -496,6 +572,34 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
     } catch (e) {
       debugPrint("CreateOrderScreen: Error fetching updated order: $e");
+    }
+  }
+
+  void _flushPendingRemoteOrderSyncIfNeeded() {
+    if (!_pendingRemoteOrderSync || !mounted || _isSaving) return;
+    _pendingRemoteOrderSync = false;
+    final serverId = _serverOrderId;
+    if (serverId == null) return;
+    final matchingOrder = ref
+        .read(ordersListProvider)
+        .asData
+        ?.value
+        .where((o) => o.id == serverId)
+        .firstOrNull;
+    if (matchingOrder != null &&
+        (matchingOrder.version > _currentVersion ||
+            (_lastKnownServerStatus != null &&
+                matchingOrder.status.toUpperCase() != _lastKnownServerStatus))) {
+      final hasPendingEdits =
+          _debounceTimer != null ||
+          _timerPausedForRetry ||
+          _dirtyFields.isNotEmpty;
+      _applyServerOrderSnapshot(
+        matchingOrder,
+        mergePendingLocalChanges: hasPendingEdits,
+      );
+    } else if (_subscribedOrderId != null) {
+      unawaited(_syncSubscribedOrderFromServer());
     }
   }
 
@@ -534,7 +638,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return;
     }
 
-    if (_isSaving || targetOrderId == null) return;
+    if (targetOrderId == null) return;
+    if (_isSaving) {
+      _pendingRemoteOrderSync = true;
+      return;
+    }
 
     final dynamic rawVersion = dataObj['version'];
     final int? eventVersion = rawVersion is num
@@ -1624,7 +1732,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Future<void> _autoSaveOrder(
     AsyncValue<List<WarehouseModel>> warehousesAsync, {
     List<Map<String, dynamic>>? customItems,
-    bool allowConflictRetry = true,
+    int remainingConflictRetries = 3,
   }) async {
     if (warehousesAsync.hasError || warehousesAsync.asData == null) return;
     final isCashVanSalesman =
@@ -1699,9 +1807,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'returned_items': retList,
     };
 
+    bool didRetry = false;
     if (mounted) {
       setState(() {
         _isSaving = true;
+        _pendingRemoteOrderSync = false;
         if (_lastChangedField != null) {
           _fieldStates[_lastChangedField!] = 'saving';
         }
@@ -1788,22 +1898,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     } catch (e) {
-      if (_isConcurrencyConflictError(e) &&
-          _hasSavedOnce &&
-          _serverOrderId != null) {
+      final isConflict = _isConcurrencyConflictError(e);
+      final isStockError = !isConflict && _isStockInsufficientError(e);
+      bool adoptedFromCreate = false;
+
+      if (isConflict &&
+          !_hasSavedOnce &&
+          e is OrderConcurrencyConflictException &&
+          e.orderId != null) {
+        _serverOrderId = e.orderId;
+        _hasSavedOnce = true;
+        adoptedFromCreate = true;
+        _subscribeToOrderPusher(e.orderId!);
+      }
+
+      if ((isConflict || isStockError) && _hasSavedOnce && _serverOrderId != null) {
         final previousVersion = version;
         final latestOrder = await _mergeLatestServerOrder(
           _serverOrderId!,
           mergePendingLocalChanges: true,
         );
-        if (allowConflictRetry &&
+        _pendingRemoteOrderSync = false;
+        if (remainingConflictRetries > 0 &&
             latestOrder != null &&
-            latestOrder.version > previousVersion &&
+            (latestOrder.version > previousVersion || adoptedFromCreate) &&
             mounted) {
+          didRetry = true;
           await _autoSaveOrder(
             warehousesAsync,
             customItems: customItems,
-            allowConflictRetry: false,
+            remainingConflictRetries: remainingConflictRetries - 1,
           );
           return;
         }
@@ -1834,10 +1958,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         _lastChangedField = null;
       }
     } finally {
-      if (mounted) {
+      if (!didRetry && mounted) {
         setState(() {
           _isSaving = false;
         });
+        _flushPendingRemoteOrderSyncIfNeeded();
       }
     }
   }
@@ -1861,7 +1986,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             final theme = Theme.of(context);
             int? retryingProductId;
 
-            Future<void> retrySingleItem(int prodId, double qty) async {
+            Future<void> retrySingleItem(
+              int prodId,
+              double qty, {
+              int remainingConflictRetries = 2,
+            }) async {
               setDialogState(() {
                 retryingProductId = prodId;
               });
@@ -1872,7 +2001,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   final isFailed = localItems.any(
                     (item) => item['product_id'] == id,
                   );
-                  if (!isFailed || id == prodId) {
+                  if ((!isFailed || id == prodId) && q > 0) {
                     itemsToSave.add({
                       'product_id': id,
                       'quantity': q,
@@ -2023,10 +2152,21 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 if (_isConcurrencyConflictError(e) &&
                     _hasSavedOnce &&
                     _serverOrderId != null) {
-                  await _mergeLatestServerOrder(
+                  final previousVersion = _currentVersion;
+                  final latestOrder = await _mergeLatestServerOrder(
                     _serverOrderId!,
                     mergePendingLocalChanges: true,
                   );
+                  if (remainingConflictRetries > 0 &&
+                      latestOrder != null &&
+                      latestOrder.version > previousVersion &&
+                      mounted) {
+                    return retrySingleItem(
+                      prodId,
+                      _cart[prodId] ?? qty,
+                      remainingConflictRetries: remainingConflictRetries - 1,
+                    );
+                  }
                 }
                 if (mounted) {
                   final errorMsg = e
@@ -2359,8 +2499,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(dialogContext);
+                          if (_hasSavedOnce && _serverOrderId != null) {
+                            await _mergeLatestServerOrder(
+                              _serverOrderId!,
+                              mergePendingLocalChanges: true,
+                            );
+                          } else if (_cart.isNotEmpty) {
+                            await Future.wait(
+                              _cart.keys.map(
+                                (pid) => ref
+                                    .read(productsListProvider.notifier)
+                                    .refreshSingleProduct(pid),
+                              ),
+                            );
+                          }
+                          if (!mounted) return;
                           final products =
                               ref.read(productsListProvider).asData?.value ?? [];
                           setState(() {
@@ -2379,6 +2534,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 }
                               }
                             }
+                            _syncNoteControllers();
                             _failureCount = 0;
                             _timerPausedForRetry = false;
                           });
@@ -2483,7 +2639,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     ref.listen<AsyncValue<List<OrderModel>>>(ordersListProvider, (_, next) {
       final serverId = _serverOrderId;
-      if (serverId == null || _isSaving || !mounted) return;
+      if (serverId == null || !mounted) return;
       final orders = next.asData?.value;
       if (orders == null) return;
       final matchingOrder = orders.where((o) => o.id == serverId).firstOrNull;
@@ -2493,6 +2649,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (matchingOrder.version > _currentVersion ||
           (_lastKnownServerStatus != null &&
               matchingStatus != _lastKnownServerStatus)) {
+        if (_isSaving) {
+          _pendingRemoteOrderSync = true;
+          return;
+        }
         final hasPendingEdits =
             _debounceTimer != null ||
             _timerPausedForRetry ||

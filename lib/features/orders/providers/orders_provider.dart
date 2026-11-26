@@ -16,8 +16,23 @@ import '../../shared/models/customer.dart';
 import '../../shared/providers/customer_provider.dart';
 import '../models/order_model.dart';
 
+class OrderConcurrencyConflictException implements Exception {
+  final String message;
+  final int? orderId;
+  final int? currentVersion;
+
+  const OrderConcurrencyConflictException({
+    required this.message,
+    this.orderId,
+    this.currentVersion,
+  });
+
+  @override
+  String toString() => message;
+}
+
 class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
-  final Set<int> _fetchingOrderIds = {};
+  final Map<int, Future<void>> _inFlightOrderFetches = {};
   final Set<int> _pendingRefetchOrderIds = {};
   final Map<int, DateTime> _deletedAtByOrderId = {};
   final Map<int, Timer> _retryTimers = {};
@@ -91,6 +106,8 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
       }
       _retryTimers.clear();
       _retryAttempts.clear();
+      _inFlightOrderFetches.clear();
+      _pendingRefetchOrderIds.clear();
       reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-orders', onOrdersEvent);
     });
@@ -179,77 +196,98 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     String? eventStatus,
   }) async {
     if (_disposed) return;
-    if (_fetchingOrderIds.contains(orderId)) {
+    final existingFuture = _inFlightOrderFetches[orderId];
+    if (existingFuture != null) {
       _pendingRefetchOrderIds.add(orderId);
+      await existingFuture;
       return;
     }
-    _fetchingOrderIds.add(orderId);
-    final fetchStartedAt = DateTime.now();
-    try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.client.get(
-        '/orders/$orderId',
-        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
-        options: Options(
-          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-        ),
-      );
-      if (_disposed || _wasDeletedSince(orderId, fetchStartedAt)) {
-        return;
-      }
-      if (response.statusCode == 200) {
-        final data = response.data['data'] ?? response.data;
-        if (data is! Map) return;
 
-        final fetched = OrderModel.fromJson(Map<String, dynamic>.from(data));
-        final user = ref.read(authProvider).user;
-        final currentOrders = state.valueOrNull;
-
-        // Non-customer /orders index hides customer portal DRAFT orders unless already tracked
-        if (user != null &&
-            !user.isCustomer &&
-            fetched.status.toUpperCase() == OrderModel.statusDraft) {
-          final alreadyExists =
-              currentOrders?.any((o) => o.id == fetched.id) ?? false;
-          if (!alreadyExists) return;
-        }
-
-        _retryTimers.remove(orderId)?.cancel();
-        _retryAttempts.remove(orderId);
-        upsertOrderLocally(fetched);
-      }
-    } on DioException catch (e) {
-      if (_disposed) return;
-      final code = e.response?.statusCode;
-      if (code == 403 || code == 404) {
-        _retryTimers.remove(orderId)?.cancel();
-        _retryAttempts.remove(orderId);
-        final user = ref.read(authProvider).user;
-        // Drivers get 403 on /orders/{id} for unassigned READY orders; refresh silently in that edge case
-        if (code == 403 &&
-            user != null &&
-            user.isDriver &&
-            eventStatus == OrderModel.statusReady) {
-          unawaited(refreshSilently());
-        } else {
-          removeOrderLocally(orderId.toString());
-          if (code == 404 &&
-              ref.exists(singleOrderProvider(orderId.toString()))) {
-            ref
-                .read(singleOrderProvider(orderId.toString()).notifier)
-                .setOrderLocally(null);
+    Future<void> runFetchLoop() async {
+      while (!_disposed) {
+        _pendingRefetchOrderIds.remove(orderId);
+        final fetchStartedAt = DateTime.now();
+        try {
+          final api = ref.read(apiClientProvider);
+          final response = await api.client.get(
+            '/orders/$orderId',
+            queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+            options: Options(
+              headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+            ),
+          );
+          if (_disposed || _wasDeletedSince(orderId, fetchStartedAt)) {
+            return;
           }
+          if (response.statusCode == 200) {
+            final data = response.data['data'] ?? response.data;
+            if (data is! Map) return;
+            final orderMap = Map<String, dynamic>.from(data);
+            final fetched = OrderModel.fromJson(orderMap);
+            final user = ref.read(authProvider).user;
+            final currentOrders = state.valueOrNull;
+
+            // Non-customer /orders index hides customer portal DRAFT orders unless already tracked
+            if (user != null &&
+                !user.isCustomer &&
+                fetched.status.toUpperCase() == OrderModel.statusDraft) {
+              final alreadyExists =
+                  currentOrders?.any((o) => o.id == fetched.id) ?? false;
+              if (!alreadyExists) return;
+            }
+
+            ref
+                .read(productsListProvider.notifier)
+                .patchProductsFromOrderData(orderMap);
+            _retryTimers.remove(orderId)?.cancel();
+            _retryAttempts.remove(orderId);
+            upsertOrderLocally(fetched);
+          }
+        } on DioException catch (e) {
+          if (_disposed) return;
+          final code = e.response?.statusCode;
+          if (code == 403 || code == 404) {
+            _retryTimers.remove(orderId)?.cancel();
+            _retryAttempts.remove(orderId);
+            final user = ref.read(authProvider).user;
+            // Drivers get 403 on /orders/{id} for unassigned READY orders; refresh silently in that edge case
+            if (code == 403 &&
+                user != null &&
+                user.isDriver &&
+                eventStatus == OrderModel.statusReady) {
+              unawaited(refreshSilently());
+            } else {
+              removeOrderLocally(orderId.toString());
+              if (code == 404 &&
+                  ref.exists(singleOrderProvider(orderId.toString()))) {
+                ref
+                    .read(singleOrderProvider(orderId.toString()).notifier)
+                    .setOrderLocally(null);
+              }
+            }
+            return;
+          } else {
+            _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
+          }
+        } catch (_) {
+          _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
         }
-      } else {
-        _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
+
+        if (_disposed || !_pendingRefetchOrderIds.remove(orderId)) {
+          break;
+        }
       }
-    } catch (_) {
-      _scheduleSingleOrderRetry(orderId, eventStatus: eventStatus);
+    }
+
+    final future = runFetchLoop();
+    _inFlightOrderFetches[orderId] = future;
+    try {
+      await future;
     } finally {
-      _fetchingOrderIds.remove(orderId);
-      if (!_disposed && _pendingRefetchOrderIds.remove(orderId)) {
-        unawaited(_fetchAndPatchSingleOrder(orderId, eventStatus: eventStatus));
+      if (identical(_inFlightOrderFetches[orderId], future)) {
+        _inFlightOrderFetches.remove(orderId);
       }
+      _pendingRefetchOrderIds.remove(orderId);
     }
   }
 
@@ -583,7 +621,7 @@ final ordersListProvider =
     );
 
 class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
-  bool _isRefreshing = false;
+  Future<void>? _activeRefreshFuture;
   bool _pendingRefresh = false;
 
   @override
@@ -658,7 +696,11 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
             'داتای وەڵامدانەوەی سێرڤەر نادروستە (Malformed response payload)',
           );
         }
-        return OrderModel.fromJson(Map<String, dynamic>.from(data));
+        final orderMap = Map<String, dynamic>.from(data);
+        ref
+            .read(productsListProvider.notifier)
+            .patchProductsFromOrderData(orderMap);
+        return OrderModel.fromJson(orderMap);
       }
       throw Exception(
         'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',
@@ -675,28 +717,41 @@ class SingleOrderNotifier extends FamilyAsyncNotifier<OrderModel?, String> {
   }
 
   Future<void> refreshSilently() async {
-    if (_isRefreshing) {
+    final existingFuture = _activeRefreshFuture;
+    if (existingFuture != null) {
       _pendingRefresh = true;
+      await existingFuture;
       return;
     }
-    _isRefreshing = true;
-    try {
-      final api = ref.read(apiClientProvider);
-      final fresh = await _fetchSingleOrder(api, arg);
-      state = AsyncData(fresh);
-      if (fresh != null) {
-        ref.read(ordersListProvider.notifier).upsertOrderLocally(fresh);
-      } else {
-        ref.read(ordersListProvider.notifier).removeOrderLocally(arg);
-      }
-    } catch (_) {
-      // Preserve current order state on transient errors
-    } finally {
-      _isRefreshing = false;
-      if (_pendingRefresh) {
+
+    Future<void> runRefreshLoop() async {
+      while (true) {
         _pendingRefresh = false;
-        unawaited(refreshSilently());
+        try {
+          final api = ref.read(apiClientProvider);
+          final fresh = await _fetchSingleOrder(api, arg);
+          state = AsyncData(fresh);
+          if (fresh != null) {
+            ref.read(ordersListProvider.notifier).upsertOrderLocally(fresh);
+          } else {
+            ref.read(ordersListProvider.notifier).removeOrderLocally(arg);
+          }
+        } catch (_) {
+          // Preserve current order state on transient errors
+        }
+        if (!_pendingRefresh) break;
       }
+    }
+
+    final future = runRefreshLoop();
+    _activeRefreshFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_activeRefreshFuture, future)) {
+        _activeRefreshFuture = null;
+      }
+      _pendingRefresh = false;
     }
   }
 
@@ -738,6 +793,35 @@ class OrderActions {
     final user = ref.read(authProvider).user;
     if (user == null || user.isCustomer) return;
     unawaited(ref.read(salesmanDashboardProvider.notifier).refreshSilently());
+  }
+
+  OrderConcurrencyConflictException? _tryParseConflictException(Object e) {
+    if (e is OrderConcurrencyConflictException) return e;
+    if (e is DioException && e.response?.statusCode == 409) {
+      final raw = e.response?.data;
+      final data = raw is Map ? raw : null;
+      final conflictData = data?['conflict_data'] is Map
+          ? data!['conflict_data'] as Map
+          : null;
+      final orderId = int.tryParse(
+        (conflictData?['order_id'] ?? data?['order_id'])?.toString() ?? '',
+      );
+      final currentVersion = int.tryParse(
+        (data?['current_version'] ?? conflictData?['version'])?.toString() ??
+            '',
+      );
+      final msg = api.extractErrorMessage(
+        raw,
+        defaultMsg:
+            'هەڵەی هاوکاتی: داتاکانی ئەم پسوڵەیە پێشتر لەلایەن ئامێرێکی ترەوە دەستکاری کراون.',
+      );
+      return OrderConcurrencyConflictException(
+        message: msg,
+        orderId: orderId,
+        currentVersion: currentVersion,
+      );
+    }
+    return null;
   }
 
   Future<OrderModel> createOrder(Map<String, dynamic> data) async {
@@ -794,6 +878,8 @@ class OrderActions {
 
       throw FormatException('داتای دروستکراوی پسوڵە نادروستە');
     } catch (e) {
+      final conflict = _tryParseConflictException(e);
+      if (conflict != null) throw conflict;
       throw Exception(api.parseError(e));
     }
   }
@@ -851,6 +937,8 @@ class OrderActions {
 
       throw FormatException('داتای نوێکراوەی پسوڵە نادروستە');
     } catch (e) {
+      final conflict = _tryParseConflictException(e);
+      if (conflict != null) throw conflict;
       throw Exception(api.parseError(e));
     }
   }

@@ -254,10 +254,20 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       final hasPendingLocalEdits =
           _debounceTimer != null ||
           _lastFailedBatch?['orderId'] == selectedOrder.id;
+      final clampedNames = <String>[];
       _applyRemoteOrderSafely(
         matchingOrder,
         mergePendingLocalChanges: hasPendingLocalEdits,
+        outClampedProductNames: clampedNames,
       );
+      if (clampedNames.isNotEmpty) {
+        AppSnackbar.show(
+          context,
+          message:
+              'بڕی ${clampedNames.join("، ")} بەپێی ستۆکی بەردەست ڕێکخرایەوە',
+          type: SnackbarType.warning,
+        );
+      }
     }
   }
 
@@ -310,8 +320,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       _secondsRemaining = 0;
       _orderCart.clear();
       _orderCartNotes.clear();
-      if (order == null &&
-          _lastFailedBatch?['orderId'] == previousOrderId) {
+      if (order == null ||
+          (_lastFailedBatch != null &&
+              _lastFailedBatch?['orderId'] != order.id)) {
         _lastFailedBatch = null;
       }
       _isManualPriceTierOverride = isManualOverride;
@@ -777,14 +788,133 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   }
 
   bool _isConcurrencyConflictError(Object e) {
+    if (e is OrderConcurrencyConflictException) return true;
     final msg = e.toString().toLowerCase();
     return msg.contains('409') ||
         msg.contains('conflict_version') ||
         msg.contains('هاوکاتی') ||
         msg.contains('دەستکاری کراون') ||
         msg.contains('نوێ بکەرەوە') ||
-        msg.contains('نوێکراوەتەوە') ||
-        msg.contains('version');
+        msg.contains('نوێکراوەتەوە');
+  }
+
+  bool _isStockInsufficientError(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('ستۆک') ||
+        msg.contains('بڕی پێویست') ||
+        msg.contains('stock') ||
+        msg.contains('insufficient');
+  }
+
+  double? _getMaxAllowedQtyForOrder(
+    int productId,
+    OrderModel targetOrder,
+    List<ProductModel> products,
+  ) {
+    final product = products.where((p) => p.id == productId).firstOrNull;
+    if (product == null) return null;
+
+    final targetWarehouseId = targetOrder.warehouseId ?? _getTargetWarehouseId();
+    final double warehouseStock = product.getStockForWarehouse(targetWarehouseId);
+    final double savedInTargetOrder =
+        targetOrder.items
+            .where((it) => it.productId == productId)
+            .firstOrNull
+            ?.quantity ??
+        0.0;
+    final maxAllowed = warehouseStock + savedInTargetOrder;
+    return maxAllowed < 0 ? 0.0 : maxAllowed;
+  }
+
+  Future<void> _refreshMissingOrderProductStocks(
+    OrderModel baseOrder,
+    OrderModel targetOrder,
+  ) async {
+    final targetItemPids = targetOrder.items.map((it) => it.productId).toSet();
+    final missingPids = <int>{
+      ..._orderCart.keys,
+      ...baseOrder.items.map((it) => it.productId),
+    }.where((pid) => !targetItemPids.contains(pid)).toList();
+
+    if (missingPids.isEmpty) return;
+    await Future.wait(
+      missingPids.map(
+        (pid) => ref.read(productsListProvider.notifier).refreshSingleProduct(pid),
+      ),
+    );
+  }
+
+  void _discardFailedLocalChanges() {
+    _debounceTimer?.cancel();
+    _countdownTimer?.cancel();
+    setState(() {
+      _secondsRemaining = 0;
+      _lastFailedBatch = null;
+      _orderCart.clear();
+      _orderCartNotes.clear();
+      final order = _selectedOrder;
+      if (order != null) {
+        for (final item in order.items) {
+          _orderCart[item.productId] = item.quantity;
+          if (item.notes != null && item.notes!.isNotEmpty) {
+            _orderCartNotes[item.productId] = item.notes!;
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _clampCartToAvailableStockAndRetry({
+    required String actionDesc,
+  }) async {
+    final activeOrder = _selectedOrder;
+    if (activeOrder == null || !mounted) return;
+
+    await ref.read(ordersListProvider.notifier).refreshSingleOrder(activeOrder.id);
+    if (!mounted) return;
+
+    final refreshedOrder = ref
+        .read(ordersListProvider)
+        .asData
+        ?.value
+        .where((o) => o.id == activeOrder.id)
+        .firstOrNull;
+    final targetOrder = refreshedOrder ?? activeOrder;
+    await _refreshMissingOrderProductStocks(activeOrder, targetOrder);
+    if (!mounted || _selectedOrder?.id != activeOrder.id) return;
+
+    if (refreshedOrder != null && _hasOrderChanged(activeOrder, refreshedOrder)) {
+      _applyRemoteOrderSafely(
+        refreshedOrder,
+        baseOrderOverride: activeOrder,
+        mergePendingLocalChanges: true,
+      );
+      _pendingRemoteOrderSync = false;
+    }
+
+    final products =
+        ref.read(productsListProvider).asData?.value ?? <ProductModel>[];
+    final currentTarget = _selectedOrder ?? targetOrder;
+    setState(() {
+      for (final entry in _orderCart.entries.toList()) {
+        final maxAllowed = _getMaxAllowedQtyForOrder(
+          entry.key,
+          currentTarget,
+          products,
+        );
+        if (maxAllowed != null) {
+          if (maxAllowed <= 0) {
+            _orderCart.remove(entry.key);
+            _orderCartNotes.remove(entry.key);
+          } else if (entry.value > maxAllowed) {
+            _orderCart[entry.key] = maxAllowed;
+          }
+        }
+      }
+      _lastFailedBatch = null;
+    });
+
+    await _executeBatchSave(actionDesc: actionDesc);
   }
 
   /// Applies a newer remote order version while optionally preserving unsaved local cart/note deltas
@@ -792,11 +922,14 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     OrderModel matchingOrder, {
     OrderModel? baseOrderOverride,
     required bool mergePendingLocalChanges,
+    List<String>? outClampedProductNames,
   }) {
     if (!mounted) return;
     final prevOrder = baseOrderOverride ?? _selectedOrder;
     final customerChanged =
         prevOrder != null && matchingOrder.customerId != prevOrder.customerId;
+    final products =
+        ref.read(productsListProvider).asData?.value ?? <ProductModel>[];
 
     final Map<int, double> nextCart = {};
     final Map<int, String> nextNotes = {};
@@ -823,11 +956,24 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         final localQty = _orderCart[pid] ?? 0.0;
         final delta = localQty - oldQty;
         if (delta.abs() > 1e-6) {
-          final updatedQty = (nextCart[pid] ?? 0.0) + delta;
+          double updatedQty = (nextCart[pid] ?? 0.0) + delta;
+          if (updatedQty > 0 && delta > 0) {
+            final maxAllowed = _getMaxAllowedQtyForOrder(
+              pid,
+              matchingOrder,
+              products,
+            );
+            if (maxAllowed != null && updatedQty > maxAllowed) {
+              updatedQty = maxAllowed;
+              final prod = products.where((p) => p.id == pid).firstOrNull;
+              outClampedProductNames?.add(prod?.name ?? 'کاڵا #$pid');
+            }
+          }
           if (updatedQty > 0) {
             nextCart[pid] = updatedQty;
           } else {
             nextCart.remove(pid);
+            nextNotes.remove(pid);
           }
         }
 
@@ -890,7 +1036,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   /// Executes batch sync to server in a single connection / database transaction
   Future<void> _executeBatchSave({
     required String actionDesc,
-    bool allowConflictRetry = true,
+    int remainingConflictRetries = 3,
   }) async {
     if (_selectedOrder == null) return;
 
@@ -928,6 +1074,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       'items': itemsList,
     };
 
+    bool didRetry = false;
     setState(() {
       _isSavingBatch = true;
       _pendingRemoteOrderSync = false;
@@ -955,56 +1102,78 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
         }
       }
     } catch (e) {
-      if (_isConcurrencyConflictError(e)) {
-        await ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId);
-        final refreshedOrders = ref.read(ordersListProvider).asData?.value;
-        final refreshedOrder = refreshedOrders
-            ?.where((o) => o.id == orderId)
-            .firstOrNull;
+      final isConflict = _isConcurrencyConflictError(e);
+      final isStockError = !isConflict && _isStockInsufficientError(e);
 
-        if (refreshedOrder == null) {
+      if (isConflict || isStockError) {
+        try {
+          await ref.read(ordersListProvider.notifier).refreshSingleOrder(orderId);
+          final refreshedOrders = ref.read(ordersListProvider).asData?.value;
+          final refreshedOrder = refreshedOrders
+              ?.where((o) => o.id == orderId)
+              .firstOrNull;
+
+          if (refreshedOrder == null) {
+            if (mounted && _selectedOrder?.id == orderId) {
+              _setActiveOrder(null);
+              AppSnackbar.show(
+                context,
+                message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
+                type: SnackbarType.warning,
+              );
+            }
+            return;
+          }
+
+          final nextStatus = refreshedOrder.status.toUpperCase();
+          if (nextStatus == OrderModel.statusDelivered ||
+              nextStatus == OrderModel.statusCancelled) {
+            if (mounted && _selectedOrder?.id == orderId) {
+              _setActiveOrder(null);
+              AppSnackbar.show(
+                context,
+                message:
+                    'ئەم پسوڵەیە لە ئامێرێکی ترەوە تەواو کراوە یان هەڵوەشاوەتەوە',
+                type: SnackbarType.warning,
+              );
+            }
+            return;
+          }
+
+          await _refreshMissingOrderProductStocks(baseOrder, refreshedOrder);
+
           if (mounted && _selectedOrder?.id == orderId) {
-            _setActiveOrder(null);
-            setState(() => _isSavingBatch = false);
-            AppSnackbar.show(
-              context,
-              message: 'ئەم پسوڵەیە لە ئامێرێکی ترەوە سڕاوەتەوە',
-              type: SnackbarType.warning,
-            );
-          }
-          return;
-        }
+            final hasRemoteVersionAdvance = refreshedOrder.version > baseOrder.version;
+            if (isConflict || hasRemoteVersionAdvance) {
+              final clampedNames = <String>[];
+              _applyRemoteOrderSafely(
+                refreshedOrder,
+                baseOrderOverride: baseOrder,
+                mergePendingLocalChanges: true,
+                outClampedProductNames: clampedNames,
+              );
+              _pendingRemoteOrderSync = false;
 
-        final nextStatus = refreshedOrder.status.toUpperCase();
-        if (nextStatus == OrderModel.statusDelivered ||
-            nextStatus == OrderModel.statusCancelled) {
-          if (mounted && _selectedOrder?.id == orderId) {
-            _setActiveOrder(null);
-            setState(() => _isSavingBatch = false);
-            AppSnackbar.show(
-              context,
-              message:
-                  'ئەم پسوڵەیە لە ئامێرێکی ترەوە تەواو کراوە یان هەڵوەشاوەتەوە',
-              type: SnackbarType.warning,
-            );
-          }
-          return;
-        }
+              if (clampedNames.isNotEmpty) {
+                AppSnackbar.show(
+                  context,
+                  message:
+                      'بڕی ${clampedNames.join("، ")} بەپێی ستۆکی بەردەست ڕێکخرایەوە',
+                  type: SnackbarType.warning,
+                );
+              }
 
-        if (mounted && _selectedOrder?.id == orderId) {
-          _applyRemoteOrderSafely(
-            refreshedOrder,
-            baseOrderOverride: baseOrder,
-            mergePendingLocalChanges: true,
-          );
-
-          if (allowConflictRetry && refreshedOrder.version > baseOrder.version) {
-            return _executeBatchSave(
-              actionDesc: actionDesc,
-              allowConflictRetry: false,
-            );
+              if (remainingConflictRetries > 0 && hasRemoteVersionAdvance) {
+                didRetry = true;
+                await _executeBatchSave(
+                  actionDesc: actionDesc,
+                  remainingConflictRetries: remainingConflictRetries - 1,
+                );
+                return;
+              }
+            }
           }
-        }
+        } catch (_) {}
       }
 
       final errorMsg = e.toString().replaceAll('Exception:', '').trim();
@@ -1028,6 +1197,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
           _flushPendingRemoteOrderSyncIfNeeded(orderId);
           _showFailedActionPersistentDialog();
         }
+      }
+    } finally {
+      if (!didRetry && mounted && _isSavingBatch) {
+        setState(() {
+          _isSavingBatch = false;
+        });
       }
     }
   }
@@ -1131,6 +1306,36 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                     const SizedBox(height: AppSpacing.lg),
 
                     // Action buttons
+                    if (_isStockInsufficientError(errorMsg)) ...[
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.auto_fix_high_rounded, size: 20),
+                        label: const Text(
+                          'ڕێکخستنەوەی بڕ بەپێی ستۆکی بەردەست',
+                          style: TextStyle(
+                            fontFamily: 'KJino',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: isRetrying
+                            ? null
+                            : () async {
+                                setModalState(() => isRetrying = true);
+                                Navigator.pop(dialogCtx);
+                                await _clampCartToAvailableStockAndRetry(
+                                  actionDesc: actionDesc,
+                                );
+                              },
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
                     Row(
                       children: [
                         Expanded(
@@ -1190,13 +1395,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                             style: TextStyle(fontFamily: 'KJino'),
                           ),
                           onPressed: () {
-                            setState(() {
-                              _lastFailedBatch = null;
-                            });
+                            _discardFailedLocalChanges();
                             Navigator.pop(dialogCtx);
                             AppSnackbar.show(
                               context,
-                              message: 'کردارە فەشەلهێناوەکە سڕایەوە',
+                              message:
+                                  'کردارە فەشەلهێناوەکە سڕایەوە و گەڕێندرایەوە بۆ دۆخی سێرڤەر',
                               type: SnackbarType.info,
                             );
                           },

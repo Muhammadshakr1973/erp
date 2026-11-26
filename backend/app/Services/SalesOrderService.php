@@ -1210,7 +1210,8 @@ class SalesOrderService
             }
 
             // Lock customer row
-            $customer = $this->getCustomerForOrder($data['customer_id']);
+            $customerId = $data['customer_id'] ?? $order->customer_id;
+            $customer = $this->getCustomerForOrder($customerId);
             $this->checkCustomerAssignment($customer, $user);
             $allowedCategoryIds = $isCustomerOrder ? $customer->getNormalizedAllowedCategoryIds() : [];
 
@@ -1307,13 +1308,13 @@ class SalesOrderService
             }
             $amountAfterPermDiscount = max(0, $subtotal - $permDiscountAmount);
 
-            $discountType = strtoupper($data['discount_type'] ?? 'PERCENT');
-            $invoiceDiscountPercent = isset($data['discount_percent']) ? max(0, min(100, (float) $data['discount_percent'])) : 0.0;
+            $discountType = strtoupper($data['discount_type'] ?? ($order->discount_type ?? 'PERCENT'));
+            $invoiceDiscountPercent = isset($data['discount_percent']) ? max(0, min(100, (float) $data['discount_percent'])) : max(0, min(100, (float) $order->discount_percent));
             $invoiceDiscountAmount = 0;
 
             if ($discountType === 'FIXED' || (isset($data['discount_amount']) && (int)$data['discount_amount'] > 0 && $invoiceDiscountPercent == 0)) {
                 $discountType = 'FIXED';
-                $fixedAmount = (int) ($data['discount_amount'] ?? 0);
+                $fixedAmount = isset($data['discount_amount']) ? (int) $data['discount_amount'] : (int) $order->discount_amount;
                 $invoiceDiscountAmount = min($amountAfterPermDiscount, max(0, $fixedAmount));
             } elseif ($invoiceDiscountPercent > 0) {
                 $discountType = 'PERCENT';
