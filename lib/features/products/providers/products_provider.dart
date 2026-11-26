@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,6 +15,8 @@ class ProductsListNotifier
   final PusherService _pusher;
   final Ref _ref;
   final Set<int> _fetchingProductIds = {};
+  bool _isRefreshingProducts = false;
+  bool _pendingRefreshProducts = false;
   late final void Function(Map<String, dynamic>) _onProductEvent;
   StreamSubscription<void>? _reconnectSub;
 
@@ -384,7 +387,12 @@ class ProductsListNotifier
     }
   }
 
-  Future<void> refreshProductsSilently() async {
+  Future<void> refreshProductsSilently({bool rethrowOnError = false}) async {
+    if (_isRefreshingProducts) {
+      _pendingRefreshProducts = true;
+      return;
+    }
+    _isRefreshingProducts = true;
     try {
       final freshProducts = await _fetchProductsFromApi();
       if (!mounted) return;
@@ -421,11 +429,24 @@ class ProductsListNotifier
       if (mounted) {
         debugPrint('Silent product refresh failed: $e\n$st');
       }
+      if (rethrowOnError) rethrow;
+    } finally {
+      _isRefreshingProducts = false;
+      if (_pendingRefreshProducts && mounted) {
+        _pendingRefreshProducts = false;
+        unawaited(refreshProductsSilently());
+      }
     }
   }
 
   Future<List<ProductModel>> _fetchProductsFromApi() async {
-    final response = await _api.client.get('/products');
+    final response = await _api.client.get(
+      '/products',
+      queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+      options: Options(
+        headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+      ),
+    );
     if (response.statusCode != 200) {
       throw Exception(
         'سێرڤەر کۆدی نادروستی گەڕاندەوە (Server returned invalid code): ${response.statusCode}',

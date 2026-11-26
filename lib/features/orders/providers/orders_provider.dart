@@ -331,9 +331,12 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     if (a.customer is Map && b.customer is Map) {
       final am = a.customer as Map;
       final bm = b.customer as Map;
-      if (am['current_balance']?.toString() !=
+      if (am['name']?.toString() != bm['name']?.toString() ||
+          am['current_balance']?.toString() !=
               bm['current_balance']?.toString() ||
           am['price_type']?.toString() != bm['price_type']?.toString() ||
+          am['permanent_discount']?.toString() !=
+              bm['permanent_discount']?.toString() ||
           am['phone']?.toString() != bm['phone']?.toString()) {
         return false;
       }
@@ -373,7 +376,7 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     return true;
   }
 
-  Future<void> refreshSilently() async {
+  Future<void> refreshSilently({bool rethrowOnError = false}) async {
     if (_isRefreshingAll) {
       _pendingRefreshAll = true;
       return;
@@ -382,23 +385,35 @@ class OrdersListNotifier extends AsyncNotifier<List<OrderModel>> {
     final api = ref.read(apiClientProvider);
     try {
       final freshOrders = await _fetchOrders(api);
+      if (_disposed) return;
       final current = state.valueOrNull;
-      if (current != null && current.length == freshOrders.length) {
-        bool allSame = true;
-        for (int i = 0; i < freshOrders.length; i++) {
-          if (!_sameOrderData(current[i], freshOrders[i])) {
-            allSame = false;
-            break;
-          }
-        }
-        if (allSame) return;
+      if (current == null) {
+        state = AsyncData(freshOrders);
+        return;
       }
-      state = AsyncData(freshOrders);
+
+      final currentById = {for (final order in current) order.id: order};
+      final updatedOrders = freshOrders.map((freshOrder) {
+        final existing = currentById[freshOrder.id];
+        final resolved = _preserveExistingCustomerExtras(existing, freshOrder);
+        return existing != null && _sameOrderData(existing, resolved)
+            ? existing
+            : resolved;
+      }).toList();
+
+      var hasChanges = current.length != updatedOrders.length;
+      for (int i = 0; !hasChanges && i < current.length; i++) {
+        hasChanges = !identical(current[i], updatedOrders[i]);
+      }
+      if (!hasChanges) return;
+
+      state = AsyncData(updatedOrders);
     } catch (_) {
+      if (rethrowOnError) rethrow;
       // Maintain current state on transient errors
     } finally {
       _isRefreshingAll = false;
-      if (_pendingRefreshAll) {
+      if (_pendingRefreshAll && !_disposed) {
         _pendingRefreshAll = false;
         unawaited(refreshSilently());
       }

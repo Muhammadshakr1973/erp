@@ -53,6 +53,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 0;
   bool _isSavingBatch = false;
+  bool _isManualRefreshing = false;
   bool _pendingRemoteOrderSync = false;
   int _localMutationSeq = 0;
 
@@ -2348,11 +2349,178 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
               onPressed: _changeOrderCustomer,
             ),
 
-          // Logo image only (no text)
-          Image.asset('assets/images/1.png', height: 36, fit: BoxFit.contain),
+          // Logo image — tap to silently refresh only items that changed on the server
+          Tooltip(
+            message: 'نوێکردنەوەی گۆڕانکارییەکان',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isManualRefreshing ? null : _refreshChangedDataOnly,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      AnimatedOpacity(
+                        opacity: _isManualRefreshing ? 0.35 : 1.0,
+                        duration: const Duration(milliseconds: 180),
+                        child: Image.asset(
+                          'assets/images/1.png',
+                          height: 36,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      if (_isManualRefreshing)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  bool _sameSpecialPrices(Map<int, double> a, Map<int, double> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  Future<void> _refreshChangedDataOnly() async {
+    if (_isManualRefreshing) return;
+
+    setState(() {
+      _isManualRefreshing = true;
+    });
+
+    final prevProducts = ref.read(productsListProvider).valueOrNull;
+    final prevCategories = ref.read(categoriesListProvider).valueOrNull;
+    final prevOrders = ref.read(ordersListProvider).valueOrNull;
+    final prevCustomers = ref
+        .read(
+          filteredCustomerListProvider(defaultCustomerDirectoryFilters),
+        )
+        .valueOrNull
+        ?.data;
+    final prevWarehouses = ref.read(warehouseListProvider).valueOrNull;
+    final activeOrder = _selectedOrder;
+    final prevSpecialPrices = Map<int, double>.from(_customerSpecialPrices);
+    final role = ref.read(authProvider).user?.role.toLowerCase() ?? '';
+
+    try {
+      bool specialPricesChanged = false;
+
+      final futures = <Future<void>>[
+        ref
+            .read(productsListProvider.notifier)
+            .refreshProductsSilently(rethrowOnError: true),
+        ref
+            .read(categoriesListProvider.notifier)
+            .refreshSilently(rethrowOnError: true),
+        ref
+            .read(ordersListProvider.notifier)
+            .refreshSilently(rethrowOnError: true),
+        ref.read(warehouseListProvider.notifier).refreshSilently(),
+      ];
+
+      if (role == 'admin' || role == 'owner' || role == 'salesman') {
+        futures.add(
+          ref
+              .read(
+                filteredCustomerListProvider(
+                  defaultCustomerDirectoryFilters,
+                ).notifier,
+              )
+              .refreshSilently(),
+        );
+      }
+
+      if (activeOrder != null && activeOrder.id > 0) {
+        if (activeOrder.status.toUpperCase() == OrderModel.statusDraft) {
+          futures.add(
+            ref
+                .read(ordersListProvider.notifier)
+                .refreshSingleOrder(activeOrder.id),
+          );
+        }
+        if (activeOrder.customerId > 0) {
+          futures.add(
+            ref
+                .read(customerActionsProvider)
+                .fetchSpecialPrices(activeOrder.customerId)
+                .then((prices) {
+                  if (!mounted || _selectedOrder?.id != activeOrder.id) return;
+                  if (!_sameSpecialPrices(_customerSpecialPrices, prices)) {
+                    specialPricesChanged = true;
+                    setState(() {
+                      _customerSpecialPrices = prices;
+                    });
+                  }
+                })
+                .catchError((_) {}),
+          );
+        }
+      }
+
+      await Future.wait(futures);
+      if (!mounted) return;
+
+      final nextProducts = ref.read(productsListProvider).valueOrNull;
+      final nextCategories = ref.read(categoriesListProvider).valueOrNull;
+      final nextOrders = ref.read(ordersListProvider).valueOrNull;
+      final nextCustomers = ref
+          .read(
+            filteredCustomerListProvider(defaultCustomerDirectoryFilters),
+          )
+          .valueOrNull
+          ?.data;
+      final nextWarehouses = ref.read(warehouseListProvider).valueOrNull;
+
+      final hasChanges =
+          !identical(prevProducts, nextProducts) ||
+          !identical(prevCategories, nextCategories) ||
+          !identical(prevOrders, nextOrders) ||
+          !identical(prevCustomers, nextCustomers) ||
+          !identical(prevWarehouses, nextWarehouses) ||
+          specialPricesChanged ||
+          !_sameSpecialPrices(prevSpecialPrices, _customerSpecialPrices);
+
+      AppSnackbar.show(
+        context,
+        message: hasChanges
+            ? 'گۆڕانکارییەکان بەبێ ڕیلۆد نوێکرانەوە'
+            : 'هیچ گۆڕانکارییەک نییە، هەموو داتاکان نوێن',
+        type: hasChanges ? SnackbarType.success : SnackbarType.info,
+      );
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message:
+              'نەتوانرا گۆڕانکارییەکان بپشکنرێن: ${e.toString().replaceAll('Exception:', '').trim()}',
+          type: SnackbarType.warning,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isManualRefreshing = false;
+        });
+      }
+    }
   }
 
   /// 10-Second Countdown & Sync Status Banner

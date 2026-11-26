@@ -10,6 +10,10 @@ import '../models/category_model.dart';
 import 'products_provider.dart';
 
 class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
+  bool _isRefreshing = false;
+  bool _pendingRefresh = false;
+  bool _disposed = false;
+
   @override
   Future<List<CategoryModel>> build() async {
     final userId = ref.watch(authProvider.select((state) => state.user?.id));
@@ -27,7 +31,9 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
     final reconnectSub = pusher.onReconnected.listen((_) {
       unawaited(refreshSilently());
     });
+    _disposed = false;
     ref.onDispose(() {
+      _disposed = true;
       reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-categories', onCategoriesEvent);
     });
@@ -113,19 +119,62 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryModel>> {
     unawaited(refreshSilently());
   }
 
-  Future<void> refreshSilently() async {
+  bool _sameCategoryData(CategoryModel a, CategoryModel b) {
+    return a.id == b.id && a.name == b.name && a.productsCount == b.productsCount;
+  }
+
+  Future<void> refreshSilently({bool rethrowOnError = false}) async {
+    if (_disposed) return;
+    if (_isRefreshing) {
+      _pendingRefresh = true;
+      return;
+    }
+    _isRefreshing = true;
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.client.get('/categories');
+      final response = await api.client.get(
+        '/categories',
+        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+        options: Options(
+          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+        ),
+      );
+      if (_disposed) return;
       if (response.statusCode == 200 &&
           response.data is Map &&
           response.data['data'] is List) {
         final List data = response.data['data'] as List;
         final fresh = data.map((json) => CategoryModel.fromJson(json)).toList();
-        state = AsyncValue.data(fresh);
+        final current = state.valueOrNull;
+        if (current == null) {
+          state = AsyncValue.data(fresh);
+          return;
+        }
+        final currentById = {for (final c in current) c.id: c};
+        final updated = fresh.map((item) {
+          final existing = currentById[item.id];
+          return existing != null && _sameCategoryData(existing, item)
+              ? existing
+              : item;
+        }).toList();
+
+        var hasChanges = current.length != updated.length;
+        for (var i = 0; !hasChanges && i < current.length; i++) {
+          hasChanges = !identical(current[i], updated[i]);
+        }
+        if (!hasChanges) return;
+
+        state = AsyncValue.data(updated);
       }
     } catch (_) {
+      if (rethrowOnError) rethrow;
       // Keep current categories on transient error
+    } finally {
+      _isRefreshing = false;
+      if (_pendingRefresh && !_disposed) {
+        _pendingRefresh = false;
+        unawaited(refreshSilently());
+      }
     }
   }
 

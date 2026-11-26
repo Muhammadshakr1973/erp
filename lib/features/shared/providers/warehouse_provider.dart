@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -111,6 +112,7 @@ class WarehouseModel {
 class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
   bool _isRefreshing = false;
   bool _pendingRefresh = false;
+  bool _disposed = false;
 
   @override
   FutureOr<List<WarehouseModel>> build() async {
@@ -140,7 +142,9 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
       unawaited(refreshSilently());
     });
 
+    _disposed = false;
     ref.onDispose(() {
+      _disposed = true;
       reconnectSub.cancel();
       pusher.unsubscribeFromChannel('private-warehouses', onWarehouseEvent);
       pusher.unsubscribeFromChannel('private-users', onWarehouseEvent);
@@ -151,7 +155,13 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
 
   Future<List<WarehouseModel>> _fetchWarehouses(ApiClient api) async {
     try {
-      final response = await api.client.get('/warehouses');
+      final response = await api.client.get(
+        '/warehouses',
+        queryParameters: {'_t': DateTime.now().millisecondsSinceEpoch},
+        options: Options(
+          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+        ),
+      );
       if (response.statusCode == 200) {
         final resData = response.data;
         if (resData is! Map || resData['data'] is! List) {
@@ -168,7 +178,31 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     }
   }
 
+  bool _sameIntList(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  bool _sameWarehouseData(WarehouseModel a, WarehouseModel b) {
+    return a.id == b.id &&
+        a.name == b.name &&
+        a.address == b.address &&
+        a.phone == b.phone &&
+        a.isMain == b.isMain &&
+        a.isActive == b.isActive &&
+        a.type == b.type &&
+        a.stocksCount == b.stocksCount &&
+        a.cashVanUserId == b.cashVanUserId &&
+        a.cashVanUserName == b.cashVanUserName &&
+        _sameIntList(a.keeperIds, b.keeperIds) &&
+        _sameIntList(a.salesmanIds, b.salesmanIds);
+  }
+
   Future<void> refreshSilently() async {
+    if (_disposed) return;
     if (_isRefreshing) {
       _pendingRefresh = true;
       return;
@@ -177,12 +211,33 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     try {
       final api = ref.read(apiClientProvider);
       final fresh = await _fetchWarehouses(api);
-      state = AsyncData(fresh);
+      if (_disposed) return;
+      final current = state.valueOrNull;
+      if (current == null) {
+        state = AsyncData(fresh);
+        return;
+      }
+
+      final currentById = {for (final w in current) w.id: w};
+      final updated = fresh.map((item) {
+        final existing = currentById[item.id];
+        return existing != null && _sameWarehouseData(existing, item)
+            ? existing
+            : item;
+      }).toList();
+
+      var hasChanges = current.length != updated.length;
+      for (var i = 0; !hasChanges && i < current.length; i++) {
+        hasChanges = !identical(current[i], updated[i]);
+      }
+      if (!hasChanges) return;
+
+      state = AsyncData(updated);
     } catch (_) {
       // Preserve current warehouse list on transient errors
     } finally {
       _isRefreshing = false;
-      if (_pendingRefresh) {
+      if (_pendingRefresh && !_disposed) {
         _pendingRefresh = false;
         unawaited(refreshSilently());
       }

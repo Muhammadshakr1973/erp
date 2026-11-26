@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,7 +113,13 @@ class FilteredCustomerListNotifier
     try {
       final response = await api.client.get(
         '/customers',
-        queryParameters: filters.toMap(),
+        queryParameters: {
+          ...filters.toMap(),
+          '_t': DateTime.now().millisecondsSinceEpoch,
+        },
+        options: Options(
+          headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+        ),
       );
       if (response.statusCode == 200) {
         final resData = response.data;
@@ -235,19 +242,38 @@ class FilteredCustomerListNotifier
       final api = ref.read(apiClientProvider);
       final fresh = await _fetchCustomersPage(api, arg);
       final current = state.valueOrNull;
-      if (current != null &&
-          current.data.length == fresh.data.length &&
-          current.total == fresh.total) {
-        bool allSame = true;
-        for (int i = 0; i < fresh.data.length; i++) {
-          if (!_sameCustomerData(current.data[i], fresh.data[i])) {
-            allSame = false;
-            break;
-          }
-        }
-        if (allSame) return;
+      if (current == null) {
+        state = AsyncData(fresh);
+        return;
       }
-      state = AsyncData(fresh);
+
+      final currentById = {for (final c in current.data) c.id: c};
+      final updatedList = fresh.data.map((freshCustomer) {
+        final existing = currentById[freshCustomer.id];
+        return existing != null && _sameCustomerData(existing, freshCustomer)
+            ? existing
+            : freshCustomer;
+      }).toList();
+
+      var hasChanges =
+          current.total != fresh.total ||
+          current.currentPage != fresh.currentPage ||
+          current.lastPage != fresh.lastPage ||
+          current.data.length != updatedList.length;
+      for (int i = 0; !hasChanges && i < current.data.length; i++) {
+        hasChanges = !identical(current.data[i], updatedList[i]);
+      }
+      if (!hasChanges) return;
+
+      state = AsyncData(
+        PaginatedResponse<Customer>(
+          data: updatedList,
+          currentPage: fresh.currentPage,
+          lastPage: fresh.lastPage,
+          total: fresh.total,
+          perPage: fresh.perPage,
+        ),
+      );
     } catch (_) {
       // Preserve current state on transient failure
     } finally {
