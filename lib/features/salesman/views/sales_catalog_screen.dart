@@ -288,7 +288,6 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
 
   /// Sets or switches the currently active order
   void _setActiveOrder(OrderModel? order, {bool isManualOverride = false}) {
-    final previousOrderId = _selectedOrder?.id;
     final previousWarehouseId = _selectedOrder?.warehouseId;
     _localMutationSeq++;
     _pendingRemoteOrderSync = false;
@@ -670,11 +669,12 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     if (newQty != null && mounted) {
-      if ((newQty - currentQty).abs() <= 1e-9) {
+      final double resolvedQty = newQty;
+      if ((resolvedQty - currentQty).abs() <= 1e-9) {
         return;
       }
 
-      if (newQty > totalAvailable) {
+      if (resolvedQty > totalAvailable) {
         AppSnackbar.show(
           context,
           message:
@@ -685,8 +685,8 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       }
 
       setState(() {
-        if (newQty > 0) {
-          _orderCart[product.id] = newQty;
+        if (resolvedQty > 0) {
+          _orderCart[product.id] = resolvedQty;
         } else {
           _orderCart.remove(product.id);
           _orderCartNotes.remove(product.id);
