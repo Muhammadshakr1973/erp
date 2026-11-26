@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_snackbar.dart';
-import '../../../core/components/app_text_field.dart';
+import '../../../core/components/global_numeric_keyboard.dart';
+import '../../../core/components/numeric_keyboard_manager.dart';
 import '../../../core/sync/pusher_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -588,7 +589,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     );
   }
 
-  /// Directly edit quantity via fast numeric input dialog
+  /// Directly edit quantity via numeric keyboard dialog
   Future<void> _editQuantityDirectly(ProductModel product) async {
     if (_selectedOrder == null) {
       _showNoOrderWarning();
@@ -606,106 +607,78 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     }
 
     final currentQty = _orderCart[product.id] ?? 0.0;
-    final controller = TextEditingController(text: currentQty.toString());
-
-    final newQty = await showDialog<double>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top-Left Close Button rule
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'دیاریکردنی بڕی ${product.name}',
-                        style: AppTextStyles.h3,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(width: 48), // balance header
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'ستۆکی بەردەست: $totalAvailable دانە',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  autofocus: true,
-                  labelText: 'بڕ (دانە)',
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    final parsed = double.tryParse(controller.text.trim());
-                    if (parsed != null && parsed >= 0) {
-                      if (parsed > totalAvailable) {
-                        AppSnackbar.show(
-                          ctx,
-                          message:
-                              'تەنها ${Formatters.cleanNumberString(totalAvailable)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر بنووسیت',
-                          type: SnackbarType.warning,
-                        );
-                        return;
-                      }
-                      Navigator.pop(ctx, parsed);
-                    } else {
-                      Navigator.pop(ctx);
-                    }
-                  },
-                  child: const Text(
-                    'جێبەجێکردن',
-                    style: TextStyle(
-                      fontFamily: 'KJino',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final controller = TextEditingController(
+      text: Formatters.cleanNumberString(currentQty),
     );
+    final focusNode = FocusNode();
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    ref.read(numericKeyboardProvider.notifier).register(
+          controller: controller,
+          focusNode: focusNode,
+          decimal: true,
+          signed: false,
+        );
+
+    double? newQty;
+    try {
+      newQty = await showDialog<double>(
+        context: context,
+        barrierDismissible: false,
+        useRootNavigator: true,
+        builder: (ctx) {
+          return NumericKeyboardDialog(
+            controller: controller,
+            labelText: 'بڕ (دانە)',
+            subtitleText:
+                '${product.name} • ستۆکی بەردەست: ${Formatters.cleanNumberString(totalAvailable)} دانە',
+            onDone: () {
+              final raw = controller.text.trim();
+              if (raw.isEmpty) {
+                Navigator.of(ctx).pop();
+                return;
+              }
+              final parsed = double.tryParse(raw);
+              if (parsed == null || parsed < 0) {
+                AppSnackbar.show(
+                  ctx,
+                  message: 'تکایە ژمارەیەکی دروست بنووسە',
+                  type: SnackbarType.warning,
+                );
+                return;
+              }
+              if (parsed > totalAvailable) {
+                AppSnackbar.show(
+                  ctx,
+                  message:
+                      'تەنها ${Formatters.cleanNumberString(totalAvailable)} دانە لە ستۆک بەردەستە و ناتوانی زیاتر بنووسیت',
+                  type: SnackbarType.warning,
+                );
+                return;
+              }
+              Navigator.of(ctx).pop(parsed);
+            },
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        ref.read(numericKeyboardProvider.notifier).hideKeyboardOnly();
+      }
+      focusNode.dispose();
+      controller.dispose();
+    }
 
     if (newQty != null && mounted) {
+      if ((newQty - currentQty).abs() <= 1e-9) {
+        return;
+      }
+
       if (newQty > totalAvailable) {
         AppSnackbar.show(
           context,
           message:
-              'ناتوانی لە ستۆکی بەردەست ($totalAvailable دانە) زیاتر دیاری بکەیت',
+              'ناتوانی لە ستۆکی بەردەست (${Formatters.cleanNumberString(totalAvailable)} دانە) زیاتر دیاری بکەیت',
           type: SnackbarType.warning,
         );
         return;

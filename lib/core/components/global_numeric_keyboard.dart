@@ -5,7 +5,12 @@ import 'numeric_keyboard_manager.dart';
 
 class GlobalNumericKeyboard extends ConsumerWidget {
   final bool isDialog;
-  const GlobalNumericKeyboard({super.key, this.isDialog = false});
+  final VoidCallback? onDone;
+  const GlobalNumericKeyboard({
+    super.key,
+    this.isDialog = false,
+    this.onDone,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,7 +68,9 @@ class GlobalNumericKeyboard extends ConsumerWidget {
                       canRequestFocus: false,
                       borderRadius: BorderRadius.circular(4),
                       onTap: () {
-                        if (isDialog) {
+                        if (onDone != null) {
+                          onDone!();
+                        } else if (isDialog) {
                           Navigator.of(context).maybePop();
                         } else {
                           ref.read(numericKeyboardProvider.notifier).hide();
@@ -217,15 +224,19 @@ class GlobalNumericKeyboardWrapper extends ConsumerWidget {
 class NumericKeyboardDialog extends ConsumerWidget {
   final TextEditingController controller;
   final String? labelText;
+  final String? subtitleText;
   final String? hintText;
   final void Function(String)? onChanged;
+  final VoidCallback? onDone;
 
   const NumericKeyboardDialog({
     super.key,
     required this.controller,
     this.labelText,
+    this.subtitleText,
     this.hintText,
     this.onChanged,
+    this.onDone,
   });
 
   @override
@@ -296,6 +307,20 @@ class NumericKeyboardDialog extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (subtitleText != null && subtitleText!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitleText!,
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl,
+                      style: AppTextStyles.caption.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   
                   // Input Value Display box (wrapped in Directionality with LTR to ensure left-to-right number and cursor)
@@ -378,7 +403,10 @@ class NumericKeyboardDialog extends ConsumerWidget {
                   // Custom Numeric Keyboard
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 260),
-                    child: const GlobalNumericKeyboard(isDialog: true),
+                    child: GlobalNumericKeyboard(
+                      isDialog: true,
+                      onDone: onDone,
+                    ),
                   ),
                 ],
               ),
