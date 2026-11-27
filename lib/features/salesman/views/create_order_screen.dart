@@ -4844,6 +4844,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             final isSpecialPrice = _isSpecialPriceApplied(
                               productId,
                             );
+                            final double maxStock = product != null
+                                ? _getProductAvailableStock(product)
+                                : 0.0;
+                            final bool canIncreaseQty =
+                                product != null &&
+                                maxStock > 0 &&
+                                (maxStock - qty) > 1e-9;
 
                             return Material(
                               key: ValueKey('cart_item_$productId'),
@@ -4972,17 +4979,29 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                     const SizedBox(width: 4),
                                                   ],
                                                   IconButton(
+                                                    tooltip: canIncreaseQty
+                                                        ? 'زیادکردن'
+                                                        : 'زیاتر لە ستۆک بەردەست نییە',
                                                     icon: Icon(
                                                       Icons.add_circle_outline,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .primary,
+                                                      color: canIncreaseQty
+                                                          ? theme
+                                                                .colorScheme
+                                                                .primary
+                                                          : theme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withValues(
+                                                                  alpha: 0.28,
+                                                                ),
                                                     ),
-                                                    onPressed: () => _addToCart(
-                                                      productId,
-                                                      moveToTopIfExisting:
-                                                          false,
-                                                    ),
+                                                    onPressed: canIncreaseQty
+                                                        ? () => _addToCart(
+                                                            productId,
+                                                            moveToTopIfExisting:
+                                                                false,
+                                                          )
+                                                        : null,
                                                   ),
                                                   InkWell(
                                                     onTap: () =>
