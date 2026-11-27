@@ -879,15 +879,22 @@ class CustomerActions {
 
   Future<void> setSpecialPrice(int customerId, int productId, double price) async {
     try {
-      await api.client.post(
+      final response = await api.client.post(
         '/customers/$customerId/special-prices',
         data: {
           'product_id': productId,
           'price': price.toInt(),
         },
       );
+      if ((response.statusCode ?? 500) >= 400) {
+        throw api.extractErrorMessage(
+          response.data,
+          defaultMsg: 'پاشەکەوتکردنی نرخی تایبەت سەرکەوتوو نەبوو',
+        );
+      }
       unawaited(refreshSingleCustomerEverywhere(customerId));
     } catch (e) {
+      if (e is String) throw Exception(e);
       throw Exception(api.parseError(e));
     }
   }
@@ -925,9 +932,16 @@ class CustomerActions {
 
   Future<void> deleteSpecialPrice(int customerId, int productId) async {
     try {
-      await api.client.delete('/customers/$customerId/special-prices/$productId');
+      final response = await api.client.delete('/customers/$customerId/special-prices/$productId');
+      if ((response.statusCode ?? 500) >= 400) {
+        throw api.extractErrorMessage(
+          response.data,
+          defaultMsg: 'سڕینەوەی نرخی تایبەت سەرکەوتوو نەبوو',
+        );
+      }
       unawaited(refreshSingleCustomerEverywhere(customerId));
     } catch (e) {
+      if (e is String) throw Exception(e);
       throw Exception(api.parseError(e));
     }
   }
