@@ -1691,7 +1691,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           : defaultPrice.toInt().toString(),
     );
 
-    final double knownCostPrice = product.costPrice;
+    double? knownCostPrice = product.costPrice > 0 ? product.costPrice : null;
+    bool fetchStarted = false;
+    bool dialogClosed = false;
     bool isSaving = false;
     String? inlineError;
 
@@ -1708,15 +1710,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (modalCtx, setDialogState) {
+          if (!fetchStarted && knownCostPrice == null) {
+            fetchStarted = true;
+            unawaited(
+              ref
+                  .read(customerActionsProvider)
+                  .fetchSpecialPriceMinCost(_selectedCustomer!.id, product.id)
+                  .then((fetched) {
+                    if (!dialogClosed && modalCtx.mounted && fetched != null) {
+                      setDialogState(() {
+                        knownCostPrice = fetched;
+                      });
+                    }
+                  }),
+            );
+          }
+
           final currentParsed = parseInputPrice();
+          final double? activeCostPrice = knownCostPrice;
           final bool violatesKnownCost =
-              knownCostPrice > 0 &&
+              activeCostPrice != null &&
               currentParsed != null &&
-              currentParsed <= knownCostPrice;
+              currentParsed <= activeCostPrice;
           final String? warningOrError =
               inlineError ??
-              (knownCostPrice > 0
-                  ? 'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(knownCostPrice)} .'
+              (activeCostPrice != null
+                  ? 'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(activeCostPrice)} .'
                   : null);
           final bool isErrorState = inlineError != null || violatesKnownCost;
 
@@ -1818,7 +1837,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     labelText: 'نرخی تایبەتی نوێ (دینار)',
                     prefixIcon: Icons.monetization_on_outlined,
                     onChanged: (_) {
-                      if (inlineError != null || knownCostPrice > 0) {
+                      if (inlineError != null || activeCostPrice != null) {
                         setDialogState(() {
                           inlineError = null;
                         });
@@ -1900,10 +1919,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           });
                           return;
                         }
-                        if (knownCostPrice > 0 && parsed <= knownCostPrice) {
+                        if (activeCostPrice != null && parsed <= activeCostPrice) {
                           setDialogState(() {
                             inlineError =
-                                'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(knownCostPrice)} .';
+                                'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(activeCostPrice)} .';
                           });
                           return;
                         }
@@ -1979,6 +1998,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         },
       ),
     );
+    dialogClosed = true;
     Future.delayed(const Duration(milliseconds: 300), controller.dispose);
   }
 

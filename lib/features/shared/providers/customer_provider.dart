@@ -877,6 +877,23 @@ class CustomerActions {
     }
   }
 
+  Future<double?> fetchSpecialPriceMinCost(int customerId, int productId) async {
+    try {
+      final response = await api.client.get(
+        '/customers/$customerId/special-prices/min-price/$productId',
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        final rawMin = response.data['min_price'];
+        if (rawMin != null) {
+          return double.tryParse(rawMin.toString());
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setSpecialPrice(int customerId, int productId, double price) async {
     try {
       final response = await api.client.post(

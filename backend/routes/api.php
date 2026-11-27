@@ -121,6 +121,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
         Route::post('/customers/{customer}/reconcile', [CustomerController::class, 'reconcile'])->middleware('permission:users.manage');
         Route::get('/customers/{customer}/special-prices', [CustomerController::class, 'getSpecialPrices'])->middleware('permission:customers.view');
+        Route::get('/customers/{customer}/special-prices/min-price/{product}', [CustomerController::class, 'getSpecialPriceMin'])->middleware('permission:orders.create');
         Route::post('/customers/{customer}/special-prices', [CustomerController::class, 'setSpecialPrice'])->middleware('permission:orders.create');
         Route::delete('/customers/{customer}/special-prices/{productId}', [CustomerController::class, 'deleteSpecialPrice'])->middleware('permission:orders.create');
         Route::get('/customers/{customer}/last-product-price/{productId}', [CustomerController::class, 'getLastProductPrice'])->middleware('permission:customers.view');

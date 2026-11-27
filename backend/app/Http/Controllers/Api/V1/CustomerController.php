@@ -211,6 +211,20 @@ class CustomerController extends Controller
         ], 200);
     }
 
+    public function getSpecialPriceMin(Request $request, Customer $customer, \App\Models\Product $product): JsonResponse
+    {
+        if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
+            return response()->json([
+                'message' => 'تۆ ڕێگەپێدراو نیت بۆ بینینی زانیاری ئەم کڕیارە.',
+                'error' => 'Forbidden.'
+            ], 403);
+        }
+
+        return response()->json([
+            'min_price' => (int) ($product->cost_price ?? 0),
+        ], 200);
+    }
+
     public function setSpecialPrice(Request $request, Customer $customer): JsonResponse
     {
         if ($request->user()->isCustomer() || !$request->user()->hasCustomerAccess($customer)) {
