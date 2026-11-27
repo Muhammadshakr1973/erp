@@ -56,6 +56,40 @@ class Product extends Model
                 $product->price_n3 = $product->price_n1;
             }
         });
+
+        static::updated(function ($product) {
+            if (!$product->wasChanged('cost_price')) {
+                return;
+            }
+
+            $newCostPrice = (int) ($product->cost_price ?? 0);
+            $lossMakingPrices = CustomerSpecialPrice::with('customer')
+                ->where('product_id', $product->id)
+                ->where('price', '<=', $newCostPrice)
+                ->get();
+
+            if ($lossMakingPrices->isEmpty()) {
+                return;
+            }
+
+            $affectedCustomers = [];
+            foreach ($lossMakingPrices as $specialPrice) {
+                if ($specialPrice->customer) {
+                    $affectedCustomers[$specialPrice->customer_id] = $specialPrice->customer;
+                }
+                $specialPrice->delete();
+            }
+
+            foreach ($affectedCustomers as $customer) {
+                try {
+                    event(new \App\Events\CustomerAccountUpdated($customer, 'special_price_deleted'));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning(
+                        'Failed to broadcast special_price_deleted on cost_price update: ' . $e->getMessage()
+                    );
+                }
+            }
+        });
     }
     public function parent()
     {
