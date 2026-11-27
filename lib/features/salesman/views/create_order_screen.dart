@@ -896,7 +896,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return false;
     }
 
-    if (currentQty + 1 > maxStock) {
+    final double remaining = maxStock - currentQty;
+    if (remaining <= 1e-9) {
       AppSnackbar.show(
         context,
         message:
@@ -906,9 +907,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       return false;
     }
 
+    final double newQty = remaining < 1.0 ? maxStock : currentQty + 1.0;
+
     _markFieldDirty('product_qty_$productId');
     setState(() {
-      _cart[productId] = currentQty + 1.0;
+      _cart[productId] = newQty;
       _syncNoteControllers();
     });
     _triggerDebouncedAutoSave();
@@ -3597,11 +3600,12 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
               _searchFocusNode.requestFocus();
             }
           });
+          final updatedQty = _cart[product.id] ?? qtyInCart;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '${product.name} زیادکرا بۆ سەبەتە (${qtyInCart + 1})',
+                '${product.name} زیادکرا بۆ سەبەتە (${Formatters.cleanNumberString(updatedQty)})',
               ),
               backgroundColor: AppColors.success,
               duration: const Duration(milliseconds: 900),
@@ -3622,10 +3626,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           }
           final added = _addToCart(product.id);
           if (!added) return;
+          final updatedQty = _cart[product.id] ?? qtyInCart;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${product.name} زیادکرا (${qtyInCart + 1})'),
+              content: Text(
+                '${product.name} زیادکرا (${Formatters.cleanNumberString(updatedQty)})',
+              ),
               backgroundColor: AppColors.success,
               duration: const Duration(milliseconds: 900),
             ),
@@ -4671,7 +4678,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                       color: AppColors.danger,
                                                     ),
                                                     onPressed: () {
-                                                      if (qty == 1) {
+                                                      if (qty <= 1) {
                                                         _confirmDeleteItem(
                                                           productId,
                                                           product?.name ??
