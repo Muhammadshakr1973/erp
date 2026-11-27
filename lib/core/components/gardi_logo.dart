@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 /// Gardi Company official brand logo widget
 class GardiLogo extends StatelessWidget {
+  static const String _assetPath = 'assets/images/1.png';
+  static const String fallbackLogoUrl =
+      'https://raw.githubusercontent.com/Muhammadshakr1973/pos/refs/heads/main/logo.png';
+
   final double height;
   final double? width;
   final BoxFit fit;
@@ -16,10 +20,31 @@ class GardiLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/images/1.png',
+      _assetPath,
       height: height,
       width: width,
       fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.network(
+          fallbackLogoUrl,
+          height: height,
+          width: width,
+          fit: fit,
+          errorBuilder: (context, networkError, networkStackTrace) {
+            return SizedBox(
+              height: height,
+              width: width,
+              child: Center(
+                child: Icon(
+                  Icons.apartment_rounded,
+                  size: height * 0.75,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
