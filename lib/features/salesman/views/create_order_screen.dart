@@ -3591,15 +3591,34 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ) {
             final allOptions = options.toList();
             final availableOptions = <ProductModel>[];
-            final unavailableOptions = <ProductModel>[];
+            final exhaustedInCartOptions = <ProductModel>[];
+            final outOfStockOptions = <ProductModel>[];
 
             for (final option in allOptions) {
-              if (_getOptionAvailableStock(option, allProducts) > 0) {
+              final double availStock = _getOptionAvailableStock(
+                option,
+                allProducts,
+              );
+              final double qtyInCart = option.isParent
+                  ? allProducts
+                        .where((v) => v.isActive && v.parentId == option.id)
+                        .fold<double>(0, (s, v) => s + (_cart[v.id] ?? 0.0))
+                  : (_cart[option.id] ?? 0.0);
+              final double remainingStock = availStock - qtyInCart;
+
+              if (remainingStock > 0) {
                 availableOptions.add(option);
+              } else if (availStock > 0 && qtyInCart > 0) {
+                exhaustedInCartOptions.add(option);
               } else {
-                unavailableOptions.add(option);
+                outOfStockOptions.add(option);
               }
             }
+
+            final unavailableOptions = <ProductModel>[
+              ...exhaustedInCartOptions,
+              ...outOfStockOptions,
+            ];
 
             final Color frameBorderColor = theme.colorScheme.primary.withValues(
               alpha: isDark ? 0.6 : 0.45,

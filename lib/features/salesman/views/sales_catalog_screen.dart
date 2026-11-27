@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/components/app_snackbar.dart';
+import '../../../core/components/gardi_logo.dart';
 import '../../../core/components/global_numeric_keyboard.dart';
 import '../../../core/components/numeric_keyboard_manager.dart';
 import '../../../core/sync/pusher_service.dart';
@@ -2557,20 +2558,9 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
                         AnimatedOpacity(
                           opacity: _isManualRefreshing ? 0.35 : 1.0,
                           duration: const Duration(milliseconds: 180),
-                          child: Image.asset(
-                            'assets/images/1.png',
+                          child: const GardiLogo(
                             width: 36,
                             height: 36,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.apartment_rounded,
-                                size: 24,
-                                color: isDark
-                                    ? Colors.white70
-                                    : Colors.blueGrey.shade700,
-                              );
-                            },
                           ),
                         ),
                         if (_isManualRefreshing)

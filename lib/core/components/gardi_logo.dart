@@ -30,19 +30,6 @@ class GardiLogo extends StatelessWidget {
           height: height,
           width: width,
           fit: fit,
-          errorBuilder: (context, networkError, networkStackTrace) {
-            return SizedBox(
-              height: height,
-              width: width,
-              child: Center(
-                child: Icon(
-                  Icons.apartment_rounded,
-                  size: height * 0.75,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            );
-          },
         );
       },
     );

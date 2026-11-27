@@ -469,8 +469,9 @@ class SalesOrderController extends Controller
             }
         }
 
-        // 2. Today's sales and profit units include every order created today.
+        // 2. Today's sales and profit units include every non-cancelled order created today.
         $todayOrders = \App\Models\SalesOrder::where('salesman_id', $user->id)
+            ->where('status', '!=', \App\Models\SalesOrder::STATUS_CANCELLED)
             ->whereDate('created_at', $today);
 
         $todaySalesAmount = (int) $todayOrders->sum('total_amount');

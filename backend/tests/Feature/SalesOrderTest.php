@@ -1410,6 +1410,6 @@ class SalesOrderTest extends TestCase
 
         $this->assertEquals(50, $response->json('data.month_units'));
         $this->assertEquals(30, $response->json('data.last_month_units'));
-        $this->assertEquals(25, $response->json('data.today_units'));
+        $this->assertEquals(20, $response->json('data.today_units'));
     }
 }

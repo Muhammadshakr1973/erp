@@ -401,6 +401,18 @@ class SalesmanDashboardScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                              ),
+                              child: Text(
+                                Formatters.units(order.totalProfit),
+                                style: AppTextStyles.caption.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
