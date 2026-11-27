@@ -664,7 +664,7 @@ class SalesOrderService
                     }
 
                     // گەڕاندنەوەی ستۆکی ئەو کاڵایانەی پاکەت نەکراون (Partial packing) بۆ ناو ستۆکی کۆگا پێش سڕینەوەیان لە پسوڵە
-                    $unpackedItems = $lockedOrder->items()->where('is_packed', false)->orderBy('product_id', 'asc')->get();
+                    $unpackedItems = $lockedOrder->items()->where('is_packed', false)->reorder('product_id', 'asc')->get();
                     foreach ($unpackedItems as $item) {
                         $warehouseStock = WarehouseStock::lockForUpdate()->where([
                             'warehouse_id' => $lockedOrder->warehouse_id,
@@ -791,7 +791,7 @@ class SalesOrderService
      */
     public function restoreStockForOrder(SalesOrder $order, $user, string $notes = ''): void
     {
-        $items = $order->items()->orderBy('product_id', 'asc')->get();
+        $items = $order->items()->reorder('product_id', 'asc')->get();
         foreach ($items as $item) {
             // هەژمارکردنی بڕی کەمکراوەی ڕاستەقینە لە ڕێگەی تراکنشنی فرۆشتن
             $deductedSales = (float) StockTransaction::where('warehouse_id', $order->warehouse_id)

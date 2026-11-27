@@ -58,6 +58,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final ScrollController _cartScrollController = ScrollController();
   final GlobalKey _searchKey = GlobalKey();
 
   int? _serverOrderId;
@@ -70,6 +71,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   bool _hasSavedOnce = false;
   bool _isSaving = false;
   bool _pendingRemoteOrderSync = false;
+  bool _pendingRemoteSideEventSync = false;
   int _localMutationSeq = 0;
 
   Timer? _countdownTimer;
@@ -591,6 +593,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   void _flushPendingRemoteOrderSyncIfNeeded() {
     if (!_pendingRemoteOrderSync || !mounted || _isSaving) return;
     _pendingRemoteOrderSync = false;
+    final bool hadSideEvent = _pendingRemoteSideEventSync;
+    _pendingRemoteSideEventSync = false;
     final serverId = _serverOrderId;
     if (serverId == null) return;
     final matchingOrder = ref
@@ -611,7 +615,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         matchingOrder,
         mergePendingLocalChanges: hasPendingEdits,
       );
-    } else if (_subscribedOrderId != null) {
+    } else if (hadSideEvent && _subscribedOrderId != null) {
       unawaited(_syncSubscribedOrderFromServer());
     }
   }
@@ -652,10 +656,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     if (targetOrderId == null) return;
-    if (_isSaving) {
-      _pendingRemoteOrderSync = true;
-      return;
-    }
 
     final dynamic rawVersion = dataObj['version'];
     final int? eventVersion = rawVersion is num
@@ -667,6 +667,18 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       'pack_item',
       'return_created',
     ].contains(eventType);
+
+    if (_isSaving) {
+      if (eventVersion == null ||
+          eventVersion > _currentVersion ||
+          (isNonVersionedOrSideEvent && eventVersion >= _currentVersion)) {
+        _pendingRemoteOrderSync = true;
+        if (isNonVersionedOrSideEvent || eventVersion == null) {
+          _pendingRemoteSideEventSync = true;
+        }
+      }
+      return;
+    }
 
     if (eventVersion == null ||
         eventVersion > _currentVersion ||
@@ -803,6 +815,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     _notesController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _cartScrollController.dispose();
     for (final c in _noteControllers.values) {
       c.dispose();
     }
@@ -881,6 +894,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     return warehouseStock + savedInThisOrder;
   }
 
+  void _scrollCartToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _cartScrollController.hasClients &&
+          _cartScrollController.offset > 0) {
+        _cartScrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   void _prependToCart(int productId, double qty) {
     final reordered = <int, double>{productId: qty};
     for (final entry in _cart.entries) {
@@ -934,16 +961,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final double newQty = remaining < 1.0 ? maxStock : currentQty + 1.0;
     final bool isNewItem = !_cart.containsKey(productId);
+    final bool shouldMoveToTop = isNewItem || moveToTopIfExisting;
 
     _markFieldDirty('product_qty_$productId');
     setState(() {
-      if (isNewItem || moveToTopIfExisting) {
+      if (shouldMoveToTop) {
         _prependToCart(productId, newQty);
       } else {
         _cart[productId] = newQty;
       }
       _syncNoteControllers();
     });
+    if (shouldMoveToTop) {
+      _scrollCartToTop();
+    }
     _triggerDebouncedAutoSave();
     return true;
   }
@@ -1845,6 +1876,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       setState(() {
         _isSaving = true;
         _pendingRemoteOrderSync = false;
+        _pendingRemoteSideEventSync = false;
         if (_lastChangedField != null) {
           _fieldStates[_lastChangedField!] = 'saving';
         }
@@ -1952,6 +1984,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           mergePendingLocalChanges: true,
         );
         _pendingRemoteOrderSync = false;
+        _pendingRemoteSideEventSync = false;
         if (remainingConflictRetries > 0 &&
             latestOrder != null &&
             (latestOrder.version > previousVersion || adoptedFromCreate) &&
@@ -4250,12 +4283,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     if (updated == null || !mounted) return;
 
     _markFieldDirty('product_qty_${parentProduct.id}');
+    bool addedAnyNewVariant = false;
     setState(() {
       for (final v in variants) {
         final qty = updated[v.id] ?? 0;
         if (qty > 0) {
           if (!_cart.containsKey(v.id)) {
             _prependToCart(v.id, qty);
+            addedAnyNewVariant = true;
           } else {
             _cart[v.id] = qty;
           }
@@ -4266,6 +4301,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       }
       _syncNoteControllers();
     });
+    if (addedAnyNewVariant) {
+      _scrollCartToTop();
+    }
     _triggerDebouncedAutoSave();
   }
 
@@ -4507,6 +4545,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       builder: (context) {
                         final cartKeys = _cart.keys.toList();
                         return ListView.separated(
+                          controller: _cartScrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(AppSpacing.md),
                           itemCount: cartKeys.length,

@@ -182,7 +182,7 @@ class SalesOrder extends Model
     }
     public function items()
     {
-        return $this->hasMany(SalesOrderItem::class);
+        return $this->hasMany(SalesOrderItem::class)->orderBy('id', 'asc');
     }
     public function tripOrders()
     {
