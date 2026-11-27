@@ -418,24 +418,25 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ref.read(productsListProvider).asData?.value ?? <ProductModel>[];
     final clampedProductNames = <String>[];
 
-    final Map<int, double> nextCart = {};
+    final Map<int, double> serverCart = {};
     final Map<int, String> nextNotes = {};
     final Map<int, double> nextServerSaved = {};
     for (final item in latestOrder.items) {
-      nextCart[item.productId] = item.quantity;
+      serverCart[item.productId] = item.quantity;
       nextServerSaved[item.productId] = item.quantity;
       if (item.notes != null && item.notes!.isNotEmpty) {
         nextNotes[item.productId] = item.notes!;
       }
     }
 
+    final Map<int, double> localNewItems = {};
     final allProductIds = <int>{..._serverSavedQuantities.keys, ..._cart.keys};
     for (final pid in allProductIds) {
       final oldQty = _serverSavedQuantities[pid] ?? 0.0;
       final localQty = _cart[pid] ?? 0.0;
       final delta = localQty - oldQty;
       if (delta.abs() > 1e-6) {
-        double updatedQty = (nextCart[pid] ?? 0.0) + delta;
+        double updatedQty = (serverCart[pid] ?? 0.0) + delta;
         if (updatedQty > 0 && delta > 0) {
           final maxAllowed = _getMaxAllowedQtyForOrder(
             pid,
@@ -449,16 +450,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           }
         }
         if (updatedQty > 0) {
-          nextCart[pid] = updatedQty;
+          if (serverCart.containsKey(pid)) {
+            serverCart[pid] = updatedQty;
+          } else {
+            localNewItems[pid] = updatedQty;
+          }
         } else {
-          nextCart.remove(pid);
+          serverCart.remove(pid);
           nextNotes.remove(pid);
         }
       }
 
       if ((_dirtyFields.contains('product_note_$pid') ||
               _fieldStates.containsKey('product_note_$pid')) &&
-          nextCart.containsKey(pid)) {
+          (serverCart.containsKey(pid) || localNewItems.containsKey(pid))) {
         final localNote = _cartNotes[pid] ?? '';
         if (localNote.isNotEmpty) {
           nextNotes[pid] = localNote;
@@ -467,6 +472,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         }
       }
     }
+
+    final Map<int, double> nextCart = {};
+    for (final pid in _cart.keys) {
+      if (localNewItems.containsKey(pid)) {
+        nextCart[pid] = localNewItems[pid]!;
+      }
+    }
+    nextCart.addAll(serverCart);
 
     final bool shouldReloadCustomer =
         !_dirtyFields.contains('customer') &&
@@ -868,7 +881,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     return warehouseStock + savedInThisOrder;
   }
 
-  bool _addToCart(int productId) {
+  void _prependToCart(int productId, double qty) {
+    final reordered = <int, double>{productId: qty};
+    for (final entry in _cart.entries) {
+      if (entry.key != productId) {
+        reordered[entry.key] = entry.value;
+      }
+    }
+    _cart
+      ..clear()
+      ..addAll(reordered);
+  }
+
+  bool _addToCart(int productId, {bool moveToTopIfExisting = true}) {
     final products = ref.read(productsListProvider).asData?.value ?? [];
     final product = products.where((p) => p.id == productId).firstOrNull;
     if (product == null) {
@@ -908,10 +933,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     final double newQty = remaining < 1.0 ? maxStock : currentQty + 1.0;
+    final bool isNewItem = !_cart.containsKey(productId);
 
     _markFieldDirty('product_qty_$productId');
     setState(() {
-      _cart[productId] = newQty;
+      if (isNewItem || moveToTopIfExisting) {
+        _prependToCart(productId, newQty);
+      } else {
+        _cart[productId] = newQty;
+      }
       _syncNoteControllers();
     });
     _triggerDebouncedAutoSave();
@@ -4224,7 +4254,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       for (final v in variants) {
         final qty = updated[v.id] ?? 0;
         if (qty > 0) {
-          _cart[v.id] = qty;
+          if (!_cart.containsKey(v.id)) {
+            _prependToCart(v.id, qty);
+          } else {
+            _cart[v.id] = qty;
+          }
         } else {
           _cart.remove(v.id);
           _cartNotes.remove(v.id);
@@ -4491,6 +4525,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 .containsKey(productId);
 
                             return Material(
+                              key: ValueKey('cart_item_$productId'),
                               color: Colors.transparent,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
@@ -4615,8 +4650,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                           .colorScheme
                                                           .primary,
                                                     ),
-                                                    onPressed: () =>
-                                                        _addToCart(productId),
+                                                    onPressed: () => _addToCart(
+                                                      productId,
+                                                      moveToTopIfExisting:
+                                                          false,
+                                                    ),
                                                   ),
                                                   InkWell(
                                                     onTap: () =>

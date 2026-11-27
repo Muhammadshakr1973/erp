@@ -104,8 +104,8 @@ class SalesOrderService
             $isCustomerOrder = $user && method_exists($user, 'isCustomer') && $user->isCustomer();
             $allowedCategoryIds = $isCustomerOrder ? $customer->getNormalizedAllowedCategoryIds() : [];
 
-            $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
-            if ($isCustomerOrder && empty($sortedItemsData)) {
+            $itemsData = array_values($data['items'] ?? []);
+            if ($isCustomerOrder && empty($itemsData)) {
                 throw ValidationException::withMessages([
                     'items' => 'تکایە لایەنی کەم کاڵایەک هەڵبژێرە.'
                 ]);
@@ -144,8 +144,37 @@ class SalesOrderService
             $subtotal = 0;
             $totalProfit = 0;
 
-            // پاشەکەوتکردنی کاڵاکان و کەمکردنەوەی ڕاستەوخۆ لە ستۆکی کۆگا (بەبێ حجزکردن)
-            foreach ($sortedItemsData as $item) {
+            // قفڵکردنی ڕیزی ستۆکی پەیوەندیدار بە ڕیزبەندی product_id بۆ پێشگرتن لە Deadlock
+            $productsById = [];
+            $lockedStocks = [];
+            $sortedProductIds = collect($itemsData)
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->sort()
+                ->values();
+
+            foreach ($sortedProductIds as $pid) {
+                $product = Product::findOrFail($pid);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
+                    ]);
+                }
+                $productsById[$pid] = $product;
+                $lockedStocks[$pid] = WarehouseStock::lockForUpdate()->firstOrCreate(
+                    ['warehouse_id' => $order->warehouse_id, 'product_id' => $pid],
+                    ['quantity' => 0, 'reserved_quantity' => 0]
+                );
+            }
+
+            // پاشەکەوتکردنی کاڵاکان بە هەمان ڕیزبەندی نێردراو و کەمکردنەوەی ڕاستەوخۆ لە ستۆکی کۆگا
+            foreach ($itemsData as $item) {
                 $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -153,24 +182,9 @@ class SalesOrderService
                     ]);
                 }
 
-                $product = Product::findOrFail($item['product_id']);
-                if ($product->is_parent) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
-                    ]);
-                }
-
-                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
-                    ]);
-                }
-
-                // قفڵکردنی ڕیزی ستۆکی پەیوەندیدار بۆ پێشگرتن لە کێبڕکێ و دڵنیابوونەوە لە بەردەستبوونی ستۆک
-                $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $order->warehouse_id, 'product_id' => $product->id],
-                    ['quantity' => 0, 'reserved_quantity' => 0]
-                );
+                $pid = (int) $item['product_id'];
+                $product = $productsById[$pid];
+                $warehouseStock = $lockedStocks[$pid];
 
                 $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
@@ -341,9 +355,37 @@ class SalesOrderService
             $subtotal = 0;
             $totalProfit = 0;
 
-            $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
+            $itemsData = array_values($data['items'] ?? []);
 
-            foreach ($sortedItemsData as $item) {
+            $productsById = [];
+            $lockedStocks = [];
+            $sortedProductIds = collect($itemsData)
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->sort()
+                ->values();
+
+            foreach ($sortedProductIds as $pid) {
+                $product = Product::findOrFail($pid);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
+                    ]);
+                }
+                $productsById[$pid] = $product;
+                $lockedStocks[$pid] = WarehouseStock::lockForUpdate()->firstOrCreate(
+                    ['warehouse_id' => $targetWarehouseId, 'product_id' => $pid],
+                    ['quantity' => 0, 'reserved_quantity' => 0]
+                );
+            }
+
+            foreach ($itemsData as $item) {
                 $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -351,24 +393,9 @@ class SalesOrderService
                     ]);
                 }
 
-                $product = Product::findOrFail($item['product_id']);
-                if ($product->is_parent) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
-                    ]);
-                }
-
-                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
-                    ]);
-                }
-
-                // قفڵکردن و پشکنینی ستۆکی فیزیکی کۆگا بۆ کاڵای نوێ
-                $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $targetWarehouseId, 'product_id' => $product->id],
-                    ['quantity' => 0, 'reserved_quantity' => 0]
-                );
+                $pid = (int) $item['product_id'];
+                $product = $productsById[$pid];
+                $warehouseStock = $lockedStocks[$pid];
 
                 $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
@@ -1226,9 +1253,37 @@ class SalesOrderService
             $subtotal = 0;
             $totalProfit = 0;
 
-            $sortedItemsData = collect($data['items'] ?? [])->sortBy('product_id')->values()->all();
+            $itemsData = array_values($data['items'] ?? []);
 
-            foreach ($sortedItemsData as $item) {
+            $productsById = [];
+            $lockedStocks = [];
+            $sortedProductIds = collect($itemsData)
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->sort()
+                ->values();
+
+            foreach ($sortedProductIds as $pid) {
+                $product = Product::findOrFail($pid);
+                if ($product->is_parent) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
+                    ]);
+                }
+                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
+                    throw ValidationException::withMessages([
+                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
+                    ]);
+                }
+                $productsById[$pid] = $product;
+                $lockedStocks[$pid] = WarehouseStock::lockForUpdate()->firstOrCreate(
+                    ['warehouse_id' => $targetWarehouseId, 'product_id' => $pid],
+                    ['quantity' => 0, 'reserved_quantity' => 0]
+                );
+            }
+
+            foreach ($itemsData as $item) {
                 $quantity = (float) $item['quantity'];
                 if ($quantity <= 0) {
                     throw ValidationException::withMessages([
@@ -1236,24 +1291,9 @@ class SalesOrderService
                     ]);
                 }
 
-                $product = Product::findOrFail($item['product_id']);
-                if ($product->is_parent) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' کاڵایەکی سەرەکی فرە-جۆرە؛ تکایە یەکێک لە جۆرەکانی هەڵبژێرە."
-                    ]);
-                }
-
-                if ($isCustomerOrder && (!$product->is_active || !in_array((int) $product->category_id, $allowedCategoryIds, true))) {
-                    throw ValidationException::withMessages([
-                        'items' => "کاڵای '{$product->name}' لە کاتیگۆرییە ڕێگەپێدراوەکانی تۆدا نییە."
-                    ]);
-                }
-
-                // قفڵکردن و پشکنینی ستۆکی فیزیکی کۆگا بۆ کاڵای نوێ
-                $warehouseStock = WarehouseStock::lockForUpdate()->firstOrCreate(
-                    ['warehouse_id' => $targetWarehouseId, 'product_id' => $product->id],
-                    ['quantity' => 0, 'reserved_quantity' => 0]
-                );
+                $pid = (int) $item['product_id'];
+                $product = $productsById[$pid];
+                $warehouseStock = $lockedStocks[$pid];
 
                 $availQty = (float) $warehouseStock->quantity;
                 if ($availQty < $quantity) {
