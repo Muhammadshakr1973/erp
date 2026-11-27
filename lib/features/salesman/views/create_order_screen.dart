@@ -187,9 +187,32 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   void _populateFromExistingOrder(OrderModel order) {
+    final Map<int, double> orderCustomerSpecialPrices = {};
+    if (order.customer is Map) {
+      final custMap = order.customer as Map;
+      final rawSpecial = custMap['special_prices'] ?? custMap['specialPrices'];
+      if (rawSpecial is List) {
+        for (final sp in rawSpecial) {
+          if (sp is Map) {
+            final pid = int.tryParse(sp['product_id']?.toString() ?? '');
+            final pr = double.tryParse(sp['price']?.toString() ?? '');
+            if (pid != null && pr != null) {
+              orderCustomerSpecialPrices[pid] = pr;
+            }
+          }
+        }
+      }
+    }
+
     setState(() {
       _serverOrderId = order.id;
-      _overridePriceType = order.priceType;
+      _overridePriceType = _inferManualOverrideFromOrder(
+        order,
+        _selectedCustomer?.id == order.customerId ? _selectedCustomer : null,
+      );
+      if (orderCustomerSpecialPrices.isNotEmpty) {
+        _customerSpecialPrices = orderCustomerSpecialPrices;
+      }
       _sharedKey = order.sharedKey;
       _currentVersion = order.version;
       _lastKnownServerStatus = order.status.toUpperCase();
@@ -265,7 +288,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       );
     });
     _subscribeToOrderPusher(order.id);
-    _loadCustomerById(order.customerId);
+    _loadCustomerById(order.customerId, existingOrder: order);
   }
 
   void _subscribeToOrderPusher(int orderId) {
@@ -495,7 +518,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       _hasSavedOnce = true;
 
       if (!_dirtyFields.contains('price_type')) {
-        _overridePriceType = latestOrder.priceType;
+        _overridePriceType = _inferManualOverrideFromOrder(
+          latestOrder,
+          shouldReloadCustomer ? null : _selectedCustomer,
+        );
       }
       if (!_dirtyFields.contains('warehouse')) {
         _selectedWarehouseId = latestOrder.warehouseId;
@@ -556,7 +582,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
 
     if (shouldReloadCustomer) {
-      _loadCustomerById(latestOrder.customerId);
+      _loadCustomerById(latestOrder.customerId, existingOrder: latestOrder);
     }
 
     return latestOrder;
@@ -694,12 +720,53 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
   }
 
-  void _loadCustomerById(int customerId) async {
+  String? _inferManualOverrideFromOrder(OrderModel order, Customer? customer) {
+    final String customerTier =
+        (customer?.priceType?.toUpperCase() ??
+        (order.customer is Map
+            ? order.customer['price_type']?.toString().toUpperCase()
+            : null) ??
+        'N3');
+
+    if (order.items.isNotEmpty) {
+      if (order.items.any((i) => i.priceType?.toUpperCase() == 'SPECIAL')) {
+        return null;
+      }
+      final tiers = order.items
+          .map((i) => i.priceType?.toUpperCase())
+          .where((t) => t == 'N1' || t == 'N2' || t == 'N3')
+          .toSet();
+      if (tiers.length == 1) {
+        final singleTier = tiers.first!;
+        if (singleTier != customerTier) {
+          return singleTier;
+        }
+      }
+      return null;
+    }
+
+    final orderTier = order.priceType?.toUpperCase();
+    if ((orderTier == 'N1' || orderTier == 'N2' || orderTier == 'N3') &&
+        orderTier != customerTier) {
+      return orderTier;
+    }
+    return null;
+  }
+
+  void _loadCustomerById(int customerId, {OrderModel? existingOrder}) async {
     if (customerId == 0) {
       if (mounted) {
         setState(() {
           _selectedCustomer = Customer.temporary;
-          _overridePriceType ??= 'N3';
+          _customerSpecialPrices = {};
+          if (!_dirtyFields.contains('price_type')) {
+            _overridePriceType = existingOrder != null
+                ? _inferManualOverrideFromOrder(
+                    existingOrder,
+                    Customer.temporary,
+                  )
+                : null;
+          }
         });
       }
       return;
@@ -711,6 +778,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (match != null && mounted) {
         setState(() {
           _selectedCustomer = match;
+          if (match.specialPrices.isNotEmpty) {
+            _customerSpecialPrices = Map<int, double>.from(match.specialPrices);
+          }
+          if (existingOrder != null && !_dirtyFields.contains('price_type')) {
+            _overridePriceType = _inferManualOverrideFromOrder(
+              existingOrder,
+              match,
+            );
+          }
         });
         _fetchSpecialPricesForCustomer(match.id);
         return;
@@ -725,6 +801,17 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (mounted) {
         setState(() {
           _selectedCustomer = customer;
+          if (customer.specialPrices.isNotEmpty) {
+            _customerSpecialPrices = Map<int, double>.from(
+              customer.specialPrices,
+            );
+          }
+          if (existingOrder != null && !_dirtyFields.contains('price_type')) {
+            _overridePriceType = _inferManualOverrideFromOrder(
+              existingOrder,
+              customer,
+            );
+          }
         });
         _fetchSpecialPricesForCustomer(customer.id);
       }
@@ -739,7 +826,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (mounted) {
         setState(() {
           _selectedCustomer = Customer.temporary;
-          _overridePriceType ??= 'N3';
+          _customerSpecialPrices = {};
+          _overridePriceType = null;
         });
       }
       return;
@@ -751,6 +839,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (match != null && mounted) {
         setState(() {
           _selectedCustomer = match;
+          if (match.specialPrices.isNotEmpty) {
+            _customerSpecialPrices = Map<int, double>.from(match.specialPrices);
+          }
         });
         _fetchSpecialPricesForCustomer(match.id);
         return;
@@ -765,6 +856,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (mounted) {
         setState(() {
           _selectedCustomer = customer;
+          if (customer.specialPrices.isNotEmpty) {
+            _customerSpecialPrices = Map<int, double>.from(
+              customer.specialPrices,
+            );
+          }
         });
         _fetchSpecialPricesForCustomer(customer.id);
       }
@@ -780,7 +876,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       final prices = await ref
           .read(customerActionsProvider)
           .fetchSpecialPrices(customerId);
-      if (mounted) {
+      if (mounted && _selectedCustomer?.id == customerId) {
         setState(() {
           _customerSpecialPrices = prices;
         });
@@ -826,17 +922,23 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     super.dispose();
   }
 
+  bool _isSpecialPriceApplied(int productId) {
+    return _overridePriceType == null &&
+        _selectedCustomer != null &&
+        _selectedCustomer!.id > 0 &&
+        _customerSpecialPrices.containsKey(productId);
+  }
+
   double _getProductUnitPrice(ProductModel product) {
+    // special prices apply when there is NO manual tier override
+    if (_isSpecialPriceApplied(product.id)) {
+      return _customerSpecialPrices[product.id]!;
+    }
+
     final String tier =
         _overridePriceType ??
         (_selectedCustomer?.priceType?.toUpperCase() ?? 'N3');
 
-    // special prices should only apply if there is NO explicit override, and we have special prices
-    if (_overridePriceType == null &&
-        _selectedCustomer != null &&
-        _customerSpecialPrices.containsKey(product.id)) {
-      return _customerSpecialPrices[product.id]!;
-    }
     switch (tier) {
       case 'N1':
         return product.priceN1;
@@ -1567,10 +1669,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 
   Future<void> _showSpecialPriceDialog(ProductModel product) async {
-    if (_selectedCustomer == null) {
+    if (_selectedCustomer == null || _selectedCustomer!.id <= 0) {
       AppSnackbar.show(
         context,
-        message: 'تکایە سەرەتا کڕیارێک هەڵبژێرە بۆ دانانی نرخی تایبەت',
+        message: 'تکایە سەرەتا کڕیارێکی تۆمارکراو هەڵبژێرە بۆ دانانی نرخی تایبەت',
         type: SnackbarType.warning,
       );
       return;
@@ -1578,11 +1680,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
     final hasSpecial = _customerSpecialPrices.containsKey(product.id);
     final currentSpecial = _customerSpecialPrices[product.id];
-    final defaultPrice = _selectedCustomer!.priceType?.toUpperCase() == 'N1'
+    final customerTier = (_selectedCustomer!.priceType ?? 'N3').toUpperCase();
+    final defaultPrice = customerTier == 'N1'
         ? product.priceN1
-        : (_selectedCustomer!.priceType?.toUpperCase() == 'N3'
-              ? product.priceN3
-              : product.priceN2);
+        : (customerTier == 'N3' ? product.priceN3 : product.priceN2);
 
     final controller = TextEditingController(
       text: hasSpecial
@@ -1625,7 +1726,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   Text('کاڵا: ${product.name}', style: AppTextStyles.bodyBold),
                   const SizedBox(height: 6),
                   Text(
-                    'نرخی بنەڕەتی کڕیار (${_selectedCustomer!.priceType ?? 'N2'}): ${Formatters.currency(defaultPrice)}',
+                    'نرخی بنەڕەتی کڕیار ($customerTier): ${Formatters.currency(defaultPrice)}',
                     style: AppTextStyles.caption,
                   ),
                   if (hasSpecial) ...[
@@ -1666,9 +1767,15 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   _selectedCustomer!.id,
                                   product.id,
                                 );
-                            setState(() {
-                              _customerSpecialPrices.remove(product.id);
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _customerSpecialPrices.remove(product.id);
+                              });
+                              if (_cart.containsKey(product.id)) {
+                                _markFieldDirty('price_type');
+                                _triggerDebouncedAutoSave();
+                              }
+                            }
                             if (dialogCtx.mounted) {
                               Navigator.pop(dialogCtx);
                             }
@@ -1703,7 +1810,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final parsed = double.tryParse(controller.text.trim());
+                        final sanitized = controller.text
+                            .trim()
+                            .replaceAll(',', '')
+                            .replaceAll(' ', '');
+                        final parsed = double.tryParse(sanitized);
                         if (parsed == null || parsed < 0) {
                           AppSnackbar.show(
                             context,
@@ -1721,9 +1832,16 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 product.id,
                                 parsed,
                               );
-                          setState(() {
-                            _customerSpecialPrices[product.id] = parsed;
-                          });
+                          if (mounted) {
+                            setState(() {
+                              _customerSpecialPrices[product.id] = parsed;
+                              _overridePriceType = null;
+                            });
+                            if (_cart.containsKey(product.id)) {
+                              _markFieldDirty('price_type');
+                              _triggerDebouncedAutoSave();
+                            }
+                          }
                           if (dialogCtx.mounted) {
                             Navigator.pop(dialogCtx);
                           }
@@ -1765,6 +1883,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         },
       ),
     );
+    Future.delayed(const Duration(milliseconds: 300), controller.dispose);
   }
 
   void _scanBarcode(List<ProductModel> products) {
@@ -2756,10 +2875,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       if (changed && mounted) {
         setState(() {
           _selectedCustomer = updated;
-          if (specialChanged && updated.specialPrices.isNotEmpty) {
-            _customerSpecialPrices = Map<int, double>.from(
-              updated.specialPrices,
-            );
+          if (specialChanged) {
+            _customerSpecialPrices = updated.specialPrices.isNotEmpty
+                ? Map<int, double>.from(updated.specialPrices)
+                : {};
           }
         });
         if (specialChanged && updated.specialPrices.isEmpty) {
@@ -4044,8 +4163,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
             _markFieldDirty('customer');
             setState(() {
               _selectedCustomer = found;
+              _overridePriceType = null;
+              _customerSpecialPrices =
+                  found != null && found.specialPrices.isNotEmpty
+                  ? Map<int, double>.from(found.specialPrices)
+                  : {};
             });
-            if (found != null) {
+            if (found != null && found.id > 0) {
               _fetchSpecialPricesForCustomer(found.id);
             }
             _triggerDebouncedAutoSave();
@@ -4058,11 +4182,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget _buildPriceTypeBadge() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final String priceType =
-        _overridePriceType ??
-        (_selectedCustomer != null
-            ? (_selectedCustomer!.priceType ?? 'N3')
-            : 'N3');
+    final String customerTier =
+        (_selectedCustomer?.priceType?.toUpperCase() ?? 'N3');
+    final String rawTier = _overridePriceType ?? customerTier;
+    final String priceType = const ['N1', 'N2', 'N3'].contains(rawTier)
+        ? rawTier
+        : (const ['N1', 'N2', 'N3'].contains(customerTier)
+              ? customerTier
+              : 'N3');
 
     Color badgeColor;
     if (priceType == 'N1') {
@@ -4079,27 +4206,65 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('دیاریکردنی جۆری نرخ', style: AppTextStyles.h3),
+            title: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('دیاریکردنی جۆری نرخ', style: AppTextStyles.h3),
+                ),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_selectedCustomer != null && _selectedCustomer!.id > 0) ...[
+                  ListTile(
+                    title: Text('ئۆتۆماتیک ($customerTier + نرخی تایبەت)'),
+                    trailing: _overridePriceType == null
+                        ? const Icon(Icons.check, color: AppColors.primary)
+                        : null,
+                    onTap: () => Navigator.pop(context, 'AUTO'),
+                  ),
+                  const Divider(height: 1),
+                ],
                 ListTile(
                   title: const Text('N1 - تاک'),
-                  trailing: priceType == 'N1'
+                  trailing:
+                      (_overridePriceType == 'N1' ||
+                          ((_selectedCustomer == null ||
+                                  _selectedCustomer!.id <= 0) &&
+                              _overridePriceType == null &&
+                              priceType == 'N1'))
                       ? const Icon(Icons.check, color: AppColors.primary)
                       : null,
                   onTap: () => Navigator.pop(context, 'N1'),
                 ),
                 ListTile(
                   title: const Text('N2 - کۆ'),
-                  trailing: priceType == 'N2'
+                  trailing:
+                      (_overridePriceType == 'N2' ||
+                          ((_selectedCustomer == null ||
+                                  _selectedCustomer!.id <= 0) &&
+                              _overridePriceType == null &&
+                              priceType == 'N2'))
                       ? const Icon(Icons.check, color: AppColors.primary)
                       : null,
                   onTap: () => Navigator.pop(context, 'N2'),
                 ),
                 ListTile(
                   title: const Text('N3 - تایبەت / کاتی'),
-                  trailing: priceType == 'N3'
+                  trailing:
+                      (_overridePriceType == 'N3' ||
+                          ((_selectedCustomer == null ||
+                                  _selectedCustomer!.id <= 0) &&
+                              _overridePriceType == null &&
+                              priceType == 'N3'))
                       ? const Icon(Icons.check, color: AppColors.primary)
                       : null,
                   onTap: () => Navigator.pop(context, 'N3'),
@@ -4112,7 +4277,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         if (selected != null && mounted) {
           _markFieldDirty('price_type');
           setState(() {
-            _overridePriceType = selected;
+            _overridePriceType = selected == 'AUTO' ? null : selected;
           });
           _triggerDebouncedAutoSave();
         }
@@ -4560,8 +4725,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             final unitPrice = product != null
                                 ? _getProductUnitPrice(product)
                                 : 0.0;
-                            final isSpecialPrice = _customerSpecialPrices
-                                .containsKey(productId);
+                            final isSpecialPrice = _isSpecialPriceApplied(
+                              productId,
+                            );
 
                             return Material(
                               key: ValueKey('cart_item_$productId'),
@@ -4615,29 +4781,36 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                                     if (isSpecialPrice)
                                                       const SizedBox(width: 4),
                                                     if (isSpecialPrice)
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 6,
-                                                              vertical: 2,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: theme
-                                                              .colorScheme
-                                                              .primary,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                4,
+                                                      GestureDetector(
+                                                        onTap: product != null
+                                                            ? () =>
+                                                                  _showSpecialPriceDialog(
+                                                                    product,
+                                                                  )
+                                                            : null,
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 6,
+                                                                vertical: 2,
                                                               ),
-                                                        ),
-                                                        child: const Text(
-                                                          'نرخی تایبەت',
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            // ignore: deprecated_member_use
+                                                          decoration: BoxDecoration(
+                                                            color: theme
+                                                                .colorScheme
+                                                                .primary,
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  4,
+                                                                ),
+                                                          ),
+                                                          child: const Text(
+                                                            'نرخی تایبەت',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight.bold,
+                                                            ),
                                                           ),
                                                         ),
                                                       ),

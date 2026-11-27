@@ -414,7 +414,7 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
     // Default / Automatic mode: First check customer special price
     if (_customerSpecialPrices.containsKey(product.id)) {
       final sp = _customerSpecialPrices[product.id]!;
-      if (sp > 0) return sp;
+      if (sp >= 0) return sp;
     }
 
     // Otherwise use selected price tier (which is set to customer's tier)
@@ -1816,10 +1816,10 @@ class _SalesCatalogScreenState extends ConsumerState<SalesCatalogScreen> {
       setState(() {
         _selectedOrder = selectedOrder.copyWith(customer: mergedCustMap);
         _selectedPriceTier = resolvedTier;
-        if (updatedCustomer.specialPrices.isNotEmpty) {
-          _customerSpecialPrices = Map<int, double>.from(
-            updatedCustomer.specialPrices,
-          );
+        if (specialChanged) {
+          _customerSpecialPrices = updatedCustomer.specialPrices.isNotEmpty
+              ? Map<int, double>.from(updatedCustomer.specialPrices)
+              : {};
         }
       });
 
