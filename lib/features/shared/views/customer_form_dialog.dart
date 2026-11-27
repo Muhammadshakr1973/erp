@@ -35,7 +35,9 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
   final _paymentFormKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isPaying = false;
+  String? _nameError;
   String? _phoneError;
+  String? _routeError;
   String? _loginCodeError;
 
   late TextEditingController _nameController;
@@ -130,9 +132,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       return;
     }
 
+    final isSalesmanUser = currentUser?.isSalesman ?? false;
+    if (isSalesmanUser && _routeId == null) {
+      setState(() {
+        _routeError = 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە گەڕەک / ڕاوت هەڵبژێرە';
+      });
+      _formKey.currentState?.validate();
+      return;
+    }
+
     setState(() {
       _isLoading = true;
+      _nameError = null;
       _phoneError = null;
+      _routeError = null;
       _loginCodeError = null;
     });
 
@@ -212,18 +225,34 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       }
     } catch (e) {
       final errStr = e.toString();
+      final lowerErr = errStr.toLowerCase();
+      final cleanErr = errStr.replaceAll('Exception:', '').trim();
       final isLoginCodeError = errStr.contains('login_code') ||
+          lowerErr.contains('login code') ||
           errStr.contains('٤ ژمارە') ||
           errStr.contains('کۆدی چوونەژوورەوە');
       final isPhoneError = !isLoginCodeError &&
           (errStr.contains('پێشتر بەکارهاتووە') ||
-              errStr.toLowerCase().contains('phone') ||
-              errStr.toLowerCase().contains('taken') ||
-              errStr.toLowerCase().contains('unique'));
+              lowerErr.contains('phone') ||
+              lowerErr.contains('taken') ||
+              lowerErr.contains('unique'));
+      final isRouteError = !isLoginCodeError &&
+          !isPhoneError &&
+          (lowerErr.contains('route') ||
+              errStr.contains('گەڕەک') ||
+              errStr.contains('ڕاوت'));
+      final isNameError = !isLoginCodeError &&
+          !isPhoneError &&
+          !isRouteError &&
+          (lowerErr.contains('name') ||
+              errStr.contains('ناوی مارکێت') ||
+              errStr.contains('ناوی کڕیار'));
 
       if (isLoginCodeError) {
         setState(() {
-          _loginCodeError = errStr.replaceAll('Exception:', '').trim();
+          _loginCodeError = lowerErr.contains('required')
+              ? 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە کۆدی ٤ ژمارەیی بنووسە'
+              : cleanErr;
         });
         _formKey.currentState?.validate();
       } else if (isPhoneError) {
@@ -231,13 +260,29 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
           _phoneError = 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە';
         });
         _formKey.currentState?.validate();
+      } else if (isRouteError) {
+        setState(() {
+          _routeError = lowerErr.contains('required')
+              ? 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە گەڕەک / ڕاوت هەڵبژێرە'
+              : cleanErr;
+        });
+        _formKey.currentState?.validate();
+      } else if (isNameError) {
+        setState(() {
+          _nameError = lowerErr.contains('required')
+              ? 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە ناوی مارکێت بنووسە'
+              : cleanErr;
+        });
+        _formKey.currentState?.validate();
       }
 
-      if (mounted) {
+      final isHandledRequired =
+          isRouteError || isNameError || (isLoginCodeError && lowerErr.contains('required'));
+      if (mounted && !isHandledRequired) {
         AppSnackbar.show(
           context,
           message: isLoginCodeError
-              ? errStr.replaceAll('Exception:', '').trim()
+              ? cleanErr
               : (isPhoneError
                     ? 'ئەم ژمارەی مۆبایلە پێشتر بەکارهاتووە، تکایە ژمارەیەکی تر بنووسە'
                     : 'کێشە لە پاشەکەوتکردن: $e'),
@@ -520,6 +565,7 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
       children: [
           const SizedBox(height: AppSpacing.sm),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: AppTextField(
@@ -527,13 +573,22 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                   labelText: 'ناوی مارکێت',
                   hintText: 'نموونە: مارکێتی بێستون',
                   prefixIcon: Icons.store_outlined,
+                  errorText: _nameError,
                   borderRadius: const BorderRadius.only(
                     topRight: Radius.circular(24),
                     bottomRight: Radius.circular(24),
                   ),
+                  onChanged: (_) {
+                    if (_nameError != null) {
+                      setState(() => _nameError = null);
+                    }
+                  },
                   validator: (value) {
+                    if (_nameError != null) {
+                      return _nameError;
+                    }
                     if (value == null || value.trim().isEmpty) {
-                      return 'تکایە ناوی مارکێت بنووسە';
+                      return 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە ناوی مارکێت بنووسە';
                     }
                     return null;
                   },
@@ -727,22 +782,59 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                 .when(
                   data: (routes) {
                     final currentUser = ref.watch(authProvider).user;
+                    final isSalesmanUser = currentUser?.isSalesman ?? false;
                     final filteredRoutes = currentUser != null && !currentUser.isAdmin
                         ? routes.where((r) => r.salesmen.any((s) => s.salesmanId == currentUser.id)).toList()
                         : routes;
+                    final effectiveRouteId =
+                        _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
+                            ? _routeId
+                            : null;
+                    final dangerColor = AppColors.getAdaptiveColor(
+                      context,
+                      AppColors.danger,
+                    );
+                    final theme = Theme.of(context);
 
                     return DropdownButtonFormField<int?>(
-                      initialValue: _routeId != null && filteredRoutes.any((r) => r.id == _routeId)
-                          ? _routeId
-                          : null,
-                      decoration: const InputDecoration(
+                      key: ValueKey(effectiveRouteId),
+                      initialValue: effectiveRouteId,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      decoration: InputDecoration(
                         labelText: 'گەڕەک / ڕاوت',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
+                        border: const OutlineInputBorder(),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: dangerColor, width: 1.5),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: dangerColor, width: 2),
+                        ),
+                        errorStyle: AppTextStyles.caption.copyWith(
+                          color: dangerColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        errorMaxLines: 2,
+                        errorText: _routeError,
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
-                        prefixIcon: Icon(Icons.alt_route),
+                        prefixIcon: Icon(
+                          Icons.alt_route,
+                          color: _routeError != null ? dangerColor : null,
+                        ),
                       ),
                       items: [
                         const DropdownMenuItem<int?>(
@@ -756,10 +848,20 @@ class _CustomerFormDialogState extends ConsumerState<CustomerFormDialog> {
                           ),
                         ),
                       ],
+                      validator: (val) {
+                        if (_routeError != null) {
+                          return _routeError;
+                        }
+                        if (isSalesmanUser && val == null) {
+                          return 'ئەم خانەیە دەبێت پڕبکرێتەوە، تکایە گەڕەک / ڕاوت هەڵبژێرە';
+                        }
+                        return null;
+                      },
                       onChanged: (val) {
                         setState(() {
                           _routeId = val;
                           _isRouteInitialized = true;
+                          _routeError = null;
                         });
                       },
                     );
