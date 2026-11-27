@@ -121,6 +121,66 @@ class ReportController extends Controller
         }
         $data['today_salesmen_plan'] = $todaySalesmenPlan;
 
+        // 11. Real-time alerts when special price on an invoice is close to cost price (profit <= 250)
+        $lowMarginSpecialPriceAlerts = \App\Models\SalesOrderItem::query()
+            ->with([
+                'order' => function ($q) {
+                    $q->select('id', 'order_number', 'order_date', 'status', 'customer_id', 'salesman_id')
+                        ->with([
+                            'salesman' => fn ($sq) => $sq->withTrashed()->select('id', 'name', 'is_cash_van'),
+                            'customer' => fn ($cq) => $cq->withTrashed()->select('id', 'name'),
+                        ]);
+                },
+                'product' => fn ($pq) => $pq->withTrashed()->select('id', 'name', 'variant_name'),
+            ])
+            ->whereIn('price_type', ['SPECIAL', 'special'])
+            ->whereRaw('unit_price <= cost_price + 250')
+            ->whereHas('order', function ($q) {
+                $q->whereNotIn('status', [
+                    SalesOrder::STATUS_CANCELLED,
+                    SalesOrder::STATUS_DRAFT,
+                    'cancelled',
+                    'draft',
+                ]);
+            })
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->filter(fn ($item) => $item->order !== null)
+            ->map(function ($item) {
+                $order = $item->order;
+                $salesman = $order->salesman;
+                $customer = $order->customer;
+                $product = $item->product;
+                $unitPrice = (int) $item->unit_price;
+                $costPrice = (int) $item->cost_price;
+                $productName = $product
+                    ? trim($product->name . (!empty($product->variant_name) ? " ({$product->variant_name})" : ''))
+                    : 'کاڵا';
+
+                return [
+                    'id'            => $item->id,
+                    'order_id'      => $order->id,
+                    'order_number'  => $order->order_number ?: (string) $order->id,
+                    'order_date'    => $order->order_date ? $order->order_date->toDateString() : null,
+                    'order_status'  => $order->status,
+                    'salesman_id'   => $order->salesman_id,
+                    'salesman_name' => $salesman?->name ?? 'نادیار',
+                    'is_cash_van'   => (bool) ($salesman?->is_cash_van ?? false),
+                    'customer_id'   => $order->customer_id,
+                    'customer_name' => $customer?->name ?? 'کڕیار',
+                    'product_id'    => $item->product_id,
+                    'product_name'  => $productName,
+                    'unit_price'    => $unitPrice,
+                    'cost_price'    => $costPrice,
+                    'profit_margin' => $unitPrice - $costPrice,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $data['low_margin_special_price_alerts'] = $lowMarginSpecialPriceAlerts;
+
         return response()->json([
             'message' => 'ئامارەکانی داشبۆرد',
             'data' => $data

@@ -12,6 +12,7 @@ class DashboardModel {
   final double lastCollectionAmount;
   final String? lastCollectionDriver;
   final List<TodaySalesmanPlanItem> todaySalesmenPlan;
+  final List<LowMarginSpecialPriceAlert> lowMarginSpecialPriceAlerts;
 
   DashboardModel({
     required this.monthlySales,
@@ -27,12 +28,18 @@ class DashboardModel {
     required this.lastCollectionAmount,
     this.lastCollectionDriver,
     this.todaySalesmenPlan = const [],
+    this.lowMarginSpecialPriceAlerts = const [],
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
     final rawPlan = json['today_salesmen_plan'] as List? ?? [];
     final parsedPlan = rawPlan
         .map((item) => TodaySalesmanPlanItem.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
+    final rawAlerts = json['low_margin_special_price_alerts'] as List? ?? [];
+    final parsedAlerts = rawAlerts
+        .map((item) => LowMarginSpecialPriceAlert.fromJson(Map<String, dynamic>.from(item)))
         .toList();
 
     return DashboardModel(
@@ -60,6 +67,7 @@ class DashboardModel {
           double.tryParse(json['last_collection_amount']?.toString() ?? '0') ?? 0.0,
       lastCollectionDriver: json['last_collection_driver']?.toString(),
       todaySalesmenPlan: parsedPlan,
+      lowMarginSpecialPriceAlerts: parsedAlerts,
     );
   }
 
@@ -77,6 +85,7 @@ class DashboardModel {
     double? lastCollectionAmount,
     String? lastCollectionDriver,
     List<TodaySalesmanPlanItem>? todaySalesmenPlan,
+    List<LowMarginSpecialPriceAlert>? lowMarginSpecialPriceAlerts,
   }) {
     return DashboardModel(
       monthlySales: monthlySales ?? this.monthlySales,
@@ -92,6 +101,7 @@ class DashboardModel {
       lastCollectionAmount: lastCollectionAmount ?? this.lastCollectionAmount,
       lastCollectionDriver: lastCollectionDriver ?? this.lastCollectionDriver,
       todaySalesmenPlan: todaySalesmenPlan ?? this.todaySalesmenPlan,
+      lowMarginSpecialPriceAlerts: lowMarginSpecialPriceAlerts ?? this.lowMarginSpecialPriceAlerts,
     );
   }
 }
@@ -130,6 +140,65 @@ class TodaySalesmanPlanItem {
       customersCount: (json['customers_count'] is num)
           ? (json['customers_count'] as num).toInt()
           : (int.tryParse(json['customers_count']?.toString() ?? '0') ?? 0),
+    );
+  }
+}
+
+class LowMarginSpecialPriceAlert {
+  final int id;
+  final int orderId;
+  final String orderNumber;
+  final String? orderDate;
+  final String orderStatus;
+  final int salesmanId;
+  final String salesmanName;
+  final bool isCashVan;
+  final int customerId;
+  final String customerName;
+  final int productId;
+  final String productName;
+  final int unitPrice;
+  final int costPrice;
+  final int profitMargin;
+
+  LowMarginSpecialPriceAlert({
+    required this.id,
+    required this.orderId,
+    required this.orderNumber,
+    this.orderDate,
+    required this.orderStatus,
+    required this.salesmanId,
+    required this.salesmanName,
+    required this.isCashVan,
+    required this.customerId,
+    required this.customerName,
+    required this.productId,
+    required this.productName,
+    required this.unitPrice,
+    required this.costPrice,
+    required this.profitMargin,
+  });
+
+  factory LowMarginSpecialPriceAlert.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) =>
+        (v is num) ? v.toInt() : (int.tryParse(v?.toString() ?? '0') ?? 0);
+
+    return LowMarginSpecialPriceAlert(
+      id: parseInt(json['id']),
+      orderId: parseInt(json['order_id']),
+      orderNumber: json['order_number']?.toString() ?? '',
+      orderDate: json['order_date']?.toString(),
+      orderStatus: json['order_status']?.toString() ?? '',
+      salesmanId: parseInt(json['salesman_id']),
+      salesmanName: json['salesman_name']?.toString() ?? 'نادیار',
+      isCashVan: json['is_cash_van'] == true || json['is_cash_van'] == 1,
+      customerId: parseInt(json['customer_id']),
+      customerName: json['customer_name']?.toString() ?? 'کڕیار',
+      productId: parseInt(json['product_id']),
+      productName: json['product_name']?.toString() ?? 'کاڵا',
+      unitPrice: parseInt(json['unit_price']),
+      costPrice: parseInt(json['cost_price']),
+      profitMargin: parseInt(json['profit_margin']),
     );
   }
 }

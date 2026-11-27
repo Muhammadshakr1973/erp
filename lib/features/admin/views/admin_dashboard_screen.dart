@@ -18,7 +18,7 @@ import '../../auth/providers/auth_provider.dart';
 // import '../../orders/providers/orders_provider.dart';
 import '../../shared/providers/route_provider.dart';
 import '../../shared/models/report_models.dart';
-// import '../models/dashboard_model.dart';
+import '../models/dashboard_model.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/reports_provider.dart';
 import 'admin_suppliers_dialog.dart';
@@ -35,6 +35,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int? _activeSalesmanTooltipId;
   int? _activeCustomerChartTooltipId;
+  bool _showAllSpecialPriceAlerts = false;
   final GlobalKey _todayPlanKey = GlobalKey();
 
   @override
@@ -194,6 +195,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
               // Alert Banner for Products Missing Prices (N1, N2, N3)
               _buildMissingPricesAlertBanner(context, ref),
+
+              if ((dashboardAsync.valueOrNull?.lowMarginSpecialPriceAlerts ?? const []).isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                _buildLowMarginSpecialPriceAlertsSection(
+                  context,
+                  dashboardAsync.valueOrNull!.lowMarginSpecialPriceAlerts,
+                ),
+              ],
 
               const SizedBox(height: AppSpacing.sectionGap),
 
@@ -439,6 +448,250 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLowMarginSpecialPriceAlertsSection(
+    BuildContext context,
+    List<LowMarginSpecialPriceAlert> alerts,
+  ) {
+    if (alerts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final dangerColor = isDark ? AppColors.dangerDark : AppColors.danger;
+    final bgColor = isDark
+        ? const Color(0xFF450A0A).withValues(alpha: 0.35)
+        : const Color(0xFFFEF2F2);
+    final borderColor = isDark
+        ? dangerColor.withValues(alpha: 0.45)
+        : const Color(0xFFFECACA);
+    final titleColor = isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B);
+    final itemBgColor = isDark
+        ? theme.colorScheme.surface.withValues(alpha: 0.65)
+        : Colors.white.withValues(alpha: 0.9);
+
+    final visibleAlerts =
+        _showAllSpecialPriceAlerts ? alerts : alerts.take(3).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(14.0),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: AppRadius.radiusMd,
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: dangerColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: dangerColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'ئاگاداری نرخی تایبەت',
+                        style: AppTextStyles.bodyBold.copyWith(
+                          color: titleColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: dangerColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${alerts.length} ئاگاداری',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'KJino',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (alerts.length > 3)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _showAllSpecialPriceAlerts = !_showAllSpecialPriceAlerts;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _showAllSpecialPriceAlerts ? 'کەمکردنەوە' : 'هەموو ببینە',
+                    style: AppTextStyles.caption.copyWith(
+                      color: titleColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: visibleAlerts.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final alert = visibleAlerts[index];
+              final roleLabel = alert.isCashVan ? 'کاشڤانە' : 'مەندوبە';
+              final baseTextStyle = AppTextStyles.bodyMedium.copyWith(
+                fontSize: 13,
+                height: 1.6,
+                color: theme.colorScheme.onSurface,
+              );
+              final boldTextStyle = baseTextStyle.copyWith(
+                fontWeight: FontWeight.bold,
+              );
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: itemBgColor,
+                  borderRadius: AppRadius.radiusSm,
+                  border: Border.all(
+                    color: borderColor.withValues(alpha: 0.7),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        style: baseTextStyle,
+                        children: [
+                          TextSpan(text: 'ئەم $roleLabel ('),
+                          TextSpan(text: alert.salesmanName, style: boldTextStyle),
+                          const TextSpan(text: ') بۆ کڕیار ('),
+                          TextSpan(text: alert.customerName, style: boldTextStyle),
+                          const TextSpan(text: ') لە پسوڵەی '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  context.push('/order/${alert.orderId}');
+                                },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.receipt_long_outlined,
+                                        size: 13,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '#${alert.orderNumber}',
+                                        style: baseTextStyle.copyWith(
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.underline,
+                                          decorationColor: theme.colorScheme.primary,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const TextSpan(text: ' کاڵای ('),
+                          TextSpan(text: alert.productName, style: boldTextStyle),
+                          const TextSpan(text: ') بە '),
+                          TextSpan(
+                            text: Formatters.currency(alert.unitPrice),
+                            style: boldTextStyle.copyWith(color: dangerColor),
+                          ),
+                          const TextSpan(text: ' داناوە و نرخی تێچووش '),
+                          TextSpan(
+                            text: Formatters.currency(alert.costPrice),
+                            style: boldTextStyle,
+                          ),
+                          const TextSpan(text: 'ـە'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'قازانج: ${Formatters.currency(alert.profitMargin)}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: dangerColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (alert.orderDate != null && alert.orderDate!.isNotEmpty)
+                          Text(
+                            alert.orderDate!,
+                            style: AppTextStyles.caption.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
