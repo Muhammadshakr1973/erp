@@ -225,6 +225,19 @@ class CustomerController extends Controller
             'price' => 'required|integer|min:0',
         ]);
 
+        $product = \App\Models\Product::findOrFail($validated['product_id']);
+        $costPrice = (int) ($product->cost_price ?? 0);
+        if ((int) $validated['price'] <= $costPrice) {
+            $formattedCost = number_format($costPrice, 0) . ' د.ع';
+            $message = "دەبێت نرخی تایبەت زیاتر بێت لە {$formattedCost} .";
+            return response()->json([
+                'message' => $message,
+                'errors' => [
+                    'price' => [$message],
+                ],
+            ], 422);
+        }
+
         $specialPrice = \App\Models\CustomerSpecialPrice::updateOrCreate(
             [
                 'customer_id' => $customer->id,

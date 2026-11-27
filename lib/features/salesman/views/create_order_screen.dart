@@ -1691,13 +1691,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           : defaultPrice.toInt().toString(),
     );
 
+    final double knownCostPrice = product.costPrice;
     bool isSaving = false;
+    String? inlineError;
+
+    double? parseInputPrice() {
+      final sanitized = controller.text
+          .trim()
+          .replaceAll(',', '')
+          .replaceAll(' ', '');
+      return double.tryParse(sanitized);
+    }
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (modalCtx, setDialogState) {
+          final currentParsed = parseInputPrice();
+          final bool violatesKnownCost =
+              knownCostPrice > 0 &&
+              currentParsed != null &&
+              currentParsed <= knownCostPrice;
+          final String? warningOrError =
+              inlineError ??
+              (knownCostPrice > 0
+                  ? 'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(knownCostPrice)} .'
+                  : null);
+          final bool isErrorState = inlineError != null || violatesKnownCost;
+
           return AlertDialog(
             title: Row(
               children: [
@@ -1739,6 +1761,55 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       ),
                     ),
                   ],
+                  if (warningOrError != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (isErrorState
+                                ? AppColors.danger
+                                : AppColors.warning)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: (isErrorState
+                                  ? AppColors.danger
+                                  : AppColors.warning)
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            isErrorState
+                                ? Icons.error_outline
+                                : Icons.warning_amber_rounded,
+                            size: 18,
+                            color: isErrorState
+                                ? AppColors.danger
+                                : AppColors.warning,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              warningOrError,
+                              style: AppTextStyles.caption.copyWith(
+                                color: isErrorState
+                                    ? AppColors.danger
+                                    : AppColors.warning,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   AppTextField(
                     controller: controller,
@@ -1746,6 +1817,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                     autofocus: true,
                     labelText: 'نرخی تایبەتی نوێ (دینار)',
                     prefixIcon: Icons.monetization_on_outlined,
+                    onChanged: (_) {
+                      if (inlineError != null || knownCostPrice > 0) {
+                        setDialogState(() {
+                          inlineError = null;
+                        });
+                      }
+                    },
                   ),
                 ],
               ),
@@ -1759,7 +1837,10 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          setDialogState(() => isSaving = true);
+                          setDialogState(() {
+                            isSaving = true;
+                            inlineError = null;
+                          });
                           try {
                             await ref
                                 .read(customerActionsProvider)
@@ -1787,12 +1868,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               );
                             }
                           } catch (e) {
-                            if (mounted) {
-                              AppSnackbar.show(
-                                context,
-                                message: 'هەڵە لە سڕینەوە: $e',
-                                type: SnackbarType.error,
-                              );
+                            final msg = e
+                                .toString()
+                                .replaceFirst('Exception: ', '')
+                                .trim();
+                            if (modalCtx.mounted) {
+                              setDialogState(() {
+                                inlineError = 'هەڵە لە سڕینەوە: $msg';
+                              });
                             }
                           } finally {
                             if (modalCtx.mounted) {
@@ -1810,20 +1893,31 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final sanitized = controller.text
-                            .trim()
-                            .replaceAll(',', '')
-                            .replaceAll(' ', '');
-                        final parsed = double.tryParse(sanitized);
+                        final parsed = parseInputPrice();
                         if (parsed == null || parsed < 0) {
-                          AppSnackbar.show(
-                            context,
-                            message: 'تکایە نرخێکی دروست بنووسە',
-                            type: SnackbarType.warning,
-                          );
+                          setDialogState(() {
+                            inlineError = 'تکایە نرخێکی دروست بنووسە';
+                          });
                           return;
                         }
-                        setDialogState(() => isSaving = true);
+                        if (knownCostPrice > 0 && parsed <= knownCostPrice) {
+                          setDialogState(() {
+                            inlineError =
+                                'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(knownCostPrice)} .';
+                          });
+                          return;
+                        }
+                        if (parsed <= 0) {
+                          setDialogState(() {
+                            inlineError =
+                                'دەبێت نرخی تایبەت زیاتر بێت لە ${Formatters.currency(0)} .';
+                          });
+                          return;
+                        }
+                        setDialogState(() {
+                          isSaving = true;
+                          inlineError = null;
+                        });
                         try {
                           await ref
                               .read(customerActionsProvider)
@@ -1854,12 +1948,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
-                            AppSnackbar.show(
-                              context,
-                              message: 'هەڵە لە پاشەکەوتکردن: $e',
-                              type: SnackbarType.error,
-                            );
+                          final msg = e
+                              .toString()
+                              .replaceFirst('Exception: ', '')
+                              .trim();
+                          if (modalCtx.mounted) {
+                            setDialogState(() {
+                              inlineError = msg;
+                            });
                           }
                         } finally {
                           if (modalCtx.mounted) {
